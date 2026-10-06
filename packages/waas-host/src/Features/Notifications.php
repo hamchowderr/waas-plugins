@@ -2,7 +2,6 @@
 
 namespace WaaSHost\Features;
 
-use WaaSHost\Api\SingleLogin;
 use WaaSHost\Core\WPCSTenant;
 
 class Notifications
@@ -63,11 +62,7 @@ class Notifications
                 &nbsp;
 
                 <p><a href="{{ tenant_one_click_login_url }}" target="_blank" rel="noopener"><strong>Login now</strong></a></p>
-                <p><small>This login link will be active for {{ tenant_one_click_login_url_expires_after }} hours after this E-mail was sent.</small></p>
-
-                &nbsp;
-
-                <p>If the above link has expired, you can always find a fresh login link in your account at <a href="{{ storefront_url }}" target="_blank" rel="noopener">{{ storefront_name }}</a> under your <a href="{{ storefront_subscription_details_url }}" target="_blank" rel="noopener">subscription details</a>.</p>
+                <p><small>This takes you to your <a href="{{ storefront_subscription_details_url }}" target="_blank" rel="noopener">subscription details</a> at <a href="{{ storefront_url }}" target="_blank" rel="noopener">{{ storefront_name }}</a>, where the login button signs you in to your website.</small></p>
 
                 &nbsp;
 
@@ -79,14 +74,17 @@ class Notifications
 
     public static function get_replaceables($subscription_id, $recipient)
     {
-        $login_expiry_seconds = 172800;
+        // No login token goes into the email: mail scanners prefetch links and mailboxes keep them. The link goes
+        // to the subscription page on the storefront, which mints a short-lived token when the customer clicks login.
+        $subscription_details_url = apply_filters('wpcs_subscription_details_url', get_site_url(), $subscription_id);
         return apply_filters('wpcs_tenant_email_replaceables', [
             "tenant_domain" => "https://" . get_post_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, true),
-            "tenant_one_click_login_url" => SingleLogin::get_login_link($subscription_id, $login_expiry_seconds),
-            "tenant_one_click_login_url_expires_after" => $login_expiry_seconds / 3600,
+            "tenant_one_click_login_url" => $subscription_details_url,
+            // Kept so custom templates that still use it don't show a raw placeholder.
+            "tenant_one_click_login_url_expires_after" => '',
             "storefront_name" => get_bloginfo('name'), 
             "storefront_url" => get_site_url(),
-            "storefront_subscription_details_url" => apply_filters('wpcs_subscription_details_url', get_site_url(), $subscription_id),
+            "storefront_subscription_details_url" => $subscription_details_url,
         ], $subscription_id, $recipient);
     }
 

@@ -7,10 +7,22 @@
       "WaaSClient\\": "src/"
     }
   },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
   "authors": [
     {
       "name": "WPCS.io",
       "email": "support@wpcs.io"
     }
-  ]
+  ],
+  "require-dev": {
+    "phpunit/phpunit": "^9.6",
+    "brain/monkey": "^2.6"
+  },
+  "scripts": {
+    "test": "phpunit"
+  }
 }

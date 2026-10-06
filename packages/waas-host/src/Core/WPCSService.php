@@ -142,7 +142,7 @@ class WPCSService
 
     public function delete_tenant($args)
     {
-        return $this->httpService->delete('/v1/tenants?tenantId=' . $args['external_id']);
+        return $this->httpService->delete('/v1/tenants?externalId=' . $args['external_id']);
     }
 
     public function add_tenant_domain($args)
