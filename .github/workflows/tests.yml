@@ -27,5 +27,28 @@ jobs:
           tools: composer:v2
       - name: Composer install
         run: composer install --no-interaction --no-progress
-      - name: Run tests
-        run: composer test
+      - name: Run unit tests
+        run: composer test -- --exclude-group mock
+
+  contract:
+    # Runs the plugin's real API client against the public Postman mock. It depends on an outside service,
+    # so it reports but doesn't block a pull request.
+    name: waas-host contract tests (Postman mock)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: packages/waas-host
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        run: composer install --no-interaction --no-progress
+      - name: Run contract tests
+        run: composer test -- --group mock

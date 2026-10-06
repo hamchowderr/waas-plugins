@@ -73,7 +73,7 @@ composer test
 
 `waas-host` also has contract tests (`tests/Contract`, group `mock`) that run the plugin's real API client against the provisioning API: by default the public Postman mock, or the server in `WAAS_TEST_API_BASE_URL`, such as the local API. They need network access; run `vendor/bin/phpunit --exclude-group mock` to skip them.
 
-Unit tests live in each package's `tests/Unit`. The `Tests` GitHub Actions workflow runs both suites on every pull request and on pushes to `main`. Release builds strip `tests/` and `phpunit.xml.dist`.
+Unit tests live in each package's `tests/Unit`. The `Tests` GitHub Actions workflow runs both packages' unit tests on every pull request and on pushes to `main`; the contract tests run there too, in a separate job that reports but doesn't block, since they depend on the public mock. Release builds strip `tests/` and `phpunit.xml.dist`.
 
 ## Building
 

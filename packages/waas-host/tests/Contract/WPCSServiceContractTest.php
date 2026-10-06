@@ -73,8 +73,9 @@ class WPCSServiceContractTest extends TestCase
             CURLOPT_HTTPHEADER => $header_lines,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => false,
-            // WordPress defaults to 5 s; the plugin passes 20 s for writes.
-            CURLOPT_TIMEOUT => $args['timeout'] ?? 5,
+            // These tests check request and response shapes, not timeouts: give the public mock room for a
+            // cold start instead of WordPress's 5 s default (the plugin passes 20 s for writes).
+            CURLOPT_TIMEOUT => max($args['timeout'] ?? 5, 30),
         ]);
         if (isset($args['body'])) {
             curl_setopt($curl, CURLOPT_POSTFIELDS, $args['body']);
