@@ -42,6 +42,17 @@ bd ready
 - Run `docker-compose up`
 - Run the following command to sync files between src and dist
 
+## Storefront secrets
+
+Each store's one-click-login private key is stored encrypted on its subscription. The encryption key comes from `wp-config.php` on the storefront:
+
+```php
+// A long random string, e.g. the output of: openssl rand -base64 48
+define('WAAS_HOST_KEY_ENCRYPTION_KEY', '...');
+```
+
+Without the constant, WordPress's auth salt is used instead. Either way, keep it stable: changing it makes the stored keys unreadable and one-click login stops working for existing stores. Keys saved by older versions in plain text are encrypted the first time they're used.
+
 ## Tests
 
 `waas-host` has PHPUnit unit tests that run without WordPress: [Brain Monkey](https://github.com/Brain-WP/BrainMonkey) stubs the WordPress functions and the API client is mocked. They need PHP 8.1 or newer.
