@@ -24,6 +24,8 @@ bd ready                                                        # what can be wo
 bd export -o .beads/issues.jsonl                                # before committing tracker changes
 ```
 
+`bd init` adds this repo as a Dolt remote and commits that change; drop that commit. Beads only pushes to the remote on `bd dolt push` or `bd sync`, so don't run those.
+
 ## Local Development
 
 ### Required tools
