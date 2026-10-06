@@ -5,6 +5,7 @@ cp -R packages/waas-host build/waas-host
 cp -R packages/waas-client build/waas-client
 
 rm -rf build/waas-host/vendor
+rm -rf build/waas-host/tests build/waas-host/phpunit.xml.dist
 rm -rf build/waas-client/vendor
 rm -rf build/waas-client/data
 
