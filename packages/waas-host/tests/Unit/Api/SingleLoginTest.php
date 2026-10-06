@@ -2,10 +2,11 @@
 
 namespace Tests\Unit\Api;
 
-use Brain\Monkey\Filters;
 use Brain\Monkey\Functions;
+use Tests\FakeCommerceAdapter;
 use Tests\Unit\TestCase;
 use WaaSHost\Api\SingleLogin;
+use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\EncryptionService;
 use WaaSHost\Core\PrivateKeyStore;
 use WaaSHost\Core\WPCSTenant;
@@ -13,7 +14,7 @@ use WaaSHost\Core\WPCSTenant;
 class SingleLoginTest extends TestCase
 {
     private static array $keys;
-    private array $meta = [];
+    private FakeCommerceAdapter $cart;
 
     public static function setUpBeforeClass(): void
     {
@@ -27,16 +28,17 @@ class SingleLoginTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->meta = [];
         Functions\when('wp_salt')->justReturn('auth-salt');
-        Functions\when('get_post_meta')->alias(fn ($id, $key) => $this->meta[$id][$key] ?? '');
-        Functions\when('update_post_meta')->alias(function ($id, $key, $value) {
-            $this->meta[$id][$key] = $value;
-            return true;
-        });
-        Functions\when('sanitize_title_with_dashes')->returnArg();
+        Functions\when('sanitize_title_with_dashes')->alias(fn ($value) => trim(preg_replace('/[^a-z0-9]+/', '-', strtolower((string) $value)), '-'));
         Functions\when('remove_accents')->returnArg();
-        Filters\expectApplied('wpcs_get_customer_username_by_subscription_id')->zeroOrMoreTimes()->andReturn('owner');
+        Commerce::reset();
+        Commerce::register($this->cart = new FakeCommerceAdapter());
+    }
+
+    protected function tearDown(): void
+    {
+        Commerce::reset();
+        parent::tearDown();
     }
 
     public function test_login_data_has_single_use_id_audience_and_issue_time(): void
@@ -71,7 +73,7 @@ class SingleLoginTest extends TestCase
 
     public function test_login_link_carries_a_token_the_store_can_verify(): void
     {
-        $this->meta[42][WPCSTenant::WPCS_DOMAIN_NAME_META] = 'shop.example.com';
+        $this->cart->meta[42][WPCSTenant::WPCS_DOMAIN_NAME_META] = 'shop.example.com';
         PrivateKeyStore::save(42, self::$keys['private']);
 
         $link = SingleLogin::get_login_link(42, SingleLogin::PORTAL_TOKEN_LIFETIME);
@@ -82,14 +84,14 @@ class SingleLoginTest extends TestCase
         $token = base64_decode(urldecode(substr($link, strlen($prefix))));
         $this->assertTrue(openssl_public_decrypt($token, $json, self::$keys['public']));
         $data = json_decode($json, true);
-        $this->assertSame('owner', $data['username']);
+        $this->assertSame('jordan_reyes', $data['username']);
         $this->assertSame('shop.example.com', $data['aud']);
         $this->assertSame(SingleLogin::PORTAL_TOKEN_LIFETIME, $data['exp'] - $data['iat']);
     }
 
     public function test_login_link_falls_back_to_the_base_domain(): void
     {
-        $this->meta[42][WPCSTenant::WPCS_BASE_DOMAIN_NAME_META] = 'tenant-1.platform.test';
+        $this->cart->meta[42][WPCSTenant::WPCS_BASE_DOMAIN_NAME_META] = 'tenant-1.platform.test';
         PrivateKeyStore::save(42, self::$keys['private']);
 
         $this->assertStringStartsWith('https://tenant-1.platform.test/', SingleLogin::get_login_link(42, 300));
@@ -97,7 +99,7 @@ class SingleLoginTest extends TestCase
 
     public function test_no_link_without_a_readable_private_key(): void
     {
-        $this->meta[42][WPCSTenant::WPCS_DOMAIN_NAME_META] = 'shop.example.com';
+        $this->cart->meta[42][WPCSTenant::WPCS_DOMAIN_NAME_META] = 'shop.example.com';
 
         $this->assertSame('', SingleLogin::get_login_link(42, 300));
 

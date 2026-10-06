@@ -2,6 +2,7 @@
 
 namespace WaaSHost\Features;
 
+use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\WPCSService;
 use WaaSHost\Core\WPCSTenant;
 
@@ -51,20 +52,19 @@ class WPCSTenantStatusService
 
     public function poll_tenant_status()
     {
-        global $wpdb;
+        $commerce = Commerce::adapter();
+        if ($commerce === null) {
+            return;
+        }
 
-        $tbl = $wpdb->prefix . 'postmeta';
-        $results = $wpdb->get_results("SELECT post_id as subscription_id, meta_value as current_status FROM $tbl m WHERE m.meta_key ='" . WPCSTenant::WPCS_TENANT_STATE . "' AND m.meta_value NOT IN (\"".WPCSTenant::READY."\",\"".WPCSTenant::DELETED."\")");
+        $results = $commerce->find_subscriptions_by_meta(WPCSTenant::WPCS_TENANT_STATE, [WPCSTenant::READY, WPCSTenant::DELETED]);
 
-        foreach ($results as $result) {
+        foreach ($results as $subscription_id => $current_status) {
             try {
-                $subscription_id = $result->subscription_id;
-                $current_status = $result->current_status;
-                
                 $tenant = new WPCSTenant($subscription_id);
 
-                $external_id = get_post_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META, true);
-                $target_domain_name = get_post_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, true);
+                $external_id = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META);
+                $target_domain_name = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META);
 
                 switch ($current_status) {
                     case WPCSTenant::PROVISIONING:

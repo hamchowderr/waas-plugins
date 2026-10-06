@@ -2,6 +2,7 @@
 
 namespace WaaSHost\Api;
 
+use WaaSHost\Commerce\Commerce;
 use WaaSHost\Features\PluginBootstrap;
 use WaaSHost\Core\EncryptionService;
 use WaaSHost\Core\PrivateKeyStore;
@@ -38,12 +39,15 @@ class SingleLogin
             return false;
         }
 
+        $commerce = Commerce::adapter();
+        if ($commerce === null) {
+            return false;
+        }
+
         $current_user_id = $current_user->ID;
         $subscription_id = sanitize_text_field($request->get_param('subscription_id'));
 
-        $order_customer_id = apply_filters('wpcs_get_customer_id_by_subscription_id_for_login_guard', '', $subscription_id);
-
-        return $current_user_id === $order_customer_id;
+        return $current_user_id === $commerce->get_customer_id($subscription_id);
     }
 
     /**
@@ -51,8 +55,9 @@ class SingleLogin
      */
     public static function get_login_link($subscription_id, $expiry_delay_in_seconds)
     {
-        $domain = get_post_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, true);
-        $base_domain = get_post_meta($subscription_id, WPCSTenant::WPCS_BASE_DOMAIN_NAME_META, true);
+        $commerce = Commerce::require_adapter();
+        $domain = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META);
+        $base_domain = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_BASE_DOMAIN_NAME_META);
 
         $domain = $domain ?: $base_domain;
 

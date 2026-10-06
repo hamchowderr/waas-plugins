@@ -3,7 +3,9 @@
 namespace Tests\Unit\Core;
 
 use Brain\Monkey\Functions;
+use Tests\FakeCommerceAdapter;
 use Tests\Unit\TestCase;
+use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\PrivateKeyStore;
 use WaaSHost\Core\WPCSTenant;
 
@@ -11,25 +13,27 @@ class PrivateKeyStoreTest extends TestCase
 {
     private const PEM = "-----BEGIN PRIVATE KEY-----\nMIIBVQIBADANBgkqhkiG9w0BAQEFAASCAT8wggE7AgEAAkEA\n-----END PRIVATE KEY-----\n";
 
-    private array $meta = [];
+    private FakeCommerceAdapter $cart;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->meta = [];
         Functions\when('wp_salt')->justReturn('auth-salt-from-wp-config');
-        Functions\when('get_post_meta')->alias(fn ($id, $key) => $this->meta[$id][$key] ?? '');
-        Functions\when('update_post_meta')->alias(function ($id, $key, $value) {
-            $this->meta[$id][$key] = $value;
-            return true;
-        });
+        Commerce::reset();
+        Commerce::register($this->cart = new FakeCommerceAdapter());
     }
 
-    public function test_saved_keys_are_encrypted_at_rest_and_load_back(): void
+    protected function tearDown(): void
+    {
+        Commerce::reset();
+        parent::tearDown();
+    }
+
+    public function test_saved_keys_are_encrypted_in_the_carts_subscription_meta(): void
     {
         PrivateKeyStore::save(42, self::PEM);
 
-        $stored = $this->meta[42][WPCSTenant::WPCS_TENANT_PRIVATE_KEY_META];
+        $stored = $this->cart->meta[42][WPCSTenant::WPCS_TENANT_PRIVATE_KEY_META];
         $this->assertStringStartsWith(PrivateKeyStore::PREFIX, $stored);
         $this->assertStringNotContainsString('PRIVATE KEY', $stored);
         $this->assertSame(self::PEM, PrivateKeyStore::load(42));
@@ -42,10 +46,10 @@ class PrivateKeyStoreTest extends TestCase
 
     public function test_legacy_plaintext_key_is_returned_and_migrated(): void
     {
-        $this->meta[42][WPCSTenant::WPCS_TENANT_PRIVATE_KEY_META] = self::PEM;
+        $this->cart->meta[42][WPCSTenant::WPCS_TENANT_PRIVATE_KEY_META] = self::PEM;
 
         $this->assertSame(self::PEM, PrivateKeyStore::load(42));
-        $this->assertTrue(PrivateKeyStore::is_sealed($this->meta[42][WPCSTenant::WPCS_TENANT_PRIVATE_KEY_META]));
+        $this->assertTrue(PrivateKeyStore::is_sealed($this->cart->meta[42][WPCSTenant::WPCS_TENANT_PRIVATE_KEY_META]));
         $this->assertSame(self::PEM, PrivateKeyStore::load(42));
     }
 

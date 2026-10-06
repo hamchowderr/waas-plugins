@@ -2,11 +2,13 @@
 
 namespace WaaSHost\Features;
 
+use WaaSHost\Commerce\Commerce;
+
 class SingleLoginService
 {
     public static function get_formatted_username($subscription_id)
     {
-        $username = apply_filters('wpcs_get_customer_username_by_subscription_id', null, $subscription_id);
+        $username = Commerce::require_adapter()->get_customer_name($subscription_id);
         return str_replace('-', '_', sanitize_title_with_dashes(remove_accents($username)));
     }
 

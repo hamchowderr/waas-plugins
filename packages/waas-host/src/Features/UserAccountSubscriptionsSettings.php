@@ -3,6 +3,7 @@
 namespace WaaSHost\Features;
 
 use Exception;
+use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\WPCSService;
 use WaaSHost\Core\WPCSTenant;
 
@@ -92,7 +93,8 @@ class UserAccountSubscriptionsSettings
             return;
         }
 
-        $owner_id = (int) apply_filters('wpcs_get_customer_id_by_subscription_id_for_login_guard', 0, $subscription_id);
+        $commerce = Commerce::adapter();
+        $owner_id = $commerce === null ? 0 : $commerce->get_customer_id($subscription_id);
         if ($owner_id === 0 || $owner_id !== get_current_user_id()) {
             return;
         }

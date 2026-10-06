@@ -2,8 +2,11 @@
 
 namespace WaaSHost\Core;
 
+use WaaSHost\Commerce\Commerce;
+
 /**
- * Stores each tenant's one-click-login private key encrypted at rest (libsodium secretbox).
+ * Stores each tenant's one-click-login private key encrypted at rest (libsodium secretbox), in the active cart's
+ * subscription meta.
  *
  * The encryption key comes from wp-config: the WAAS_HOST_KEY_ENCRYPTION_KEY constant if defined, otherwise
  * WordPress's auth salt. Either way a database dump alone no longer yields working login keys. Rotating that
@@ -18,7 +21,7 @@ class PrivateKeyStore
 
     public static function save($subscription_id, string $private_key): void
     {
-        update_post_meta($subscription_id, WPCSTenant::WPCS_TENANT_PRIVATE_KEY_META, self::seal($private_key));
+        Commerce::require_adapter()->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_PRIVATE_KEY_META, self::seal($private_key));
     }
 
     /**
@@ -26,7 +29,7 @@ class PrivateKeyStore
      */
     public static function load($subscription_id): string
     {
-        $stored = (string) get_post_meta($subscription_id, WPCSTenant::WPCS_TENANT_PRIVATE_KEY_META, true);
+        $stored = (string) Commerce::require_adapter()->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_PRIVATE_KEY_META);
         if ($stored === '') {
             return '';
         }

@@ -2,10 +2,11 @@
 
 namespace Tests\Unit\Features;
 
-use Brain\Monkey\Filters;
 use Brain\Monkey\Functions;
 use Mockery;
+use Tests\FakeCommerceAdapter;
 use Tests\Unit\TestCase;
+use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\WPCSService;
 use WaaSHost\Core\WPCSTenant;
 use WaaSHost\Features\UserAccountSubscriptionsSettings;
@@ -36,14 +37,16 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
                 WPCSTenant::WPCS_DOMAIN_NAME_META => 'old.example.com',
             ][$key] ?? '';
         });
-        Filters\expectApplied('wpcs_get_customer_id_by_subscription_id_for_login_guard')
-            ->zeroOrMoreTimes()
-            ->andReturn(self::OWNER_ID);
+        Commerce::reset();
+        $cart = new FakeCommerceAdapter();
+        $cart->customer_id = self::OWNER_ID;
+        Commerce::register($cart);
     }
 
     protected function tearDown(): void
     {
         $_POST = [];
+        Commerce::reset();
         parent::tearDown();
     }
 
@@ -83,6 +86,16 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
 
         $this->wpcs->shouldNotReceive('add_tenant_domain');
         Functions\expect('update_post_meta')->never();
+
+        $this->settings->handle_update_subscription_domain(self::SUBSCRIPTION_ID);
+    }
+
+    public function test_no_cart_means_no_owner_and_no_change(): void
+    {
+        Commerce::reset();
+        $_POST = ['domain_name' => 'shop.example.com', 'wpcs_domain_nonce' => 'good'];
+
+        $this->wpcs->shouldNotReceive('add_tenant_domain');
 
         $this->settings->handle_update_subscription_domain(self::SUBSCRIPTION_ID);
     }
