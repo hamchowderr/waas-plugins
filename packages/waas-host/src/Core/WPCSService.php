@@ -26,7 +26,7 @@ class WPCSService
         }
 
         // Don't assume that if somebody uses the API constants, they are correct.
-        if (defined('WPCS_API_KEY') && defined('WPCS_API_SECRET') && defined('WPCS_API_REGION'))
+        if (defined('WPCS_API_KEY') && defined('WPCS_API_SECRET') && (defined('WPCS_API_REGION') || defined('WPCS_API_BASE_URL')))
         {
             try {
                 $can_reach = $this->test_reachability();

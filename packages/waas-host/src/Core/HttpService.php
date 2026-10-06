@@ -11,7 +11,7 @@ class HttpService
 
     public function __construct(ConfigService $config_service)
     {
-        $this->base_uri = 'https://api.' . $config_service->get_api_region() . '.wpcs.io';
+        $this->base_uri = (string) $config_service->get_api_base_url();
         $this->auth_keys = $config_service->get_api_key() . ":" . $config_service->get_api_secret();
     }
 

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true">
+    <testsuites>
+        <testsuite name="waas-host">
+            <directory>tests</directory>
+        </testsuite>
+    </testsuites>
+    <php>
+        <!-- Contract tests (group "mock") call this server. Override to run them against the local API. -->
+        <env name="WAAS_TEST_API_BASE_URL" value="https://2b5454f2-760b-4b86-8589-344ffae396d4.mock.pstmn.io"/>
+    </php>
+</phpunit>

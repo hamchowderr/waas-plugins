@@ -169,3 +169,4 @@ wp-config.php
 
 # End of https://www.toptal.com/developers/gitignore/api/phpstorm,wordpress
 /vendor/
+.phpunit.result.cache
