@@ -3,6 +3,7 @@
 use WaaSHost\Api\RolesController;
 use WaaSHost\Api\SingleLogin;
 use WaaSHost\Commerce\Commerce;
+use WaaSHost\Commerce\FluentCart\FluentCartAdapter;
 use WaaSHost\Commerce\WooCommerce\WooCommerceAdapter;
 use WaaSHost\Core\ConfigService;
 use WaaSHost\Core\HttpService;
@@ -24,7 +25,7 @@ require_once 'vendor/autoload.php';
 /*
 Plugin Name: WaaS Host
 Plugin URI: https://github.com/Daxez/waas-wpcs
-Description: This plugin is used to create tenants on WPCS.io with support of WordPress, WooCommerce, WooCommerce Subscriptions and Self-service Dashboard for WooCommerce Subscriptions.
+Description: This plugin is used to create tenants on WPCS.io with support of WordPress, FluentCart, WooCommerce, WooCommerce Subscriptions and Self-service Dashboard for WooCommerce Subscriptions.
 Author: WPCS
 Version: 2.2.7
 Author URI: https://wpcs.io
@@ -50,7 +51,8 @@ SingleLogin::init();
 new TenantsSubscriptionManager($wpcsService);
 new TenantsAddOnSubscriptionManager($wpcsService);
 
-// Cart: the first active one registered here (WooCommerce today; FluentCart next)
+// Cart: the first active one registered here wins; the wpcs_commerce_adapter filter can override
+Commerce::register(new FluentCartAdapter());
 Commerce::register(new WooCommerceAdapter());
 Commerce::boot($wpcsService);
 

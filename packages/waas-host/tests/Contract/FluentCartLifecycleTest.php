@@ -1,0 +1,134 @@
+<?php
+
+namespace Tests\Contract;
+
+use Brain\Monkey\Actions;
+use Brain\Monkey\Functions;
+use Mockery;
+use Tests\Unit\TestCase;
+use WaaSHost\Commerce\Commerce;
+use WaaSHost\Commerce\FluentCart\FluentCartAdapter;
+use WaaSHost\Commerce\FluentCart\FluentCartStore;
+use WaaSHost\Commerce\FluentCart\WaasProvisioningIntegration;
+use WaaSHost\Core\ConfigService;
+use WaaSHost\Core\HttpService;
+use WaaSHost\Core\PrivateKeyStore;
+use WaaSHost\Core\WPCSService;
+use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Features\TenantsSubscriptionManager;
+
+/**
+ * A FluentCart subscription from feed run to store creation and removal, against the
+ * provisioning API (see MockApi). FluentCart's tables are an in-memory store mock.
+ *
+ * @group mock
+ */
+class FluentCartLifecycleTest extends TestCase
+{
+    use MockApi;
+
+    private const SUBSCRIPTION_ID = 900;
+
+    /** @var array<int, array<string, mixed>> fct_subscription_meta */
+    private array $meta = [];
+    private $order;
+    private WaasProvisioningIntegration $integration;
+    private TenantsSubscriptionManager $manager;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Commerce::reset();
+        $this->use_mock_api([
+            'wpcs_host_settings_root_domain' => 'stores.waas.example',
+            'wpcs_host_settings_default_user_role' => 'administrator',
+        ]);
+        Functions\stubTranslationFunctions();
+        Functions\when('sanitize_text_field')->alias(fn ($value) => trim(strip_tags((string) $value)));
+        Functions\when('remove_accents')->returnArg();
+        Functions\when('sanitize_title_with_dashes')->alias(fn ($value) => trim(preg_replace('/[^a-z0-9]+/', '-', strtolower((string) $value)), '-'));
+        Functions\when('wp_salt')->justReturn('auth-salt');
+        Functions\when('is_plugin_active')->alias(fn ($plugin) => $plugin === 'fluent-cart/fluent-cart.php');
+
+        $this->order = Mockery::mock();
+        $this->order->id = 500;
+        $this->order->allows('addLog');
+
+        $store = Mockery::mock(FluentCartStore::class);
+        $store->allows('get_subscription_meta')->andReturnUsing(fn ($id, $key) => $this->meta[$id][$key] ?? '');
+        $store->allows('update_subscription_meta')->andReturnUsing(function ($id, $key, $value) {
+            $this->meta[$id][$key] = $value;
+        });
+        $store->allows('get_order_product_ids')->with($this->order)->andReturn([101, 102]);
+        $store->allows('get_plan_feed')->with(101)->andReturn(['enabled' => 'yes', 'role' => 'peptide-store', 'group_name' => 'peptide-starter']);
+        $store->allows('get_plan_feed')->with(102)->andReturnNull();
+        $store->allows('get_order_meta')->with($this->order, WPCSTenant::WPCS_WEBSITE_NAME_META)->andReturn('Apex Research');
+        $store->allows('get_subscription_customer')->andReturn(['user_id' => 7, 'email' => 'owner@apexresearch.example', 'name' => 'Jordan Reyes']);
+
+        Commerce::register(new FluentCartAdapter($store));
+        $service = new WPCSService(new HttpService(new ConfigService()));
+        $this->manager = new TenantsSubscriptionManager($service);
+        $this->integration = new WaasProvisioningIntegration($service, $store);
+
+        // Wire the two actions the integration fires to the shared store-creation code.
+        Actions\expectDone('wpcs_subscription_created')->zeroOrMoreTimes()
+            ->whenHappen(fn ($id, $order) => $this->manager->create_tenant_when_subscription_created($id, $order));
+        Actions\expectDone('wpcs_subscription_expired')->zeroOrMoreTimes()
+            ->whenHappen(fn ($id) => $this->manager->remove_tenant_when_subscription_expired($id));
+    }
+
+    protected function tearDown(): void
+    {
+        Commerce::reset();
+        parent::tearDown();
+    }
+
+    private function run_feed(string $trigger, string $is_revoke = 'no'): void
+    {
+        $this->integration->processAction($this->order, [
+            'trigger' => $trigger,
+            'is_revoke_hook' => $is_revoke,
+            'event_data' => ['subscription' => (object) ['id' => self::SUBSCRIPTION_ID]],
+        ]);
+    }
+
+    public function test_activation_creates_the_store_from_the_product_feed(): void
+    {
+        $this->mock_example('Create tenant: Scheduled (API generated the externalId)');
+
+        $this->run_feed('subscription_activated');
+
+        $sent = json_decode($this->requests[0][3], true);
+        $this->assertSame('Apex Research', $sent['name']);
+        $this->assertSame('jordan_reyes', $sent['wordPressUserName']);
+        $this->assertSame('owner@apexresearch.example', $sent['wordPressUserEmail']);
+        $this->assertSame('apex-research.stores.waas.example', $sent['customDomainName']);
+        $this->assertSame('peptide-starter', $sent['groupName']);
+        $this->assertSame('peptide-store', $sent['phpConstants']['WPCS_TENANT_ROLES']['value']);
+
+        $meta = $this->meta[self::SUBSCRIPTION_ID];
+        $this->assertSame('store-1042', $meta[WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META]);
+        $this->assertSame('apex-research.stores.waas.example', $meta[WPCSTenant::WPCS_DOMAIN_NAME_META]);
+        $this->assertStringContainsString('PRIVATE KEY', PrivateKeyStore::load(self::SUBSCRIPTION_ID));
+    }
+
+    public function test_a_second_activation_does_not_create_another_store(): void
+    {
+        $this->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META] = 'store-1042';
+
+        $this->run_feed('subscription_reactivated');
+
+        $this->assertSame([], $this->requests);
+    }
+
+    public function test_cancel_deletes_the_store_by_external_id(): void
+    {
+        $this->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META] = 'store-1042';
+        $this->mock_example('Delete tenant: Scheduled');
+
+        $this->run_feed('subscription_canceled');
+
+        $this->assertSame('DELETE', $this->requests[0][0]);
+        $this->assertStringEndsWith('/v1/tenants?externalId=store-1042', $this->requests[0][1]);
+    }
+}

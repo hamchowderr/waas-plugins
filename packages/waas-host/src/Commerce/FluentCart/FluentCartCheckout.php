@@ -1,0 +1,116 @@
+<?php
+
+namespace WaaSHost\Commerce\FluentCart;
+
+use WaaSHost\Core\Exceptions\InvalidDomainException;
+use WaaSHost\Core\WPCSService;
+use WaaSHost\Core\WPCSTenant;
+
+/**
+ * The "Website name" field on FluentCart's checkout, shown when the cart holds a website plan.
+ * The name becomes the store's subdomain, so it is checked with the provisioning API first.
+ */
+class FluentCartCheckout
+{
+    public const FIELD = WPCSTenant::WPCS_WEBSITE_NAME_META;
+
+    private WPCSService $wpcs_service;
+    private FluentCartAdapter $adapter;
+    private FluentCartStore $store;
+
+    public function __construct(WPCSService $wpcs_service, FluentCartAdapter $adapter, ?FluentCartStore $store = null)
+    {
+        $this->wpcs_service = $wpcs_service;
+        $this->adapter = $adapter;
+        $this->store = $store ?? new FluentCartStore();
+
+        add_filter('fluent_cart/checkout_renderer/billing_fields', [$this, 'add_field'], 10, 2);
+        add_filter('fluent_cart/checkout/validate_data', [$this, 'validate'], 10, 2);
+        add_action('fluent_cart/checkout/prepare_other_data', [$this, 'save'], 10, 1);
+    }
+
+    public function cart_has_plan($cart): bool
+    {
+        if (!$cart) {
+            return false;
+        }
+
+        foreach ($this->store->get_cart_product_ids($cart) as $product_id) {
+            if ($this->adapter->is_plan_product($product_id)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function add_field($fields, $args)
+    {
+        if (!$this->cart_has_plan($args['cart'] ?? null)) {
+            return $fields;
+        }
+
+        $label = __('Website name', WPCS_WAAS_HOST_TEXTDOMAIN);
+        $fields[self::FIELD] = [
+            'id' => self::FIELD,
+            'name' => self::FIELD,
+            'type' => 'text',
+            'data-type' => 'text',
+            'label' => '',
+            'required' => 'yes',
+            'value' => '',
+            'placeholder' => $label,
+            'aria-label' => $label,
+        ];
+
+        return $fields;
+    }
+
+    public function validate($errors, $args)
+    {
+        if (!$this->cart_has_plan($args['cart'] ?? null)) {
+            return $errors;
+        }
+
+        $website_name = trim(sanitize_text_field((string) ($args['data'][self::FIELD] ?? '')));
+        if ($website_name === '') {
+            $errors[self::FIELD]['required'] = __('Please enter a name for your website.', WPCS_WAAS_HOST_TEXTDOMAIN);
+            return $errors;
+        }
+
+        $root_domain = get_option('wpcs_host_settings_root_domain', '');
+        if ($root_domain === '') {
+            return $errors; // the provisioning API picks a unique domain itself
+        }
+
+        $slug = sanitize_title_with_dashes(remove_accents($website_name));
+        if ($slug === '') {
+            $errors[self::FIELD]['invalid'] = __('Please use letters or numbers in the website name.', WPCS_WAAS_HOST_TEXTDOMAIN);
+            return $errors;
+        }
+
+        try {
+            if (!$this->wpcs_service->domain_available($slug . '.' . $root_domain)) {
+                $errors[self::FIELD]['taken'] = __('Website name is already taken! Please use a different one.', WPCS_WAAS_HOST_TEXTDOMAIN);
+            }
+        } catch (InvalidDomainException $e) {
+            $errors[self::FIELD]['invalid'] = __('The resulting domain is not valid.', WPCS_WAAS_HOST_TEXTDOMAIN);
+        } catch (\Exception $e) {
+            $errors[self::FIELD]['unavailable'] = __('We could not check the website name right now. Please try again in a minute.', WPCS_WAAS_HOST_TEXTDOMAIN);
+        }
+
+        return $errors;
+    }
+
+    /** @param array $data cart, order, request_data, ... */
+    public function save($data)
+    {
+        $order = $data['order'] ?? null;
+        $website_name = trim(sanitize_text_field((string) ($data['request_data'][self::FIELD] ?? '')));
+        if (!$order || $website_name === '' || !$this->cart_has_plan($data['cart'] ?? null)) {
+            return;
+        }
+
+        $order->updateMeta(self::FIELD, $website_name);
+    }
+}

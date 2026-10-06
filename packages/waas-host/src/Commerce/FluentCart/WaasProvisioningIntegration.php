@@ -1,0 +1,158 @@
+<?php
+
+namespace WaaSHost\Commerce\FluentCart;
+
+use FluentCart\App\Modules\Integrations\BaseIntegrationManager;
+use WaaSHost\Api\RolesController;
+use WaaSHost\Core\WPCSService;
+use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Features\PluginBootstrap;
+
+/**
+ * Product integration that makes a FluentCart product a website plan. Its feed stores
+ * the role and snapshot group; its triggers create the store (subscription activated)
+ * and remove it (canceled, end of term, or access revoked). FluentCart runs product
+ * feeds in the background through Action Scheduler, outside the payment request.
+ */
+class WaasProvisioningIntegration extends BaseIntegrationManager
+{
+    public const KEY = 'waas_provisioning';
+
+    /** Triggers that create the store. Creation is idempotent per subscription. */
+    public const CREATE_TRIGGERS = ['subscription_activated', 'subscription_reactivated', 'order_paid_done'];
+
+    /** Triggers that remove the store, besides any revoke hook FluentCart flags. */
+    public const REMOVE_TRIGGERS = ['subscription_canceled', 'subscription_eot', 'subscription_expired_validity'];
+
+    public $scopes = ['product'];
+
+    private WPCSService $wpcs_service;
+    private FluentCartStore $store;
+
+    public function __construct(WPCSService $wpcs_service, FluentCartStore $store)
+    {
+        parent::__construct(__('WaaS Provisioning', WPCS_WAAS_HOST_TEXTDOMAIN), self::KEY, 20);
+
+        $this->wpcs_service = $wpcs_service;
+        $this->store = $store;
+        $this->description = __('Create a website for the customer when they subscribe to this product, and remove it when the subscription ends.', WPCS_WAAS_HOST_TEXTDOMAIN);
+        $this->disableGlobalSettings = true;
+    }
+
+    /** Always on: the feed needs no global settings (the default checks an API key option). */
+    public function isConfigured()
+    {
+        return true;
+    }
+
+    public function getApiSettings()
+    {
+        return ['status' => true, 'apiKey' => ''];
+    }
+
+    public function getIntegrationDefaults($settings)
+    {
+        return [
+            'enabled' => 'yes',
+            'name' => __('Website plan', WPCS_WAAS_HOST_TEXTDOMAIN),
+            'role' => '',
+            'group_name' => '',
+            'event_trigger' => ['subscription_activated', 'subscription_canceled', 'subscription_eot'],
+            'watch_on_access_revoke' => 'yes',
+        ];
+    }
+
+    public function getSettingsFields($settings, $args = [])
+    {
+        $roles = [];
+        foreach ((array) get_option(PluginBootstrap::ROLES_WP_OPTION, []) as $slug => $role) {
+            $roles[(string) $slug] = is_object($role) && isset($role->title) ? $role->title : (string) $slug;
+        }
+
+        $groups = [];
+        try {
+            foreach ($this->wpcs_service->get_available_groupnames() as $group_name) {
+                $groups[(string) $group_name] = (string) $group_name;
+            }
+        } catch (\Exception $e) {
+            // API unreachable: the field stays empty and the store uses the default snapshot.
+        }
+
+        $fields = [
+            [
+                'key' => 'name',
+                'label' => __('Feed Title', WPCS_WAAS_HOST_TEXTDOMAIN),
+                'required' => true,
+                'component' => 'text',
+                'placeholder' => __('Website plan', WPCS_WAAS_HOST_TEXTDOMAIN),
+            ],
+            [
+                'key' => 'role',
+                'label' => __('Role', WPCS_WAAS_HOST_TEXTDOMAIN),
+                'component' => 'select',
+                'is_multiple' => false,
+                'required' => false,
+                'options' => $roles,
+                'inline_tip' => sprintf(
+                    /* translators: %s: link that reloads the roles from the provisioning API */
+                    __('Decides which plugins the website gets. Missing a role? %s', WPCS_WAAS_HOST_TEXTDOMAIN),
+                    '<a href="' . esc_url(RolesController::get_refresh_url()) . '">' . __('Refresh roles', WPCS_WAAS_HOST_TEXTDOMAIN) . '</a>'
+                ),
+            ],
+            [
+                'key' => 'group_name',
+                'label' => __('Snapshot group', WPCS_WAAS_HOST_TEXTDOMAIN),
+                'component' => 'select',
+                'is_multiple' => false,
+                'required' => false,
+                'options' => $groups,
+                'inline_tip' => __('The website starts as a copy of this snapshot group. Leave empty for the default.', WPCS_WAAS_HOST_TEXTDOMAIN),
+            ],
+            [
+                'key' => 'watch_on_access_revoke',
+                'component' => 'yes-no-checkbox',
+                'checkbox_label' => __('Remove the website on refund or when subscription access expires', WPCS_WAAS_HOST_TEXTDOMAIN),
+            ],
+            $this->actionFields(),
+        ];
+
+        return [
+            'fields' => $fields,
+            'button_require_list' => false,
+            'integration_title' => __('WaaS Provisioning', WPCS_WAAS_HOST_TEXTDOMAIN),
+        ];
+    }
+
+    /**
+     * @param \FluentCart\App\Models\Order $order
+     * @param array $eventData the feed run: trigger, is_revoke_hook, feed, event_data
+     */
+    public function processAction($order, $eventData)
+    {
+        $trigger = (string) ($eventData['trigger'] ?? '');
+        $is_revoke = ($eventData['is_revoke_hook'] ?? '') === 'yes';
+
+        $subscription = $eventData['event_data']['subscription'] ?? null;
+        if (!$subscription) {
+            $subscription = $this->store->find_subscription_for_order($order);
+        }
+        if (!$subscription) {
+            return; // one-off purchases don't get a website
+        }
+        $subscription_id = (int) $subscription->id;
+
+        if ($is_revoke || in_array($trigger, self::REMOVE_TRIGGERS, true)) {
+            if (empty($this->store->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META))) {
+                return; // never created
+            }
+            do_action('wpcs_subscription_expired', $subscription_id);
+            $order->addLog(__('Website removed', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s)', $subscription_id, $trigger), 'info', 'WaaS');
+            return;
+        }
+
+        if (in_array($trigger, self::CREATE_TRIGGERS, true)) {
+            do_action('wpcs_subscription_created', $subscription_id, $order);
+            $order->addLog(__('Website requested', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s)', $subscription_id, $trigger), 'info', 'WaaS');
+        }
+    }
+}

@@ -46,6 +46,21 @@ bd ready
 
 `scripts/test-env.sh up` starts a throwaway WordPress (MariaDB + WordPress in Docker) at http://127.0.0.1 with this checkout's Host plugin, FluentCart, WooCommerce and Subscriptions for WooCommerce active. Log in as admin / admin. `scripts/test-env.sh wp ...` runs WP-CLI; `scripts/test-env.sh down` removes it. It works in Claude Code cloud sessions (it starts Docker and routes WordPress's outbound calls through the session proxy).
 
+## Storefront cart
+
+The Host plugin runs on **FluentCart** (1.7 or newer, subscriptions built in) or on **WooCommerce** with WooCommerce Subscriptions or Subscriptions for WooCommerce. When both are active, FluentCart is used; the `wpcs_commerce_adapter` filter can pick another.
+
+On FluentCart:
+
+1. Make a subscription product.
+2. On the product, open **Integrations**, add **WaaS Provisioning**, and choose the role and snapshot group.
+   - The default triggers create the website when the subscription is activated.
+   - They remove it when it's canceled or reaches its end of term, and on refund or expired access.
+3. Checkout asks for a **Website name** whenever the cart holds such a product, and checks that the name is free.
+4. Customers find their websites under **Website** in the customer portal: status, one-click login and their own domain. Each subscription there also links to them.
+
+FluentCart creates the website in the background, through Action Scheduler, so it appears a few minutes after payment.
+
 ## API base URL
 
 The Host plugin talks to the provisioning API at the URL in **Settings → API Base URL**, or the `WPCS_API_BASE_URL` constant in `wp-config.php` (the constant wins). Without either, it falls back to the old WPCS host for the selected region. The `wpcs_settings_api_base_url` filter can change it.
