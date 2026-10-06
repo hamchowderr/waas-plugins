@@ -15,13 +15,14 @@ Two plugins used to create a communication between a host and multiple tenants i
 
 ## Work tracking (beads)
 
-Work is tracked in [beads](https://github.com/steveyegge/beads) (prefix `waas`). Its Dolt remote is this repo's GitHub origin; set `DOLT_REMOTE_INFO_BRANCH` to a blank value before `bd dolt push` so Dolt doesn't push an extra branch.
+Work is tracked in [beads](https://github.com/steveyegge/beads) (prefix `waas`). The issue database syncs through a private DoltHub database, [`chowderr/waas`](https://www.dolthub.com/repositories/chowderr/waas): `bd dolt push` after changes, `bd dolt pull` to get others'. `.beads/issues.jsonl` is a local export (kept fresh by `export.auto`) and is not committed.
 
-`.beads/issues.jsonl` is also committed, because Claude Code cloud sessions can't push Dolt's refs to GitHub (the session proxy only allows branch pushes). Rebuild from it on a fresh clone with no Dolt data:
+On a fresh clone, with DoltHub credentials in `~/.dolt/creds` (`dolt creds import`, or the JWK the cloud environment writes):
 
 ```shell
 npm install -g @beads/bd
-bd init --prefix waas --skip-agents --skip-hooks --from-jsonl
+bd init --prefix waas --skip-agents --skip-hooks --remote chowderr/waas
+bd dolt pull
 bd ready
 ```
 
