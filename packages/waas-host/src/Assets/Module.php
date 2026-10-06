@@ -18,7 +18,8 @@ class Module
 
     public static function enqueue_confirm_cancel_button()
     {
-        if(\is_account_page())
+        // is_account_page() is WooCommerce's; without WooCommerce there is no account page to add the script to.
+        if(function_exists('is_account_page') && \is_account_page())
         {
             $script_name = 'sub-confirm-cancel-button.js';
             $src = plugin_dir_url( __FILE__ ) . "/js/$script_name";

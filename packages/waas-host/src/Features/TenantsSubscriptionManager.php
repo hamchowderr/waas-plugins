@@ -6,7 +6,6 @@ use Exception;
 use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\EncryptionService;
 use WaaSHost\Core\PrivateKeyStore;
-use WaaSHost\Core\WPCSProduct;
 use WaaSHost\Core\WPCSService;
 use WaaSHost\Core\WPCSTenant;
 
@@ -38,29 +37,20 @@ class TenantsSubscriptionManager
 
         $purchase = $commerce->get_plan_purchase($subscription_id, $purchase_context);
 
+        if (empty($purchase->plans)) {
+            return;
+        }
+
         $group_name = "";
         $subscription_roles = [];
-        $has_wpcs_products = false;
+        $product_role = '';
 
-        foreach ($purchase->product_ids as $product_id) {
-
-            $wpcs_product = new WPCSProduct($product_id);
-
-            if (!$wpcs_product->is_wpcs_product()) {
-                continue;
-            }
-
-            $has_wpcs_products = true;
-
-            $product_role = $wpcs_product->get_role();
+        foreach ($purchase->plans as $plan) {
+            $product_role = $plan->role;
             if (!empty($product_role)) {
                 $subscription_roles[] = $product_role;
             }
-            $group_name = empty($group_name) ? $wpcs_product->get_tenant_snapshot_group_name() : $group_name;
-        }
-
-        if (!$has_wpcs_products) {
-            return;
+            $group_name = empty($group_name) ? $plan->group_name : $group_name;
         }
 
         $website_name = sanitize_text_field($purchase->website_name);

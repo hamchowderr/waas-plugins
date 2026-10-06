@@ -35,7 +35,10 @@ class AdminWpcsHome
         $subs_for_wc_active = is_plugin_active('subscriptions-for-woocommerce/subscriptions-for-woocommerce.php');
         $wc_subs_active = is_plugin_active('woocommerce-subscriptions/woocommerce-subscriptions.php');
 
-        $checklist_items['required_plugins_installed']['is_done'] = $woocommerce_active && ($subs_for_wc_active || $wc_subs_active);
+        // FluentCart has subscriptions built in; WooCommerce needs one of the two subscription plugins.
+        $fluentcart_active = defined('FLUENTCART_VERSION');
+
+        $checklist_items['required_plugins_installed']['is_done'] = $fluentcart_active || ($woocommerce_active && ($subs_for_wc_active || $wc_subs_active));
 
         return $checklist_items;
     }
@@ -50,6 +53,11 @@ class AdminWpcsHome
 
     public function check_woo_wpcs_product($checklist_items)
     {
+        // WooCommerce products only; other carts' adapters mark this item done through the same filter.
+        if (!function_exists('wc_get_product')) {
+            return $checklist_items;
+        }
+
         $products = get_posts([
             'post_type' => 'product',
             'meta_query' => [WPCSProduct::get_wpcs_product_meta_query()],
@@ -110,7 +118,7 @@ class AdminWpcsHome
                     "is_done" => false,
                 ],
                 "create_woo_wpcs_product" => [
-                    "label" => __('Create a WooCommerce WPCS product', WPCS_WAAS_HOST_TEXTDOMAIN),
+                    "label" => __('Create a website plan product', WPCS_WAAS_HOST_TEXTDOMAIN),
                     "is_done" => false,
                 ],
                 "setup_tenant_roles" => [

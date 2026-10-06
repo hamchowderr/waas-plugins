@@ -32,8 +32,9 @@ class UserAccountSubscriptionsSettings
         }
 
         $this->handle_update_subscription_domain($subscription_id);
-        $domain_name = get_post_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, true);
-        $base_domain_name = get_post_meta($subscription_id, WPCSTenant::WPCS_BASE_DOMAIN_NAME_META, true);
+        $commerce = Commerce::require_adapter();
+        $domain_name = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META);
+        $base_domain_name = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_BASE_DOMAIN_NAME_META);
 
         $domain_name = esc_attr($domain_name ?: $base_domain_name);
         $nonce_field = wp_nonce_field(self::DOMAIN_NONCE_ACTION . $subscription_id, self::DOMAIN_NONCE_FIELD, true, false);
@@ -105,8 +106,8 @@ class UserAccountSubscriptionsSettings
             return;
         }
 
-        $tenant_external_id = get_post_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META, true);
-        $tenant_current_domain_name = get_post_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, true);
+        $tenant_external_id = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META);
+        $tenant_current_domain_name = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META);
 
         if ($domain === $tenant_current_domain_name) {
             return;
@@ -118,7 +119,7 @@ class UserAccountSubscriptionsSettings
                 'domain_name' => $domain,
             ]);
 
-            update_post_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, $domain);
+            $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, $domain);
 
             if ($tenant_current_domain_name) {
                 wp_schedule_single_event(time() + 300, 'remove_tenant_old_domain', [$tenant_external_id, $tenant_current_domain_name]);

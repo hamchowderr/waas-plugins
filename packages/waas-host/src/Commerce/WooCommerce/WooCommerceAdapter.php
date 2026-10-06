@@ -3,7 +3,9 @@
 namespace WaaSHost\Commerce\WooCommerce;
 
 use WaaSHost\Commerce\CommerceAdapter;
+use WaaSHost\Commerce\PlanProduct;
 use WaaSHost\Commerce\PlanPurchase;
+use WaaSHost\Core\WPCSProduct;
 use WaaSHost\Core\WPCSService;
 use WaaSHost\Core\WPCSTenant;
 use WaaSHost\Features\AddonProductCategory;
@@ -59,13 +61,16 @@ class WooCommerceAdapter implements CommerceAdapter
      */
     public function get_plan_purchase($subscription_id, $purchase_context): PlanPurchase
     {
-        $product_ids = [];
+        $plans = [];
         foreach ($purchase_context->get_items() as $item) {
-            $product_ids[] = $item->get_product_id();
+            $product = new WPCSProduct($item->get_product_id());
+            if ($product->is_wpcs_product()) {
+                $plans[] = new PlanProduct($item->get_product_id(), (string) $product->get_role(), (string) $product->get_tenant_snapshot_group_name());
+            }
         }
 
         return new PlanPurchase(
-            $product_ids,
+            $plans,
             (string) get_post_meta($purchase_context->get_id(), WPCSTenant::WPCS_WEBSITE_NAME_META, true),
             (string) $purchase_context->get_billing_email()
         );
