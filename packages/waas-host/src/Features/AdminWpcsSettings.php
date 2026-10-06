@@ -70,6 +70,9 @@ class AdminWpcsSettings
     public function register_wpcs_admin_settings()
     {
         register_setting('wpcs-admin', 'wpcs_credentials_region_setting');
+        register_setting('wpcs-admin', 'wpcs_credentials_api_base_url_setting', [
+            'sanitize_callback' => 'esc_url_raw'
+        ]);
         register_setting('wpcs-admin', 'wpcs_credentials_api_key_setting');
         register_setting('wpcs-admin', 'wpcs_credentials_api_secret_setting');
         register_setting('wpcs-admin', 'wpcs_host_settings_root_domain');
@@ -115,6 +118,25 @@ class AdminWpcsSettings
                     'eu1' => __('EU1', WPCS_WAAS_HOST_TEXTDOMAIN),
                     'us1' => __('US1', WPCS_WAAS_HOST_TEXTDOMAIN),
                 ],
+            ]
+        );
+
+        add_settings_field(
+            'wpcs_credentials_api_base_url_setting',
+            __('API Base URL', WPCS_WAAS_HOST_TEXTDOMAIN),
+            [$this, 'render_settings_field'],
+            'wpcs-admin',
+            'wpcs_credentials',
+            [
+                "id" => "wpcs_credentials_api_base_url_setting",
+                "disabled" => defined('WPCS_API_BASE_URL'),
+                "hint" => defined('WPCS_API_BASE_URL')
+                    ? __('Defined as constant', WPCS_WAAS_HOST_TEXTDOMAIN)
+                    : __('The provisioning API, for example https://api.example.com. Overrides the region when set.', WPCS_WAAS_HOST_TEXTDOMAIN),
+                "type" => "text",
+                "styles" => [
+                    "width" => "100%",
+                ]
             ]
         );
 

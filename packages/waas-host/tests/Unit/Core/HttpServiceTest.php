@@ -17,7 +17,7 @@ class HttpServiceTest extends TestCase
         parent::setUp();
 
         $config = Mockery::mock(ConfigService::class);
-        $config->allows('get_api_region')->andReturn('eu1');
+        $config->allows('get_api_base_url')->andReturn('https://api.eu1.wpcs.io');
         $config->allows('get_api_key')->andReturn('key');
         $config->allows('get_api_secret')->andReturn('secret');
         $this->http = new HttpService($config);

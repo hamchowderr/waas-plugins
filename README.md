@@ -42,6 +42,14 @@ bd ready
 - Run `docker-compose up`
 - Run the following command to sync files between src and dist
 
+## API base URL
+
+The Host plugin talks to the provisioning API at the URL in **Settings → API Base URL**, or the `WPCS_API_BASE_URL` constant in `wp-config.php` (the constant wins). Without either, it falls back to the old WPCS host for the selected region. The `wpcs_settings_api_base_url` filter can change it.
+
+```php
+define('WPCS_API_BASE_URL', 'https://2b5454f2-760b-4b86-8589-344ffae396d4.mock.pstmn.io'); // Postman mock
+```
+
 ## Storefront secrets
 
 Each store's one-click-login private key is stored encrypted on its subscription. The encryption key comes from `wp-config.php` on the storefront:
@@ -63,7 +71,9 @@ composer install
 composer test
 ```
 
-Tests live in each package's `tests/Unit`. The `Tests` GitHub Actions workflow runs both suites on every pull request and on pushes to `main`. Release builds strip `tests/` and `phpunit.xml.dist`.
+`waas-host` also has contract tests (`tests/Contract`, group `mock`) that run the plugin's real API client against the provisioning API: by default the public Postman mock, or the server in `WAAS_TEST_API_BASE_URL`, such as the local API. They need network access; run `vendor/bin/phpunit --exclude-group mock` to skip them.
+
+Unit tests live in each package's `tests/Unit`. The `Tests` GitHub Actions workflow runs both packages' unit tests on every pull request and on pushes to `main`; the contract tests run there too, in a separate job that reports but doesn't block, since they depend on the public mock. Release builds strip `tests/` and `phpunit.xml.dist`.
 
 ## Building
 
