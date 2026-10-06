@@ -2,6 +2,8 @@
 
 namespace WaaSHost\Core;
 
+use WaaSHost\Commerce\Commerce;
+
 class WPCSTenant
 {
     public const WPCS_WEBSITE_NAME_META = 'WPCS_WEBSITE_NAME_META';
@@ -29,11 +31,11 @@ class WPCSTenant
 
     public function get_status()
     {
-        return get_post_meta($this->post_id, self::WPCS_TENANT_STATE, true);
+        return Commerce::require_adapter()->get_subscription_meta($this->post_id, self::WPCS_TENANT_STATE);
     }
 
     public function update_status($status)
     {
-        return update_post_meta($this->post_id, self::WPCS_TENANT_STATE, $status);
+        Commerce::require_adapter()->update_subscription_meta($this->post_id, self::WPCS_TENANT_STATE, $status);
     }
 }

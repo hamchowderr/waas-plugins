@@ -3,11 +3,11 @@
 namespace WaaSHost\Features;
 
 use Exception;
+use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\EncryptionService;
 use WaaSHost\Core\WPCSProduct;
 use WaaSHost\Core\WPCSService;
 use WaaSHost\Core\WPCSTenant;
-use WC_Order;
 
 class TenantsSubscriptionManager
 {
@@ -22,25 +22,27 @@ class TenantsSubscriptionManager
     }
 
     /**
+     * @param mixed $purchase_context passed by the cart adapter; only the adapter reads it
      * @throws Exception
      */
-    public function create_tenant_when_subscription_created($subscription_id, WC_Order $order)
+    public function create_tenant_when_subscription_created($subscription_id, $purchase_context)
     {
+        $commerce = Commerce::require_adapter();
+
         // abort early if the subscription already has a tenant external ID
-        if(!empty(get_post_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META, true)))
+        if(!empty($commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META)))
         {
             return;
         }
 
-        $order_items = $order->get_items();
+        $purchase = $commerce->get_plan_purchase($subscription_id, $purchase_context);
 
         $group_name = "";
         $subscription_roles = [];
         $has_wpcs_products = false;
 
-        foreach ($order_items as $key => $item) {
+        foreach ($purchase->product_ids as $product_id) {
 
-            $product_id = $item->get_product_id();
             $wpcs_product = new WPCSProduct($product_id);
 
             if (!$wpcs_product->is_wpcs_product()) {
@@ -60,14 +62,14 @@ class TenantsSubscriptionManager
             return;
         }
 
-        $website_name = sanitize_text_field(get_post_meta($order->get_id(), WPCSTenant::WPCS_WEBSITE_NAME_META, true));
+        $website_name = sanitize_text_field($purchase->website_name);
 
         $keys = EncryptionService::generate_key_pair();
 
         $args = [
             'name' => $website_name,
             'wordpress_username' => SingleLoginService::get_formatted_username($subscription_id),
-            'wordpress_email' => $order->get_billing_email(),
+            'wordpress_email' => $purchase->customer_email,
             'wordpress_user_role' => get_option(WPCSTenant::WPCS_DEFAULT_USER_ROLE),
             'group_name' => ($group_name === false || empty($group_name)) ? null : $group_name,
             'php_constants' => [
@@ -90,18 +92,18 @@ class TenantsSubscriptionManager
 
         $domain_name = $new_tenant->customDomain ?? $new_tenant->baseDomain;
 
-        update_post_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META, $new_tenant->externalId);
-        update_post_meta($subscription_id, WPCSTenant::WPCS_TENANT_PRIVATE_KEY_META, $keys['private_key']);
-        update_post_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, $domain_name);
-        update_post_meta($subscription_id, WPCSTenant::WPCS_BASE_DOMAIN_NAME_META, $new_tenant->baseDomain);
-        update_post_meta($subscription_id, WPCSTenant::WPCS_SUBSCRIPTION_USER_ROLES, [$product_role]);
+        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META, $new_tenant->externalId);
+        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_PRIVATE_KEY_META, $keys['private_key']);
+        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, $domain_name);
+        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_BASE_DOMAIN_NAME_META, $new_tenant->baseDomain);
+        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_SUBSCRIPTION_USER_ROLES, [$product_role]);
 
         do_action('wpcs_tenant_linked_to_subscription', $subscription_id);
     }
 
     public function remove_tenant_when_subscription_expired($subscription_id)
     {
-        $tenant_external_id = get_post_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META, true);
+        $tenant_external_id = Commerce::require_adapter()->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META);
         $this->wpcsService->delete_tenant([
             'external_id' => $tenant_external_id
         ]);

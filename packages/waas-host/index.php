@@ -2,25 +2,18 @@
 
 use WaaSHost\Api\RolesController;
 use WaaSHost\Api\SingleLogin;
+use WaaSHost\Commerce\Commerce;
+use WaaSHost\Commerce\WooCommerce\WooCommerceAdapter;
 use WaaSHost\Core\ConfigService;
 use WaaSHost\Core\HttpService;
 use WaaSHost\Core\WPCSService;
-use WaaSHost\Features\PluginBootstrap;
 use WaaSHost\Features\TenantsAddOnSubscriptionManager;
 use WaaSHost\Features\TenantsSubscriptionManager;
-use WaaSHost\Features\UserAccountSubscriptionsSettings;
-use WaaSHost\Features\UserWcTenantsCheckout;
 use WaaSHost\Features\AdminWpcsSettings;
 use WaaSHost\Features\AdminWpcsHome;
 use WaaSHost\Features\AdminNotices;
-use WaaSHost\Features\AddonProductCategory;
 use WaaSHost\Features\Notifications;
-use WaaSHost\Features\WooCommerceCartValidator;
-use WaaSHost\Features\WooCommerceProductData;
 use WaaSHost\Features\WPCSTenantStatusService;
-use WaaSHost\Integrations\SelfServiceDashboard\SelfServiceDashboardIntegration;
-use WaaSHost\Integrations\WoocommerceSubscriptionsIntegration;
-use WaaSHost\Integrations\SubscriptionsForWoocommerceIntegration;
 
 require_once 'vendor/autoload.php';
 
@@ -56,25 +49,18 @@ new RolesController($wpcsService);
 SingleLogin::init();
 new TenantsSubscriptionManager($wpcsService);
 new TenantsAddOnSubscriptionManager($wpcsService);
-new UserAccountSubscriptionsSettings($wpcsService);
-new UserWcTenantsCheckout($wpcsService);
+
+// Cart: the first active one registered here (WooCommerce today; FluentCart next)
+Commerce::register(new WooCommerceAdapter());
+Commerce::boot($wpcsService);
+
 new WPCSTenantStatusService($wpcsService);
 AdminNotices::init();
 new AdminWpcsHome($wpcsConfigService);
 new AdminWpcsSettings($wpcsService, $wpcsConfigService);
-new WooCommerceProductData($wpcsService);
-new WooCommerceCartValidator();
 WaaSHost\Assets\Module::init();
-
-// Integrations
-SelfServiceDashboardIntegration::init();
-SubscriptionsForWoocommerceIntegration::init();
-WoocommerceSubscriptionsIntegration::init();
 
 WaaSHost\Updater\Module::init();
 new WaaSHost\Migrations\Module($wpcsService);
-AddonProductCategory::init();
 Notifications::init();
 
-// Plugin Bootstrap
-new PluginBootstrap();

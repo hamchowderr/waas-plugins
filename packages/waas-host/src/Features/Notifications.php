@@ -3,6 +3,7 @@
 namespace WaaSHost\Features;
 
 use WaaSHost\Api\SingleLogin;
+use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\WPCSTenant;
 
 class Notifications
@@ -19,9 +20,7 @@ class Notifications
             return;
         }
 
-        $order = new \WC_Order($subscription_id);
-
-        $recipient = apply_filters('wpcs_tenant_ready_email_recipient', $order->get_billing_email(), $subscription_id);
+        $recipient = apply_filters('wpcs_tenant_ready_email_recipient', Commerce::require_adapter()->get_customer_email($subscription_id), $subscription_id);
         $subject = self::get_ready_email_subject($subscription_id, $recipient);
         $headers = apply_filters('wpcs_tenant_ready_email_headers', ['Content-Type: text/html; charset=UTF-8'], $subscription_id);
         $body = self::get_ready_email_body($subscription_id, $recipient);
@@ -81,12 +80,12 @@ class Notifications
     {
         $login_expiry_seconds = 172800;
         return apply_filters('wpcs_tenant_email_replaceables', [
-            "tenant_domain" => "https://" . get_post_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, true),
+            "tenant_domain" => "https://" . Commerce::require_adapter()->get_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META),
             "tenant_one_click_login_url" => SingleLogin::get_login_link($subscription_id, $login_expiry_seconds),
             "tenant_one_click_login_url_expires_after" => $login_expiry_seconds / 3600,
             "storefront_name" => get_bloginfo('name'), 
             "storefront_url" => get_site_url(),
-            "storefront_subscription_details_url" => apply_filters('wpcs_subscription_details_url', get_site_url(), $subscription_id),
+            "storefront_subscription_details_url" => Commerce::require_adapter()->get_subscription_url($subscription_id),
         ], $subscription_id, $recipient);
     }
 

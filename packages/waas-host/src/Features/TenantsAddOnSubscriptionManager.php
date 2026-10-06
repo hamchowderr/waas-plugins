@@ -2,6 +2,7 @@
 
 namespace WaaSHost\Features;
 
+use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\WPCSTenant;
 use WaaSHost\Core\WPCSService;
 
@@ -17,11 +18,12 @@ class TenantsAddOnSubscriptionManager
     public function update_tenant_roles($subscription_id, $subscription_roles)
     {
         try {
-            $tenant_external_id = get_post_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META, true);
+            $commerce = Commerce::require_adapter();
+            $tenant_external_id = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META);
             $this->wpcsService->update_tenant($tenant_external_id, [
                 'php_constants' => ['WPCS_TENANT_ROLES' => ['value' => implode(",", $subscription_roles), 'isPrivate' => false]]
             ]);
-            update_post_meta($subscription_id, WPCSTenant::WPCS_SUBSCRIPTION_USER_ROLES, array_unique($subscription_roles));
+            $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_SUBSCRIPTION_USER_ROLES, array_unique($subscription_roles));
         } catch (\Exception $error) {
             error_log('Failed to update roles list for tenant');
             error_log($error);

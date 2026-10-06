@@ -27,6 +27,10 @@ final class WpStub
 {
     public static array $options = [];
     public static array $filters = [];
+    /** Every do_action call: [hook, args]. */
+    public static array $actions = [];
+    /** Product post meta: post id => [key => value]. */
+    public static array $post_meta = [];
     /** Extra headers added to every outgoing request (e.g. x-mock-response-name). */
     public static array $extra_headers = [];
     /** Every outgoing request, for assertions: [method, url, headers, body]. */
@@ -36,9 +40,54 @@ final class WpStub
     {
         self::$options = [];
         self::$filters = [];
+        self::$actions = [];
+        self::$post_meta = [];
         self::$extra_headers = [];
         self::$requests = [];
     }
+}
+
+function add_action($hook, $callback, $priority = 10, $args = 1)
+{
+    WpStub::$filters[$hook][] = $callback;
+}
+
+function add_filter($hook, $callback, $priority = 10, $args = 1)
+{
+    WpStub::$filters[$hook][] = $callback;
+}
+
+function do_action($hook, ...$args)
+{
+    WpStub::$actions[] = [$hook, $args];
+    foreach (WpStub::$filters[$hook] ?? [] as $callback) {
+        $callback(...$args);
+    }
+}
+
+function get_post_meta($post_id, $key, $single = false)
+{
+    return WpStub::$post_meta[$post_id][$key] ?? '';
+}
+
+function wp_next_scheduled($hook)
+{
+    return true;
+}
+
+function sanitize_text_field($value)
+{
+    return trim(strip_tags((string) $value));
+}
+
+function remove_accents($value)
+{
+    return (string) $value;
+}
+
+function sanitize_title_with_dashes($value)
+{
+    return trim(preg_replace('/[^a-z0-9]+/', '-', strtolower((string) $value)), '-');
 }
 
 function get_option($name, $default = false)
@@ -85,6 +134,11 @@ function wp_remote_get($url, $args = [])
     return wp_stub_request($args['method'] ?? 'GET', $url, $args);
 }
 
+function wp_remote_head($url, $args = [])
+{
+    return wp_stub_request('HEAD', $url, $args);
+}
+
 function wp_remote_post($url, $args = [])
 {
     return wp_stub_request($args['method'] ?? 'POST', $url, $args);
@@ -105,6 +159,7 @@ function wp_stub_request($method, $url, $args)
         CURLOPT_HTTPHEADER => $header_lines,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => false,
+        CURLOPT_NOBODY => $method === 'HEAD',
         // WordPress defaults to 5 s; the plugin passes 20 s for writes.
         CURLOPT_TIMEOUT => $args['timeout'] ?? 5,
     ]);
