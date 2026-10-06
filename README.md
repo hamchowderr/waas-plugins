@@ -42,6 +42,18 @@ bd ready
 - Run `docker-compose up`
 - Run the following command to sync files between src and dist
 
+## Tests
+
+`waas-host` has PHPUnit unit tests that run without WordPress: [Brain Monkey](https://github.com/Brain-WP/BrainMonkey) stubs the WordPress functions and the API client is mocked. They need PHP 8.1 or newer.
+
+```shell
+cd packages/waas-host
+composer install
+composer test
+```
+
+Tests live in `packages/waas-host/tests/Unit`. The `Tests` GitHub Actions workflow runs them on every pull request and on pushes to `main`. Release builds strip `tests/` and `phpunit.xml.dist`.
+
 ## Building
 
 Run the following command to build the plugins
