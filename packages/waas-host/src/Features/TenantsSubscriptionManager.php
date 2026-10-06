@@ -4,6 +4,7 @@ namespace WaaSHost\Features;
 
 use Exception;
 use WaaSHost\Core\EncryptionService;
+use WaaSHost\Core\PrivateKeyStore;
 use WaaSHost\Core\WPCSProduct;
 use WaaSHost\Core\WPCSService;
 use WaaSHost\Core\WPCSTenant;
@@ -91,7 +92,7 @@ class TenantsSubscriptionManager
         $domain_name = $new_tenant->customDomain ?? $new_tenant->baseDomain;
 
         update_post_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META, $new_tenant->externalId);
-        update_post_meta($subscription_id, WPCSTenant::WPCS_TENANT_PRIVATE_KEY_META, $keys['private_key']);
+        PrivateKeyStore::save($subscription_id, $keys['private_key']);
         update_post_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, $domain_name);
         update_post_meta($subscription_id, WPCSTenant::WPCS_BASE_DOMAIN_NAME_META, $new_tenant->baseDomain);
         update_post_meta($subscription_id, WPCSTenant::WPCS_SUBSCRIPTION_USER_ROLES, [$product_role]);
