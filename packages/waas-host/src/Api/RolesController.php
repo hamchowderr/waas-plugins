@@ -41,7 +41,7 @@ class RolesController
 
     public function admin_post_update_tenant_roles_list()
     {
-        if (!current_user_can('manage_woocommerce')) {
+        if (!current_user_can('manage_woocommerce') && !current_user_can('manage_options')) {
             wp_die(esc_html__('You are not allowed to refresh roles.'), 403);
         }
 

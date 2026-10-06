@@ -18,6 +18,7 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
 
     private $wpcs;
     private UserAccountSubscriptionsSettings $settings;
+    private FakeCommerceAdapter $cart;
 
     protected function setUp(): void
     {
@@ -31,16 +32,14 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
         Functions\when('wp_verify_nonce')->alias(
             fn ($nonce, $action) => $nonce === 'good' && $action === 'wpcs_update_domain_' . self::SUBSCRIPTION_ID ? 1 : false
         );
-        Functions\when('get_post_meta')->alias(function ($id, $key) {
-            return [
-                WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META => 'ext-123',
-                WPCSTenant::WPCS_DOMAIN_NAME_META => 'old.example.com',
-            ][$key] ?? '';
-        });
         Commerce::reset();
-        $cart = new FakeCommerceAdapter();
-        $cart->customer_id = self::OWNER_ID;
-        Commerce::register($cart);
+        $this->cart = new FakeCommerceAdapter();
+        $this->cart->customer_id = self::OWNER_ID;
+        $this->cart->meta[self::SUBSCRIPTION_ID] = [
+            WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META => 'ext-123',
+            WPCSTenant::WPCS_DOMAIN_NAME_META => 'old.example.com',
+        ];
+        Commerce::register($this->cart);
     }
 
     protected function tearDown(): void
@@ -56,27 +55,27 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
 
         $this->wpcs->expects('add_tenant_domain')
             ->with(['external_id' => 'ext-123', 'domain_name' => 'shop.example.com']);
-        Functions\expect('update_post_meta')
-            ->once()
-            ->with(self::SUBSCRIPTION_ID, WPCSTenant::WPCS_DOMAIN_NAME_META, 'shop.example.com');
         Functions\expect('wp_schedule_single_event')
             ->once()
             ->with(Mockery::type('int'), 'remove_tenant_old_domain', ['ext-123', 'old.example.com']);
 
         $this->settings->handle_update_subscription_domain(self::SUBSCRIPTION_ID);
+
+        $this->assertSame('shop.example.com', $this->cart->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_DOMAIN_NAME_META]);
     }
 
     public function test_missing_or_wrong_nonce_changes_nothing(): void
     {
         // A forged cross-site POST has no valid nonce.
         $this->wpcs->shouldNotReceive('add_tenant_domain');
-        Functions\expect('update_post_meta')->never();
 
         $_POST = ['domain_name' => 'evil.example.com'];
         $this->settings->handle_update_subscription_domain(self::SUBSCRIPTION_ID);
 
         $_POST = ['domain_name' => 'evil.example.com', 'wpcs_domain_nonce' => 'bad'];
         $this->settings->handle_update_subscription_domain(self::SUBSCRIPTION_ID);
+
+        $this->assertDomainUnchanged();
     }
 
     public function test_another_user_cannot_change_the_domain(): void
@@ -85,9 +84,10 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
         $_POST = ['domain_name' => 'evil.example.com', 'wpcs_domain_nonce' => 'good'];
 
         $this->wpcs->shouldNotReceive('add_tenant_domain');
-        Functions\expect('update_post_meta')->never();
 
         $this->settings->handle_update_subscription_domain(self::SUBSCRIPTION_ID);
+
+        $this->assertDomainUnchanged();
     }
 
     public function test_no_cart_means_no_owner_and_no_change(): void
@@ -98,6 +98,8 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
         $this->wpcs->shouldNotReceive('add_tenant_domain');
 
         $this->settings->handle_update_subscription_domain(self::SUBSCRIPTION_ID);
+
+        $this->assertDomainUnchanged();
     }
 
     public function test_attribute_injection_is_rejected_as_an_invalid_domain(): void
@@ -105,9 +107,10 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
         $_POST = ['domain_name' => "x' autofocus onfocus='alert(1)", 'wpcs_domain_nonce' => 'good'];
 
         $this->wpcs->shouldNotReceive('add_tenant_domain');
-        Functions\expect('update_post_meta')->never();
 
         $this->settings->handle_update_subscription_domain(self::SUBSCRIPTION_ID);
+
+        $this->assertDomainUnchanged();
     }
 
     public function test_unchanged_domain_is_a_no_op(): void
@@ -145,7 +148,7 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
 
     public function test_render_escapes_the_stored_domain_and_includes_the_nonce(): void
     {
-        Functions\when('get_post_meta')->justReturn("x' onfocus='alert(1)");
+        $this->cart->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_DOMAIN_NAME_META] = "x' onfocus='alert(1)";
         Functions\when('get_option')->justReturn('eu1');
         Functions\when('esc_attr')->alias(fn ($v) => htmlspecialchars($v, ENT_QUOTES));
         Functions\expect('wp_nonce_field')
@@ -160,5 +163,10 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
         $this->assertStringContainsString('name="wpcs_domain_nonce"', $html);
         $this->assertStringContainsString("value='x&#039; onfocus=&#039;alert(1)'", $html);
         $this->assertStringNotContainsString("onfocus='alert(1)'", $html);
+    }
+
+    private function assertDomainUnchanged(): void
+    {
+        $this->assertSame('old.example.com', $this->cart->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_DOMAIN_NAME_META]);
     }
 }

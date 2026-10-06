@@ -7,6 +7,7 @@ use Brain\Monkey\Functions;
 use Tests\FakeCommerceAdapter;
 use Tests\Unit\TestCase;
 use WaaSHost\Commerce\Commerce;
+use WaaSHost\Commerce\PlanProduct;
 use WaaSHost\Commerce\PlanPurchase;
 use WaaSHost\Core\ConfigService;
 use WaaSHost\Core\HttpService;
@@ -28,7 +29,6 @@ class TenantLifecycleTest extends TestCase
 
     private FakeCommerceAdapter $cart;
     private WPCSService $service;
-    private array $post_meta = [];
 
     protected function setUp(): void
     {
@@ -39,12 +39,6 @@ class TenantLifecycleTest extends TestCase
             'wpcs_host_settings_default_user_role' => 'administrator',
         ]);
 
-        // Two products: the base plan and a product that isn't a plan.
-        $this->post_meta = [
-            101 => ['_is_wpcs_product' => 'yes', 'WPCS_PRODUCT_ROLE_META' => 'peptide-store', 'WPCS_PRODUCT_GROUPNAME_META' => 'peptide-starter'],
-            102 => [],
-        ];
-        Functions\when('get_post_meta')->alias(fn ($id, $key) => $this->post_meta[$id][$key] ?? '');
         Functions\when('sanitize_text_field')->alias(fn ($value) => trim(strip_tags((string) $value)));
         Functions\when('remove_accents')->returnArg();
         Functions\when('sanitize_title_with_dashes')->alias(fn ($value) => trim(preg_replace('/[^a-z0-9]+/', '-', strtolower((string) $value)), '-'));
@@ -64,7 +58,8 @@ class TenantLifecycleTest extends TestCase
 
     private function purchase(): PlanPurchase
     {
-        return new PlanPurchase([101, 102], ' Apex Research ', 'owner@apexresearch.example');
+        // The adapter has already left out the non-plan product on the order.
+        return new PlanPurchase([new PlanProduct(101, 'peptide-store', 'peptide-starter')], ' Apex Research ', 'owner@apexresearch.example');
     }
 
     public function test_creates_the_store_and_saves_it_on_the_subscription(): void
@@ -107,7 +102,7 @@ class TenantLifecycleTest extends TestCase
     {
         $manager = new TenantsSubscriptionManager($this->service);
 
-        $manager->create_tenant_when_subscription_created('sub-1', new PlanPurchase([102], 'Apex Research', 'owner@apexresearch.example'));
+        $manager->create_tenant_when_subscription_created('sub-1', new PlanPurchase([], 'Apex Research', 'owner@apexresearch.example'));
 
         $this->assertSame([], $this->requests);
     }

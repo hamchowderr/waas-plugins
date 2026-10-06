@@ -27,8 +27,10 @@ interface CommerceAdapter
     public function boot(WPCSService $wpcs_service): void;
 
     /**
-     * What a new store needs from the purchase. $purchase_context is whatever the
-     * adapter passed as the second argument of wpcs_subscription_created.
+     * What a new store needs from the purchase: its website-plan products (with the
+     * role and snapshot group each grants, read from wherever this cart keeps product
+     * settings), the website name and the customer's email. $purchase_context is
+     * whatever the adapter passed as the second argument of wpcs_subscription_created.
      */
     public function get_plan_purchase($subscription_id, $purchase_context): PlanPurchase;
 

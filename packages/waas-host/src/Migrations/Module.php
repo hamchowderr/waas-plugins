@@ -37,6 +37,11 @@ class Module
 
     public function migrate_non_wpcs_products()
     {
+        // Only WooCommerce products carry these settings as post meta.
+        if (!function_exists('wc_get_product')) {
+            return;
+        }
+
         $products = get_posts([
             'numberposts' => -1,
             'post_type' => 'product',
