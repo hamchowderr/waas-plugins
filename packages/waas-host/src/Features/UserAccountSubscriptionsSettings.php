@@ -3,12 +3,17 @@
 namespace WaaSHost\Features;
 
 use Exception;
+use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\WPCSService;
 use WaaSHost\Core\WPCSTenant;
 
 class UserAccountSubscriptionsSettings
 {
+    public const DOMAIN_NONCE_FIELD = 'wpcs_domain_nonce';
+    public const DOMAIN_NONCE_ACTION = 'wpcs_update_domain_';
+
     private WPCSService $wpcsService;
+    private string $domain_error = '';
 
     public function __construct(WPCSService $wpcsService)
     {
@@ -30,10 +35,15 @@ class UserAccountSubscriptionsSettings
         $domain_name = get_post_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, true);
         $base_domain_name = get_post_meta($subscription_id, WPCSTenant::WPCS_BASE_DOMAIN_NAME_META, true);
 
-        $domain_name = $domain_name ?: $base_domain_name;
+        $domain_name = esc_attr($domain_name ?: $base_domain_name);
+        $nonce_field = wp_nonce_field(self::DOMAIN_NONCE_ACTION . $subscription_id, self::DOMAIN_NONCE_FIELD, true, false);
 
         echo '<h4>Website Details</h4>';
+        if ($this->domain_error !== '') {
+            echo '<p class="woocommerce-error">' . esc_html($this->domain_error) . '</p>';
+        }
         echo "<form method='post' action=''>
+                $nonce_field
                 <p class='woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide'>
                     <label for='account_email'>Domain Name (optional)</label>
                     <input type='text' placeholder='example.com' class='woocommerce-Input woocommerce-Input--email input-text' name='domain_name' id='domain_name' value='$domain_name'>
@@ -77,12 +87,28 @@ class UserAccountSubscriptionsSettings
             return;
         }
 
-        $domain = sanitize_text_field($_POST['domain_name']);
+        // Only the subscription's owner, from this form (not a forged cross-site POST), may change the domain.
+        $nonce = isset($_POST[self::DOMAIN_NONCE_FIELD]) ? sanitize_text_field(wp_unslash($_POST[self::DOMAIN_NONCE_FIELD])) : '';
+        if (!wp_verify_nonce($nonce, self::DOMAIN_NONCE_ACTION . $subscription_id)) {
+            return;
+        }
+
+        $commerce = Commerce::adapter();
+        $owner_id = $commerce === null ? 0 : $commerce->get_customer_id($subscription_id);
+        if ($owner_id === 0 || $owner_id !== get_current_user_id()) {
+            return;
+        }
+
+        $domain = strtolower(trim(sanitize_text_field(wp_unslash($_POST['domain_name']))));
+        if (!self::is_valid_hostname($domain)) {
+            $this->domain_error = 'Please enter a valid domain name, like example.com.';
+            return;
+        }
 
         $tenant_external_id = get_post_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META, true);
         $tenant_current_domain_name = get_post_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, true);
 
-        if ($_POST['domain_name'] === $tenant_current_domain_name) {
+        if ($domain === $tenant_current_domain_name) {
             return;
         }
 
@@ -99,6 +125,13 @@ class UserAccountSubscriptionsSettings
             }
         } catch (Exception $e) {
         }
+    }
+
+    public static function is_valid_hostname(string $domain): bool
+    {
+        return strlen($domain) <= 253
+            && strpos($domain, '.') !== false
+            && filter_var($domain, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
     }
 
     public function remove_tenant_old_domain($external_id, $old_domain_name)

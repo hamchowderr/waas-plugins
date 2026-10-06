@@ -93,7 +93,7 @@ class WooCommerceProductData
             </div>
             <div>
                 <p>
-                    <a href="<?php echo admin_url('/admin-post.php?action=wpcs_refresh_roles') ?>">
+                    <a href="<?php echo esc_url(\WaaSHost\Api\RolesController::get_refresh_url()) ?>">
                         <?php _e('Refresh Roles', WPCS_WAAS_HOST_TEXTDOMAIN); ?>
                     </a>
                 </p>

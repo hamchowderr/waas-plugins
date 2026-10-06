@@ -72,6 +72,7 @@
 # - github.token    → use GITHUB_TOKEN env var instead
 
 sync:
-    remote: "git+https://github.com/hamchowderr/waas-plugins"
+    remote: chowderr/waas
 export:
     auto: true
+    git-add: false

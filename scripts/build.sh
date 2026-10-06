@@ -5,9 +5,10 @@ cp -R packages/waas-host build/waas-host
 cp -R packages/waas-client build/waas-client
 
 rm -rf build/waas-host/vendor
+rm -rf build/waas-host/tests build/waas-host/phpunit.xml.dist
 rm -rf build/waas-client/vendor
+rm -rf build/waas-client/tests build/waas-client/phpunit.xml.dist
 rm -rf build/waas-client/data
-rm -rf build/waas-host/tests build/waas-host/phpunit.xml.dist build/waas-host/.phpunit.result.cache
 
 (cd build/waas-host && composer install --no-dev)
 (cd build/waas-client && composer install --no-dev)

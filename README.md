@@ -15,13 +15,14 @@ Two plugins used to create a communication between a host and multiple tenants i
 
 ## Work tracking (beads)
 
-Work is tracked in [beads](https://github.com/steveyegge/beads) (prefix `waas`). Its Dolt remote is this repo's GitHub origin; set `DOLT_REMOTE_INFO_BRANCH` to a blank value before `bd dolt push` so Dolt doesn't push an extra branch.
+Work is tracked in [beads](https://github.com/steveyegge/beads) (prefix `waas`). The issue database syncs through a private DoltHub database, [`chowderr/waas`](https://www.dolthub.com/repositories/chowderr/waas): `bd dolt push` after changes, `bd dolt pull` to get others'. `.beads/issues.jsonl` is a local export (kept fresh by `export.auto`) and is not committed.
 
-`.beads/issues.jsonl` is also committed, because Claude Code cloud sessions can't push Dolt's refs to GitHub (the session proxy only allows branch pushes). Rebuild from it on a fresh clone with no Dolt data:
+On a fresh clone, with DoltHub credentials in `~/.dolt/creds` (`dolt creds import`, or the JWK the cloud environment writes):
 
 ```shell
 npm install -g @beads/bd
-bd init --prefix waas --skip-agents --skip-hooks --from-jsonl
+bd init --prefix waas --skip-agents --skip-hooks --remote chowderr/waas
+bd dolt pull
 bd ready
 ```
 
@@ -49,16 +50,30 @@ The Host plugin talks to the provisioning API at the URL in **Settings → API B
 define('WPCS_API_BASE_URL', 'https://2b5454f2-760b-4b86-8589-344ffae396d4.mock.pstmn.io'); // Postman mock
 ```
 
-## Tests
+## Storefront secrets
 
-```shell
-cd packages/waas-host
-composer install
-vendor/bin/phpunit                      # all tests
-vendor/bin/phpunit --exclude-group mock # offline only
+Each store's one-click-login private key is stored encrypted on its subscription. The encryption key comes from `wp-config.php` on the storefront:
+
+```php
+// A long random string, e.g. the output of: openssl rand -base64 48
+define('WAAS_HOST_KEY_ENCRYPTION_KEY', '...');
 ```
 
-Tests in the `mock` group run the plugin's real API client against the provisioning API, by default the public Postman mock. Set `WAAS_TEST_API_BASE_URL` to run them against another server, such as the local API.
+Without the constant, WordPress's auth salt is used instead. Either way, keep it stable: changing it makes the stored keys unreadable and one-click login stops working for existing stores. Keys saved by older versions in plain text are encrypted the first time they're used.
+
+## Tests
+
+Both plugins have PHPUnit unit tests that run without WordPress: [Brain Monkey](https://github.com/Brain-WP/BrainMonkey) stubs the WordPress functions and outside calls are mocked. They need PHP 8.1 or newer.
+
+```shell
+cd packages/waas-host   # or packages/waas-client
+composer install
+composer test
+```
+
+`waas-host` also has contract tests (`tests/Contract`, group `mock`) that run the plugin's real API client against the provisioning API: by default the public Postman mock, or the server in `WAAS_TEST_API_BASE_URL`, such as the local API. They need network access; run `vendor/bin/phpunit --exclude-group mock` to skip them.
+
+Unit tests live in each package's `tests/Unit`. The `Tests` GitHub Actions workflow runs both suites on every pull request and on pushes to `main`. Release builds strip `tests/` and `phpunit.xml.dist`.
 
 ## Building
 

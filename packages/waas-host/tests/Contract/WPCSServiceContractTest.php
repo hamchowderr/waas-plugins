@@ -1,48 +1,40 @@
 <?php
 
-namespace Tests\Core;
+namespace Tests\Contract;
 
-use PHPUnit\Framework\TestCase;
+use Tests\Unit\TestCase;
 use WaaSHost\Core\ConfigService;
 use WaaSHost\Core\Exceptions\InvalidApiKeyException;
 use WaaSHost\Core\Exceptions\InvalidDomainException;
 use WaaSHost\Core\HttpService;
 use WaaSHost\Core\WPCSService;
-use WpStub;
 
 /**
- * Runs the plugin's real API client against the provisioning API (by default
- * the public Postman mock, see phpunit.xml.dist). The mock picks a response by
- * the x-mock-response-name header, named "<request>: <example>".
+ * Runs the plugin's real API client against the provisioning API (see MockApi).
  *
  * @group mock
  */
 class WPCSServiceContractTest extends TestCase
 {
+    use MockApi;
+
     private WPCSService $service;
 
     protected function setUp(): void
     {
-        WpStub::reset();
-        WpStub::$options['wpcs_credentials_api_base_url_setting'] = getenv('WAAS_TEST_API_BASE_URL');
-        WpStub::$options['wpcs_credentials_api_key_setting'] = 'test-key';
-        WpStub::$options['wpcs_credentials_api_secret_setting'] = 'test-secret';
+        parent::setUp();
+        $this->use_mock_api();
         $this->service = new WPCSService(new HttpService(new ConfigService()));
     }
 
-    private function mock_example(string $name): void
-    {
-        WpStub::$extra_headers['x-mock-response-name'] = $name;
-    }
-
-    public function test_connection_test_succeeds()
+    public function test_connection_test_succeeds(): void
     {
         $this->mock_example('List versions: Production v1.0.0 and a release candidate');
 
         $this->assertTrue($this->service->test_reachability());
     }
 
-    public function test_connection_test_reports_bad_credentials_on_403()
+    public function test_connection_test_reports_bad_credentials_on_403(): void
     {
         $this->mock_example('List versions: 403 Invalid API key or secret');
 
@@ -50,7 +42,7 @@ class WPCSServiceContractTest extends TestCase
         $this->service->test_reachability();
     }
 
-    public function test_finds_the_production_version()
+    public function test_finds_the_production_version(): void
     {
         $this->mock_example('List versions: Production v1.0.0 and a release candidate');
 
@@ -59,15 +51,15 @@ class WPCSServiceContractTest extends TestCase
         $this->assertSame('v1-0-0.versions.waas.example', $version->domain);
     }
 
-    public function test_lists_template_groups_from_production_snapshots()
+    public function test_lists_template_groups_from_production_snapshots(): void
     {
         $this->mock_example('List snapshots: Two store templates on production');
 
         $this->assertSame(['peptide-starter', 'peptide-pro'], $this->service->get_available_groupnames());
-        $this->assertStringEndsWith('/v1/snapshots?onlyProductionVersion=true', WpStub::$requests[0][1]);
+        $this->assertStringEndsWith('/v1/snapshots?onlyProductionVersion=true', $this->requests[0][1]);
     }
 
-    public function test_create_tenant_returns_generated_external_id_and_domains()
+    public function test_create_tenant_returns_generated_external_id_and_domains(): void
     {
         $this->mock_example('Create tenant: Scheduled (API generated the externalId)');
 
@@ -86,10 +78,10 @@ class WPCSServiceContractTest extends TestCase
         $this->assertSame('store-1042', $tenant->externalId);
         // TenantsSubscriptionManager waits for customDomain ?? baseDomain.
         $this->assertSame('apex-research.stores.waas.example', $tenant->customDomain ?? $tenant->baseDomain);
-        $this->assertArrayNotHasKey('externalId', json_decode(WpStub::$requests[0][3], true));
+        $this->assertArrayNotHasKey('externalId', json_decode($this->requests[0][3], true));
     }
 
-    public function test_tenant_status_while_provisioning_and_when_ready()
+    public function test_tenant_status_while_provisioning_and_when_ready(): void
     {
         $this->mock_example('List tenants: Still provisioning (statusCode 0)');
         $this->assertSame(0, $this->service->get_tenant_safe('store-1042')->statusCode);
@@ -100,14 +92,14 @@ class WPCSServiceContractTest extends TestCase
         $this->assertSame('apex-research.stores.waas.example', $tenant->domainName);
     }
 
-    public function test_unknown_tenant_is_null()
+    public function test_unknown_tenant_is_null(): void
     {
         $this->mock_example('List tenants: No such tenant (empty list)');
 
         $this->assertNull($this->service->get_tenant_safe('nope'));
     }
 
-    public function test_update_tenant_roles()
+    public function test_update_tenant_roles(): void
     {
         $this->mock_example('Update tenant options and constants: Scheduled (roles updated)');
 
@@ -118,7 +110,7 @@ class WPCSServiceContractTest extends TestCase
         $this->assertSame('store-1042', $result->externalId);
     }
 
-    public function test_domain_availability()
+    public function test_domain_availability(): void
     {
         $this->mock_example('Check domain availability: Available');
         $this->assertTrue($this->service->domain_available('apex-research.stores.waas.example'));
@@ -127,7 +119,7 @@ class WPCSServiceContractTest extends TestCase
         $this->assertFalse($this->service->domain_available('apex-research.stores.waas.example'));
     }
 
-    public function test_invalid_domain_is_reported()
+    public function test_invalid_domain_is_reported(): void
     {
         $this->mock_example('Check domain availability: 400 Invalid domain');
 
@@ -135,7 +127,7 @@ class WPCSServiceContractTest extends TestCase
         $this->service->domain_available('bad_domain!');
     }
 
-    public function test_custom_domain_add_and_old_domain_removal()
+    public function test_custom_domain_add_and_old_domain_removal(): void
     {
         $this->mock_example("Add tenant domain: Scheduled (customer's own domain)");
         $this->service->add_tenant_domain(['external_id' => 'store-1042', 'domain_name' => 'apexresearchlabs.example']);
@@ -143,15 +135,16 @@ class WPCSServiceContractTest extends TestCase
         $this->mock_example('Remove tenant domain: Scheduled (old subdomain removed)');
         $this->service->delete_tenant_domain(['external_id' => 'store-1042', 'old_domain_name' => 'apex-research.stores.waas.example']);
 
-        $this->assertSame(['POST', 'DELETE'], array_column(WpStub::$requests, 0));
+        $this->assertSame(['POST', 'DELETE'], array_column($this->requests, 0));
     }
 
-    public function test_delete_tenant()
+    public function test_delete_tenant_by_external_id(): void
     {
         $this->mock_example('Delete tenant: Scheduled');
 
         $this->service->delete_tenant(['external_id' => 'store-1042']);
 
-        $this->assertSame('DELETE', WpStub::$requests[0][0]);
+        $this->assertSame('DELETE', $this->requests[0][0]);
+        $this->assertStringEndsWith('/v1/tenants?externalId=store-1042', $this->requests[0][1]);
     }
 }

@@ -16,6 +16,7 @@ class FakeCommerceAdapter implements CommerceAdapter
     /** @var array<int|string, array<string, mixed>> subscription id => meta */
     public array $meta = [];
     public bool $booted = false;
+    public int $customer_id = 7;
 
     public function __construct(string $id = 'fake', bool $available = true)
     {
@@ -67,7 +68,7 @@ class FakeCommerceAdapter implements CommerceAdapter
 
     public function get_customer_id($subscription_id): int
     {
-        return 7;
+        return $this->customer_id;
     }
 
     public function get_customer_email($subscription_id): string
