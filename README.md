@@ -44,15 +44,15 @@ bd ready
 
 ## Tests
 
-`waas-host` has PHPUnit unit tests that run without WordPress: [Brain Monkey](https://github.com/Brain-WP/BrainMonkey) stubs the WordPress functions and the API client is mocked. They need PHP 8.1 or newer.
+Both plugins have PHPUnit unit tests that run without WordPress: [Brain Monkey](https://github.com/Brain-WP/BrainMonkey) stubs the WordPress functions and outside calls are mocked. They need PHP 8.1 or newer.
 
 ```shell
-cd packages/waas-host
+cd packages/waas-host   # or packages/waas-client
 composer install
 composer test
 ```
 
-Tests live in `packages/waas-host/tests/Unit`. The `Tests` GitHub Actions workflow runs them on every pull request and on pushes to `main`. Release builds strip `tests/` and `phpunit.xml.dist`.
+Tests live in each package's `tests/Unit`. The `Tests` GitHub Actions workflow runs both suites on every pull request and on pushes to `main`. Release builds strip `tests/` and `phpunit.xml.dist`.
 
 ## Building
 

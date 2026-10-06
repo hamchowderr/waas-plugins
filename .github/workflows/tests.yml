@@ -5,16 +5,17 @@ on:
     branches:
       - main
 jobs:
-  waas-host:
-    name: waas-host unit tests (PHP ${{ matrix.php }})
+  unit:
+    name: ${{ matrix.package }} unit tests (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        package: [waas-host, waas-client]
         php: ["8.1", "8.3"]
     defaults:
       run:
-        working-directory: packages/waas-host
+        working-directory: packages/${{ matrix.package }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
