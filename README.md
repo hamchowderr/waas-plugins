@@ -15,16 +15,15 @@ Two plugins used to create a communication between a host and multiple tenants i
 
 ## Work tracking (beads)
 
-The plan lives in [beads](https://github.com/steveyegge/beads): `.beads/issues.jsonl` is the saved copy, committed with the code. The beads database itself is local and not committed.
+Work is tracked in [beads](https://github.com/steveyegge/beads) (prefix `waas`). Its Dolt remote is this repo's GitHub origin; set `DOLT_REMOTE_INFO_BRANCH` to a blank value before `bd dolt push` so Dolt doesn't push an extra branch.
+
+`.beads/issues.jsonl` is also committed, because Claude Code cloud sessions can't push Dolt's refs to GitHub (the session proxy only allows branch pushes). Rebuild from it on a fresh clone with no Dolt data:
 
 ```shell
 npm install -g @beads/bd
-bd init --prefix waas --skip-agents --skip-hooks --from-jsonl   # fresh clone: rebuild from issues.jsonl
-bd ready                                                        # what can be worked on now
-bd export -o .beads/issues.jsonl                                # before committing tracker changes
+bd init --prefix waas --skip-agents --skip-hooks --from-jsonl
+bd ready
 ```
-
-`bd init` adds this repo as a Dolt remote and commits that change; drop that commit. Beads only pushes to the remote on `bd dolt push` or `bd sync`, so don't run those.
 
 ## Local Development
 
