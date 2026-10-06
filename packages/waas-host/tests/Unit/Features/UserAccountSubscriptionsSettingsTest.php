@@ -149,7 +149,9 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
     public function test_render_escapes_the_stored_domain_and_includes_the_nonce(): void
     {
         $this->cart->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_DOMAIN_NAME_META] = "x' onfocus='alert(1)";
-        Functions\when('get_option')->justReturn('eu1');
+        Functions\when('get_option')->justReturn('');
+        Functions\stubEscapeFunctions();
+        Functions\stubTranslationFunctions();
         Functions\when('esc_attr')->alias(fn ($v) => htmlspecialchars($v, ENT_QUOTES));
         Functions\expect('wp_nonce_field')
             ->once()
@@ -163,6 +165,75 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
         $this->assertStringContainsString('name="wpcs_domain_nonce"', $html);
         $this->assertStringContainsString("value='x&#039; onfocus=&#039;alert(1)'", $html);
         $this->assertStringNotContainsString("onfocus='alert(1)'", $html);
+    }
+
+    private function options(array $options): void
+    {
+        Functions\when('get_option')->alias(fn ($name, $default = false) => $options[$name] ?? $default);
+    }
+
+    private function dns_html(): string
+    {
+        Functions\stubEscapeFunctions();
+        Functions\stubTranslationFunctions();
+        ob_start();
+        $this->settings->render_dns_instructions();
+
+        return ob_get_clean();
+    }
+
+    public function test_dns_instructions_use_the_configured_targets(): void
+    {
+        $this->options([
+            UserAccountSubscriptionsSettings::DNS_A_RECORDS_OPTION => '203.0.113.10, 203.0.113.11',
+            UserAccountSubscriptionsSettings::DNS_CNAME_TARGET_OPTION => 'stores.otaku.example',
+            'wpcs_credentials_region_setting' => 'eu1',
+        ]);
+
+        $this->assertSame(
+            ['a_records' => ['203.0.113.10', '203.0.113.11'], 'cname' => 'stores.otaku.example'],
+            UserAccountSubscriptionsSettings::dns_targets()
+        );
+        $html = $this->dns_html();
+        $this->assertStringContainsString("<pre>203.0.113.10\n203.0.113.11</pre>", $html);
+        $this->assertStringContainsString('<pre>stores.otaku.example</pre>', $html);
+        $this->assertStringNotContainsString('wpcs.io', $html);
+    }
+
+    public function test_only_the_configured_record_type_is_shown(): void
+    {
+        $this->options([UserAccountSubscriptionsSettings::DNS_CNAME_TARGET_OPTION => 'stores.otaku.example']);
+
+        $html = $this->dns_html();
+
+        $this->assertStringContainsString('CNAME', $html);
+        $this->assertStringNotContainsString('A records', $html);
+    }
+
+    public function test_without_settings_wpcs_stores_keep_their_region_values(): void
+    {
+        $this->options(['wpcs_credentials_region_setting' => 'US1']);
+
+        $this->assertSame('public.us1.wpcs.io', UserAccountSubscriptionsSettings::dns_targets()['cname']);
+        $this->assertCount(3, UserAccountSubscriptionsSettings::dns_targets()['a_records']);
+    }
+
+    public function test_without_settings_or_region_customers_are_told_to_contact_support(): void
+    {
+        $this->options([]);
+
+        $html = $this->dns_html();
+
+        $this->assertStringContainsString('contact support', $html);
+        $this->assertStringNotContainsString('<pre>', $html);
+    }
+
+    public function test_ip_list_keeps_valid_unique_addresses(): void
+    {
+        $this->assertSame(
+            ['203.0.113.10', '2001:db8::1', '203.0.113.11'],
+            UserAccountSubscriptionsSettings::parse_ip_list("203.0.113.10,2001:db8::1\n 203.0.113.11 bogus 203.0.113.10 999.1.1.1")
+        );
     }
 
     private function assertDomainUnchanged(): void

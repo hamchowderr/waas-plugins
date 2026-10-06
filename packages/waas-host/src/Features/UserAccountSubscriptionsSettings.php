@@ -11,6 +11,14 @@ class UserAccountSubscriptionsSettings
 {
     public const DOMAIN_NONCE_FIELD = 'wpcs_domain_nonce';
     public const DOMAIN_NONCE_ACTION = 'wpcs_update_domain_';
+    public const DNS_A_RECORDS_OPTION = 'wpcs_host_settings_dns_a_records';
+    public const DNS_CNAME_TARGET_OPTION = 'wpcs_host_settings_dns_cname_target';
+
+    /** What stores hosted on WPCS used, by region; only shown when the DNS settings are empty. */
+    private const LEGACY_WPCS_DNS = [
+        'us1' => ['a_records' => ['54.166.55.112', '54.163.0.37', '174.129.101.20'], 'cname' => 'public.us1.wpcs.io'],
+        'eu1' => ['a_records' => ['54.74.209.56', '54.75.81.37', '54.216.187.86'], 'cname' => 'public.eu1.wpcs.io'],
+    ];
 
     private WPCSService $wpcsService;
     private string $domain_error = '';
@@ -52,33 +60,58 @@ class UserAccountSubscriptionsSettings
 	            <button class='button' type='submit'>Update</button>
 	           </form><br /><br />";
 
-        $api_region = get_option('wpcs_credentials_region_setting', '');
-        echo '<div class="wpcs-ip-instructions">
-              <p>Before verifying a domain, make sure that its DNS contains the following settings.</p>
-              <p>For the domain apex add A records with <b>each of the following IPs</b> as their values:</p>';
+        $this->render_dns_instructions();
+    }
 
-        if(strtolower($api_region) == 'us1'){
-            echo '
-<pre>
-54.166.55.112
-54.163.0.37
-174.129.101.20
-</pre>
-              <p>If you are verifying a subdomain, create a CNAME record with the value:</p>
-              <pre>public.us1.wpcs.io</pre>';
-        } elseif(strtolower($api_region) == 'eu1') {
-            echo '
-<pre>
-54.74.209.56
-54.75.81.37
-54.216.187.86
-</pre>
-              <p>If you are verifying a subdomain, create a CNAME record with the value:</p>
-              <pre>public.eu1.wpcs.io</pre>';
-        } else {
-            echo 'The region is currently not setup correctly.';
+    /**
+     * Where customers point their own domain: A-record IPs for an apex domain, a CNAME target for a subdomain.
+     * Set under Settings → Custom domain DNS. Without them, stores on the old WPCS hosting keep the WPCS
+     * values for their region.
+     *
+     * @return array{a_records: string[], cname: string}
+     */
+    public static function dns_targets(): array
+    {
+        $a_records = self::parse_ip_list((string) get_option(self::DNS_A_RECORDS_OPTION, ''));
+        $cname = trim((string) get_option(self::DNS_CNAME_TARGET_OPTION, ''));
+
+        if (!$a_records && $cname === '') {
+            $legacy = self::LEGACY_WPCS_DNS[strtolower((string) get_option('wpcs_credentials_region_setting', ''))] ?? null;
+            if ($legacy !== null) {
+                return $legacy;
+            }
         }
 
+        return ['a_records' => $a_records, 'cname' => $cname];
+    }
+
+    /** @return string[] the valid IP addresses in a comma, space or newline separated list */
+    public static function parse_ip_list(string $list): array
+    {
+        $ips = preg_split('/[\s,]+/', $list, -1, PREG_SPLIT_NO_EMPTY);
+
+        return array_values(array_unique(array_filter($ips, fn ($ip) => filter_var($ip, FILTER_VALIDATE_IP) !== false)));
+    }
+
+    public function render_dns_instructions(): void
+    {
+        $targets = self::dns_targets();
+
+        echo '<div class="wpcs-ip-instructions">';
+        if (!$targets['a_records'] && $targets['cname'] === '') {
+            echo '<p>' . esc_html__('Custom domains are not set up on this store yet. Please contact support to connect your domain.', WPCS_WAAS_HOST_TEXTDOMAIN) . '</p></div>';
+            return;
+        }
+
+        echo '<p>' . esc_html__('Before verifying a domain, make sure that its DNS contains the following settings.', WPCS_WAAS_HOST_TEXTDOMAIN) . '</p>';
+        if ($targets['a_records']) {
+            echo '<p>' . esc_html__('For the domain apex add A records with each of the following IPs as their values:', WPCS_WAAS_HOST_TEXTDOMAIN) . '</p>';
+            echo '<pre>' . esc_html(implode("\n", $targets['a_records'])) . '</pre>';
+        }
+        if ($targets['cname'] !== '') {
+            echo '<p>' . esc_html__('If you are verifying a subdomain, create a CNAME record with the value:', WPCS_WAAS_HOST_TEXTDOMAIN) . '</p>';
+            echo '<pre>' . esc_html($targets['cname']) . '</pre>';
+        }
         echo '</div>';
     }
 

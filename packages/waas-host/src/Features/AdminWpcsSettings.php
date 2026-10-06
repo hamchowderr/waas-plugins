@@ -76,6 +76,12 @@ class AdminWpcsSettings
         register_setting('wpcs-admin', 'wpcs_credentials_api_key_setting');
         register_setting('wpcs-admin', 'wpcs_credentials_api_secret_setting');
         register_setting('wpcs-admin', 'wpcs_host_settings_root_domain');
+        register_setting('wpcs-admin', UserAccountSubscriptionsSettings::DNS_A_RECORDS_OPTION, [
+            'sanitize_callback' => [$this, 'sanitize_dns_a_records']
+        ]);
+        register_setting('wpcs-admin', UserAccountSubscriptionsSettings::DNS_CNAME_TARGET_OPTION, [
+            'sanitize_callback' => [$this, 'sanitize_dns_cname_target']
+        ]);
         register_setting('wpcs-admin', WPCSTenant::WPCS_DEFAULT_USER_ROLE, [
             'default' => 'administrator',
             'sanitize_callback' => [$this, 'sanitize_user_role']
@@ -184,6 +190,35 @@ class AdminWpcsSettings
             [
                 "id" => "wpcs_host_settings_root_domain",
                 "hint" => __("The root domain your customer's tenant will be created with. If you fill out mywaas.com, an example tenant domain will be customer.mywaas.com.", WPCS_WAAS_HOST_TEXTDOMAIN),
+                "type" => "text"
+            ]
+        );
+
+        add_settings_field(
+            UserAccountSubscriptionsSettings::DNS_A_RECORDS_OPTION,
+            __('Custom domain A records', WPCS_WAAS_HOST_TEXTDOMAIN),
+            [$this, 'render_settings_field'],
+            'wpcs-admin',
+            'wpcs_host_settings',
+            [
+                "id" => UserAccountSubscriptionsSettings::DNS_A_RECORDS_OPTION,
+                "hint" => __("The IPs customers point their own apex domain (example.com) at, separated by commas. Shown on their website page.", WPCS_WAAS_HOST_TEXTDOMAIN),
+                "type" => "text",
+                "styles" => [
+                    "width" => "100%",
+                ]
+            ]
+        );
+
+        add_settings_field(
+            UserAccountSubscriptionsSettings::DNS_CNAME_TARGET_OPTION,
+            __('Custom domain CNAME target', WPCS_WAAS_HOST_TEXTDOMAIN),
+            [$this, 'render_settings_field'],
+            'wpcs-admin',
+            'wpcs_host_settings',
+            [
+                "id" => UserAccountSubscriptionsSettings::DNS_CNAME_TARGET_OPTION,
+                "hint" => __("The hostname customers point a subdomain (shop.example.com) at with a CNAME record.", WPCS_WAAS_HOST_TEXTDOMAIN),
                 "type" => "text"
             ]
         );
@@ -361,6 +396,18 @@ class AdminWpcsSettings
         echo '<div class="notice notice-error is-dismissible">
         <p>Important: your API Key/Secret combination or selected region seem to be incorrect, we could not connect.</p>
         </div>';
+    }
+
+    public function sanitize_dns_a_records($value)
+    {
+        return implode(', ', UserAccountSubscriptionsSettings::parse_ip_list((string) $value));
+    }
+
+    public function sanitize_dns_cname_target($value)
+    {
+        $host = strtolower(trim(sanitize_text_field((string) $value), " \t\n\r\0\x0B."));
+
+        return UserAccountSubscriptionsSettings::is_valid_hostname($host) ? $host : '';
     }
 
     public function sanitize_user_role($value)

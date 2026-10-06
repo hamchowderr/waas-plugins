@@ -61,6 +61,15 @@ On FluentCart:
 
 FluentCart creates the website in the background, through Action Scheduler, so it appears a few minutes after payment.
 
+### Custom domains
+
+Customers can connect their own domain from their website page, which tells them which DNS records to create. Set these under **WPCS.io → Settings**:
+
+- **Custom domain A records:** the IPs an apex domain (`example.com`) points at.
+- **Custom domain CNAME target:** the hostname a subdomain (`shop.example.com`) points at.
+
+While both are empty, a store set to a WPCS region still shows the WPCS values for that region. Without a region either, customers are asked to contact support.
+
 ## API base URL
 
 The Host plugin talks to the provisioning API at the URL in **Settings → API Base URL**, or the `WPCS_API_BASE_URL` constant in `wp-config.php` (the constant wins). Without either, it falls back to the old WPCS host for the selected region. The `wpcs_settings_api_base_url` filter can change it.
