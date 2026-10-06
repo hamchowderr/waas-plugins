@@ -169,6 +169,7 @@ wp-config.php
 
 # End of https://www.toptal.com/developers/gitignore/api/phpstorm,wordpress
 /vendor/
+.test-env
 .phpunit.result.cache
 
 # Beads / Dolt files (added by bd init)

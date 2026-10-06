@@ -42,6 +42,10 @@ bd ready
 - Run `docker-compose up`
 - Run the following command to sync files between src and dist
 
+## Test environment
+
+`scripts/test-env.sh up` starts a throwaway WordPress (MariaDB + WordPress in Docker) at http://127.0.0.1 with this checkout's Host plugin, FluentCart, WooCommerce and Subscriptions for WooCommerce active. Log in as admin / admin. `scripts/test-env.sh wp ...` runs WP-CLI; `scripts/test-env.sh down` removes it. It works in Claude Code cloud sessions (it starts Docker and routes WordPress's outbound calls through the session proxy).
+
 ## API base URL
 
 The Host plugin talks to the provisioning API at the URL in **Settings → API Base URL**, or the `WPCS_API_BASE_URL` constant in `wp-config.php` (the constant wins). Without either, it falls back to the old WPCS host for the selected region. The `wpcs_settings_api_base_url` filter can change it.
