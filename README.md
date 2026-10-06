@@ -13,6 +13,17 @@ Two plugins used to create a communication between a host and multiple tenants i
 - Tenants domains
 - Single-Sign On
 
+## Work tracking (beads)
+
+The plan lives in [beads](https://github.com/steveyegge/beads): `.beads/issues.jsonl` is the saved copy, committed with the code. The beads database itself is local and not committed.
+
+```shell
+npm install -g @beads/bd
+bd init --prefix waas --skip-agents --skip-hooks --from-jsonl   # fresh clone: rebuild from issues.jsonl
+bd ready                                                        # what can be worked on now
+bd export -o .beads/issues.jsonl                                # before committing tracker changes
+```
+
 ## Local Development
 
 ### Required tools
