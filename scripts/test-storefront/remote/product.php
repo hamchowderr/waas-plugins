@@ -25,19 +25,24 @@ if ($existing) {
 }
 
 $roles = array_keys((array) get_option('waas-host-roles-options', []));
+$meta = ProductMeta::where('object_id', $id)->where('object_type', 'product_integration')->where('meta_key', 'waas_provisioning')->first();
+$old = $meta && is_array($meta->meta_value) ? $meta->meta_value : [];
+// waas-host's default triggers; keep a role already chosen in wp-admin.
 $feed = [
-    'enabled' => 'yes', 'name' => 'Website plan', 'role' => (string) ($roles[0] ?? ''), 'group_name' => '',
-    'event_trigger' => ['subscription_activated', 'subscription_canceled', 'subscription_eot'],
+    'enabled' => 'yes', 'name' => 'Website plan', 'role' => (string) ($old['role'] ?? '') ?: (string) ($roles[0] ?? ''),
+    'group_name' => (string) ($old['group_name'] ?? ''),
+    'event_trigger' => \WaaSHost\Commerce\FluentCart\WaasProvisioningIntegration::DEFAULT_TRIGGERS,
     'watch_on_access_revoke' => 'yes',
 ];
 $data = IntegrationHelper::validateAndFormatIntegrationFeedSettings($feed, ['provider' => 'waas_provisioning', 'scope' => 'product', 'product_id' => $id, 'integration_id' => null]);
 if (is_wp_error($data)) { echo 'feed invalid: ' . $data->get_error_message() . ' ' . json_encode($data->get_error_data()) . "\n"; return; }
-$meta = ProductMeta::where('object_id', $id)->where('object_type', 'product_integration')->where('meta_key', 'waas_provisioning')->first();
 if ($meta) { $meta->meta_value = $data; $meta->save(); } else {
     ProductMeta::create(['object_id' => $id, 'object_type' => 'product_integration', 'meta_key' => 'waas_provisioning', 'meta_value' => $data]);
 }
 do_action('fluent_cart/reindex_integration_feeds', []);
+$saved = ProductMeta::where('object_id', $id)->where('object_type', 'product_integration')->where('meta_key', 'waas_provisioning')->first()->meta_value;
 echo 'feed saved, role: ' . ($feed['role'] ?: '(default)') . ', roles available: ' . implode(',', $roles) . "\n";
+echo 'feed triggers: ' . implode(',', (array) ($saved['event_trigger'] ?? [])) . "\n";
 echo 'url: ' . get_permalink($id) . "\n";
 $v = \FluentCart\App\Models\ProductVariation::where('post_id', $id)->first();
 echo 'variation: ' . $v->id . ' ' . $v->payment_type . ' ' . $v->item_price . ' ' . json_encode($v->other_info) . "\n";

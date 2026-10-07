@@ -9,7 +9,9 @@
 
 Talks to the Coolify API at COOLIFY_URL (default https://coolify.otakusolutions.io) with
 COOLIFY_TOKEN, or with none where a proxy injects credentials. `create` reads the provisioning
-API key and secret from WAAS_TEST_KEY and WAAS_TEST_SECRET.
+API key and secret from WAAS_TEST_KEY and WAAS_TEST_SECRET, and the Card gateway's
+Authorize.Net sandbox credentials, when present, from AUTHNET_SANDBOX_LOGIN_ID and
+AUTHNET_SANDBOX_TRANSACTION_KEY.
 """
 import base64
 import json
@@ -143,6 +145,10 @@ def create():
     set_env(uuid, 'WP_ADMIN_PASSWORD', ''.join(secrets.choice(alphabet) for _ in range(32)))
     set_env(uuid, 'WAAS_API_KEY', os.environ['WAAS_TEST_KEY'], locked=True)
     set_env(uuid, 'WAAS_API_SECRET', os.environ['WAAS_TEST_SECRET'], locked=True)
+    # Optional: Authorize.Net sandbox credentials for the Card gateway (the payments step uses them).
+    if os.environ.get('AUTHNET_SANDBOX_LOGIN_ID') and os.environ.get('AUTHNET_SANDBOX_TRANSACTION_KEY'):
+        set_env(uuid, 'AUTHNET_LOGIN_ID', os.environ['AUTHNET_SANDBOX_LOGIN_ID'], locked=True)
+        set_env(uuid, 'AUTHNET_TRANSACTION_KEY', os.environ['AUTHNET_SANDBOX_TRANSACTION_KEY'], locked=True)
     api('POST', f'/services/{uuid}/start')
     wait_healthy(uuid)
     print(f'project {project}, service {uuid}')
@@ -170,6 +176,9 @@ def push():
     data = base64.b64encode(build()).decode()
     chunks = [data[i:i + CHUNK] for i in range(0, len(data), CHUNK)]
     api('PATCH', f'/services/{uuid}', {'docker_compose_raw': compose(True)})
+    if not healthy(uuid, 0.2):
+        api('POST', f'/services/{uuid}/start')
+        wait_healthy(uuid)
     run(uuid, 'rm -rf /opt/wpcli/pkg && mkdir -p /opt/wpcli/pkg')
     for i, chunk in enumerate(chunks):
         print(f'chunk {i + 1}/{len(chunks)}')

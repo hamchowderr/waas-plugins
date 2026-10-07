@@ -10,6 +10,8 @@ services:
       WP_ADMIN_PASSWORD: ${WP_ADMIN_PASSWORD}
       WAAS_API_KEY: ${WAAS_API_KEY}
       WAAS_API_SECRET: ${WAAS_API_SECRET}
+      AUTHNET_LOGIN_ID: ${AUTHNET_LOGIN_ID:-}
+      AUTHNET_TRANSACTION_KEY: ${AUTHNET_TRANSACTION_KEY:-}
     volumes:
     - wp:/var/www/html
     - wpcli:/opt/wpcli
