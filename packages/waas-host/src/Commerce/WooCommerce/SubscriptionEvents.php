@@ -24,6 +24,8 @@ final class SubscriptionEvents
 {
     /** Subscription meta set while a suspension is in effect, so suspend and reactivate fire once each. */
     public const SUSPENDED_META = '_waas_store_suspended';
+    /** Subscription meta set once the order that started it ended it (refunded or cancelled), so that fires once. */
+    public const PARENT_ORDER_ENDED_META = '_waas_parent_order_ended';
 
     /**
      * @param \WC_Order|null $order the order the subscription was bought with; the subscription itself when there is none
@@ -62,6 +64,18 @@ final class SubscriptionEvents
             return;
         }
 
+        do_action('wpcs_subscription_expired', $subscription_id);
+    }
+
+    /** The order that started the subscription was refunded or cancelled. Fires once, whichever comes first. */
+    public static function ended_by_parent_order($subscription_id): void
+    {
+        $commerce = Commerce::require_adapter();
+        if (!self::has_store($subscription_id) || $commerce->get_subscription_meta($subscription_id, self::PARENT_ORDER_ENDED_META) === 'yes') {
+            return;
+        }
+
+        $commerce->update_subscription_meta($subscription_id, self::PARENT_ORDER_ENDED_META, 'yes');
         do_action('wpcs_subscription_expired', $subscription_id);
     }
 

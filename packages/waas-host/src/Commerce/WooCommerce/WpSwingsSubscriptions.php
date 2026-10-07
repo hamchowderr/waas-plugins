@@ -49,6 +49,8 @@ class WpSwingsSubscriptions implements SubscriptionPlugin
         add_action('wps_sfw_expire_subscription_scheduler', [$this, 'on_ended'], 10, 1);
         // WP Swings leaves the subscription active when its order is refunded; WooCommerce Subscriptions cancels it.
         add_action('woocommerce_order_fully_refunded', [$this, 'on_order_refunded'], 10, 1);
+        // Cancelling that order also cancels the subscription, by writing its status meta with no hook of its own.
+        add_action('woocommerce_order_status_cancelled', [$this, 'on_order_cancelled'], 10, 1);
 
         add_action('woocommerce_before_order_object_save', [$this, 'on_before_order_save'], 10, 1);
         add_action('woocommerce_after_order_object_save', [$this, 'on_order_saved'], 10, 1);
@@ -107,6 +109,20 @@ class WpSwingsSubscriptions implements SubscriptionPlugin
     /** The order that started a subscription was fully refunded: the subscription ends, as if it were cancelled. */
     public function on_order_refunded($order_id): void
     {
+        $this->end_with_parent_order($order_id);
+    }
+
+    /**
+     * The order that started a subscription was cancelled (by an admin, or WooCommerce's timeout for unpaid orders):
+     * WP Swings cancels the subscription, and its store, if it has one, ends now.
+     */
+    public function on_order_cancelled($order_id): void
+    {
+        $this->end_with_parent_order($order_id);
+    }
+
+    private function end_with_parent_order($order_id): void
+    {
         $order = wc_get_order($order_id);
         if (!$order instanceof \WC_Order || $order->get_type() === $this->get_order_type()) {
             return;
@@ -116,7 +132,7 @@ class WpSwingsSubscriptions implements SubscriptionPlugin
         $subscription = $subscription_id ? $this->get_subscription($subscription_id) : null;
         $parent = $subscription !== null ? $this->get_parent_order($subscription) : null;
         if ($parent !== null && $parent->get_id() === $order->get_id()) {
-            SubscriptionEvents::ended($subscription_id);
+            SubscriptionEvents::ended_by_parent_order($subscription_id);
         }
     }
 
