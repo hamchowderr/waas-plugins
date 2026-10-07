@@ -182,3 +182,5 @@ wp-config.php
 # beads export: local only, issues sync via the DoltHub remote
 .beads/issues.jsonl
 
+
+__pycache__/

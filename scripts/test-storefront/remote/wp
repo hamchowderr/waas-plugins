@@ -1,0 +1,4 @@
+#!/bin/sh
+# WP-CLI as www-data (uid 33). Scheduled tasks run as root.
+export HOME=/tmp
+exec setpriv --reuid=33 --regid=33 --clear-groups php -d memory_limit=512M /opt/wpcli/wp-cli.phar --path=/var/www/html "$@"
