@@ -8,7 +8,7 @@ A second throwaway storefront, on WooCommerce, for testing the whole lifecycle e
 | wp-admin | https://storefront-woo-test.191.101.15.236.sslip.io/wp-admin, user `admin` (admin@otakusolutions.io) |
 | Admin password | Coolify → Projects → **WaaS Storefront (test)** → production → **storefront-woo-test** → Environment Variables → `WP_ADMIN_PASSWORD` (click the eye to show it) |
 | Provisioning API | https://waas-api.otakusolutions.io, with the test API key (Coolify variables `WAAS_API_KEY` and `WAAS_API_SECRET`, locked) |
-| Test product | **Website plan (test)**, $1.00 a month, `/product/website-plan-test/`, a WP Swings subscription marked as a WaaS product |
+| Test product | **Website plan (test)**, $1.00 a month, `/product/website-plan-test/` (product 11), a WP Swings subscription marked as a WaaS product with the role `store` |
 | Payments | Stripe (WooCommerce Stripe Gateway) in **test mode**, set up by the owner (see [Stripe](#stripe)); and **Pay later (test)**, Woo's Cash on delivery, for tests by hand |
 
 ## How it's built
@@ -17,7 +17,7 @@ One Coolify **Service** from [`scripts/test-storefront/compose-woo.yml`](../scri
 
 Plugins:
 
-- WooCommerce, from wordpress.org. High-Performance Order Storage stays on, the default; waas-host reads and writes orders and subscriptions through the order API only.
+- WooCommerce, from wordpress.org. Installed from WP-CLI, it chose posts storage rather than High-Performance Order Storage (the `pages` step prints which). waas-host reads and writes orders and subscriptions through the order API only, so it works with either.
 - Subscriptions for WooCommerce by WP Swings (free), from wordpress.org. waas-host's WooCommerce adapter uses it when it's active (`WpSwingsSubscriptions`). The `pages` step switches it on (`wps_sfw_enable_plugin`) and lets customers cancel from My Account.
 - WooCommerce Stripe Gateway, from wordpress.org. It's the only gateway WP Swings' free version renews automatically.
 - FluentSMTP, from wordpress.org, installed with no connection (see [Email](test-storefront.md#email); the steps are the same).
@@ -25,6 +25,17 @@ Plugins:
 - **Test storefront shim**: the must-use plugin [`waas-test-storefront-cod-shim.php`](../scripts/test-storefront/remote-woo/waas-test-storefront-cod-shim.php). WP Swings' free version hides every gateway except Stripe when the cart holds a subscription; the shim adds Cash on delivery to its list (filter `wps_sfw_supported_payment_gateway_for_woocommerce`), so the lifecycle can be tested by hand without a card. It is for this storefront only; never install it on a real store.
 
 Everything else follows the FluentCart storefront ([How it's built](test-storefront.md#how-its-built)): commands run as on-demand scheduled tasks and drop to www-data (uid 33); the plugin package arrives in 20 KB chunks through `WAAS_PKG`; WordPress's cron is off (`DISABLE_WP_CRON`) and the every-minute `wp-cron` task runs Action Scheduler (where WP Swings schedules renewals) and WP-cron; secrets are only Coolify variables, all locked except `WP_ADMIN_PASSWORD`. The setup scripts are in [`remote-woo/`](../scripts/test-storefront/remote-woo/), and share `wp` and `check.php` with `remote/`.
+
+## Coolify ids
+
+| | |
+|---|---|
+| Project | `WaaS Storefront (test)`, `mruxjblciig9ofjy5tsfj3s5` (shared with storefront-test) |
+| Environment | `production` |
+| Service | `storefront-woo-test`, `07jytgxfsqeupxdljntktlpo` |
+| Scheduled task | `wp-cron`, every minute |
+
+The script finds the service by name, so the id changes after a rebuild.
 
 ## Rebuild, update, remove
 

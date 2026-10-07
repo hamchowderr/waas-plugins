@@ -37,7 +37,8 @@ case "${1:-}" in
     $WP option update wpcs_credentials_api_secret_setting "$WAAS_API_SECRET" >/dev/null
     echo api key and secret set
     $WP option update wpcs_notification_settings_send_tenant_ready_email on
-    $WP eval-file $X/check.php ;;
+    $WP eval-file $X/check.php
+    $WP eval-file $X/roles.php ;;
   pages)
     $WP eval-file $X/store.php --user=admin
     $WP rewrite flush
