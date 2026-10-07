@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Commerce\FluentCart;
 
+use Brain\Monkey\Filters;
 use Brain\Monkey\Functions;
 use Mockery;
 use Tests\Unit\TestCase;
@@ -197,5 +198,63 @@ class FluentCartPortalTest extends TestCase
         $sections = explode('<section', $html);
         $this->assertStringContainsString('already taken', end($sections), "902's section is the last one");
         $this->assertSame(2, substr_count($html, 'wpcs-choose-website-name"'));
+    }
+    public function test_the_tab_is_called_my_website_and_has_an_icon(): void
+    {
+        $api = Mockery::mock();
+        $api->expects('addCustomerDashboardEndpoint')->with('website', Mockery::on(function ($args) {
+            return $args['title'] === 'My website' && strpos($args['icon_svg'], '<svg') === 0 && is_callable($args['render_callback']);
+        }));
+        Functions\when('fluent_cart_api')->justReturn($api);
+
+        $this->portal->register_endpoint();
+    }
+
+    public function test_the_tab_moves_right_after_dashboard(): void
+    {
+        $items = ['dashboard' => ['label' => 'Dashboard'], 'purchase-history' => [], 'subscriptions' => [], 'website' => ['label' => 'My website'], 'profile' => []];
+
+        $moved = $this->portal->move_menu_item_after_dashboard($items);
+
+        $this->assertSame(['dashboard', 'website', 'purchase-history', 'subscriptions', 'profile'], array_keys($moved));
+        $this->assertSame(['label' => 'My website'], $moved['website']);
+    }
+
+    public function test_the_menu_is_left_alone_without_dashboard_or_the_tab(): void
+    {
+        $this->assertSame(['website' => [], 'profile' => []], $this->portal->move_menu_item_after_dashboard(['website' => [], 'profile' => []]));
+        $this->assertSame(['dashboard' => [], 'profile' => []], $this->portal->move_menu_item_after_dashboard(['dashboard' => [], 'profile' => []]));
+    }
+
+    public function test_a_ready_website_gets_a_notice_with_login_and_manage_links(): void
+    {
+        ob_start();
+        $this->portal->render_ready_notice();
+        $html = ob_get_clean();
+
+        $this->assertSame(1, substr_count($html, 'wpcs-website-ready-notice'), 'only 900 is ready');
+        $this->assertStringContainsString('apex.sites.example', $html);
+        $this->assertStringContainsString('tenant/single_login?subscription_id=900', $html);
+        $this->assertStringContainsString('https://storefront.example/account/website', $html);
+    }
+
+    public function test_no_notice_on_the_website_tab_itself(): void
+    {
+        Filters\expectApplied('fluent_cart/customer_portal/active_tab')->andReturn('website');
+
+        ob_start();
+        $this->portal->render_ready_notice();
+
+        $this->assertSame('', ob_get_clean());
+    }
+
+    public function test_no_notice_for_logged_out_visitors(): void
+    {
+        Functions\when('get_current_user_id')->justReturn(0);
+
+        ob_start();
+        $this->portal->render_ready_notice();
+
+        $this->assertSame('', ob_get_clean());
     }
 }

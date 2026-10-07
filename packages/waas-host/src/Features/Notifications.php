@@ -61,7 +61,7 @@ class Notifications
                 &nbsp;
 
                 <p><a href="{{ tenant_one_click_login_url }}" target="_blank" rel="noopener"><strong>Login now</strong></a></p>
-                <p><small>This takes you to your <a href="{{ storefront_subscription_details_url }}" target="_blank" rel="noopener">subscription details</a> at <a href="{{ storefront_url }}" target="_blank" rel="noopener">{{ storefront_name }}</a>, where the login button signs you in to your website.</small></p>
+                <p><small>This takes you to your website page at <a href="{{ storefront_url }}" target="_blank" rel="noopener">{{ storefront_name }}</a>, where the login button signs you in to your website. Your plan and billing are in your <a href="{{ storefront_subscription_details_url }}" target="_blank" rel="noopener">subscription details</a>.</small></p>
 
                 &nbsp;
 
@@ -74,11 +74,13 @@ class Notifications
     public static function get_replaceables($subscription_id, $recipient)
     {
         // No login token goes into the email: mail scanners prefetch links and mailboxes keep them. The link goes
-        // to the subscription page on the storefront, which mints a short-lived token when the customer clicks login.
+        // to the website page on the storefront, which mints a short-lived token when the customer clicks login.
         $subscription_details_url = Commerce::require_adapter()->get_subscription_url($subscription_id);
+        // The customer's website page where the cart has one (FluentCart's "My website" tab); else the subscription.
+        $website_page_url = (string) apply_filters('wpcs_website_page_url', $subscription_details_url, $subscription_id) ?: $subscription_details_url;
         return apply_filters('wpcs_tenant_email_replaceables', [
             "tenant_domain" => "https://" . Commerce::require_adapter()->get_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META),
-            "tenant_one_click_login_url" => $subscription_details_url,
+            "tenant_one_click_login_url" => $website_page_url,
             // Kept so custom templates that still use it don't show a raw placeholder.
             "tenant_one_click_login_url_expires_after" => '',
             "storefront_name" => get_bloginfo('name'), 

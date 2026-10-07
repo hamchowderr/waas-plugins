@@ -58,7 +58,7 @@ On FluentCart:
    - They remove it when it's canceled or reaches its end of term, on expired access, and when the order that bought the subscription is refunded. Refunding a renewal order leaves the website up while the subscription stays active.
    - Feeds made before reactivation was a default get it added on the first load after the update, unless their triggers were changed by hand.
 3. Checkout asks for a **Website name** whenever the cart holds such a product, and checks that the name is free.
-4. Customers find their websites under **Website** in the customer portal: status, one-click login and their own domain. Each subscription there also links to them.
+4. Customers find their websites under **My website** in the customer portal, right after Dashboard: status, one-click login and their own domain. While a website is ready, the other portal pages show a notice with its login link, and each subscription links to it. The website-ready email links to this page; a customer who is logged out logs in first and lands there.
 
 On WooCommerce:
 
