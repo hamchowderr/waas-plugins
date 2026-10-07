@@ -64,11 +64,13 @@ class TenantLifecycleTest extends TestCase
 
     public function test_creates_the_store_and_saves_it_on_the_subscription(): void
     {
-        $manager = new TenantsSubscriptionManager($this->service);
+        $manager = new TenantsSubscriptionManager($this->service, $jobs = $this->use_store_jobs());
         $this->mock_example('Create tenant: Scheduled (API generated the externalId)');
         Actions\expectDone('wpcs_tenant_linked_to_subscription')->once()->with('sub-1');
 
         $manager->create_tenant_when_subscription_created('sub-1', $this->purchase());
+        $this->assertSame([], $this->requests, 'the cart event only queues the job');
+        $jobs->run('sub-1');
 
         $sent = json_decode($this->requests[0][3], true);
         $this->assertSame('Apex Research', $sent['name']);
@@ -77,6 +79,7 @@ class TenantLifecycleTest extends TestCase
         $this->assertSame('apex-research.stores.waas.example', $sent['customDomainName']);
         $this->assertSame('peptide-starter', $sent['groupName']);
         $this->assertSame('peptide-store', $sent['phpConstants']['WPCS_TENANT_ROLES']['value']);
+        $this->assertMatchesRegularExpression('/^[0-9a-f-]{36}$/', $sent['externalId'], 'chosen up front, so a retry cannot make a second store');
 
         $meta = $this->cart->meta['sub-1'];
         $this->assertSame('store-1042', $meta[WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META]);
@@ -90,19 +93,21 @@ class TenantLifecycleTest extends TestCase
 
     public function test_does_not_create_a_second_store_for_the_same_subscription(): void
     {
-        $manager = new TenantsSubscriptionManager($this->service);
+        $manager = new TenantsSubscriptionManager($this->service, $jobs = $this->use_store_jobs());
         $this->cart->meta['sub-1'][WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META] = 'store-1042';
 
         $manager->create_tenant_when_subscription_created('sub-1', $this->purchase());
+        $jobs->run('sub-1');
 
         $this->assertSame([], $this->requests);
     }
 
     public function test_purchase_without_a_plan_product_creates_nothing(): void
     {
-        $manager = new TenantsSubscriptionManager($this->service);
+        $manager = new TenantsSubscriptionManager($this->service, $jobs = $this->use_store_jobs());
 
         $manager->create_tenant_when_subscription_created('sub-1', new PlanPurchase([], 'Apex Research', 'owner@apexresearch.example'));
+        $jobs->run('sub-1');
 
         $this->assertSame([], $this->requests);
     }
@@ -138,12 +143,13 @@ class TenantLifecycleTest extends TestCase
 
     public function test_deletion_after_the_grace_period_deletes_the_store_by_external_id(): void
     {
-        $manager = new TenantsSubscriptionManager($this->service);
+        $manager = new TenantsSubscriptionManager($this->service, $jobs = $this->use_store_jobs());
         $this->cart->meta['sub-1'][WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META] = 'store-1042';
         $this->cart->meta['sub-1'][WPCSTenant::WPCS_TENANT_STATE] = WPCSTenant::SUSPENDED;
         $this->mock_example('Delete tenant: Scheduled');
 
         $manager->delete_suspended_tenant('sub-1');
+        $jobs->run('sub-1');
 
         $this->assertSame('DELETE', $this->requests[0][0]);
         $this->assertStringEndsWith('/v1/tenants?externalId=store-1042', $this->requests[0][1]);

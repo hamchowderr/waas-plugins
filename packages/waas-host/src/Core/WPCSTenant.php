@@ -18,12 +18,16 @@ class WPCSTenant
     public const WPCS_TENANT_DELETE_AT_META = 'WPCS_TENANT_DELETE_AT_META';
 
     public const WPCS_TENANT_STATE = 'WPCS_TENANT_STATE';
+    /** Asked for; the background job that creates or restores the store has not finished yet. */
+    public const QUEUED = 'Queued';
     public const PROVISIONING = 'Provisioning';
     public const LINKING_DOMAIN = 'Linking Domain';
     public const REQUESTING_SSL = 'Requesting SSL';
     public const READY = 'Ready';
     public const SUSPENDED = 'Suspended';
     public const DELETED = 'Deleted';
+    /** A background job kept failing; an admin has to retry it (see StoreJobs). */
+    public const FAILED = 'Failed';
 
     private $post_id;
 

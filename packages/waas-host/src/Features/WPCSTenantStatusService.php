@@ -57,7 +57,7 @@ class WPCSTenantStatusService
             return;
         }
 
-        $results = $commerce->find_subscriptions_by_meta(WPCSTenant::WPCS_TENANT_STATE, [WPCSTenant::READY, WPCSTenant::SUSPENDED, WPCSTenant::DELETED]);
+        $results = $commerce->find_subscriptions_by_meta(WPCSTenant::WPCS_TENANT_STATE, [WPCSTenant::QUEUED, WPCSTenant::READY, WPCSTenant::SUSPENDED, WPCSTenant::DELETED, WPCSTenant::FAILED]);
 
         foreach ($results as $subscription_id => $current_status) {
             try {

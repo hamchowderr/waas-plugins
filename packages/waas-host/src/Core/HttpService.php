@@ -6,6 +6,9 @@ use Exception;
 
 class HttpService
 {
+    /** Reads also run in customer requests (the checkout's domain check), so they get a short explicit timeout. */
+    private const READ_TIMEOUT = 10;
+
     private string $auth_keys;
     private string $base_uri;
 
@@ -21,7 +24,8 @@ class HttpService
     public function get($uri)
     {
         $response = wp_remote_get($this->base_uri . $uri, [
-            'headers' => $this->get_api_header()
+            'headers' => $this->get_api_header(),
+            'timeout' => self::READ_TIMEOUT,
         ]);
 
         $this->ensureSuccessStatusCode($response);
@@ -34,7 +38,8 @@ class HttpService
     public function getraw($uri)
     {
         $response = wp_remote_get($this->base_uri . $uri, [
-            'headers' => $this->get_api_header()
+            'headers' => $this->get_api_header(),
+            'timeout' => self::READ_TIMEOUT,
         ]);
 
         // Skip ensureSuccessStatusCode and let caller handle

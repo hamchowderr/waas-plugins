@@ -3,6 +3,7 @@
 namespace Tests\Contract;
 
 use Brain\Monkey\Functions;
+use WaaSHost\Features\StoreJobs;
 
 /**
  * Routes WordPress's HTTP functions to cURL so the plugin's real API client talks to the provisioning API (by
@@ -39,6 +40,29 @@ trait MockApi
         Functions\when('wp_remote_get')->alias(fn ($url, $args = []) => $this->request($args['method'] ?? 'GET', $url, $args));
         Functions\when('wp_remote_post')->alias(fn ($url, $args = []) => $this->request($args['method'] ?? 'POST', $url, $args));
         Functions\when('wp_remote_head')->alias(fn ($url, $args = []) => $this->request('HEAD', $url, $args));
+    }
+
+    /**
+     * Store jobs run here, in the test, with run(): Action Scheduler and the job lock are stubbed in memory.
+     */
+    private function use_store_jobs(): StoreJobs
+    {
+        Functions\when('add_option')->alias(function ($name, $value = '') {
+            if (array_key_exists($name, $this->options)) {
+                return false;
+            }
+            $this->options[$name] = $value;
+            return true;
+        });
+        Functions\when('delete_option')->alias(function ($name) {
+            unset($this->options[$name]);
+            return true;
+        });
+        Functions\when('wp_generate_uuid4')->alias(fn () => sprintf('%08x-%04x-4%03x-a%03x-%012x', random_int(0, 0xffffffff), random_int(0, 0xffff), random_int(0, 0xfff), random_int(0, 0xfff), random_int(0, 0xffffffffffff)));
+        Functions\when('as_schedule_single_action')->justReturn(1);
+        Functions\when('as_next_scheduled_action')->justReturn(false);
+
+        return new StoreJobs();
     }
 
     private function mock_example(string $name): void

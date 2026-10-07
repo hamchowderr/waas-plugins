@@ -102,6 +102,10 @@ class WPCSService
             'wordPressUserRole' => $args['wordpress_user_role'],
         ];
 
+        if (isset($args['external_id'])) {
+            $payload['externalId'] = $args['external_id'];
+        }
+
         if (isset($args['wordpress_password'])) {
             $payload['wordPressUserPassword'] = $args['wordpress_password'];
         }
