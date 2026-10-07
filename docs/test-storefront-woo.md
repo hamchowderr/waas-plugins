@@ -50,6 +50,7 @@ scripts/test-storefront/storefront.py --cart woo setup    # bootstrap install pl
 - **New plugin code:** `push`, then `setup plugins check`.
 - **Single steps:** `setup check`, `setup payments`, and so on. Every step can be re-run.
 - **Make a renewal due now:** `storefront.py --cart woo run 'sh /opt/wpcli/x/setup.sh renew <subscription id>'`. The `wp-cron` task then creates the renewal order within a few minutes (and, with Stripe, charges the saved test card).
+- **Watch a test:** `storefront.py --cart woo run 'sh /opt/wpcli/x/setup.sh watch'` prints, for the latest five subscriptions, WP Swings' status and next payment date, the parent order's status, and waas-host's store meta (store, state, suspend_at, delete_at, the planned end-of-period event). Read-only, and no customer data.
 - **Remove:** `storefront.py --cart woo remove` deletes this service with its volumes. The project is deleted only when no service is left in it, so the FluentCart storefront stays.
 
 `--cart woo` only ever finds, changes or deletes the service named `storefront-woo-test`.

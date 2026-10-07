@@ -3,6 +3,7 @@
 #   sh /opt/wpcli/x/setup.sh <step>
 # Steps, in order: bootstrap install plugins configure pages product payments cron (check any time).
 #   sh /opt/wpcli/x/setup.sh renew <subscription id>   # make a subscription's renewal due now
+#   sh /opt/wpcli/x/setup.sh watch                     # read-only lifecycle status of the latest subscriptions
 set -eu
 X=/opt/wpcli/x
 WP="sh $X/wp"
@@ -56,5 +57,8 @@ case "${1:-}" in
     $WP eval-file $X/renew.php "$2" --user=admin ;;
   check)
     $WP eval-file $X/check.php ;;
+  watch)
+    # Read-only: subscription status, next payment date, and waas-host's store meta for the latest subscriptions.
+    $WP eval-file $X/watch.php ;;
   *) echo "unknown step"; exit 2 ;;
 esac
