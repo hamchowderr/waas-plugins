@@ -47,7 +47,7 @@ scripts/test-storefront/storefront.py --cart woo push     # build waas-host and 
 scripts/test-storefront/storefront.py --cart woo setup    # bootstrap install plugins configure pages product payments cron
 ```
 
-- **New plugin code:** `push`, then `setup plugins check`.
+- **New plugin code:** `push`, then `setup plugins check`. The `plugins` step installs the wordpress.org plugins only when they're missing; update those from wp-admin.
 - **Single steps:** `setup check`, `setup payments`, and so on. Every step can be re-run.
 - **Make a renewal due now:** `storefront.py --cart woo run 'sh /opt/wpcli/x/setup.sh renew <subscription id>'`. The `wp-cron` task then creates the renewal order within a few minutes (and, with Stripe, charges the saved test card).
 - **Watch a test:** `storefront.py --cart woo run 'sh /opt/wpcli/x/setup.sh watch'` prints, for the latest five subscriptions, WP Swings' status and next payment date, the parent order's status, and waas-host's store meta (store, state, suspend_at, delete_at, the planned end-of-period event). Read-only, and no customer data.
@@ -74,7 +74,7 @@ Stripe test card: `4242 4242 4242 4242`, any future expiry date, any CVC.
 
 Use a new customer each time (a made-up name and a `+tag` address on your own mailbox), never real customer data.
 
-1. **Buy.** Open the test product, add it to the cart, and check out with **Pay later (test)** or the Stripe test card. Checkout asks for the **Website name**. With Pay later, mark the order **Processing** or **Completed** in WooCommerce → Orders; WP Swings then activates the subscription.
+1. **Buy.** Open the test product, add it to the cart, and check out with **Pay later (test)** or the Stripe test card. Checkout asks for the **Website name**. Guest checkout is off, so WooCommerce creates the customer's account and logs them in; its generated password goes out by email only once FluentSMTP is connected, so finish the test in the same browser session. Pay later puts the order straight into **Processing** (the product is virtual), and WP Swings activates the subscription on that; nothing needs marking paid.
 2. **Store created.** Within a minute or two (the `wp-cron` task), the subscription's page in **My Account** → **Subscriptions** shows the website status, and then **Ready** with a **Login as** link. The "Your website is ready" email goes out once FluentSMTP is connected.
 3. **One-click login.** Click **Login as**: the store opens logged in.
 4. **Suspend.** Make a renewal due (`setup.sh renew <id>`, above). With Pay later the renewal order stays pending: mark it **Failed** in WooCommerce → Orders. WP Swings puts the subscription **on hold** and waas-host suspends the store. With Stripe, a declined test card (`4000 0000 0000 0341` saved at checkout) does the same.
