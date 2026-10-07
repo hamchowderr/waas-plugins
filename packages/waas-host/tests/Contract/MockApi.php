@@ -51,11 +51,28 @@ trait MockApi
         $headers = array_merge($args['headers'] ?? [], $this->extra_headers);
         $this->requests[] = [$method, $url, $headers, $args['body'] ?? null];
 
-        $curl = curl_init($url);
-        $header_lines = [];
-        foreach ($headers as $key => $value) {
-            $header_lines[] = $key . ': ' . $value;
+        $header_lines = array_map(fn ($key, $value) => $key . ': ' . $value, array_keys($headers), $headers);
+
+        // The public mock sometimes hangs on a request without answering. That says nothing about the plugin,
+        // so a timed-out request is sent again, up to 3 times in all; any other error is returned as is.
+        for ($attempt = 1; ; $attempt++) {
+            [$body, $code, $errno, $error] = $this->send($method, $url, $header_lines, $args);
+            if ($errno !== CURLE_OPERATION_TIMEDOUT || $attempt >= 3) {
+                break;
+            }
         }
+
+        if ($body === false) {
+            return new \WP_Error('http_request_failed', $error);
+        }
+
+        return ['body' => $body, 'response' => ['code' => $code]];
+    }
+
+    /** @return array{0: string|false, 1: int, 2: int, 3: string} body, status code, curl error number, curl error */
+    private function send(string $method, string $url, array $header_lines, array $args): array
+    {
+        $curl = curl_init($url);
         curl_setopt_array($curl, [
             CURLOPT_CUSTOMREQUEST => $method,
             CURLOPT_NOBODY => $method === 'HEAD',
@@ -71,14 +88,9 @@ trait MockApi
         }
 
         $body = curl_exec($curl);
-        if ($body === false) {
-            $error = new \WP_Error('http_request_failed', curl_error($curl));
-            curl_close($curl);
-            return $error;
-        }
-
-        $code = curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+        $result = [$body, (int) curl_getinfo($curl, CURLINFO_RESPONSE_CODE), curl_errno($curl), curl_error($curl)];
         curl_close($curl);
-        return ['body' => $body, 'response' => ['code' => $code]];
+
+        return $result;
     }
 }
