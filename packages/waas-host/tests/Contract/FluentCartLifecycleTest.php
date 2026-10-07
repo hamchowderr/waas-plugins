@@ -33,6 +33,10 @@ class FluentCartLifecycleTest extends TestCase
     /** @var array<int, array<string, mixed>> fct_subscription_meta */
     private array $meta = [];
     private bool $canceled = false;
+    /** The subscription's next billing date as a unix time; 0 = nothing left of the paid period. */
+    private int $paid_through = 0;
+    /** wp_schedule_single_event calls: [timestamp, hook, args]. */
+    private array $scheduled = [];
     private $order;
     private WaasProvisioningIntegration $integration;
     private TenantsSubscriptionManager $manager;
@@ -41,6 +45,9 @@ class FluentCartLifecycleTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        if (!defined('DAY_IN_SECONDS')) {
+            define('DAY_IN_SECONDS', 86400);
+        }
         Commerce::reset();
         $this->use_mock_api([
             'wpcs_host_settings_root_domain' => 'stores.waas.example',
@@ -68,6 +75,12 @@ class FluentCartLifecycleTest extends TestCase
         $store->allows('get_order_meta')->with($this->order, WPCSTenant::WPCS_WEBSITE_NAME_META)->andReturn('Apex Research');
         // The feeds run after FluentCart changed the subscription; a cancel finds it canceled.
         $store->allows('get_subscription_status')->andReturnUsing(fn () => $this->canceled ? 'canceled' : 'active');
+        $store->allows('get_paid_through')->andReturnUsing(fn () => $this->paid_through);
+        Functions\when('wp_schedule_single_event')->alias(function ($timestamp, $hook, $args = []) {
+            $this->scheduled[] = [$timestamp, $hook, $args];
+            return true;
+        });
+        Functions\when('wp_clear_scheduled_hook')->justReturn(0);
         $store->allows('get_subscription_customer')->andReturn(['user_id' => 7, 'email' => 'owner@apexresearch.example', 'name' => 'Jordan Reyes']);
 
         Commerce::register(new FluentCartAdapter($store));
@@ -82,6 +95,8 @@ class FluentCartLifecycleTest extends TestCase
             ->whenHappen(fn ($id, $order) => $this->manager->create_tenant_when_subscription_created($id, $order));
         Actions\expectDone('wpcs_subscription_expired')->zeroOrMoreTimes()
             ->whenHappen(fn ($id) => $this->manager->delete_suspended_tenant($id));
+        Actions\expectDone('wpcs_subscription_canceled_until')->zeroOrMoreTimes()
+            ->whenHappen(fn ($id, $until) => $this->manager->suspend_at_end_of_paid_period($id, $until));
     }
 
     protected function tearDown(): void
@@ -141,5 +156,30 @@ class FluentCartLifecycleTest extends TestCase
 
         $this->assertSame('DELETE', $this->requests[0][0]);
         $this->assertStringEndsWith('/v1/tenants?externalId=store-1042', $this->requests[0][1]);
+    }
+
+    public function test_a_cancel_with_paid_time_left_waits_for_the_end_of_the_period(): void
+    {
+        $this->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META] = 'store-1042';
+        $this->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_TENANT_STATE] = WPCSTenant::READY;
+        $this->paid_through = time() + 30 * 86400;
+
+        $this->run_feed('subscription_canceled');
+
+        $this->assertSame([], $this->requests, 'nothing reaches the API before the end of the paid period');
+        $this->assertSame(WPCSTenant::READY, $this->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_TENANT_STATE]);
+        $this->assertSame($this->paid_through, $this->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_TENANT_SUSPEND_AT_META]);
+        $this->assertSame([[$this->paid_through, TenantsSubscriptionManager::SUSPEND_AT_PERIOD_END_HOOK, [self::SUBSCRIPTION_ID]]], $this->scheduled);
+
+        // The end of the paid period, with the subscription still cancelled: the usual cancel path. Its suspend job is
+        // not run here: the mock has no suspend example yet (waas-api-2hl.5); the unit tests run it.
+        $this->manager->paid_period_ended(self::SUBSCRIPTION_ID);
+
+        $this->assertSame(WPCSTenant::SUSPENDED, $this->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_TENANT_STATE]);
+        $queue = $this->meta[self::SUBSCRIPTION_ID][StoreJobs::QUEUE_META];
+        $this->assertSame(['suspend'], array_column($queue, 'op'));
+        $this->assertTrue($queue[0]['args']['backup']);
+        $this->assertSame(TenantsSubscriptionManager::DELETE_SUSPENDED_TENANT_HOOK, end($this->scheduled)[1]);
+        $this->assertSame([], $this->requests);
     }
 }

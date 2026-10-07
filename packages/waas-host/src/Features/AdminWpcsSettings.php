@@ -11,6 +11,9 @@ class AdminWpcsSettings
     const SHOULD_SEND_TENANT_READY_EMAIL_OPTION = 'wpcs_notification_settings_send_tenant_ready_email';
     const TENANT_READY_EMAIL_SUBJECT_OPTION = 'wpcs_notification_settings_tenant_ready_email_subject';
     const TENANT_READY_EMAIL_BODY_OPTION = 'wpcs_notification_settings_tenant_ready_email_body';
+    const SHOULD_SEND_SUSPEND_SCHEDULED_EMAIL_OPTION = 'wpcs_notification_settings_send_suspend_scheduled_email';
+    const SUSPEND_SCHEDULED_EMAIL_SUBJECT_OPTION = 'wpcs_notification_settings_suspend_scheduled_email_subject';
+    const SUSPEND_SCHEDULED_EMAIL_BODY_OPTION = 'wpcs_notification_settings_suspend_scheduled_email_body';
     const SHOULD_REMOVE_ADMINISTRATOR_PLUGIN_CAPABILITIES_OPTION = 'wpcs_host_setting_remove_admininistrator_plugin_capabilities_on_tenant';
 
     private WPCSService $wpcsService;
@@ -27,6 +30,9 @@ class AdminWpcsSettings
         add_filter('wpcs_tenant_ready_email_allowed', [$this, 'allow_tenant_ready_email']);
         add_filter('wpcs_tenant_ready_email_subject', [$this, 'tenant_ready_email_subject'], 10, 1);
         add_filter('wpcs_tenant_ready_email_body', [$this, 'tenant_ready_email_body'], 10, 1);
+        add_filter('wpcs_suspend_scheduled_email_allowed', [$this, 'allow_suspend_scheduled_email']);
+        add_filter('wpcs_suspend_scheduled_email_subject', [$this, 'suspend_scheduled_email_subject'], 10, 1);
+        add_filter('wpcs_suspend_scheduled_email_body', [$this, 'suspend_scheduled_email_body'], 10, 1);
         add_filter('wpcs_remove_tenant_administrator_plugin_capabilities', [$this, 'remove_tenant_administrator_plugin_capabilities']);
     }
 
@@ -100,6 +106,15 @@ class AdminWpcsSettings
             'default' => Notifications::get_default_tenant_ready_body()
         ]);
         register_setting('wpcs-admin', self::SHOULD_SEND_TENANT_READY_EMAIL_OPTION, [
+            'default' => 'on'
+        ]);
+        register_setting('wpcs-admin', self::SUSPEND_SCHEDULED_EMAIL_SUBJECT_OPTION, [
+            'default' => Notifications::get_default_suspend_scheduled_subject()
+        ]);
+        register_setting('wpcs-admin', self::SUSPEND_SCHEDULED_EMAIL_BODY_OPTION, [
+            'default' => Notifications::get_default_suspend_scheduled_body()
+        ]);
+        register_setting('wpcs-admin', self::SHOULD_SEND_SUSPEND_SCHEDULED_EMAIL_OPTION, [
             'default' => 'on'
         ]);
     }
@@ -325,6 +340,50 @@ class AdminWpcsSettings
                 "type" => "checkbox",
             ]
         );
+
+        add_settings_field(
+            self::SUSPEND_SCHEDULED_EMAIL_SUBJECT_OPTION,
+            __('Cancellation e-mail subject', WPCS_WAAS_HOST_TEXTDOMAIN),
+            [$this, 'render_settings_field'],
+            'wpcs-admin',
+            'wpcs_notification_settings',
+            [
+                "id" => self::SUSPEND_SCHEDULED_EMAIL_SUBJECT_OPTION,
+                "hint" => __("The subject of the E-mail sent when a customer cancels: their website stays online until the end of the period they paid for. {{ suspend_date }} is that date.", WPCS_WAAS_HOST_TEXTDOMAIN),
+                "type" => "text",
+                "styles" => [
+                    "width" => "100%",
+                    "margin-right" => "1em",
+                ]
+            ]
+        );
+
+        add_settings_field(
+            self::SUSPEND_SCHEDULED_EMAIL_BODY_OPTION,
+            __('Cancellation e-mail body', WPCS_WAAS_HOST_TEXTDOMAIN),
+            [$this, 'render_settings_field'],
+            'wpcs-admin',
+            'wpcs_notification_settings',
+            [
+                "id" => self::SUSPEND_SCHEDULED_EMAIL_BODY_OPTION,
+                "hint" => __("The body of that E-mail. Besides the website-ready placeholders it can use {{ suspend_date }} and {{ deletion_grace_days }}.", WPCS_WAAS_HOST_TEXTDOMAIN),
+                "type" => "html-editor",
+                "media_buttons" => false,
+            ]
+        );
+
+        add_settings_field(
+            self::SHOULD_SEND_SUSPEND_SCHEDULED_EMAIL_OPTION,
+            __('Send E-mail when a customer cancels?', WPCS_WAAS_HOST_TEXTDOMAIN),
+            [$this, 'render_settings_field'],
+            'wpcs-admin',
+            'wpcs_notification_settings',
+            [
+                "id" => self::SHOULD_SEND_SUSPEND_SCHEDULED_EMAIL_OPTION,
+                "hint" => __("Whether to tell the customer, when they cancel, until when their website stays online.", WPCS_WAAS_HOST_TEXTDOMAIN),
+                "type" => "checkbox",
+            ]
+        );
     }
 
     function render_settings_field($args)
@@ -391,6 +450,29 @@ class AdminWpcsSettings
         }
 
         return get_option(self::SHOULD_SEND_TENANT_READY_EMAIL_OPTION) === 'on';
+    }
+
+    function allow_suspend_scheduled_email($allowed)
+    {
+        if (!$allowed) {
+            return $allowed;
+        }
+
+        return get_option(self::SHOULD_SEND_SUSPEND_SCHEDULED_EMAIL_OPTION, 'on') === 'on';
+    }
+
+    function suspend_scheduled_email_subject($text)
+    {
+        $option_val = get_option(self::SUSPEND_SCHEDULED_EMAIL_SUBJECT_OPTION);
+
+        return !empty($option_val) ? $option_val : $text;
+    }
+
+    function suspend_scheduled_email_body($text)
+    {
+        $option_val = get_option(self::SUSPEND_SCHEDULED_EMAIL_BODY_OPTION);
+
+        return !empty($option_val) ? $option_val : $text;
     }
 
     function remove_tenant_administrator_plugin_capabilities($allowed)

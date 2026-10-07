@@ -45,6 +45,9 @@ class FluentCartPortalTest extends TestCase
         ]);
         $this->store->allows('find_user_subscription_ids')->with(self::OWNER_ID, 'owner@apexresearch.example')->andReturn([900, 901, 902, 903]);
         $this->store->allows('get_portal_url')->with('website')->andReturn('https://storefront.example/account/website');
+        $this->store->allows('get_subscription_url')->andReturnUsing(fn ($id) => "https://storefront.example/account/subscription/sub-$id");
+        Functions\when('get_option')->alias(fn ($name, $default = false) => $name === 'date_format' ? 'F j, Y' : $default);
+        Functions\when('wp_date')->alias(fn ($format, $ts) => gmdate($format, $ts));
 
         $this->domain_settings = Mockery::mock(UserAccountSubscriptionsSettings::class);
         $this->portal = new FluentCartPortal(new FluentCartAdapter($this->store), $this->store, $this->domain_settings);
@@ -256,5 +259,34 @@ class FluentCartPortalTest extends TestCase
         $this->portal->render_ready_notice();
 
         $this->assertSame('', ob_get_clean());
+    }
+    public function test_each_website_links_to_managing_or_cancelling_its_plan(): void
+    {
+        $this->domain_settings->allows('render_edit_domain');
+
+        ob_start();
+        $this->portal->render();
+        $html = ob_get_clean();
+
+        $this->assertSame(2, substr_count($html, 'Manage or cancel plan'));
+        $this->assertStringContainsString('https://storefront.example/account/subscription/sub-900', $html);
+    }
+
+    public function test_a_cancelled_website_shows_active_until_the_end_of_the_paid_period(): void
+    {
+        $this->meta[900][WPCSTenant::WPCS_TENANT_SUSPEND_AT_META] = gmmktime(16, 3, 29, 11, 7, 2026);
+        $this->domain_settings->allows('render_edit_domain');
+
+        ob_start();
+        $this->portal->render();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString('Status: Active until November 7, 2026', $html);
+        $this->assertStringContainsString('deleted 30 days later', $html);
+        $this->assertStringContainsString('tenant/single_login?subscription_id=900', $html, 'login stays until then');
+
+        ob_start();
+        $this->portal->render_ready_notice();
+        $this->assertStringContainsString('is active until November 7, 2026', ob_get_clean());
     }
 }

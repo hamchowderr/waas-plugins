@@ -165,6 +165,19 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
                 $order->addLog(__('Website kept', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s): a renewal order, and the subscription is still active', $subscription_id, $trigger), 'info', 'WaaS');
                 return;
             }
+            // A customer's or admin's cancel keeps the website until the end of the period they paid for. A refund or
+            // revoked access, the end of term, or a cancel with nothing left of the period takes it offline now.
+            $paid_through = (!$is_revoke && $trigger === 'subscription_canceled') ? $this->store->get_paid_through($subscription_id) : 0;
+            if ($paid_through > time()) {
+                do_action('wpcs_subscription_canceled_until', $subscription_id, $paid_through);
+                $order->addLog(
+                    __('Website stays online until the paid period ends', WPCS_WAAS_HOST_TEXTDOMAIN),
+                    sprintf('Subscription #%d (%s): until %s UTC', $subscription_id, $trigger, gmdate('Y-m-d H:i', $paid_through)),
+                    'info',
+                    'WaaS'
+                );
+                return;
+            }
             do_action('wpcs_subscription_expired', $subscription_id);
             $order->addLog(__('Website suspended', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s)', $subscription_id, $trigger), 'info', 'WaaS');
             return;

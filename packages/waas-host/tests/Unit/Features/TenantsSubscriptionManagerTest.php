@@ -387,4 +387,104 @@ class TenantsSubscriptionManagerTest extends StoreJobsTestCase
         $this->assertSame('restore_or_create', $this->queue(900)[0]['op']);
         $this->assertSame(1, $this->queue(900)[0]['attempts']);
     }
+    private const SUSPEND_HOOK = TenantsSubscriptionManager::SUSPEND_AT_PERIOD_END_HOOK;
+
+    public function test_a_cancel_inside_the_paid_period_keeps_the_store_and_plans_the_suspend(): void
+    {
+        $until = time() + 30 * DAY_IN_SECONDS;
+        Actions\expectDone('wpcs_tenant_suspend_scheduled')->once()->with(900, $until);
+
+        $this->manager->suspend_at_end_of_paid_period(900, $until);
+
+        $this->assertSame(WPCSTenant::READY, $this->state());
+        $this->assertSame($until, $this->cart->meta[900][WPCSTenant::WPCS_TENANT_SUSPEND_AT_META]);
+        $this->assertSame([[$until, self::SUSPEND_HOOK, [900]]], $this->scheduled);
+        $this->assertSame([], $this->queue(900), 'no API call until then');
+    }
+
+    public function test_a_repeated_cancel_keeps_the_first_date(): void
+    {
+        $until = time() + 30 * DAY_IN_SECONDS;
+        $this->manager->suspend_at_end_of_paid_period(900, $until);
+        $this->manager->suspend_at_end_of_paid_period(900, $until + 3600);
+
+        $this->assertSame($until, $this->cart->meta[900][WPCSTenant::WPCS_TENANT_SUSPEND_AT_META]);
+        $this->assertCount(1, $this->scheduled);
+    }
+
+    public function test_at_the_end_of_the_paid_period_the_store_is_suspended_as_on_any_cancel(): void
+    {
+        $this->manager->suspend_at_end_of_paid_period(900, time() + 30 * DAY_IN_SECONDS);
+        $this->cart->inactive[900] = true;
+
+        $this->manager->paid_period_ended(900);
+
+        $this->assertSame(WPCSTenant::SUSPENDED, $this->state());
+        $this->assertSame('', $this->cart->meta[900][WPCSTenant::WPCS_TENANT_SUSPEND_AT_META]);
+        $this->assertSame('suspend', $this->queue(900)[0]['op']);
+        $this->assertTrue($this->queue(900)[0]['args']['backup']);
+        $this->assertNotEmpty($this->cart->meta[900][WPCSTenant::WPCS_TENANT_DELETE_AT_META]);
+    }
+
+    public function test_reactivating_before_the_end_keeps_the_store_and_drops_the_planned_suspend(): void
+    {
+        $this->manager->suspend_at_end_of_paid_period(900, time() + 30 * DAY_IN_SECONDS);
+        Actions\expectDone('wpcs_tenant_suspend_canceled')->once()->with(900);
+
+        $this->manager->create_tenant_when_subscription_created(900, $this->purchase());
+
+        $this->assertSame(WPCSTenant::READY, $this->state());
+        $this->assertSame('', $this->cart->meta[900][WPCSTenant::WPCS_TENANT_SUSPEND_AT_META]);
+        $this->assertSame([], $this->scheduled);
+        $this->assertSame([], $this->queue(900));
+    }
+
+    public function test_a_planned_suspend_firing_after_a_reactivation_does_nothing(): void
+    {
+        $this->manager->suspend_at_end_of_paid_period(900, time() + 30 * DAY_IN_SECONDS);
+        $this->manager->create_tenant_when_subscription_created(900, $this->purchase());
+
+        $this->manager->paid_period_ended(900);
+
+        $this->assertSame(WPCSTenant::READY, $this->state());
+        $this->assertSame([], $this->queue(900));
+    }
+
+    public function test_an_active_subscription_at_the_end_of_the_period_keeps_the_store(): void
+    {
+        // e.g. reactivated through a path that didn't reach waas-host
+        $this->manager->suspend_at_end_of_paid_period(900, time() + 30 * DAY_IN_SECONDS);
+
+        $this->manager->paid_period_ended(900);
+
+        $this->assertSame(WPCSTenant::READY, $this->state());
+        $this->assertSame('', $this->cart->meta[900][WPCSTenant::WPCS_TENANT_SUSPEND_AT_META]);
+        $this->assertSame([], $this->queue(900));
+    }
+
+    public function test_the_sweep_runs_a_planned_suspend_whose_event_was_lost(): void
+    {
+        $this->cart->meta[900][WPCSTenant::WPCS_TENANT_SUSPEND_AT_META] = time() - 60;
+        $this->cart->meta[901] = [WPCSTenant::WPCS_TENANT_SUSPEND_AT_META => time() + 3600];
+        $this->cart->inactive[900] = true;
+
+        $this->manager->run_due_suspensions();
+
+        $this->assertSame(WPCSTenant::SUSPENDED, $this->state());
+        $this->assertSame('suspend', $this->queue(900)[0]['op']);
+        $this->assertSame([], $this->queue(901), 'not due yet');
+    }
+
+    public function test_a_store_already_offline_or_a_past_date_takes_the_usual_path_now(): void
+    {
+        $this->manager->suspend_tenant_on_hold(900);
+        $this->manager->suspend_at_end_of_paid_period(900, time() + 30 * DAY_IN_SECONDS);
+
+        $this->assertSame('', $this->cart->meta[900][WPCSTenant::WPCS_TENANT_SUSPEND_AT_META] ?? '');
+        $this->assertNotEmpty($this->cart->meta[900][WPCSTenant::WPCS_TENANT_DELETE_AT_META], 'backup and grace period start now');
+
+        $this->cart->meta[902] = [WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META => 'store-2', WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::READY];
+        $this->manager->suspend_at_end_of_paid_period(902, time() - 1);
+        $this->assertSame(WPCSTenant::SUSPENDED, $this->state(902));
+    }
 }

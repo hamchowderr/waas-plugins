@@ -4,6 +4,8 @@ namespace WaaSHost\Commerce\FluentCart;
 
 use WaaSHost\Core\WPCSTenant;
 use WaaSHost\Features\NameConflicts;
+use WaaSHost\Features\Notifications;
+use WaaSHost\Features\TenantsSubscriptionManager;
 use WaaSHost\Features\SingleLoginService;
 use WaaSHost\Features\UserAccountSubscriptionsSettings;
 
@@ -100,11 +102,20 @@ class FluentCartPortal
                 ?: $this->adapter->get_subscription_meta($subscription_id, WPCSTenant::WPCS_BASE_DOMAIN_NAME_META);
 
             echo '<div class="wpcs-website-ready-notice fct-alert fct-alert-success" style="margin-bottom:16px">';
-            echo '<p>' . sprintf(
-                /* translators: %s: the website's domain */
-                esc_html__('Your website %s is ready.', WPCS_WAAS_HOST_TEXTDOMAIN),
-                '<strong>' . esc_html((string) ($domain ?: __('Your website', WPCS_WAAS_HOST_TEXTDOMAIN))) . '</strong>'
-            ) . ' ';
+            $name = '<strong>' . esc_html((string) ($domain ?: __('Your website', WPCS_WAAS_HOST_TEXTDOMAIN))) . '</strong>';
+            $suspend_at = $this->suspend_at($subscription_id);
+            echo '<p>' . ($suspend_at
+                ? sprintf(
+                    /* translators: 1: the website's domain, 2: date */
+                    esc_html__('Your website %1$s is active until %2$s.', WPCS_WAAS_HOST_TEXTDOMAIN),
+                    $name,
+                    esc_html(Notifications::format_date($suspend_at))
+                )
+                : sprintf(
+                    /* translators: %s: the website's domain */
+                    esc_html__('Your website %s is ready.', WPCS_WAAS_HOST_TEXTDOMAIN),
+                    $name
+                )) . ' ';
             echo '<a class="fct-btn fct-btn-primary" target="_blank" rel="noopener" href="' . esc_url(SingleLoginService::get_login_link($subscription_id)) . '">'
                 . esc_html__('Log in to your website', WPCS_WAAS_HOST_TEXTDOMAIN) . '</a> ';
             echo '<a href="' . esc_url($this->store->get_portal_url(self::ENDPOINT)) . '">' . esc_html__('Manage website', WPCS_WAAS_HOST_TEXTDOMAIN) . '</a></p>';
@@ -160,7 +171,21 @@ class FluentCartPortal
             echo '<section class="wpcs-website">';
             echo '<h3>' . esc_html((string) ($domain ?: __('Your website', WPCS_WAAS_HOST_TEXTDOMAIN))) . '</h3>';
             NameConflicts::render_result($subscription_id);
-            echo '<p>' . esc_html__('Status:', WPCS_WAAS_HOST_TEXTDOMAIN) . ' ' . esc_html(WPCSTenant::customer_status_label($status)) . '</p>';
+            $suspend_at = $status === WPCSTenant::READY ? $this->suspend_at($subscription_id) : 0;
+            if ($suspend_at) {
+                echo '<p>' . esc_html__('Status:', WPCS_WAAS_HOST_TEXTDOMAIN) . ' ' . esc_html(sprintf(
+                    /* translators: %s: date */
+                    __('Active until %s', WPCS_WAAS_HOST_TEXTDOMAIN),
+                    Notifications::format_date($suspend_at)
+                )) . '</p>';
+                echo '<p>' . esc_html(sprintf(
+                    /* translators: %d: number of days */
+                    __('Your subscription is cancelled. Your website stays online until then; after that it is taken offline, and deleted %d days later.', WPCS_WAAS_HOST_TEXTDOMAIN),
+                    TenantsSubscriptionManager::get_deletion_grace_days()
+                )) . '</p>';
+            } else {
+                echo '<p>' . esc_html__('Status:', WPCS_WAAS_HOST_TEXTDOMAIN) . ' ' . esc_html(WPCSTenant::customer_status_label($status)) . '</p>';
+            }
             if ($status === WPCSTenant::READY) {
                 echo '<p><a class="fct-btn fct-btn-primary" target="_blank" rel="noopener" href="' . esc_url(SingleLoginService::get_login_link($subscription_id)) . '">'
                     . esc_html__('Log in to your website', WPCS_WAAS_HOST_TEXTDOMAIN) . '</a></p>';
@@ -171,8 +196,16 @@ class FluentCartPortal
             if (!empty($this->adapter->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META))) {
                 $this->domain_settings->render_edit_domain($subscription_id);
             }
+            echo '<p><a href="' . esc_url($this->adapter->get_subscription_url($subscription_id)) . '">'
+                . esc_html__('Manage or cancel plan', WPCS_WAAS_HOST_TEXTDOMAIN) . '</a></p>';
             echo '</section>';
         }
+    }
+
+    /** When a cancelled subscription's website goes offline (end of its paid period); 0 when not planned. */
+    private function suspend_at($subscription_id): int
+    {
+        return (int) $this->adapter->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_AT_META);
     }
 
     public function add_subscription_actions($data, $args)
