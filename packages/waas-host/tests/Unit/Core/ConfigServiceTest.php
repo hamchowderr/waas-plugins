@@ -105,4 +105,50 @@ class ConfigServiceTest extends TestCase
 
         $this->assertSame([], (new HttpService(new ConfigService()))->get('/v1/versions'));
     }
+
+    public function test_dns_a_records_from_setting_drop_invalid_and_duplicate_ips(): void
+    {
+        $this->options['wpcs_dns_a_records_setting'] = "203.0.113.10, 203.0.113.11\n203.0.113.10 not-an-ip 2001:db8::1";
+
+        $this->assertSame(['203.0.113.10', '203.0.113.11', '2001:db8::1'], (new ConfigService())->get_dns_a_records());
+    }
+
+    public function test_no_dns_records_by_default(): void
+    {
+        $this->options['wpcs_credentials_region_setting'] = 'us1';
+        $config = new ConfigService();
+
+        $this->assertSame([], $config->get_dns_a_records());
+        $this->assertSame('', $config->get_dns_cname_target());
+    }
+
+    public function test_dns_cname_target_is_normalized_and_validated(): void
+    {
+        $this->options['wpcs_dns_cname_target_setting'] = ' Sites.Example.NET. ';
+        $this->assertSame('sites.example.net', (new ConfigService())->get_dns_cname_target());
+
+        $this->options['wpcs_dns_cname_target_setting'] = 'https://sites.example.net';
+        $this->assertSame('', (new ConfigService())->get_dns_cname_target());
+    }
+
+    public function test_sanitize_ip_list_stores_a_clean_comma_list(): void
+    {
+        $this->assertSame('203.0.113.10, 203.0.113.11', ConfigService::sanitize_ip_list("203.0.113.10\n bad, 203.0.113.11"));
+    }
+
+    /**
+     * @runInSeparateProcess
+     * @preserveGlobalState disabled
+     */
+    public function test_dns_constants_win_over_settings(): void
+    {
+        define('WPCS_DNS_A_RECORDS', ['198.51.100.1', '198.51.100.2']);
+        define('WPCS_DNS_CNAME_TARGET', 'edge.from-constant.example');
+        $this->options['wpcs_dns_a_records_setting'] = '203.0.113.10';
+        $this->options['wpcs_dns_cname_target_setting'] = 'sites.example.net';
+        $config = new ConfigService();
+
+        $this->assertSame(['198.51.100.1', '198.51.100.2'], $config->get_dns_a_records());
+        $this->assertSame('edge.from-constant.example', $config->get_dns_cname_target());
+    }
 }
