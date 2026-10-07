@@ -31,6 +31,11 @@ Author: WPCS
 Version: 2.2.7
 Author URI: https://wpcs.io
 Update URI: wpcs-waas-host
+Requires at least: 6.4
+Requires PHP: 8.1
+License: GPL-3.0-or-later
+License URI: https://www.gnu.org/licenses/gpl-3.0.html
+Text Domain: wpcs-waas-host-textdomain
 */
 
 define( 'WPCS_WAAS_HOST_SLUG', 'wpcs-waas-host' );
