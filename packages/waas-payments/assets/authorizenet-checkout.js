@@ -152,6 +152,9 @@
                 return;
             }
             this.clearError();
+            // Placing the order leaves FluentCart's full-page "Order Processing..." overlay
+            // up, and it sits above the card form and swallows its clicks.
+            this.paymentLoader && this.paymentLoader.hideLoader();
             const trigger = document.getElementById('waas-anet-acceptui');
             if (trigger) {
                 trigger.click();

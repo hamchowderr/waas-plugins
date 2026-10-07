@@ -4,6 +4,7 @@ namespace WaaSHost\Features;
 
 use Exception;
 use WaaSHost\Commerce\Commerce;
+use WaaSHost\Core\ConfigService;
 use WaaSHost\Core\WPCSService;
 use WaaSHost\Core\WPCSTenant;
 
@@ -13,11 +14,13 @@ class UserAccountSubscriptionsSettings
     public const DOMAIN_NONCE_ACTION = 'wpcs_update_domain_';
 
     private WPCSService $wpcsService;
+    private ConfigService $config;
     private string $domain_error = '';
 
-    public function __construct(WPCSService $wpcsService)
+    public function __construct(WPCSService $wpcsService, ?ConfigService $config = null)
     {
         $this->wpcsService = $wpcsService;
+        $this->config = $config ?? new ConfigService();
 
         add_action('wpcs_after_subscription_details_html', [$this, 'render_edit_domain'], 10, 1);
         add_action('remove_tenant_old_domain', [$this, 'remove_tenant_old_domain'], 1, 2);
@@ -52,33 +55,31 @@ class UserAccountSubscriptionsSettings
 	            <button class='button' type='submit'>Update</button>
 	           </form><br /><br />";
 
-        $api_region = get_option('wpcs_credentials_region_setting', '');
-        echo '<div class="wpcs-ip-instructions">
-              <p>Before verifying a domain, make sure that its DNS contains the following settings.</p>
-              <p>For the domain apex add A records with <b>each of the following IPs</b> as their values:</p>';
+        $this->render_dns_instructions();
+    }
 
-        if(strtolower($api_region) == 'us1'){
-            echo '
-<pre>
-54.166.55.112
-54.163.0.37
-174.129.101.20
-</pre>
-              <p>If you are verifying a subdomain, create a CNAME record with the value:</p>
-              <pre>public.us1.wpcs.io</pre>';
-        } elseif(strtolower($api_region) == 'eu1') {
-            echo '
-<pre>
-54.74.209.56
-54.75.81.37
-54.216.187.86
-</pre>
-              <p>If you are verifying a subdomain, create a CNAME record with the value:</p>
-              <pre>public.eu1.wpcs.io</pre>';
-        } else {
-            echo 'The region is currently not setup correctly.';
+    /** DNS records for a custom domain, from the storefront's DNS settings. With neither set, the customer is told to contact support. */
+    public function render_dns_instructions()
+    {
+        $a_records = $this->config->get_dns_a_records();
+        $cname_target = $this->config->get_dns_cname_target();
+        if (!$a_records && $cname_target === '') {
+            echo '<div class="wpcs-ip-instructions"><p>'
+                . esc_html('Custom domains are not set up on this store yet. Please contact support to connect your domain.')
+                . '</p></div>';
+            return;
         }
 
+        echo '<div class="wpcs-ip-instructions">';
+        echo '<p>Before verifying a domain, make sure that its DNS contains the following settings.</p>';
+        if ($a_records) {
+            echo '<p>For the domain apex add A records with <b>each of the following IPs</b> as their values:</p>';
+            echo '<pre>' . esc_html(implode("\n", $a_records)) . '</pre>';
+        }
+        if ($cname_target !== '') {
+            echo '<p>If you are verifying a subdomain, create a CNAME record with the value:</p>';
+            echo '<pre>' . esc_html($cname_target) . '</pre>';
+        }
         echo '</div>';
     }
 

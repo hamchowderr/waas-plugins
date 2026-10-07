@@ -128,7 +128,8 @@ $GLOBALS['waas_refund_answer'] = 'refund-not-settled';
 $response = $refund($order, $charge, 5000);
 $check('admin sees success', 'success', $response['gateway_refund']['status'] ?? null);
 $check('Authorize.Net calls', ['refundTransaction', 'voidTransaction'], $GLOBALS['waas_anet_calls']);
-$voidId = json_decode(file_get_contents($fixtures . 'void-approved.json'), true)['transactionResponse']['transId'];
+// Recorded fixtures start with Authorize.Net's byte order mark.
+$voidId = json_decode(preg_replace('/^\xEF\xBB\xBF/', '', file_get_contents($fixtures . 'void-approved.json')), true)['transactionResponse']['transId'];
 $check('void recorded as a full refund', ['payment_status' => 'refunded', 'total_refund' => 5000, 'refunded_total' => 5000, 'refund_rows' => [[5000, $voidId]]], $state($order, $charge));
 
 $failures ? WP_CLI::error($failures . ' check(s) failed.') : WP_CLI::success('All refund checks passed.');

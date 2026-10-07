@@ -19,7 +19,8 @@ use FluentCart\App\Services\Payments\PaymentHelper;
  * it finds nothing new and leaves the order's totals, payment status and items alone.
  * The controller still shows the gateway's error to the admin (OrderController.php:403-416).
  *
- * Remove once FluentCart only records a refund after the gateway accepts it.
+ * Temporary guard (beads waas-hju.6): remove it once FluentCart ships the upstream fix and only
+ * records a refund after the gateway accepts it.
  */
 class FailedRefundRollback
 {

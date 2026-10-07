@@ -61,7 +61,7 @@ PHP
     fi
 
     (cd "$ROOT/packages/waas-host" && composer dump-autoload -q)
-    (cd "$ROOT/packages/waas-payments" && composer dump-autoload -q)
+    (cd "$ROOT/packages/waas-payments" && { [ -d vendor ] || composer install -q --no-dev; })
 
     docker rm -f waas-db waas-wp >/dev/null 2>&1 || true
     docker run -d --name waas-db --network host -v waas-db-data:/var/lib/mysql \
