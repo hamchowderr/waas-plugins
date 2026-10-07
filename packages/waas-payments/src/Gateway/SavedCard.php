@@ -2,6 +2,7 @@
 
 namespace WaaSPayments\Gateway;
 
+use FluentCart\App\Models\SubscriptionMeta;
 use WaaSPayments\Driver\DriverResult;
 
 /**
@@ -86,5 +87,20 @@ class SavedCard
         }
 
         return null;
+    }
+
+    /**
+     * Whether a subscription other than $subscriptionId renews on this card. Authorize.Net keeps one payment
+     * profile per card on a customer profile, so a customer's subscriptions on the same card share it, and
+     * deleting it for one would break the others' renewals.
+     */
+    public static function isUsedByAnotherSubscription(array $card, $subscriptionId): bool
+    {
+        return SubscriptionMeta::query()
+            ->where('meta_key', self::META_KEY)
+            ->where('subscription_id', '!=', (int) $subscriptionId)
+            // Stored as JSON (FluentCart's meta mutator).
+            ->where('meta_value', 'like', '%"vendor_method_id":"' . $card['method_ref'] . '"%')
+            ->exists();
     }
 }

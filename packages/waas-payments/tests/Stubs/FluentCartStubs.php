@@ -358,6 +358,58 @@ namespace FluentCart\App\Models {
         }
     }
 
+    if (!class_exists(SubscriptionMeta::class)) {
+        /** fct_subscription_meta, read from the in-memory subscriptions' meta (stored as JSON, like FluentCart). */
+        class SubscriptionMeta
+        {
+            public static function query()
+            {
+                $rows = [];
+                foreach (Subscription::$table as $subscription) {
+                    foreach ($subscription->meta as $key => $value) {
+                        $rows[] = (object) ['subscription_id' => $subscription->id, 'meta_key' => $key, 'meta_value' => json_encode($value)];
+                    }
+                }
+                return new SubscriptionMetaQuery($rows);
+            }
+        }
+
+        class SubscriptionMetaQuery
+        {
+            private array $rows;
+
+            public function __construct(array $rows)
+            {
+                $this->rows = $rows;
+            }
+
+            public function where($column, $operator, $value = null)
+            {
+                if (func_num_args() === 2) {
+                    [$operator, $value] = ['=', $operator];
+                }
+                $this->rows = array_values(array_filter($this->rows, function ($row) use ($column, $operator, $value) {
+                    $actual = $row->{$column};
+                    switch ($operator) {
+                        case '!=':
+                            return $actual != $value;
+                        case 'like':
+                            $pattern = '/^' . str_replace('%', '.*', preg_quote($value, '/')) . '$/s';
+                            return (bool) preg_match($pattern, (string) $actual);
+                        default:
+                            return $actual == $value;
+                    }
+                }));
+                return $this;
+            }
+
+            public function exists(): bool
+            {
+                return $this->rows !== [];
+            }
+        }
+    }
+
     if (!class_exists(Order::class)) {
         class Order
         {

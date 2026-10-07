@@ -135,7 +135,7 @@ class CardUpdate
 
         $replaced = SavedCard::store($subscription, $result, $sandbox);
         if ($replaced) {
-            PaymentConfirmation::deleteCard($this->gateway, $replaced);
+            PaymentConfirmation::deleteCard($this->gateway, $replaced, $subscription->id);
         }
 
         // The old card's decline reason no longer applies; FluentCart's retry bookkeeping stays,
