@@ -142,8 +142,9 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
         $subscription_id = (int) $subscription->id;
 
         if ($is_revoke || in_array($trigger, self::REMOVE_TRIGGERS, true)) {
-            if (empty($this->store->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META))) {
-                return; // never created
+            if (empty($this->store->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META))
+                && !is_array($this->store->get_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META))) {
+                return; // never created, and not waiting for a new name
             }
             do_action('wpcs_subscription_expired', $subscription_id);
             $order->addLog(__('Website suspended', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s)', $subscription_id, $trigger), 'info', 'WaaS');

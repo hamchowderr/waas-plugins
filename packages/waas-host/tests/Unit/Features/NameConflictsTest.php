@@ -239,4 +239,61 @@ class NameConflictsTest extends StoreJobsTestCase
         $this->assertStringContainsString('1 website is waiting for its customer to choose a new name.', $html);
         $this->assertStringContainsString('Subscription #901: "Apex Research" was taken (apex-research.stores.waas.example)', $html);
     }
+
+    public function test_cancelling_while_waiting_stops_the_wait_and_the_form_refuses(): void
+    {
+        $this->parked();
+        $this->wpcs->expects('domain_available')->never();
+        $this->wpcs->expects('suspend_tenant')->never();
+
+        $this->manager->suspend_tenant_when_subscription_expired(901);
+
+        $this->assertSame('', $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+        $this->assertSame([], $this->queue(901));
+        $this->assertSame([], $this->scheduled, 'no deletion is scheduled: there is no store');
+        $this->assertFalse(WPCSTenant::shown_to_customer('', ''));
+        $this->assertStringContainsString('not active', $this->conflicts->choose_new_name(901, 'Apex Labs'));
+        $this->assertSame([], $this->queue(901));
+
+        Functions\when('current_user_can')->justReturn(true);
+        ob_start();
+        $this->conflicts->show_admin_notice();
+        $this->assertSame('', ob_get_clean(), 'no admin notice for a cancelled subscription');
+        $this->assertCount(2, $this->mails, 'no more emails');
+    }
+
+    public function test_a_hold_pauses_the_wait_and_reactivation_lets_the_customer_choose_again(): void
+    {
+        $this->parked();
+
+        $this->manager->suspend_tenant_on_hold(901);
+        $this->assertSame('', $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+        $this->manager->suspend_tenant_when_subscription_expired(901); // cancelled after the hold: still nothing to do
+
+        $this->manager->resume_suspended_tenant(901);
+        $this->assertSame(WPCSTenant::NEEDS_NEW_NAME, $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+
+        $this->wpcs->expects('domain_available')->andReturn(true);
+        $this->assertNull($this->conflicts->choose_new_name(901, 'Apex Labs'));
+        $this->assertSame('create', $this->queue(901)[0]['op']);
+        $this->assertSame(self::SECOND_ID, $this->queue(901)[0]['args']['external_id']);
+    }
+
+    public function test_activation_events_never_queue_a_second_create_for_a_store_waiting_for_a_name(): void
+    {
+        $this->parked();
+        $purchase = new PlanPurchase([new PlanProduct(101, 'peptide-store', 'peptide-starter')], 'Apex Research', 'owner@apexresearch.example');
+
+        // A repeated activation while waiting changes nothing.
+        $this->manager->create_tenant_when_subscription_created(901, $purchase);
+        $this->assertSame(WPCSTenant::NEEDS_NEW_NAME, $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+        $this->assertSame([], $this->queue(901));
+
+        // Cancelled, then reactivated (FluentCart reports that as an activation): the customer chooses again.
+        $this->manager->suspend_tenant_when_subscription_expired(901);
+        $this->manager->create_tenant_when_subscription_created(901, $purchase);
+        $this->assertSame(WPCSTenant::NEEDS_NEW_NAME, $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+        $this->assertSame([], $this->queue(901));
+        $this->assertSame('', $this->meta(WPCSTenant::WPCS_DOMAIN_NAME_META));
+    }
 }

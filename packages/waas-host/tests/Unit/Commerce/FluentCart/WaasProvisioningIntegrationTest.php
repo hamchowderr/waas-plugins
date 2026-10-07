@@ -90,6 +90,7 @@ class WaasProvisioningIntegrationTest extends TestCase
     public function test_removal_without_a_store_does_nothing(): void
     {
         $this->has_store(false);
+        $this->store->allows('get_subscription_meta')->with(900, WPCSTenant::WPCS_NAME_CONFLICT_META)->andReturn('');
         Actions\expectDone('wpcs_subscription_expired')->never();
 
         $this->run_feed('subscription_canceled');
@@ -142,5 +143,14 @@ class WaasProvisioningIntegrationTest extends TestCase
         $fields = array_column($integration->getSettingsFields([])['fields'], null, 'key');
 
         $this->assertSame([], $fields['group_name']['options']);
+    }
+
+    public function test_cancelling_a_store_that_waits_for_a_new_name_is_reported(): void
+    {
+        $this->has_store(false);
+        $this->store->allows('get_subscription_meta')->with(900, WPCSTenant::WPCS_NAME_CONFLICT_META)->andReturn(['name' => 'Apex Research']);
+        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+
+        $this->run_feed('subscription_canceled');
     }
 }

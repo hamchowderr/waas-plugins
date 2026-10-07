@@ -62,6 +62,11 @@ class TenantsSubscriptionManager
      */
     public function create_tenant_when_subscription_created($subscription_id, $purchase_context)
     {
+        if (NameConflicts::is_waiting($subscription_id)) {
+            // The store waits for the customer's new name (and is never created twice).
+            $this->name_conflicts->resume($subscription_id);
+            return;
+        }
         if ($this->has_store($subscription_id)) {
             $status = $this->jobs->status($subscription_id);
             if ($status === WPCSTenant::SUSPENDED) {
@@ -90,6 +95,10 @@ class TenantsSubscriptionManager
      */
     public function suspend_tenant_when_subscription_expired($subscription_id)
     {
+        if (NameConflicts::is_waiting($subscription_id)) {
+            $this->name_conflicts->pause($subscription_id);
+            return;
+        }
         $commerce = Commerce::require_adapter();
         $status = $this->jobs->status($subscription_id);
 
@@ -114,6 +123,10 @@ class TenantsSubscriptionManager
      */
     public function suspend_tenant_on_hold($subscription_id)
     {
+        if (NameConflicts::is_waiting($subscription_id)) {
+            $this->name_conflicts->pause($subscription_id);
+            return;
+        }
         if (!$this->has_store($subscription_id)
             || in_array($this->jobs->status($subscription_id), [WPCSTenant::SUSPENDED, WPCSTenant::DELETED], true)) {
             return;
@@ -125,6 +138,10 @@ class TenantsSubscriptionManager
 
     public function resume_suspended_tenant($subscription_id)
     {
+        if (NameConflicts::is_waiting($subscription_id)) {
+            $this->name_conflicts->resume($subscription_id);
+            return;
+        }
         if ($this->jobs->status($subscription_id) !== WPCSTenant::SUSPENDED) {
             return;
         }

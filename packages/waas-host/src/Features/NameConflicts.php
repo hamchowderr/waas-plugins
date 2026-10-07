@@ -57,6 +57,43 @@ class NameConflicts
         do_action('wpcs_tenant_name_conflict', $subscription_id, $name);
     }
 
+    /** True while the subscription's store waits for a new name, also while that wait is paused. */
+    public static function is_waiting($subscription_id): bool
+    {
+        return is_array(Commerce::require_adapter()->get_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META));
+    }
+
+    /**
+     * The subscription was cancelled, put on hold or expired while waiting for a new name: there is no store to
+     * suspend, so the wait stops (no state, no admin notice, the form refuses) until the subscription is active.
+     */
+    public function pause($subscription_id): void
+    {
+        $commerce = Commerce::require_adapter();
+        $conflict = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META);
+        if (!is_array($conflict) || !empty($conflict['paused'])) {
+            return;
+        }
+
+        $conflict['paused'] = true;
+        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META, $conflict);
+        $this->jobs->set_status($subscription_id, '');
+    }
+
+    /** Active again: the customer can choose the name again. */
+    public function resume($subscription_id): void
+    {
+        $commerce = Commerce::require_adapter();
+        $conflict = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META);
+        if (!is_array($conflict) || empty($conflict['paused'])) {
+            return;
+        }
+
+        unset($conflict['paused']);
+        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META, $conflict);
+        $this->jobs->set_status($subscription_id, WPCSTenant::NEEDS_NEW_NAME);
+    }
+
     /**
      * The customer's new name: checked like at checkout, except that here the API must answer (the customer is
      * waiting for the result, and a second conflict would only repeat this).
@@ -67,6 +104,9 @@ class NameConflicts
     {
         $commerce = Commerce::require_adapter();
         $conflict = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META);
+        if (is_array($conflict) && !empty($conflict['paused'])) {
+            return __('This subscription is not active, so we can\'t set up its website. Once the subscription is active again, you can choose a name here.', WPCS_WAAS_HOST_TEXTDOMAIN);
+        }
         if (!is_array($conflict) || $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_STATE) !== WPCSTenant::NEEDS_NEW_NAME) {
             return __('This website does not need a new name.', WPCS_WAAS_HOST_TEXTDOMAIN);
         }
@@ -163,7 +203,7 @@ class NameConflicts
             return;
         }
 
-        $waiting = $commerce->find_subscriptions_by_meta(WPCSTenant::WPCS_NAME_CONFLICT_META, ['']);
+        $waiting = array_filter($commerce->find_subscriptions_by_meta(WPCSTenant::WPCS_NAME_CONFLICT_META, ['']), fn ($conflict) => is_array($conflict) && empty($conflict['paused']));
         if (!$waiting) {
             return;
         }

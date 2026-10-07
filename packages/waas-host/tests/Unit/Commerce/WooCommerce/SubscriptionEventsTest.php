@@ -243,4 +243,17 @@ class SubscriptionEventsTest extends TestCase
     {
         $this->commerce->meta[$subscription_id][WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META] = 'ext-' . $subscription_id;
     }
+
+    public function test_a_store_waiting_for_a_new_name_is_held_and_reactivated_like_a_store(): void
+    {
+        $this->commerce->meta[900][WPCSTenant::WPCS_NAME_CONFLICT_META] = ['name' => 'Apex Research'];
+        Actions\expectDone('wpcs_subscription_suspended')->once()->with(900);
+        Actions\expectDone('wpcs_subscription_reactivated')->once()->with(900);
+        Actions\expectDone('wpcs_subscription_created')->never();
+        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+
+        SubscriptionEvents::suspended(900);
+        SubscriptionEvents::activated(900, Mockery::mock('WC_Order'));
+        SubscriptionEvents::ended(900);
+    }
 }
