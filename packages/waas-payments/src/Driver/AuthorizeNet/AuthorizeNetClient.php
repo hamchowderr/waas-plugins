@@ -7,9 +7,10 @@ namespace WaaSPayments\Driver\AuthorizeNet;
  *
  * Authorize.Net's official PHP SDK (authorizenet/authorizenet) is not used: it posts with raw
  * curl (lib/net/authorize/util/HttpClient.php:68), which skips WordPress's HTTP API and the
- * site's proxy and certificate settings, and it autoloads ~300 unprefixed global classes by
- * classmap, which collide with any other plugin on the site that bundles a different SDK
- * version. The three calls this plugin makes are small.
+ * site's proxy and certificate settings, and it autoloads 278 classes by classmap under the
+ * shared net\authorize namespace (not scoped to this plugin), which collide with any other
+ * plugin on the site that bundles a different SDK version. The three calls this plugin makes
+ * are small.
  *
  * The JSON API is a translation of the XML schema, so keys must follow the schema's element
  * order (AnetApiSchema.xsd in the SDK repo); the builders in AuthorizeNetDriver do.
