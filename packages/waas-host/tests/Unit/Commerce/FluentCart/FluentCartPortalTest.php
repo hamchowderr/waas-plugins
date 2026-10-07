@@ -129,4 +129,30 @@ class FluentCartPortalTest extends TestCase
         $this->assertStringContainsString('Status: Setup delayed — we&#039;re on it', $html);
         $this->assertStringNotContainsString('Status: Failed', $html);
     }
+
+    public function test_a_website_whose_name_was_taken_shows_the_new_name_form(): void
+    {
+        $this->meta[902] = [WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::NEEDS_NEW_NAME];
+        $this->domain_settings->allows('render_edit_domain')->with(900);
+        $this->domain_settings->allows('render_edit_domain')->with(901);
+        $this->domain_settings->expects('render_edit_domain')->with(902)->never();
+        Functions\when('admin_url')->alias(fn ($path = '') => 'https://storefront.example/wp-admin/' . $path);
+        Functions\when('wp_nonce_field')->alias(function ($action) {
+            echo '<input type="hidden" name="_wpnonce" data-action="' . $action . '" />';
+        });
+
+        ob_start();
+        $this->portal->render();
+        $html = ob_get_clean();
+
+        $this->assertSame([900, 901, 902], $this->portal->current_user_websites());
+        $this->assertStringContainsString('Status: Choose a new website name', $html);
+        $this->assertStringContainsString('data-action="wpcs_choose_website_name_902"', $html);
+        $this->assertSame(1, substr_count($html, 'wpcs-choose-website-name"'));
+    }
+
+    public function test_the_new_name_link_goes_to_the_website_page(): void
+    {
+        $this->assertSame('https://storefront.example/account/website', $this->portal->website_page_url());
+    }
 }

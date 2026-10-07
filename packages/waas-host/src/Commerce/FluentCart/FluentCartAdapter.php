@@ -97,6 +97,17 @@ class FluentCartAdapter implements CommerceAdapter
         return $this->store->find_subscription_meta($key, $excluded_values);
     }
 
+    public function is_domain_taken(string $domain_name): bool
+    {
+        foreach ($this->store->find_subscription_ids_with_meta(WPCSTenant::WPCS_DOMAIN_NAME_META, $domain_name) as $subscription_id) {
+            if ($this->store->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_STATE) !== WPCSTenant::DELETED) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function get_customer_id($subscription_id): int
     {
         $customer = $this->store->get_subscription_customer($subscription_id);

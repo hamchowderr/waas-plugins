@@ -3,6 +3,7 @@
 namespace WaaSHost\Commerce\FluentCart;
 
 use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Features\NameConflicts;
 use WaaSHost\Features\SingleLoginService;
 use WaaSHost\Features\UserAccountSubscriptionsSettings;
 
@@ -27,6 +28,13 @@ class FluentCartPortal
 
         add_action('fluent_cart/init', [$this, 'register_endpoint']);
         add_filter('fluent_cart/customer_portal/subscription_data', [$this, 'add_subscription_actions'], 10, 2);
+        add_filter('wpcs_choose_website_name_url', [$this, 'website_page_url']);
+    }
+
+    /** The form for a new website name is on the Website page, not FluentCart's subscription page. */
+    public function website_page_url(): string
+    {
+        return $this->store->get_portal_url(self::ENDPOINT);
     }
 
     public function register_endpoint()
@@ -80,6 +88,9 @@ class FluentCartPortal
             if ($status === WPCSTenant::READY) {
                 echo '<p><a class="fct-btn fct-btn-primary" target="_blank" rel="noopener" href="' . esc_url(SingleLoginService::get_login_link($subscription_id)) . '">'
                     . esc_html__('Log in to your website', WPCS_WAAS_HOST_TEXTDOMAIN) . '</a></p>';
+            }
+            if ($status === WPCSTenant::NEEDS_NEW_NAME) {
+                NameConflicts::render_form($subscription_id);
             }
             if (!empty($this->adapter->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META))) {
                 $this->domain_settings->render_edit_domain($subscription_id);

@@ -9,6 +9,7 @@ use WaaSHost\Commerce\PlanProduct;
 use WaaSHost\Commerce\PlanPurchase;
 use WaaSHost\Core\WPCSService;
 use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Features\NameConflicts;
 use WaaSHost\Features\StoreJobs;
 use WaaSHost\Features\TenantsSubscriptionManager;
 
@@ -24,12 +25,14 @@ class TenantsSubscriptionManagerTest extends StoreJobsTestCase
 
     private $wpcs;
     private TenantsSubscriptionManager $manager;
+    private NameConflicts $name_conflicts;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->wpcs = Mockery::mock(WPCSService::class);
-        $this->manager = new TenantsSubscriptionManager($this->wpcs, $this->jobs);
+        $this->name_conflicts = new NameConflicts($this->wpcs, $this->jobs);
+        $this->manager = new TenantsSubscriptionManager($this->wpcs, $this->jobs, $this->name_conflicts);
 
         $this->cart->meta[900] = [
             WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META => 'store-1042',

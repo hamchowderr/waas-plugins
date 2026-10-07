@@ -47,6 +47,12 @@ class FluentCartStore
         }
     }
 
+    /** @return int[] ids of subscriptions whose $key meta is $value */
+    public function find_subscription_ids_with_meta(string $key, string $value): array
+    {
+        return array_map('intval', SubscriptionMeta::query()->where('meta_key', $key)->where('meta_value', $value)->pluck('subscription_id')->toArray());
+    }
+
     /** @return array<int, mixed> subscription id => meta value */
     public function find_subscription_meta(string $key, array $excluded_values): array
     {

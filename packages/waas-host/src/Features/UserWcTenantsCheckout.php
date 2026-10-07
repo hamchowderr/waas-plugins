@@ -12,7 +12,8 @@ use WP_Error;
 /**
  * The required "Website name" field at checkout, shown when the cart has a website plan (and isn't a renewal,
  * resubscribe or plan switch). The name is checked against existing stores and the API's availability check, and
- * saved on the order as WPCS_WEBSITE_NAME_META.
+ * saved on the order as WPCS_WEBSITE_NAME_META. When the API can't answer, the name is still accepted (and marked
+ * unverified on the order) as long as no store in this storefront has it.
  *
  * Block checkout (WooCommerce's default): an additional checkout field (woocommerce_register_additional_checkout_field)
  * that is shown and required only when the cart's waas-host Store API data says needs_website_name. Classic
@@ -25,6 +26,8 @@ class UserWcTenantsCheckout
 
     private WPCSService $wpcsService;
     private WooCommerceAdapter $commerce;
+    /** @var array<string, true> names accepted in this request without the API's answer */
+    private array $unverified = [];
 
     public function __construct(WPCSService $wpcsService, WooCommerceAdapter $commerce)
     {
@@ -126,6 +129,7 @@ class UserWcTenantsCheckout
         $value = sanitize_text_field((string) $value);
         if ($key === self::FIELD_ID && $value !== '' && $wc_object instanceof \WC_Order) {
             $wc_object->update_meta_data(WPCSTenant::WPCS_WEBSITE_NAME_META, $value);
+            $this->mark_unverified($wc_object, $value);
         }
     }
 
@@ -168,7 +172,17 @@ class UserWcTenantsCheckout
     public function save_classic_checkout_field($order, $data): void
     {
         if (isset($data[WPCSTenant::WPCS_WEBSITE_NAME_META])) {
-            $order->update_meta_data(WPCSTenant::WPCS_WEBSITE_NAME_META, sanitize_text_field((string) $data[WPCSTenant::WPCS_WEBSITE_NAME_META]));
+            $value = sanitize_text_field((string) $data[WPCSTenant::WPCS_WEBSITE_NAME_META]);
+            $order->update_meta_data(WPCSTenant::WPCS_WEBSITE_NAME_META, $value);
+            $this->mark_unverified($order, $value);
+        }
+    }
+
+    /** @param \WC_Order $order */
+    private function mark_unverified($order, string $website_name): void
+    {
+        if (isset($this->unverified[$website_name])) {
+            $order->update_meta_data(WPCSTenant::WPCS_WEBSITE_NAME_UNVERIFIED_META, 'yes');
         }
     }
 
@@ -204,9 +218,11 @@ class UserWcTenantsCheckout
         } catch (InvalidDomainException $e) {
             return __('The resulting domain is not valid.', WPCS_WAAS_HOST_TEXTDOMAIN);
         } catch (\Throwable $e) {
-            // Fail closed: taking payment for a name we couldn't check risks a store that can't be created.
-            error_log('WaaS Host: website name availability check failed: ' . $e->getMessage());
-            return __('We could not check the website name right now. Please try again in a minute.', WPCS_WAAS_HOST_TEXTDOMAIN);
+            // Fail open: take the order. The name passed the storefront's own duplicate check above; if the API
+            // later finds it taken, the customer is asked for a new one (NameConflicts).
+            error_log('WaaS Host: website name availability check failed, accepting "' . $website_name . '" unverified: ' . $e->getMessage());
+            $this->unverified[$website_name] = true;
+            return null;
         }
     }
 }

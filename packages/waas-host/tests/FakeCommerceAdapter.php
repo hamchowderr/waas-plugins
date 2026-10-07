@@ -66,6 +66,17 @@ class FakeCommerceAdapter implements CommerceAdapter
         return $found;
     }
 
+    public function is_domain_taken(string $domain_name): bool
+    {
+        foreach ($this->meta as $meta) {
+            if (($meta['WPCS_DOMAIN_NAME_META'] ?? null) === $domain_name && ($meta['WPCS_TENANT_STATE'] ?? '') !== 'Deleted') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function get_customer_id($subscription_id): int
     {
         return $this->customer_id;

@@ -64,6 +64,23 @@ class SubscriptionDetailsTest extends TestCase
         $this->assertStringContainsString('Website status: Setup delayed — we&#039;re on it', $this->render(5));
     }
 
+    public function test_a_website_whose_name_was_taken_asks_the_customer_for_a_new_one(): void
+    {
+        $this->cart->meta[5] = [WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::NEEDS_NEW_NAME];
+        Functions\when('admin_url')->alias(fn ($path = '') => 'https://storefront.example/wp-admin/' . $path);
+        Functions\when('wp_nonce_field')->alias(function ($action) {
+            echo '<input type="hidden" name="_wpnonce" data-action="' . $action . '" />';
+        });
+
+        $html = $this->render(5);
+
+        $this->assertStringContainsString('Website status: Choose a new website name', $html);
+        $this->assertStringContainsString('name="action" value="wpcs_choose_website_name"', $html);
+        $this->assertStringContainsString('data-action="wpcs_choose_website_name_5"', $html);
+        $this->assertStringContainsString('name="website_name"', $html);
+        $this->assertStringNotContainsString('single_login', $html);
+    }
+
     public function test_a_ready_website_keeps_its_state_and_login_link(): void
     {
         $this->cart->meta[5] = [WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META => 'store-1042', WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::READY];

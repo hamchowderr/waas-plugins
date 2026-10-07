@@ -4,6 +4,7 @@ namespace WaaSHost\Commerce\WooCommerce;
 
 use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Features\NameConflicts;
 use WaaSHost\Features\SingleLoginService;
 
 /**
@@ -30,7 +31,10 @@ final class SubscriptionDetails
         $username = SingleLoginService::get_formatted_username($subscription_id);
         ?>
         <p class="wpcs-tenant-status"><?php esc_html_e('Website status:', WPCS_WAAS_HOST_TEXTDOMAIN); ?> <?php echo esc_html($status); ?></p>
-        <?php if (!$has_store) {
+        <?php if ($state === WPCSTenant::NEEDS_NEW_NAME) {
+            NameConflicts::render_form($subscription_id);
+        }
+        if (!$has_store) {
             return; // nothing to log in to yet
         } ?>
         <p>

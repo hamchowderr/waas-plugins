@@ -57,14 +57,39 @@ class UserWcTenantsCheckoutTest extends TestCase
         $this->assertStringContainsString('not valid', $this->checkout->check_website_name('Apex Research'));
     }
 
-    public function test_unreachable_api_blocks_checkout_instead_of_crashing(): void
+    public function test_unreachable_api_accepts_the_name_and_marks_the_order_unverified(): void
     {
+        // Chowderr's decision (waas-91g.20): fail open. It used to refuse with "try again in a minute".
         $previous = ini_set('error_log', '/dev/null');
         $this->commerce->allows('is_domain_taken')->andReturn(false);
         $this->wpcs_service->expects('domain_available')->andThrow(new \TypeError('network down'));
 
-        $this->assertStringContainsString('try again', $this->checkout->check_website_name('Apex Research'));
+        $this->assertNull($this->checkout->check_website_name('Apex Research'));
         ini_set('error_log', (string) $previous);
+
+        $order = Mockery::mock('WC_Order');
+        $order->expects('update_meta_data')->with(WPCSTenant::WPCS_WEBSITE_NAME_META, 'Apex Research');
+        $order->expects('update_meta_data')->with(WPCSTenant::WPCS_WEBSITE_NAME_UNVERIFIED_META, 'yes');
+        $this->checkout->save_classic_checkout_field($order, [WPCSTenant::WPCS_WEBSITE_NAME_META => 'Apex Research']);
+    }
+
+    public function test_a_local_duplicate_is_still_refused_while_the_api_is_down(): void
+    {
+        $this->commerce->allows('is_domain_taken')->andReturn(true);
+        $this->wpcs_service->expects('domain_available')->never();
+
+        $this->assertStringContainsString('already taken', $this->checkout->check_website_name('Apex Research'));
+    }
+
+    public function test_a_verified_name_is_not_marked(): void
+    {
+        $this->commerce->allows('is_domain_taken')->andReturn(false);
+        $this->wpcs_service->allows('domain_available')->andReturn(true);
+        $this->checkout->check_website_name('Apex Research');
+
+        $order = Mockery::mock('WC_Order');
+        $order->expects('update_meta_data')->once()->with(WPCSTenant::WPCS_WEBSITE_NAME_META, 'Apex Research');
+        $this->checkout->save_classic_checkout_field($order, [WPCSTenant::WPCS_WEBSITE_NAME_META => 'Apex Research']);
     }
 
     public function test_names_that_make_no_dns_label_are_rejected(): void
