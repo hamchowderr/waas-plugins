@@ -4,6 +4,7 @@ namespace WaaSHost\Commerce\WooCommerce;
 
 use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Features\NameConflicts;
 
 /**
  * Turns subscription status changes from either WooCommerce subscription plugin into the storefront's own events:
@@ -62,8 +63,10 @@ final class SubscriptionEvents
         do_action('wpcs_subscription_expired', $subscription_id);
     }
 
+    /** True when the subscription has a store, or one waiting for a new name (NameConflicts). */
     private static function has_store($subscription_id): bool
     {
-        return !empty(Commerce::require_adapter()->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META));
+        return !empty(Commerce::require_adapter()->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META))
+            || NameConflicts::is_waiting($subscription_id);
     }
 }

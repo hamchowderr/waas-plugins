@@ -39,6 +39,7 @@ class FluentCartCheckoutTest extends TestCase
         $this->store->allows('get_cart_product_ids')->with($this->other_cart)->andReturn([102]);
         $this->store->allows('get_plan_feed')->with(101)->andReturn(['enabled' => 'yes']);
         $this->store->allows('get_plan_feed')->with(102)->andReturnNull();
+        $this->store->allows('find_subscription_ids_with_meta')->andReturn([])->byDefault();
 
         $this->checkout = new FluentCartCheckout($this->wpcs, new FluentCartAdapter($this->store), $this->store);
     }
@@ -93,11 +94,37 @@ class FluentCartCheckoutTest extends TestCase
         $this->assertArrayHasKey('invalid', $this->validate('Apex Research')[self::FIELD]);
     }
 
-    public function test_api_outage_blocks_with_a_retry_message_instead_of_failing_checkout(): void
+    public function test_api_outage_accepts_the_name_and_marks_it_unverified(): void
     {
+        // Chowderr's decision (waas-91g.20): fail open. It used to refuse with "try again in a minute".
+        $previous = ini_set('error_log', '/dev/null');
         $this->wpcs->allows('domain_available')->andThrow(new \Exception('Something went wrong connecting to the API'));
 
-        $this->assertArrayHasKey('unavailable', $this->validate('Apex Research')[self::FIELD]);
+        $this->assertSame([], $this->validate('Apex Research'));
+        ini_set('error_log', (string) $previous);
+
+        $order = Mockery::mock();
+        $order->expects('updateMeta')->with(self::FIELD, 'Apex Research');
+        $order->expects('updateMeta')->with(WPCSTenant::WPCS_WEBSITE_NAME_UNVERIFIED_META, 'yes');
+        $this->checkout->save(['order' => $order, 'cart' => $this->plan_cart, 'request_data' => [self::FIELD => 'Apex Research']]);
+    }
+
+    public function test_a_name_another_subscription_here_has_is_refused_without_asking_the_api(): void
+    {
+        $this->store->allows('find_subscription_ids_with_meta')->with(WPCSTenant::WPCS_DOMAIN_NAME_META, 'apex-research.sites.example')->andReturn([900]);
+        $this->store->allows('get_subscription_meta')->with(900, WPCSTenant::WPCS_TENANT_STATE)->andReturn(WPCSTenant::QUEUED);
+        $this->wpcs->expects('domain_available')->never();
+
+        $this->assertArrayHasKey('taken', $this->validate('Apex Research')[self::FIELD]);
+    }
+
+    public function test_the_name_of_a_deleted_store_can_be_used_again(): void
+    {
+        $this->store->allows('find_subscription_ids_with_meta')->andReturn([900]);
+        $this->store->allows('get_subscription_meta')->with(900, WPCSTenant::WPCS_TENANT_STATE)->andReturn(WPCSTenant::DELETED);
+        $this->wpcs->expects('domain_available')->andReturn(true);
+
+        $this->assertSame([], $this->validate('Apex Research'));
     }
 
     public function test_without_a_root_domain_the_api_picks_the_domain(): void

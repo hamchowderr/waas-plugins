@@ -8,7 +8,8 @@ use WaaSHost\Core\WPCSTenant;
 
 /**
  * The "Website name" field on FluentCart's checkout, shown when the cart holds a website plan.
- * The name becomes the store's subdomain, so it is checked with the provisioning API first.
+ * The name becomes the store's subdomain, so it is checked against this storefront's stores and with the
+ * provisioning API. When the API can't answer, the name is accepted (and marked unverified on the order).
  */
 class FluentCartCheckout
 {
@@ -17,6 +18,8 @@ class FluentCartCheckout
     private WPCSService $wpcs_service;
     private FluentCartAdapter $adapter;
     private FluentCartStore $store;
+    /** @var array<string, true> names accepted in this request without the API's answer */
+    private array $unverified = [];
 
     public function __construct(WPCSService $wpcs_service, FluentCartAdapter $adapter, ?FluentCartStore $store = null)
     {
@@ -89,14 +92,23 @@ class FluentCartCheckout
             return $errors;
         }
 
+        $domain_name = $slug . '.' . $root_domain;
+        if ($this->adapter->is_domain_taken($domain_name)) {
+            $errors[self::FIELD]['taken'] = __('Website name is already taken! Please use a different one.', WPCS_WAAS_HOST_TEXTDOMAIN);
+            return $errors;
+        }
+
         try {
-            if (!$this->wpcs_service->domain_available($slug . '.' . $root_domain)) {
+            if (!$this->wpcs_service->domain_available($domain_name)) {
                 $errors[self::FIELD]['taken'] = __('Website name is already taken! Please use a different one.', WPCS_WAAS_HOST_TEXTDOMAIN);
             }
         } catch (InvalidDomainException $e) {
             $errors[self::FIELD]['invalid'] = __('The resulting domain is not valid.', WPCS_WAAS_HOST_TEXTDOMAIN);
         } catch (\Exception $e) {
-            $errors[self::FIELD]['unavailable'] = __('We could not check the website name right now. Please try again in a minute.', WPCS_WAAS_HOST_TEXTDOMAIN);
+            // Fail open: take the order (no store here has the name). If the API later finds it taken, the customer
+            // is asked for a new one (NameConflicts).
+            error_log('WaaS Host: website name availability check failed, accepting "' . $website_name . '" unverified: ' . $e->getMessage());
+            $this->unverified[$website_name] = true;
         }
 
         return $errors;
@@ -112,5 +124,8 @@ class FluentCartCheckout
         }
 
         $order->updateMeta(self::FIELD, $website_name);
+        if (isset($this->unverified[$website_name])) {
+            $order->updateMeta(WPCSTenant::WPCS_WEBSITE_NAME_UNVERIFIED_META, 'yes');
+        }
     }
 }

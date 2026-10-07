@@ -48,6 +48,12 @@ interface CommerceAdapter
      */
     public function find_subscriptions_by_meta(string $key, array $excluded_values): array;
 
+    /**
+     * True if a subscription in this storefront already has, or is getting, a store on $domain_name (stores that
+     * were deleted don't count). Checkout refuses such a name even when the provisioning API can't be asked.
+     */
+    public function is_domain_taken(string $domain_name): bool;
+
     /** WordPress user id of the customer who owns the subscription, 0 if unknown. */
     public function get_customer_id($subscription_id): int;
 

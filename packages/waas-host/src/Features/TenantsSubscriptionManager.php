@@ -28,11 +28,13 @@ class TenantsSubscriptionManager
 
     private WPCSService $wpcsService;
     private StoreJobs $jobs;
+    private NameConflicts $name_conflicts;
 
-    public function __construct(WPCSService $wpcsService, StoreJobs $jobs)
+    public function __construct(WPCSService $wpcsService, StoreJobs $jobs, ?NameConflicts $name_conflicts = null)
     {
         $this->wpcsService = $wpcsService;
         $this->jobs = $jobs;
+        $this->name_conflicts = $name_conflicts ?? new NameConflicts($wpcsService, $jobs);
 
         add_action('wpcs_subscription_created', [$this, 'create_tenant_when_subscription_created'], 10, 2);
         add_action('wpcs_subscription_suspended', [$this, 'suspend_tenant_on_hold']);
@@ -60,6 +62,11 @@ class TenantsSubscriptionManager
      */
     public function create_tenant_when_subscription_created($subscription_id, $purchase_context)
     {
+        if (NameConflicts::is_waiting($subscription_id)) {
+            // The store waits for the customer's new name (and is never created twice).
+            $this->name_conflicts->resume($subscription_id);
+            return;
+        }
         if ($this->has_store($subscription_id)) {
             $status = $this->jobs->status($subscription_id);
             if ($status === WPCSTenant::SUSPENDED) {
@@ -78,6 +85,8 @@ class TenantsSubscriptionManager
 
         $this->jobs->enqueue($subscription_id, 'create', $store);
         $this->jobs->set_status($subscription_id, WPCSTenant::QUEUED);
+        // Recorded now, so checkout refuses the same name for someone else even before the store exists.
+        Commerce::require_adapter()->update_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, (string) ($store['request']['custom_domain_name'] ?? ''));
     }
 
     /**
@@ -86,6 +95,10 @@ class TenantsSubscriptionManager
      */
     public function suspend_tenant_when_subscription_expired($subscription_id)
     {
+        if (NameConflicts::is_waiting($subscription_id)) {
+            $this->name_conflicts->pause($subscription_id);
+            return;
+        }
         $commerce = Commerce::require_adapter();
         $status = $this->jobs->status($subscription_id);
 
@@ -110,6 +123,10 @@ class TenantsSubscriptionManager
      */
     public function suspend_tenant_on_hold($subscription_id)
     {
+        if (NameConflicts::is_waiting($subscription_id)) {
+            $this->name_conflicts->pause($subscription_id);
+            return;
+        }
         if (!$this->has_store($subscription_id)
             || in_array($this->jobs->status($subscription_id), [WPCSTenant::SUSPENDED, WPCSTenant::DELETED], true)) {
             return;
@@ -121,6 +138,10 @@ class TenantsSubscriptionManager
 
     public function resume_suspended_tenant($subscription_id)
     {
+        if (NameConflicts::is_waiting($subscription_id)) {
+            $this->name_conflicts->resume($subscription_id);
+            return;
+        }
         if ($this->jobs->status($subscription_id) !== WPCSTenant::SUSPENDED) {
             return;
         }
@@ -166,7 +187,16 @@ class TenantsSubscriptionManager
                 'isPrivate' => false,
             ];
 
-            $new_tenant = $this->wpcsService->create_tenant($args);
+            try {
+                $new_tenant = $this->wpcsService->create_tenant($args);
+            } catch (\Exception $error) {
+                if ($this->name_taken($args, $error)) {
+                    // Retrying can't help: park the store until the customer picks another name.
+                    $this->name_conflicts->park($subscription_id, $store, $error->getMessage());
+                    return ['replace' => []];
+                }
+                throw $error;
+            }
             $external_id = $new_tenant->externalId ?? $external_id;
             $domain_name = $new_tenant->customDomain ?? $new_tenant->baseDomain;
             $base_domain = $new_tenant->baseDomain;
@@ -232,6 +262,9 @@ class TenantsSubscriptionManager
     public function job_suspend($subscription_id, array $args, int $attempt): ?array
     {
         $external_id = $this->external_id($subscription_id);
+        if ($external_id === '') {
+            return null; // never created (its create was parked for a new name)
+        }
         if (!empty($args['already_suspended'])) {
             $this->wpcsService->create_tenant_backup($external_id);
         } else {
@@ -245,7 +278,11 @@ class TenantsSubscriptionManager
 
     public function job_resume($subscription_id, array $args, int $attempt): ?array
     {
-        $this->wpcsService->resume_tenant($this->external_id($subscription_id));
+        $external_id = $this->external_id($subscription_id);
+        if ($external_id === '') {
+            return null; // never created (its create was parked for a new name)
+        }
+        $this->wpcsService->resume_tenant($external_id);
         do_action('wpcs_tenant_resumed', $subscription_id);
 
         return null;
@@ -254,6 +291,9 @@ class TenantsSubscriptionManager
     public function job_delete($subscription_id, array $args, int $attempt): ?array
     {
         $external_id = $this->external_id($subscription_id);
+        if ($external_id === '') {
+            return null; // never created (its create was parked for a new name)
+        }
 
         // An earlier try may have scheduled the deletion before failing.
         $tenant = $attempt > 0 ? $this->wpcsService->get_tenant_safe($external_id) : false;
@@ -266,6 +306,28 @@ class TenantsSubscriptionManager
         return null;
     }
 
+    /**
+     * The create was refused because the custom domain belongs to another store: the API's 400 "Domain ... is
+     * already in use", or any 400 when the availability check then says the domain is taken.
+     */
+    private function name_taken(array $args, \Exception $error): bool
+    {
+        $domain = (string) ($args['custom_domain_name'] ?? '');
+        $message = $error->getMessage();
+        if ($domain === '' || strpos($message, 'Failed: 400') !== 0) {
+            return false;
+        }
+        if (stripos($message, 'already in use') !== false) {
+            return true;
+        }
+
+        try {
+            return !$this->wpcsService->domain_available($domain);
+        } catch (\Throwable $e) {
+            return false; // can't tell: retry as usual
+        }
+    }
+
     /** True when the subscription has a store, or one is queued to be created. */
     private function has_store($subscription_id): bool
     {
@@ -275,12 +337,7 @@ class TenantsSubscriptionManager
 
     private function external_id($subscription_id): string
     {
-        $external_id = (string) Commerce::require_adapter()->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META);
-        if ($external_id === '') {
-            throw new \RuntimeException('The subscription has no store.');
-        }
-
-        return $external_id;
+        return (string) Commerce::require_adapter()->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META);
     }
 
     /**

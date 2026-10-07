@@ -17,6 +17,11 @@ class WPCSTenant
     /** Unix time at which a suspended store is deleted. */
     public const WPCS_TENANT_DELETE_AT_META = 'WPCS_TENANT_DELETE_AT_META';
 
+    /** Order meta: 'yes' when checkout accepted the website name without the API's availability check. */
+    public const WPCS_WEBSITE_NAME_UNVERIFIED_META = 'WPCS_WEBSITE_NAME_UNVERIFIED_META';
+    /** Subscription meta while the store waits for a new name (see NameConflicts). */
+    public const WPCS_NAME_CONFLICT_META = 'WPCS_NAME_CONFLICT_META';
+
     public const WPCS_TENANT_STATE = 'WPCS_TENANT_STATE';
     /** Asked for; the background job that creates or restores the store has not finished yet. */
     public const QUEUED = 'Queued';
@@ -26,6 +31,8 @@ class WPCSTenant
     public const READY = 'Ready';
     public const SUSPENDED = 'Suspended';
     public const DELETED = 'Deleted';
+    /** The website name turned out to be taken when the store was created; the customer picks a new one. */
+    public const NEEDS_NEW_NAME = 'Needs New Name';
     /** A background job kept failing; an admin has to retry it (see StoreJobs). */
     public const FAILED = 'Failed';
 
@@ -44,6 +51,8 @@ class WPCSTenant
                 return __('Setting up your website', WPCS_WAAS_HOST_TEXTDOMAIN);
             case self::FAILED:
                 return __('Setup delayed — we\'re on it', WPCS_WAAS_HOST_TEXTDOMAIN);
+            case self::NEEDS_NEW_NAME:
+                return __('Choose a new website name', WPCS_WAAS_HOST_TEXTDOMAIN);
             default:
                 return (string) $state;
         }
@@ -52,7 +61,7 @@ class WPCSTenant
     /** True when the customer should see a website: the subscription has one, or one is being set up. */
     public static function shown_to_customer($external_id, $state): bool
     {
-        return !empty($external_id) || in_array($state, [self::QUEUED, self::FAILED], true);
+        return !empty($external_id) || in_array($state, [self::QUEUED, self::FAILED, self::NEEDS_NEW_NAME], true);
     }
 
     public function get_status()
