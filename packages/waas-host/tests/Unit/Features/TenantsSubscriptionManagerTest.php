@@ -326,6 +326,96 @@ class TenantsSubscriptionManagerTest extends StoreJobsTestCase
         $this->assertSame(WPCSTenant::READY, $this->state());
     }
 
+    private function reason($subscription_id = 900)
+    {
+        return $this->cart->meta[$subscription_id][WPCSTenant::WPCS_TENANT_SUSPEND_REASON_META] ?? null;
+    }
+
+    private function queued_ops($subscription_id = 900): array
+    {
+        return array_column($this->queue($subscription_id), 'op');
+    }
+
+    public function test_a_billing_suspension_records_why_and_a_resume_clears_it(): void
+    {
+        $this->manager->suspend_tenant_on_hold(900);
+        $this->assertSame(WPCSTenant::SUSPENDED_ON_HOLD, $this->reason());
+
+        $this->manager->suspend_tenant_when_subscription_expired(900);
+        $this->assertSame(WPCSTenant::SUSPENDED_ENDED, $this->reason());
+
+        $this->manager->resume_suspended_tenant(900);
+        $this->assertSame('', $this->reason());
+    }
+
+    public function test_a_renewal_paid_after_a_hold_resumes_the_store(): void
+    {
+        $this->manager->suspend_tenant_on_hold(900);
+
+        $this->manager->resume_after_renewal(900);
+
+        $this->assertSame(WPCSTenant::READY, $this->state());
+        $this->assertSame(['suspend', 'resume'], $this->queued_ops());
+    }
+
+    public function test_a_renewal_after_the_subscription_ended_resumes_the_store_and_drops_the_deletion(): void
+    {
+        // E.g. the first order was refunded in the payment provider's dashboard, but billing went on.
+        $this->manager->suspend_tenant_when_subscription_expired(900);
+        $this->assertCount(1, $this->scheduled);
+
+        $this->manager->resume_after_renewal(900);
+
+        $this->assertSame(WPCSTenant::READY, $this->state());
+        $this->assertSame([], $this->scheduled);
+        $this->assertSame('', $this->cart->meta[900][WPCSTenant::WPCS_TENANT_DELETE_AT_META]);
+    }
+
+    public function test_a_renewal_leaves_a_store_suspended_by_hand_offline(): void
+    {
+        $this->cart->meta[900][WPCSTenant::WPCS_TENANT_STATE] = WPCSTenant::SUSPENDED;
+
+        $this->manager->resume_after_renewal(900);
+
+        $this->assertSame(WPCSTenant::SUSPENDED, $this->state());
+        $this->assertSame([], $this->queue(900));
+    }
+
+    public function test_a_renewal_while_the_subscription_is_not_active_keeps_the_store_offline(): void
+    {
+        $this->manager->suspend_tenant_on_hold(900);
+        $this->cart->inactive[900] = true;
+
+        $this->manager->resume_after_renewal(900);
+
+        $this->assertSame(WPCSTenant::SUSPENDED, $this->state());
+        $this->assertSame(['suspend'], $this->queued_ops());
+    }
+
+    public function test_a_renewal_after_the_deletion_ran_does_nothing(): void
+    {
+        $this->manager->suspend_tenant_when_subscription_expired(900);
+        $this->manager->delete_suspended_tenant(900);
+
+        $this->manager->resume_after_renewal(900);
+
+        $this->assertSame(WPCSTenant::DELETED, $this->state());
+        $this->assertSame(['suspend', 'delete'], $this->queued_ops());
+    }
+
+    public function test_a_renewal_of_a_running_store_does_nothing(): void
+    {
+        $this->manager->resume_after_renewal(900);
+
+        $this->assertSame(WPCSTenant::READY, $this->state());
+        $this->assertSame([], $this->queue(900));
+    }
+
+    public function test_the_renewal_event_is_wired(): void
+    {
+        $this->assertNotFalse(has_action('wpcs_subscription_renewed', [$this->manager, 'resume_after_renewal']));
+    }
+
     private function deleted_store(): void
     {
         $this->cart->meta[900][WPCSTenant::WPCS_TENANT_STATE] = WPCSTenant::DELETED;
