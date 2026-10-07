@@ -95,7 +95,7 @@ class FluentCartLifecycleTest extends TestCase
             'event_data' => ['subscription' => (object) ['id' => self::SUBSCRIPTION_ID]],
         ]);
         // The feed only queued the API work; run it as Action Scheduler would.
-        $this->jobs->run(self::SUBSCRIPTION_ID);
+        $this->run_store_jobs($this->jobs, self::SUBSCRIPTION_ID);
     }
 
     public function test_activation_creates_the_store_from_the_product_feed(): void

@@ -36,6 +36,25 @@ class WPCSTenant
         $this->post_id = $post_id;
     }
 
+    /** What the customer sees for a state; internal names stay as they are (the admin notice uses them too). */
+    public static function customer_status_label($state): string
+    {
+        switch ((string) $state) {
+            case self::QUEUED:
+                return __('Setting up your website', WPCS_WAAS_HOST_TEXTDOMAIN);
+            case self::FAILED:
+                return __('Setup delayed — we\'re on it', WPCS_WAAS_HOST_TEXTDOMAIN);
+            default:
+                return (string) $state;
+        }
+    }
+
+    /** True when the customer should see a website: the subscription has one, or one is being set up. */
+    public static function shown_to_customer($external_id, $state): bool
+    {
+        return !empty($external_id) || in_array($state, [self::QUEUED, self::FAILED], true);
+    }
+
     public function get_status()
     {
         return Commerce::require_adapter()->get_subscription_meta($this->post_id, self::WPCS_TENANT_STATE);

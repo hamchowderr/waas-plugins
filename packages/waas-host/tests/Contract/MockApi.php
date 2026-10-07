@@ -3,6 +3,7 @@
 namespace Tests\Contract;
 
 use Brain\Monkey\Functions;
+use WaaSHost\Commerce\Commerce;
 use WaaSHost\Features\StoreJobs;
 
 /**
@@ -65,6 +66,31 @@ trait MockApi
         return new StoreJobs();
     }
 
+    /**
+     * Run the store's jobs as Action Scheduler would. A job that fails keeps its error in the queue (to retry
+     * later); report that error here instead of letting a later assertion trip over the missing store.
+     */
+    private function run_store_jobs(StoreJobs $jobs, $subscription_id): void
+    {
+        $jobs->run($subscription_id);
+
+        $queue = Commerce::require_adapter()->get_subscription_meta($subscription_id, StoreJobs::QUEUE_META);
+        if (is_array($queue) && isset($queue[0]['error'])) {
+            $this->fail(sprintf('Store job "%s" failed against the mock: %s', $queue[0]['op'], $queue[0]['error']));
+        }
+    }
+
+    /** Seconds to wait before resending a request the mock failed: 4 attempts, about 12 s at worst. */
+    private static function mock_retry_delays(): array
+    {
+        return [1, 3, 8];
+    }
+
+    private function pause(int $seconds): void
+    {
+        sleep($seconds);
+    }
+
     private function mock_example(string $name): void
     {
         $this->extra_headers['x-mock-response-name'] = $name;
@@ -78,14 +104,15 @@ trait MockApi
         $header_lines = array_map(fn ($key, $value) => $key . ': ' . $value, array_keys($headers), $headers);
 
         // The public mock sometimes hangs, or answers with an error of its own instead of the example. That says
-        // nothing about the plugin, so such a request is sent again, up to 3 times in all; any other error is
-        // returned as is.
+        // nothing about the plugin, so such a request is sent again after a pause; its errors come in short bursts,
+        // so an immediate resend tends to hit the same burst. Any other error is returned as is.
         for ($attempt = 1; ; $attempt++) {
             [$body, $code, $errno, $error] = $this->send($method, $url, $header_lines, $args);
             $mock_failed = $errno === CURLE_OPERATION_TIMEDOUT || self::is_mock_error($body);
-            if (!$mock_failed || $attempt >= 3) {
+            if (!$mock_failed || $attempt > count(self::mock_retry_delays())) {
                 break;
             }
+            $this->pause(self::mock_retry_delays()[$attempt - 1]);
         }
 
         if ($body === false) {

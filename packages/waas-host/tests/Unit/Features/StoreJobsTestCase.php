@@ -20,6 +20,8 @@ abstract class StoreJobsTestCase extends TestCase
     protected array $actions = [];
     /** WP-Cron single events: [timestamp, hook, args] */
     protected array $scheduled = [];
+    /** wp_mail calls: [to, subject, message] */
+    protected array $mails = [];
 
     protected function setUp(): void
     {
@@ -61,6 +63,19 @@ abstract class StoreJobsTestCase extends TestCase
                 }
             }
             return false;
+        });
+
+        if (!defined('WPCS_WAAS_HOST_TEXTDOMAIN')) {
+            define('WPCS_WAAS_HOST_TEXTDOMAIN', 'wpcs-waas-host');
+        }
+        Functions\stubTranslationFunctions();
+        Functions\when('get_bloginfo')->justReturn('Peptide Storefront');
+        Functions\when('wp_specialchars_decode')->returnArg();
+        Functions\when('admin_url')->alias(fn ($path = '') => 'https://storefront.example/wp-admin/' . $path);
+        $this->options['admin_email'] = 'ops@storefront.example';
+        Functions\when('wp_mail')->alias(function ($to, $subject, $message) {
+            $this->mails[] = [$to, $subject, $message];
+            return true;
         });
 
         $this->cart = new FakeCommerceAdapter();

@@ -70,7 +70,7 @@ class TenantLifecycleTest extends TestCase
 
         $manager->create_tenant_when_subscription_created('sub-1', $this->purchase());
         $this->assertSame([], $this->requests, 'the cart event only queues the job');
-        $jobs->run('sub-1');
+        $this->run_store_jobs($jobs, 'sub-1');
 
         $sent = json_decode($this->requests[0][3], true);
         $this->assertSame('Apex Research', $sent['name']);
@@ -97,7 +97,7 @@ class TenantLifecycleTest extends TestCase
         $this->cart->meta['sub-1'][WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META] = 'store-1042';
 
         $manager->create_tenant_when_subscription_created('sub-1', $this->purchase());
-        $jobs->run('sub-1');
+        $this->run_store_jobs($jobs, 'sub-1');
 
         $this->assertSame([], $this->requests);
     }
@@ -107,7 +107,7 @@ class TenantLifecycleTest extends TestCase
         $manager = new TenantsSubscriptionManager($this->service, $jobs = $this->use_store_jobs());
 
         $manager->create_tenant_when_subscription_created('sub-1', new PlanPurchase([], 'Apex Research', 'owner@apexresearch.example'));
-        $jobs->run('sub-1');
+        $this->run_store_jobs($jobs, 'sub-1');
 
         $this->assertSame([], $this->requests);
     }
@@ -149,7 +149,7 @@ class TenantLifecycleTest extends TestCase
         $this->mock_example('Delete tenant: Scheduled');
 
         $manager->delete_suspended_tenant('sub-1');
-        $jobs->run('sub-1');
+        $this->run_store_jobs($jobs, 'sub-1');
 
         $this->assertSame('DELETE', $this->requests[0][0]);
         $this->assertStringEndsWith('/v1/tenants?externalId=store-1042', $this->requests[0][1]);
