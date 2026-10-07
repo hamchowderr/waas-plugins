@@ -4,51 +4,60 @@ namespace WaaSHost\Features;
 
 use WaaSHost\Core\WPCSProduct;
 
+/**
+ * An add-on can only be bought together with a website plan. Checked for the classic cart and checkout, and for
+ * the block checkout (Store API), which doesn't run woocommerce_check_cart_items.
+ */
 class WooCommerceCartValidator
 {
+    public const ERROR_CODE = 'wpcs_addon_without_base_product';
+
     public function __construct()
     {
         add_action('woocommerce_check_cart_items', [$this, 'validate_cart_contents']);
+        add_action('woocommerce_store_api_cart_errors', [$this, 'validate_store_api_cart'], 10, 2);
     }
 
     public function validate_cart_contents()
     {
         $cart = \WC()->cart;
-
-        // No checks required
-        if($cart->is_empty())
-        {
-            return;
+        if ($cart && $this->has_addon_without_base_product($cart->get_cart())) {
+            // Needs to be of type error, otherwise checkout is not prevented.
+            \wc_add_notice(self::message(), 'error');
         }
+    }
 
-        $items = \WC()->cart->cart_contents;
+    /**
+     * @param \WP_Error $errors
+     * @param \WC_Cart $cart
+     */
+    public function validate_store_api_cart($errors, $cart)
+    {
+        if ($cart && $this->has_addon_without_base_product($cart->get_cart())) {
+            $errors->add(self::ERROR_CODE, self::message());
+        }
+    }
 
-        $cart_contains_add_on = false;
-        $cart_contains_base_product = false;
+    /** @param array $items cart items, each with a product_id */
+    public function has_addon_without_base_product(array $items): bool
+    {
+        $has_addon = false;
+        $has_base_product = false;
 
-        foreach ($items as $key => $item)
-        {
-            $wpcs_product = new WPCSProduct($item['product_id']);
-            if($wpcs_product->is_wpcs_product())
-            {
-                if($wpcs_product->get_type() === WPCSProduct::WPCS_PRODUCT_TYPE_BASE_PRODUCT)
-                {
-                    $cart_contains_base_product = true;
-                }
-
-                if($wpcs_product->get_type() === WPCSProduct::WPCS_PRODUCT_TYPE_ADDON)
-                {
-                    $cart_contains_add_on = true;
-                }
+        foreach ($items as $item) {
+            $product_id = (int) ($item['product_id'] ?? 0);
+            if (AddonProductCategory::is_product_addon($product_id)) {
+                $has_addon = true;
+            } elseif ((new WPCSProduct($product_id))->is_wpcs_product()) {
+                $has_base_product = true;
             }
         }
 
-        if($cart_contains_add_on && !$cart_contains_base_product)
-        {
-            $text = __('Cannot proceed to checkout with an Add-on but no base product. Please add a base product to your cart.', WPCS_WAAS_HOST_TEXTDOMAIN);
+        return $has_addon && !$has_base_product;
+    }
 
-            // Needs to be of type error, otherwise checkout is not prevented.
-            \wc_add_notice($text, 'error');
-        }
+    private static function message(): string
+    {
+        return __('Cannot proceed to checkout with an Add-on but no base product. Please add a base product to your cart.', WPCS_WAAS_HOST_TEXTDOMAIN);
     }
 }
