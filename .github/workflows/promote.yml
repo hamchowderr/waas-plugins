@@ -1,0 +1,50 @@
+name: Promote release
+# Points the stable channel at a release already in the bucket (usually a tested beta), without
+# rebuilding it. The zip is checked against its manifest and the keys built into the plugins first.
+# Channels only move forward. Same secrets and variables as "Release plugin".
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Plugin
+        type: choice
+        options: [waas-host, waas-client, waas-payments]
+      version:
+        description: 'Released version, like 2.3.0-beta.2'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: plugin-releases
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Promote ${{ inputs.package }} ${{ inputs.version }} to stable
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
+          coverage: none
+
+      - name: Promote
+        env:
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_RELEASES_BUCKET || 'waas-releases' }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_RELEASES_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_RELEASES_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+          PACKAGE: ${{ inputs.package }}
+          VERSION: ${{ inputs.version }}
+        run: scripts/release/promote.sh "$PACKAGE" "$VERSION"

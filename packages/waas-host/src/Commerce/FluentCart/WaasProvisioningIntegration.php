@@ -169,23 +169,20 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
             // revoked access, the end of term, or a cancel with nothing left of the period takes it offline now.
             $paid_through = (!$is_revoke && $trigger === 'subscription_canceled') ? $this->store->get_paid_through($subscription_id) : 0;
             if ($paid_through > time()) {
-                do_action('wpcs_subscription_canceled_until', $subscription_id, $paid_through);
-                $order->addLog(
+                WaasEventNotes::fire($this->store, $order, $subscription_id, 'wpcs_subscription_canceled_until', [$paid_through],
                     __('Website stays online until the paid period ends', WPCS_WAAS_HOST_TEXTDOMAIN),
-                    sprintf('Subscription #%d (%s): until %s UTC', $subscription_id, $trigger, gmdate('Y-m-d H:i', $paid_through)),
-                    'info',
-                    'WaaS'
+                    sprintf('Subscription #%d (%s): until %s UTC', $subscription_id, $trigger, gmdate('Y-m-d H:i', $paid_through))
                 );
                 return;
             }
-            do_action('wpcs_subscription_expired', $subscription_id);
-            $order->addLog(__('Website suspended', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s)', $subscription_id, $trigger), 'info', 'WaaS');
+            WaasEventNotes::fire($this->store, $order, $subscription_id, 'wpcs_subscription_expired', [],
+                __('Website suspended', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s)', $subscription_id, $trigger));
             return;
         }
 
         if (in_array($trigger, self::CREATE_TRIGGERS, true)) {
-            do_action('wpcs_subscription_created', $subscription_id, $order);
-            $order->addLog(__('Website requested', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s)', $subscription_id, $trigger), 'info', 'WaaS');
+            WaasEventNotes::fire($this->store, $order, $subscription_id, 'wpcs_subscription_created', [$order],
+                __('Website requested', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s)', $subscription_id, $trigger));
         }
     }
 }

@@ -93,6 +93,55 @@ Only needed for a different sandbox account, or if the keys are rotated.
    - in WordPress: **FluentCart** → **Settings** → **Payments** → **Authorize.Net** ("Card"). Paste both values, keep **Sandbox mode** On, keep the method on, and click **Save**. The plugin verifies them and fetches the Public Client Key; or
    - in Coolify: update `AUTHNET_LOGIN_ID` / `AUTHNET_TRANSACTION_KEY`, restart the service, then run `storefront.py setup payments`.
 
+## Stripe (test) and PayPal (sandbox)
+
+For subscriptions billed by Stripe or PayPal ("Gateway managed" subscription mode). The storefront is switched to that mode separately; until then it runs store-managed with the Card gateway.
+
+**Webhooks are mandatory.** Under Gateway managed, Stripe or PayPal bills the renewals. A paid renewal, a failed payment, a cancel or suspend made in the provider's dashboard, and a refund reach FluentCart only through the webhook. waas-host acts on what FluentCart records. Without the webhook, the website stays online after the customer stops paying, and a paused or cancelled plan never takes it offline.
+
+### Stripe (test mode)
+
+1. In WordPress go to **FluentCart** → **Settings** → **Payments** → **Stripe**, open the **Test credentials** tab and click **Connect with Stripe** (or **Or Setup keys manually**: the test publishable key `pk_test_…` and secret key `sk_test_…` from the Stripe dashboard, **Developers** → **API keys**, with **Test mode** on). Turn the method on and click **Save**.
+2. In the Stripe dashboard, with **Test mode** on, go to **Developers** → **Webhooks** → **Add endpoint**. The link under **Webhook URL** in FluentCart's Stripe settings opens this page with the events already ticked.
+3. Endpoint URL:
+
+   ```
+   https://storefront-test.191.101.15.236.sslip.io/?fluent-cart=fct_payment_listener_ipn&method=stripe
+   ```
+
+4. Events: `checkout.session.completed`, `charge.succeeded`, `charge.captured`, `charge.refunded`, `charge.refund.updated`, `charge.dispute.created`, `charge.dispute.closed`, `invoice.paid`, `invoice_payment.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`, `payment_intent.succeeded`, `setup_intent.succeeded`.
+5. Save the endpoint. FluentCart needs no signing secret: it fetches each event back from Stripe to check it.
+
+Test card: `4242 4242 4242 4242`, any future expiry date, any CVC.
+
+### PayPal (sandbox)
+
+1. **FluentCart** → **Settings** → **Payments** → **PayPal**, **Test credentials** tab.
+2. **Connect** (recommended): click **Connect with PayPal** and log in with a sandbox business account from https://developer.paypal.com (**Testing Tools** → **Sandbox Accounts**). FluentCart registers the webhook itself; **Webhook Info** then says the webhook is connected and lists its events. Nothing else to set up.
+3. **Manual keys** (only if Connect isn't used): at https://developer.paypal.com, under **Apps & Credentials** (Sandbox), open or create a REST app, then:
+   1. Copy its **Client ID** and **Secret** into FluentCart.
+   2. In the app, under **Sandbox Webhooks**, click **Add Webhook** with the URL:
+
+      ```
+      https://storefront-test.191.101.15.236.sslip.io/?fluent-cart=fct_payment_listener_ipn&method=paypal
+      ```
+
+   3. Select the events: `PAYMENT.SALE.COMPLETED`, `PAYMENT.SALE.REFUNDED`, `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.REFUNDED`, `BILLING.SUBSCRIPTION.CREATED`, `BILLING.SUBSCRIPTION.ACTIVATED`, `BILLING.SUBSCRIPTION.SUSPENDED`, `BILLING.SUBSCRIPTION.CANCELLED`, `BILLING.SUBSCRIPTION.EXPIRED`, `BILLING.SUBSCRIPTION.PAYMENT.FAILED`, and the `CUSTOMER.DISPUTE.*` events.
+   4. Copy the webhook's **Webhook ID** into **Test Webhook ID** in FluentCart, then click **Save**.
+4. Pay at checkout with a sandbox personal (buyer) account.
+
+### What the website does
+
+| In Stripe or PayPal | FluentCart | Website |
+|---|---|---|
+| Renewal paid | renewed | Stays online. If waas-host had taken it offline for a billing event and the plan is active again, it comes back. |
+| Payment failed | failing, then cancelled when the provider gives up | Stays online while the provider retries; taken offline when the subscription ends, and deleted after the grace period. |
+| Paused or suspended (e.g. PayPal suspend) | paused | Taken offline, no backup and no deletion. Comes back when the plan is resumed. |
+| Cancelled (by the customer, an admin or the provider) | canceled | Stays online until the end of the paid period, then taken offline, and deleted after the grace period. |
+| Refunded | refunded | Refunding the first order takes the website offline now. A refunded renewal order keeps it while the plan stays active. |
+
+A website an admin took offline by hand is never brought back by a renewal.
+
 ## Email
 
 The WordPress image has no mail program, so nothing is sent until FluentSMTP has a connection. That covers FluentCart's receipts and account emails, password resets, and waas-host's "Your website is ready" email, which is turned on (WaaS → Settings) and carries the store's domain and a one-click login link. FluentSMTP is installed with no connection; the owner picks a provider and enters its credentials in wp-admin.

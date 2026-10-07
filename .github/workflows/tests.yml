@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [waas-host, waas-client, waas-payments]
+        package: [waas-host, waas-client, waas-payments, waas-updater]
         php: ["8.1", "8.3"]
     defaults:
       run:
@@ -29,6 +29,25 @@ jobs:
         run: composer install --no-interaction --no-progress
       - name: Run unit tests
         run: composer test -- --exclude-group mock
+
+  release-scripts:
+    # Builds, stamps, signs and verifies all three plugins with a throwaway key, and runs publish and
+    # promote against a fake bucket. Nothing is uploaded.
+    name: Release scripts (dry run)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
+          coverage: none
+          tools: composer:v2
+      - name: The plugins' updater copies are in sync
+        run: scripts/sync-updater.sh --check
+      - name: Release scripts
+        run: scripts/release/test.sh
 
   js:
     name: waas-payments checkout script tests

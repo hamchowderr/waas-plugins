@@ -41,6 +41,7 @@ class TenantsSubscriptionManager
         add_action('wpcs_subscription_created', [$this, 'create_tenant_when_subscription_created'], 10, 2);
         add_action('wpcs_subscription_suspended', [$this, 'suspend_tenant_on_hold']);
         add_action('wpcs_subscription_reactivated', [$this, 'resume_suspended_tenant']);
+        add_action('wpcs_subscription_renewed', [$this, 'resume_after_renewal']);
         add_action('wpcs_subscription_expired', [$this, 'suspend_tenant_when_subscription_expired']);
         add_action('wpcs_subscription_canceled_until', [$this, 'suspend_at_end_of_paid_period'], 10, 2);
         add_action(self::SUSPEND_AT_PERIOD_END_HOOK, [$this, 'paid_period_ended']);
@@ -121,6 +122,7 @@ class TenantsSubscriptionManager
         // Already offline since it went on hold, without a backup: the job only takes the backup.
         $this->jobs->enqueue($subscription_id, 'suspend', ['backup' => true, 'already_suspended' => $status === WPCSTenant::SUSPENDED]);
         $this->jobs->set_status($subscription_id, WPCSTenant::SUSPENDED);
+        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_REASON_META, WPCSTenant::SUSPENDED_ENDED);
         $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_DELETE_AT_META, $delete_at);
         wp_schedule_single_event($delete_at, self::DELETE_SUSPENDED_TENANT_HOOK, [$subscription_id]);
     }
@@ -217,6 +219,7 @@ class TenantsSubscriptionManager
 
         $this->jobs->enqueue($subscription_id, 'suspend', ['backup' => false, 'already_suspended' => false]);
         $this->jobs->set_status($subscription_id, WPCSTenant::SUSPENDED);
+        Commerce::require_adapter()->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_REASON_META, WPCSTenant::SUSPENDED_ON_HOLD);
     }
 
     public function resume_suspended_tenant($subscription_id)
@@ -233,7 +236,26 @@ class TenantsSubscriptionManager
         $this->jobs->enqueue($subscription_id, 'resume');
         wp_clear_scheduled_hook(self::DELETE_SUSPENDED_TENANT_HOOK, [$subscription_id]);
         Commerce::require_adapter()->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_DELETE_AT_META, '');
+        Commerce::require_adapter()->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_REASON_META, '');
         $this->jobs->set_status($subscription_id, WPCSTenant::READY);
+    }
+
+    /**
+     * A renewal was paid. Brings back a store that waas-host took offline for a billing event, when the subscription
+     * is active again: e.g. the order that bought it was refunded in the payment provider's dashboard while billing
+     * went on, or a renewal came in after the subscription went on hold. A store suspended some other way (no
+     * reason recorded) and a deleted store are left as they are.
+     */
+    public function resume_after_renewal($subscription_id)
+    {
+        $commerce = Commerce::require_adapter();
+        if ($this->jobs->status($subscription_id) !== WPCSTenant::SUSPENDED
+            || !in_array($commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_REASON_META), [WPCSTenant::SUSPENDED_ON_HOLD, WPCSTenant::SUSPENDED_ENDED], true)
+            || !$commerce->is_subscription_active($subscription_id)) {
+            return;
+        }
+
+        $this->resume_suspended_tenant($subscription_id);
     }
 
     /** End of the grace period. Does nothing if the store was resumed in the meantime. */

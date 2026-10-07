@@ -53,6 +53,7 @@ class FluentCartAdapter implements CommerceAdapter
             (new FluentCartFeedTriggers($store))->maybe_run();
         });
 
+        (new FluentCartSubscriptionEvents($store))->register();
         new FluentCartCheckout($wpcs_service, $this, $store);
         new FluentCartPortal($this, $store, $domain_settings);
 
