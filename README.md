@@ -93,7 +93,7 @@ Without the constant, WordPress's auth salt is used instead. Either way, keep it
 
 ## Tests
 
-Both plugins have PHPUnit unit tests that run without WordPress: [Brain Monkey](https://github.com/Brain-WP/BrainMonkey) stubs the WordPress functions and outside calls are mocked. They need PHP 8.1 or newer.
+The plugins (and `packages/waas-updater`) have PHPUnit unit tests that run without WordPress: [Brain Monkey](https://github.com/Brain-WP/BrainMonkey) stubs the WordPress functions and outside calls are mocked. They need PHP 8.1 or newer.
 
 ```shell
 cd packages/waas-host   # or packages/waas-client
@@ -105,13 +105,11 @@ composer test
 
 Unit tests live in each package's `tests/Unit`. The `Tests` GitHub Actions workflow runs both packages' unit tests on every pull request and on pushes to `main`; the contract tests run there too, in a separate job that reports but doesn't block, since they depend on the public mock. Release builds strip `tests/` and `phpunit.xml.dist`.
 
-## Building
+## Releases and updates
 
-Run the following command to build the plugins
+Plugins update from our own channel only: the provisioning API and the `waas-releases` R2 bucket. Tag `waas-host-v2.3.0` (or `waas-payments-v…`, `waas-client-v…`; `-beta.N` for the beta channel) on `main` and the **Release plugin** workflow builds, signs and publishes it. Stores don't update waas-client themselves; it comes with their template version. See [docs/releases.md](docs/releases.md).
 
-```shell
-bash scripts/build.sh
-```
+To build a zip locally: `scripts/release/build.sh waas-host 2.3.0 dist`.
 
 ### Card payments
 

@@ -45,8 +45,8 @@ if (!wp_doing_ajax()) {
 
     new SingleSignOnController($decryptionService);
 
-    // Updater
-    WaaSClient\Updater\Module::init();
+    // No self-update: a store's waas-client comes with its template version, and the store gets a
+    // newer one by moving to a newer version (waas-hw4). Update URI keeps wordpress.org out.
 
     if (getenv("WPCS_IS_TENANT") !== 'true') {
         new AdminTenantSettings();

@@ -4,7 +4,9 @@ namespace Tests\Unit\Updater;
 
 use Brain\Monkey\Functions;
 use Tests\Unit\TestCase;
+use WaaSHost\Core\ConfigService;
 use WaaSHost\Updater\Module;
+use WaaSHost\Updater\Updater;
 
 if (!defined('WPCS_WAAS_HOST_SLUG')) {
     define('WPCS_WAAS_HOST_SLUG', 'wpcs-waas-host');
@@ -13,48 +15,74 @@ if (!defined('WPCS_WAAS_HOST_SLUG')) {
     define('WPCS_WAAS_HOST_VERSION', '2.2.7');
 }
 
-/** The self-updater stays off until we have our own update channel, and a failed fetch never fatals. */
+/**
+ * WaaS Host's updates come only from our channel (the shared Updater, tested in
+ * packages/waas-updater), and it lends the storefront's API credentials to waas-payments.
+ */
 class ModuleTest extends TestCase
 {
     protected function setUp(): void
     {
         parent::setUp();
-        if (!class_exists('WP_Error')) {
-            eval('class WP_Error { public $code; public function __construct($code = "", $message = "") { $this->code = $code; } }');
-        }
-        Functions\when('is_wp_error')->alias(fn ($value) => $value instanceof \WP_Error);
-        (new \ReflectionProperty(Module::class, 'remote_data'))->setValue(null, null);
+        Functions\when('wp_parse_url')->alias('parse_url');
+        Functions\when('sanitize_url')->alias(function ($url) { return strpos($url, '://') === false ? 'http://' . $url : $url; });
     }
 
-    public function test_without_an_info_url_no_hooks_are_registered_and_no_update_request_is_made(): void
+    private function config($base_url, $key, $secret): ConfigService
     {
-        $this->assertFalse(defined('WAAS_UPDATE_INFO_URL'));
+        $config = \Mockery::mock(ConfigService::class);
+        $config->shouldReceive('get_api_base_url')->andReturn($base_url);
+        $config->shouldReceive('get_api_key')->andReturn($key);
+        $config->shouldReceive('get_api_secret')->andReturn($secret);
+        return $config;
+    }
+
+    public function test_credentials_come_from_the_api_settings(): void
+    {
+        $this->assertSame(
+            ['base_url' => 'https://waas-api.example.test', 'key' => 'key-id', 'secret' => 'not-a-secret'],
+            Module::credentials($this->config('https://waas-api.example.test', 'key-id', 'not-a-secret'))
+        );
+        $this->assertNull(Module::credentials($this->config(false, 'key-id', 'not-a-secret')));
+        $this->assertNull(Module::credentials($this->config('https://waas-api.example.test', '', 'not-a-secret')));
+        $this->assertNull(Module::credentials($this->config('https://waas-api.example.test', 'key-id', false)));
+    }
+
+    public function test_it_lends_the_credentials_to_our_other_plugins(): void
+    {
+        $captured = null;
+        Functions\when('add_filter')->alias(function ($hook, $callback) use (&$captured) {
+            if ($hook === 'waas_update_credentials') {
+                $captured = $callback;
+            }
+            return true;
+        });
+
+        Module::init($this->config('https://waas-api.example.test', 'key-id', 'not-a-secret'));
+
+        $this->assertIsCallable($captured);
+        $this->assertSame('key-id', $captured(null)['key']);
+        $other = ['base_url' => 'https://elsewhere.test', 'key' => 'k', 'secret' => 's'];
+        $this->assertSame($other, $captured($other), 'Credentials another filter already supplied are kept.');
+    }
+
+    public function test_update_hooks_are_registered_only_once_a_signing_key_is_built_in(): void
+    {
         Functions\expect('wp_remote_get')->never();
+        $this->assertInstanceOf(Updater::class, Module::init($this->config('https://waas-api.example.test', 'key-id', 'not-a-secret')));
 
-        Module::init();
-
-        $this->assertFalse(has_filter('plugins_api', [Module::class, 'modify_plugin_details']));
-
-        $this->assertFalse(Module::maybe_show_update_available(false, [], WPCS_WAAS_HOST_BASENAME));
-        $args = (object) ['slug' => WPCS_WAAS_HOST_SLUG];
-        $this->assertFalse(Module::modify_plugin_details(false, 'plugin_information', $args));
+        if (empty(Updater::PUBLIC_KEYS)) {
+            $this->assertFalse(has_filter('upgrader_pre_download'));
+            $this->assertFalse(has_filter('update_plugins_wpcs-waas-host'));
+        } else {
+            $this->assertNotFalse(has_filter('upgrader_pre_download'));
+            $this->assertNotFalse(has_filter('update_plugins_wpcs-waas-host'));
+        }
     }
 
-    /**
-     * @runInSeparateProcess
-     * @preserveGlobalState disabled
-     */
-    public function test_a_failed_fetch_returns_the_error_and_is_cached(): void
+    public function test_the_copy_of_the_shared_updater_is_in_sync(): void
     {
-        define('WAAS_UPDATE_INFO_URL', 'https://updates.example.test/wpcs-waas-host-info.json');
-        $error = new \WP_Error('http_request_failed', 'cURL error 28');
-        Functions\expect('wp_remote_get')->once()->with(WAAS_UPDATE_INFO_URL)->andReturn($error);
-
-        Module::init();
-        $this->assertNotFalse(has_filter('plugins_api', [Module::class, 'modify_plugin_details']));
-
-        $this->assertSame($error, Module::get_remote_data());
-        $this->assertSame($error, Module::get_remote_data());
-        $this->assertFalse(Module::maybe_show_update_available(false, [], WPCS_WAAS_HOST_BASENAME));
+        exec(escapeshellarg(dirname(__DIR__, 5) . '/scripts/sync-updater.sh') . ' --check 2>&1', $out, $status);
+        $this->assertSame(0, $status, implode("\n", $out));
     }
 }
