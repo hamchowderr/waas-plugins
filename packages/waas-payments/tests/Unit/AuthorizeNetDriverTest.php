@@ -98,10 +98,10 @@ class AuthorizeNetDriverTest extends TestCase
         $result = $this->driver()->charge($this->chargeRequest());
 
         $this->assertTrue($result->success);
-        $this->assertSame('2149186954', $result->transactionId);
+        $this->assertSame('80060594473', $result->transactionId);
         $this->assertSame('1111', $result->data['card_last4']);
         $this->assertSame('Visa', $result->data['card_brand']);
-        $this->assertSame('HW617E', $result->data['auth_code']);
+        $this->assertSame('JMSV1Q', $result->data['auth_code']);
         $this->assertSame('Y', $result->data['avs_result']);
         $this->assertSame('P', $result->data['cvv_result']);
     }

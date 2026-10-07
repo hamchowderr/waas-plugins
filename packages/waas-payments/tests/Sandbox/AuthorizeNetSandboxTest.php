@@ -33,15 +33,26 @@ class AuthorizeNetSandboxTest extends TestCase
             $this->markTestSkipped('Set AUTHORIZENET_SANDBOX_LOGIN_ID and AUTHORIZENET_SANDBOX_TRANSACTION_KEY to run against the sandbox.');
         }
 
-        // A plain HTTP POST in place of WordPress's.
+        // A plain HTTP POST in place of WordPress's, through HTTPS_PROXY when one is set
+        // (PHP streams ignore it otherwise).
         Functions\when('wp_remote_post')->alias(function ($url, $args) {
-            $context = stream_context_create(['http' => [
+            $http = [
                 'method'        => 'POST',
                 'header'        => 'Content-Type: application/json',
                 'content'       => $args['body'],
                 'timeout'       => $args['timeout'],
                 'ignore_errors' => true,
-            ]]);
+            ];
+            $proxy = getenv('HTTPS_PROXY') ?: getenv('https_proxy');
+            if ($proxy) {
+                $http['proxy'] = preg_replace('#^https?://#', 'tcp://', $proxy);
+                $http['request_fulluri'] = false;
+            }
+            $ssl = [];
+            if (getenv('SSL_CERT_FILE')) {
+                $ssl['cafile'] = getenv('SSL_CERT_FILE');
+            }
+            $context = stream_context_create(['http' => $http, 'ssl' => $ssl]);
             $body = @file_get_contents($url, false, $context);
             if ($body === false) {
                 return new \WP_Error('http_request_failed', 'Could not reach ' . $url);
@@ -59,14 +70,14 @@ class AuthorizeNetSandboxTest extends TestCase
      * In production the browser makes the token with Accept.js and the server never sees a card;
      * this is only for driving the sandbox from a test.
      */
-    private function sandboxToken(): array
+    private function sandboxToken(string $zip = '98004'): array
     {
         $client = new AuthorizeNetClient($this->loginId, $this->transactionKey, true);
         $response = $client->send('securePaymentContainerRequest', [
             'data' => [
                 'type'  => 'TOKEN',
                 'id'    => uniqid('waas-test-', true),
-                'token' => ['cardNumber' => '4111111111111111', 'expirationDate' => '12' . (date('Y') + 2), 'cardCode' => '123'],
+                'token' => ['cardNumber' => '4111111111111111', 'expirationDate' => '12' . (date('Y') + 2), 'cardCode' => '123', 'zip' => $zip],
             ],
         ]);
         $this->assertIsArray($response, 'apitest.authorize.net is not reachable');
@@ -96,5 +107,19 @@ class AuthorizeNetSandboxTest extends TestCase
         $refund = $driver->refund(new RefundRequest($amount, $amount, $charge->transactionId, $charge->data['card_last4']));
         $this->assertTrue($refund->success, $refund->message);
         $this->assertSame('void', $refund->data['action']);
+    }
+
+    /** Authorize.Net's testing guide: billing ZIP 46282 makes the sandbox decline a card. */
+    public function test_a_declined_card_is_a_failure_with_the_bank_message(): void
+    {
+        $driver = new AuthorizeNetDriver(new AuthorizeNetClient($this->loginId, $this->transactionKey, true));
+
+        $token = $this->sandboxToken('46282');
+        $charge = $driver->charge(new ChargeRequest(random_int(100, 99999), $token['dataDescriptor'], $token['dataValue']));
+
+        $this->assertFalse($charge->success);
+        $this->assertSame('2', $charge->code);
+        $this->assertSame('This transaction has been declined.', $charge->message);
+        $this->assertNotSame('', $charge->transactionId);
     }
 }
