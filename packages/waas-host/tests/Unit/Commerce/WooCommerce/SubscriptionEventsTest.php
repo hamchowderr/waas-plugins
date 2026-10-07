@@ -335,4 +335,45 @@ class SubscriptionEventsTest extends TestCase
 
         (new WpSwingsSubscriptions())->on_cancelled(900, 'Cancel');
     }
+    /** A parent order 500 of WP Swings subscription 900. */
+    private function wp_swings_parent_order(): void
+    {
+        $subscription = Mockery::mock('WPS_Subscription', 'WC_Order');
+        $subscription->allows('get_type')->andReturn('wps_subscriptions');
+        $subscription->allows('get_parent_id')->andReturn(500);
+        $order = $this->refunded_order(500, 900);
+        Functions\when('wc_get_order')->alias(fn ($id) => [900 => $subscription, 500 => $order][$id] ?? false);
+    }
+
+    public function test_wp_swings_cancelling_the_order_that_started_a_subscription_with_a_store_ends_it_now(): void
+    {
+        $this->with_store(900);
+        $this->wp_swings_parent_order();
+        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+        Actions\expectDone('wpcs_subscription_canceled_until')->never();
+
+        (new WpSwingsSubscriptions())->on_order_cancelled(500);
+    }
+
+    public function test_wp_swings_an_unpaid_order_cancelled_before_any_store_does_nothing(): void
+    {
+        // WooCommerce's timeout for unpaid orders: the subscription never started, so there is no store.
+        $this->wp_swings_parent_order();
+        Actions\expectDone('wpcs_subscription_expired')->never();
+
+        (new WpSwingsSubscriptions())->on_order_cancelled(500);
+
+        $this->assertArrayNotHasKey(SubscriptionEvents::PARENT_ORDER_ENDED_META, $this->commerce->meta[900] ?? []);
+    }
+
+    public function test_wp_swings_cancel_and_refund_of_the_same_order_end_the_store_once(): void
+    {
+        $this->with_store(900);
+        $this->wp_swings_parent_order();
+        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+
+        $plugin = new WpSwingsSubscriptions();
+        $plugin->on_order_cancelled(500);
+        $plugin->on_order_refunded(500);
+    }
 }
