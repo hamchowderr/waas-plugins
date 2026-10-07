@@ -14,6 +14,8 @@ use WaaSHost\Features\NameConflicts;
  *   payment, or put on hold by an admin). Fired once per hold.
  * - wpcs_subscription_reactivated($subscription_id): a held subscription with a store became active again.
  * - wpcs_subscription_expired($subscription_id): a subscription with a store was cancelled or expired.
+ * - wpcs_subscription_canceled_until($subscription_id, $paid_through): a subscription with a store was cancelled with
+ *   paid time left; the store stays online until $paid_through (TenantsSubscriptionManager).
  *
  * Pending-cancel fires nothing: the customer has paid until the end of the term, and the subscription plugin
  * cancels it then.
@@ -61,6 +63,16 @@ final class SubscriptionEvents
         }
 
         do_action('wpcs_subscription_expired', $subscription_id);
+    }
+
+    /** Cancelled, but paid until $paid_through (unix time). */
+    public static function canceled_until($subscription_id, int $paid_through): void
+    {
+        if (!self::has_store($subscription_id)) {
+            return;
+        }
+
+        do_action('wpcs_subscription_canceled_until', $subscription_id, $paid_through);
     }
 
     /** True when the subscription has a store, or one waiting for a new name (NameConflicts). */

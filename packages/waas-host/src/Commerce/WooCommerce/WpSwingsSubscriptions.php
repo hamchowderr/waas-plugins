@@ -7,13 +7,16 @@ namespace WaaSHost\Commerce\WooCommerce;
  * wps_subscriptions. The subscription's state is the wps_subscription_status meta (the order status stays
  * wc-wps_renewal), and the parent order and customer are kept in the wps_parent_order and wps_customer_id meta.
  *
- * Its own hooks cover activation, cancellation and expiry. Nothing is fired when a subscription goes on hold (a
- * failed renewal, or an admin pausing it) or is reactivated, so those are read from the status meta whenever it is
- * written: through the order object (High-Performance Order Storage) or as post meta (posts storage).
+ * Its own hooks cover activation, cancellation and expiry. A cancel ends the subscription at once, though the customer
+ * has paid until the next payment date, so the store stays online until then. Nothing is fired when a subscription
+ * goes on hold (a failed renewal, or an admin pausing it) or is reactivated, so those are read from the status meta
+ * whenever it is written: through the order object (High-Performance Order Storage) or as post meta (posts storage).
  */
 class WpSwingsSubscriptions implements SubscriptionPlugin
 {
     public const STATUS_META = 'wps_subscription_status';
+    /** When the next renewal is due, in site-local time (current_time('timestamp')). Kept on a cancel. */
+    public const NEXT_PAYMENT_META = 'wps_next_payment_date';
 
     /** @var array<int, true> subscription objects (by spl_object_id) whose save in progress writes the status */
     private array $saving_status = [];
@@ -42,7 +45,7 @@ class WpSwingsSubscriptions implements SubscriptionPlugin
         // Fired once the first payment completes and the subscription's activation meta is written.
         add_action('wps_sfw_order_status_changed', [$this, 'on_activated'], 10, 2);
         // Fired for cancellations by the customer, an admin and the payment gateways.
-        add_action('wps_sfw_subscription_cancel', [$this, 'on_ended'], 10, 1);
+        add_action('wps_sfw_subscription_cancel', [$this, 'on_cancelled'], 10, 2);
         add_action('wps_sfw_expire_subscription_scheduler', [$this, 'on_ended'], 10, 1);
         // WP Swings leaves the subscription active when its order is refunded; WooCommerce Subscriptions cancels it.
         add_action('woocommerce_order_fully_refunded', [$this, 'on_order_refunded'], 10, 1);
@@ -72,6 +75,33 @@ class WpSwingsSubscriptions implements SubscriptionPlugin
         if ($this->get_subscription($subscription_id) !== null) {
             SubscriptionEvents::ended((int) $subscription_id);
         }
+    }
+
+    /**
+     * A cancel ('Cancel' from the customer, an admin or a bulk action) keeps the store until the end of the period the
+     * customer paid for. Anything else, or a cancel with nothing left of the period, ends it now.
+     */
+    public function on_cancelled($subscription_id, $status = ''): void
+    {
+        $subscription = $this->get_subscription($subscription_id);
+        if ($subscription === null) {
+            return;
+        }
+
+        $paid_through = $status === 'Cancel' ? $this->get_paid_through($subscription) : 0;
+        if ($paid_through > time()) {
+            SubscriptionEvents::canceled_until((int) $subscription_id, $paid_through);
+        } else {
+            SubscriptionEvents::ended((int) $subscription_id);
+        }
+    }
+
+    /** When the subscription's paid period ends: its next payment date as a unix time, 0 when there is none. */
+    public function get_paid_through(\WC_Order $subscription): int
+    {
+        $local = (int) $subscription->get_meta(self::NEXT_PAYMENT_META);
+
+        return $local > 0 ? $local - (int) round((float) get_option('gmt_offset', 0) * 3600) : 0;
     }
 
     /** The order that started a subscription was fully refunded: the subscription ends, as if it were cancelled. */

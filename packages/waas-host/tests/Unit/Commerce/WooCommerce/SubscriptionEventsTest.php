@@ -282,4 +282,57 @@ class SubscriptionEventsTest extends TestCase
         $plugin->on_order_refunded(501);
         $plugin->on_order_refunded(500);
     }
+    private function wp_swings_subscription(int $id, $next_payment_local): void
+    {
+        $subscription = Mockery::mock('WPS_Subscription', 'WC_Order');
+        $subscription->allows('get_type')->andReturn('wps_subscriptions');
+        $subscription->allows('get_meta')->with(WpSwingsSubscriptions::NEXT_PAYMENT_META)->andReturn($next_payment_local);
+        Functions\when('wc_get_order')->alias(fn ($order_id) => $order_id === $id ? $subscription : false);
+    }
+
+    public function test_wp_swings_cancel_with_paid_time_left_keeps_the_store_until_the_next_payment_date(): void
+    {
+        $this->with_store(900);
+        $paid_through = time() + 20 * 86400;
+        // WP Swings keeps the date in site-local time; the site is at UTC-5.
+        $this->wp_swings_subscription(900, (string) ($paid_through - 5 * 3600));
+        Functions\when('get_option')->alias(fn ($name, $default = false) => $name === 'gmt_offset' ? '-5' : $default);
+        Actions\expectDone('wpcs_subscription_canceled_until')->once()->with(900, $paid_through);
+        Actions\expectDone('wpcs_subscription_expired')->never();
+
+        (new WpSwingsSubscriptions())->on_cancelled(900, 'Cancel');
+    }
+
+    /**
+     * @dataProvider wp_swings_cancels_that_end_now
+     */
+    public function test_wp_swings_cancel_without_paid_time_left_ends_the_store_now($next_payment, string $status): void
+    {
+        $this->with_store(900);
+        $this->wp_swings_subscription(900, $next_payment);
+        Functions\when('get_option')->justReturn('0');
+        Actions\expectDone('wpcs_subscription_canceled_until')->never();
+        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+
+        (new WpSwingsSubscriptions())->on_cancelled(900, $status);
+    }
+
+    public function wp_swings_cancels_that_end_now(): array
+    {
+        return [
+            'next payment date passed' => [(string) (time() - 60), 'Cancel'],
+            'no next payment date' => ['', 'Cancel'],
+            'not a cancel' => [(string) (time() + 86400), 'other'],
+        ];
+    }
+
+    public function test_wp_swings_cancel_without_a_store_fires_nothing(): void
+    {
+        $this->wp_swings_subscription(900, (string) (time() + 86400));
+        Functions\when('get_option')->justReturn('0');
+        Actions\expectDone('wpcs_subscription_canceled_until')->never();
+        Actions\expectDone('wpcs_subscription_expired')->never();
+
+        (new WpSwingsSubscriptions())->on_cancelled(900, 'Cancel');
+    }
 }

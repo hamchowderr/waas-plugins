@@ -92,6 +92,22 @@ class SubscriptionDetailsTest extends TestCase
         $this->assertStringContainsString('single_login?subscription_id=5', $html);
     }
 
+    public function test_a_cancelled_website_shows_active_until_the_end_of_the_paid_period(): void
+    {
+        $this->cart->meta[5] = [
+            WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META => 'store-1042', WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::READY,
+            WPCSTenant::WPCS_TENANT_SUSPEND_AT_META => gmmktime(16, 3, 29, 11, 7, 2026),
+        ];
+        Functions\when('get_option')->alias(fn ($name, $default = false) => $default);
+        Functions\when('wp_date')->alias(fn ($format, $ts) => gmdate($format, $ts));
+
+        $html = $this->render(5);
+
+        $this->assertStringContainsString('Website status: Active until November 7, 2026', $html);
+        $this->assertStringContainsString('Your subscription is cancelled. Your website stays online until then', $html);
+        $this->assertStringContainsString('single_login?subscription_id=5', $html);
+    }
+
     public function test_a_subscription_without_a_website_shows_nothing(): void
     {
         $this->cart->meta[5] = [];

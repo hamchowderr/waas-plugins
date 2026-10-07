@@ -5,11 +5,14 @@ namespace WaaSHost\Commerce\WooCommerce;
 use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\WPCSTenant;
 use WaaSHost\Features\NameConflicts;
+use WaaSHost\Features\Notifications;
 use WaaSHost\Features\SingleLoginService;
+use WaaSHost\Features\TenantsSubscriptionManager;
 
 /**
  * The store's panel on the customer's subscription page: the domain form (wpcs_after_subscription_details_html),
- * the one-click login link and the store's status. Shown only on subscriptions that have a store, except for the
+ * the one-click login link and the store's status ("Active until <date>" while a cancelled subscription's paid period
+ * runs out). Shown only on subscriptions that have a store, except for the
  * result of a new website name the customer just submitted.
  */
 final class SubscriptionDetails
@@ -32,10 +35,22 @@ final class SubscriptionDetails
         }
 
         $status = WPCSTenant::customer_status_label($state);
+        $suspend_at = $state === WPCSTenant::READY ? (int) $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_AT_META) : 0;
+        if ($suspend_at) {
+            /* translators: %s: date */
+            $status = sprintf(__('Active until %s', WPCS_WAAS_HOST_TEXTDOMAIN), Notifications::format_date($suspend_at));
+        }
         $username = SingleLoginService::get_formatted_username($subscription_id);
         ?>
         <p class="wpcs-tenant-status"><?php esc_html_e('Website status:', WPCS_WAAS_HOST_TEXTDOMAIN); ?> <?php echo esc_html($status); ?></p>
-        <?php if ($state === WPCSTenant::NEEDS_NEW_NAME) {
+        <?php if ($suspend_at) { ?>
+            <p class="wpcs-tenant-suspend-at"><?php echo esc_html(sprintf(
+                /* translators: %d: number of days */
+                __('Your subscription is cancelled. Your website stays online until then; after that it is taken offline, and deleted %d days later.', WPCS_WAAS_HOST_TEXTDOMAIN),
+                TenantsSubscriptionManager::get_deletion_grace_days()
+            )); ?></p>
+        <?php }
+        if ($state === WPCSTenant::NEEDS_NEW_NAME) {
             NameConflicts::render_form($subscription_id);
         }
         if (!$has_store) {
