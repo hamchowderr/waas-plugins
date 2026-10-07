@@ -15,6 +15,7 @@ class WaasProvisioningIntegrationTest extends TestCase
 {
     private $store;
     private $order;
+    private array $logs = [];
     private WaasProvisioningIntegration $integration;
 
     protected function setUp(): void
@@ -24,7 +25,10 @@ class WaasProvisioningIntegrationTest extends TestCase
         $this->store = Mockery::mock(FluentCartStore::class);
         $this->order = Mockery::mock();
         $this->order->id = 500;
-        $this->order->allows('addLog');
+        $this->order->type = 'subscription';
+        $this->order->allows('addLog')->andReturnUsing(function (...$args) {
+            $this->logs[] = $args;
+        });
         $this->store->allows('get_subscription_status')->with(900)->andReturn('canceled')->byDefault();
         $this->integration = new WaasProvisioningIntegration(Mockery::mock(WPCSService::class), $this->store);
     }
@@ -109,7 +113,8 @@ class WaasProvisioningIntegrationTest extends TestCase
     {
         $defaults = $this->integration->getIntegrationDefaults([]);
 
-        $this->assertSame(['subscription_activated', 'subscription_canceled', 'subscription_eot'], $defaults['event_trigger']);
+        // Reactivation (a late payment after the subscription expired) resumes the suspended store.
+        $this->assertSame(['subscription_activated', 'subscription_reactivated', 'subscription_canceled', 'subscription_eot'], $defaults['event_trigger']);
         $this->assertSame('yes', $defaults['watch_on_access_revoke']);
         $this->assertTrue($this->integration->isConfigured());
     }
@@ -176,5 +181,54 @@ class WaasProvisioningIntegrationTest extends TestCase
             'canceled, waiting for a name' => ['subscription_canceled', true],
             'end of term, waiting for a name' => ['subscription_eot', true],
         ];
+    }
+
+    public function test_a_late_payment_that_reactivates_the_subscription_resumes_the_store(): void
+    {
+        Actions\expectDone('wpcs_subscription_created')->once()->with(900, $this->order);
+
+        $this->run_feed('subscription_reactivated');
+    }
+
+    /** @dataProvider renewal_order_revokes */
+    public function test_a_renewal_order_refunded_or_cancelled_while_the_subscription_stays_active_keeps_the_store(string $trigger, string $status): void
+    {
+        $this->order->type = 'renewal';
+        $this->has_store(true);
+        $this->store->allows('get_subscription_status')->with(900)->andReturn($status);
+        Actions\expectDone('wpcs_subscription_expired')->never();
+
+        $this->run_feed($trigger, ['is_revoke_hook' => 'yes']);
+
+        $this->assertSame('Website kept', $this->logs[0][0]);
+        $this->assertStringContainsString('renewal order', $this->logs[0][1]);
+    }
+
+    public function renewal_order_revokes(): array
+    {
+        return [
+            'refunded, active' => ['order_fully_refunded', 'active'],
+            'refunded, trialing' => ['order_fully_refunded', 'trialing'],
+            'cancelled, active' => ['order_status_changed_to_canceled', 'active'],
+        ];
+    }
+
+    public function test_a_renewal_order_refunded_after_the_subscription_ended_still_removes_the_store(): void
+    {
+        $this->order->type = 'renewal';
+        $this->has_store(true);
+        $this->store->allows('get_subscription_status')->with(900)->andReturn('canceled');
+        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+
+        $this->run_feed('order_fully_refunded', ['is_revoke_hook' => 'yes']);
+    }
+
+    public function test_the_initial_order_refunded_removes_the_store_although_fluentcart_keeps_the_subscription_active(): void
+    {
+        $this->has_store(true);
+        $this->store->allows('get_subscription_status')->with(900)->andReturn('active');
+        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+
+        $this->run_feed('order_fully_refunded', ['is_revoke_hook' => 'yes']);
     }
 }

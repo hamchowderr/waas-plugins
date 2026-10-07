@@ -24,6 +24,12 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
     /** Triggers that suspend the store, besides any revoke hook FluentCart flags. */
     public const REMOVE_TRIGGERS = ['subscription_canceled', 'subscription_eot', 'subscription_expired_validity'];
 
+    /**
+     * A new feed's triggers. subscription_reactivated resumes a store that was suspended when the subscription
+     * expired, once the customer pays late; FluentCartFeedTriggers adds it to feeds made before it was a default.
+     */
+    public const DEFAULT_TRIGGERS = ['subscription_activated', 'subscription_reactivated', 'subscription_canceled', 'subscription_eot'];
+
     public $scopes = ['product'];
 
     private WPCSService $wpcs_service;
@@ -57,7 +63,7 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
             'name' => __('Website plan', WPCS_WAAS_HOST_TEXTDOMAIN),
             'role' => '',
             'group_name' => '',
-            'event_trigger' => ['subscription_activated', 'subscription_canceled', 'subscription_eot'],
+            'event_trigger' => self::DEFAULT_TRIGGERS,
             'watch_on_access_revoke' => 'yes',
         ];
     }
@@ -146,10 +152,17 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
                 && !is_array($this->store->get_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META))) {
                 return; // never created, and not waiting for a new name
             }
-            // Feeds run in the background, so a cancel can be handled after the reactivation that followed it. A
-            // refund (revoke) leaves the subscription active, so it always counts.
-            if (!$is_revoke && in_array($this->store->get_subscription_status($subscription_id), FluentCartStore::ACTIVE_STATUSES, true)) {
+            $is_active = in_array($this->store->get_subscription_status($subscription_id), FluentCartStore::ACTIVE_STATUSES, true);
+            // Feeds run in the background, so a cancel can be handled after the reactivation that followed it.
+            if (!$is_revoke && $is_active) {
                 $order->addLog(__('Website kept', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s): the subscription is active again', $subscription_id, $trigger), 'info', 'WaaS');
+                return;
+            }
+            // A refund (revoke) leaves the subscription active, so refunding the order that bought it counts. A
+            // renewal order refunded or cancelled while the subscription carries on doesn't: the customer keeps the
+            // plan, as on WooCommerce, where only the parent order's refund ends the subscription.
+            if ($is_revoke && $is_active && ($order->type ?? '') === 'renewal') {
+                $order->addLog(__('Website kept', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s): a renewal order, and the subscription is still active', $subscription_id, $trigger), 'info', 'WaaS');
                 return;
             }
             do_action('wpcs_subscription_expired', $subscription_id);
