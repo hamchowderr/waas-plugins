@@ -1,7 +1,7 @@
 #!/bin/sh
 # Test storefront setup steps, run by Coolify scheduled tasks as root in the wordpress container.
 #   sh /opt/wpcli/x/setup.sh <step>
-# Steps, in order: bootstrap install plugins configure pages product payments (check any time).
+# Steps, in order: bootstrap install plugins configure pages product payments cron (check any time).
 set -eu
 X=/opt/wpcli/x
 WP="sh $X/wp"
@@ -20,6 +20,7 @@ case "${1:-}" in
     $WP rewrite structure '/%postname%/' --hard ;;
   plugins)
     $WP plugin install fluent-cart --activate
+    $WP plugin install fluent-smtp --activate
     $WP plugin install $X/waas-host.zip --activate --force
     $WP plugin install $X/waas-payments.zip --activate --force
     $WP plugin list ;;
@@ -29,6 +30,7 @@ case "${1:-}" in
     $WP option update wpcs_credentials_api_key_setting "$WAAS_API_KEY" >/dev/null
     $WP option update wpcs_credentials_api_secret_setting "$WAAS_API_SECRET" >/dev/null
     echo api key and secret set
+    $WP option update wpcs_notification_settings_send_tenant_ready_email on
     $WP eval-file $X/check.php ;;
   pages)
     $WP eval 'if (!(new FluentCart\Api\StoreSettings())->get("checkout_page_id")) (new FluentCart\App\CPT\Pages())->createPages();' --user=admin
@@ -38,6 +40,10 @@ case "${1:-}" in
     $WP eval-file $X/product.php --user=admin ;;
   payments)
     $WP eval-file $X/payments.php --user=admin ;;
+  cron)
+    # WordPress no longer runs cron on page loads; the service's every-minute wp-cron task does.
+    $WP config set DISABLE_WP_CRON true --raw --type=constant
+    $WP config get DISABLE_WP_CRON ;;
   check)
     $WP eval-file $X/check.php ;;
   *) echo "unknown step"; exit 2 ;;
