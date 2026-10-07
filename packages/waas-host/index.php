@@ -25,7 +25,7 @@ require_once 'vendor/autoload.php';
  */
 /*
 Plugin Name: WaaS Host
-Plugin URI: https://github.com/Daxez/waas-wpcs
+Plugin URI: https://github.com/hamchowderr/waas-plugins
 Description: This plugin is used to create tenants on WPCS.io with support of WordPress, FluentCart, WooCommerce, WooCommerce Subscriptions and Self-service Dashboard for WooCommerce Subscriptions.
 Author: WPCS
 Version: 2.2.7

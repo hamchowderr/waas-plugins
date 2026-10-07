@@ -22,9 +22,13 @@ use WaaSPayments\Driver\RefundRequest;
  * 3. The script posts the token to PaymentConfirmation, which charges it (authorize and
  *    capture) and marks the order paid.
  *
- * One-time payments only: no subscription module is passed to the parent, so FluentCart
- * never offers this method for gateway-billed subscriptions, and a store-billed
- * subscription is refused in makePaymentFromPaymentInstance().
+ * Subscriptions: store-billed only (FluentCart > Settings > Subscriptions: "Store managed",
+ * with "Automatic charge" on for renewals charged to the saved card). FluentCart runs the
+ * schedule, retries and status changes; this gateway saves the card at Authorize.Net (CIM)
+ * on the first payment and charges it when FluentCart asks (chargeRenewal). No subscription
+ * module is passed to the parent, so there's no 'subscriptions' feature: FluentCart never
+ * offers this method for gateway-billed ("automatic") subscriptions, which would need
+ * Authorize.Net to run the schedule.
  */
 class AuthorizeNetGateway extends AbstractPaymentGateway
 {
@@ -33,7 +37,9 @@ class AuthorizeNetGateway extends AbstractPaymentGateway
     // The only dataDescriptor Accept.js issues (Accept.js docs, "Building the Opaque Data Payment Type").
     const TOKEN_DESCRIPTOR = 'COMMON.ACCEPT.INAPP.PAYMENT';
 
-    public array $supportedFeatures = ['payment', 'refund'];
+    // system_subscription: FluentCart's SystemChargeService may charge renewals through
+    // chargeRenewal(). card_update: the customer portal links to CardUpdate's page.
+    public array $supportedFeatures = ['payment', 'refund', 'system_subscription', 'card_update'];
 
     /** @var callable|null Builds the driver; replaced in tests. */
     private $driverFactory;
@@ -57,6 +63,7 @@ class AuthorizeNetGateway extends AbstractPaymentGateway
     public function boot()
     {
         (new PaymentConfirmation($this))->register();
+        (new CardUpdate($this))->register();
     }
 
     public function meta(): array
@@ -83,10 +90,14 @@ class AuthorizeNetGateway extends AbstractPaymentGateway
      */
     public function makePaymentFromPaymentInstance(PaymentInstance $paymentInstance)
     {
-        if ($paymentInstance->subscription) {
+        // A store-billed subscription's payment is a one-time charge (and saves the card when
+        // FluentCart auto-charges its renewals). A gateway-billed one would need Authorize.Net
+        // to run the schedule, which this gateway doesn't do.
+        $subscription = $paymentInstance->subscription;
+        if ($subscription && !in_array($subscription->collection_method, ['manual', 'system'], true)) {
             return new \WP_Error(
                 'waas_payments_no_subscriptions',
-                __('Subscriptions and recurring billing are not available for this store. Please remove the subscription from your cart.', 'waas-payments')
+                __('This subscription can\'t be paid by card. The store needs FluentCart\'s subscription setting "Store managed".', 'waas-payments')
             );
         }
 
@@ -130,7 +141,52 @@ class AuthorizeNetGateway extends AbstractPaymentGateway
         ];
     }
 
-    /** Authorize.Net webhooks aren't used: the charge is confirmed synchronously. */
+    /**
+     * Authorize.Net CIM can save a card without charging it (a subscription with nothing to
+     * pay today). Core/AbstractPaymentGateway.php supportsSetupWithoutCharge().
+     */
+    public function supportsSetupWithoutCharge(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Charges a renewal invoice to the saved card, for FluentCart's SystemChargeService.
+     *
+     * @param PaymentInstance $paymentInstance
+     * @param array $args ['attempt' => int]
+     * @return true|string|\WP_Error
+     */
+    public function chargeRenewal(PaymentInstance $paymentInstance, $args = [])
+    {
+        return (new RenewalCharge($this))->charge($paymentInstance, max(1, (int) ($args['attempt'] ?? 1)));
+    }
+
+    /**
+     * @param PaymentInstance $paymentInstance
+     * @return true|string|\WP_Error
+     */
+    public function reconcileRenewalCharge(PaymentInstance $paymentInstance)
+    {
+        return (new RenewalCharge($this))->reconcile($paymentInstance);
+    }
+
+    /**
+     * FluentCart's customer portal opens this URL to change the card of a subscription paid by
+     * a gateway other than Stripe or PayPal (its card_update_url, from Subscription::getUrlAttribute).
+     */
+    public function getSubscriptionUrl($url, $data)
+    {
+        $subscription = $data['subscription'] ?? null;
+
+        if ($subscription && $subscription->collection_method === 'system' && SavedCard::read($subscription)) {
+            return CardUpdate::url($subscription);
+        }
+
+        return $url;
+    }
+
+    /** Authorize.Net webhooks aren't used: charges are confirmed synchronously (beads waas-hju.10). */
     public function handleIPN()
     {
     }

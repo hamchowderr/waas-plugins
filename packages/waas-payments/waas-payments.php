@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: WaaS Payments
- * Description: Card payments for FluentCart through the store's payment gateway. One-time payments only. First gateway: Authorize.Net.
+ * Description: Card payments for FluentCart through the store's payment gateway, including subscriptions charged automatically on renewal (FluentCart store-managed subscriptions). First gateway: Authorize.Net.
  * Version: 0.1.0
  * Requires at least: 6.0
  * Requires PHP: 7.4

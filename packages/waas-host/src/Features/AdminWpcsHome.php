@@ -102,7 +102,7 @@ class AdminWpcsHome
                 <p>
                     Before you can sell sites automatically with this Storefront there are a few things that require setup. Down below you can find a list of things to set up in the Storefront here.
                     But maybe even more important is to have something to sell.
-                    The Storefront is only useful when connecting it to a WPCS Application that contains a Version (the one with the production label) with the WaaS-Client plugin setup. <a href="https://github.com/Daxez/waas-wpcs/releases/latest" target="_blank">You can download the WaaS-Client plugin here.</a>
+                    The Storefront is only useful when connecting it to a WPCS Application that contains a Version (the one with the production label) with the WaaS-Client plugin setup. <a href="https://github.com/hamchowderr/waas-plugins" target="_blank">The WaaS-Client plugin is in our repository.</a>
                 </p>
 
             </section>

@@ -5,8 +5,8 @@ require_once(ABSPATH . '/wp-admin/includes/plugin.php');
 
 /*
 Plugin Name: WaaS Client
-Plugin URI: https://github.com/Daxez/waas-wpcs
-Description: This plugin is used as counterpart for the WaaS-Host plugin in repository https://github.com/Daxez/waas-wpcs and enables single sign on from the Host as well as enabling/disabling certain plugins as described by the roles settings.
+Plugin URI: https://github.com/hamchowderr/waas-plugins
+Description: This plugin is used as counterpart for the WaaS-Host plugin in repository https://github.com/hamchowderr/waas-plugins (forked from https://github.com/Daxez/waas-wpcs) and enables single sign on from the Host as well as enabling/disabling certain plugins as described by the roles settings.
 Author: WPCS
 Version: 2.2.7
 Author URI: https://wpcs.io

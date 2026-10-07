@@ -154,6 +154,14 @@ namespace FluentCart\App\Helpers {
             public const TRANSACTION_REFUNDED = 'refunded';
             public const TRANSACTION_TYPE_CHARGE = 'charge';
             public const TRANSACTION_TYPE_REFUND = 'refund';
+            public const ORDER_TYPE_RENEWAL = 'renewal';
+            public const PAYMENT_PENDING = 'pending';
+            public const PAYMENT_SCHEDULED = 'scheduled';
+            public const SUBSCRIPTION_ACTIVE = 'active';
+            public const SUBSCRIPTION_TRIALING = 'trialing';
+            public const SUBSCRIPTION_PAST_DUE = 'past_due';
+            public const SUBSCRIPTION_EXPIRED = 'expired';
+            public const SUBSCRIPTION_CANCELED = 'canceled';
         }
     }
 
@@ -273,6 +281,197 @@ namespace FluentCart\App\Models {
             public function get()
             {
                 return $this->rows;
+            }
+
+            public function first()
+            {
+                return $this->rows[0] ?? null;
+            }
+        }
+    }
+
+    if (!class_exists(Subscription::class)) {
+        /** A FluentCart subscription with its meta kept in memory. */
+        class Subscription
+        {
+            /** Saved subscriptions by id, standing in for fct_subscriptions. */
+            public static array $table = [];
+
+            public $id;
+            public $uuid = '';
+            public $status = 'active';
+            public $collection_method = 'system';
+            public $customer_id = 42;
+            public $parent_order_id = 7;
+            public $vendor_customer_id = '';
+            public $item_name = 'Website plan';
+            public $order;
+            public $meta = [];
+            public $logs = [];
+            public $saved = 0;
+
+            public function __construct(array $attributes = [])
+            {
+                foreach ($attributes as $key => $value) {
+                    $this->{$key} = $value;
+                }
+                if ($this->id) {
+                    self::$table[$this->id] = $this;
+                }
+            }
+
+            public static function query()
+            {
+                return new OrderTransactionQuery(self::$table);
+            }
+
+            public function getMeta($key, $default = null)
+            {
+                return $this->meta[$key] ?? $default;
+            }
+
+            public function updateMeta($key, $value)
+            {
+                $this->meta[$key] = $value;
+            }
+
+            public function deleteMeta($key)
+            {
+                unset($this->meta[$key]);
+            }
+
+            public function save()
+            {
+                $this->saved++;
+                return true;
+            }
+
+            public function addLog($title, $description = '', $type = 'info')
+            {
+                $this->logs[] = [$title, $description, $type];
+            }
+
+            public function isSystem(): bool
+            {
+                return $this->collection_method === 'system';
+            }
+        }
+    }
+
+    if (!class_exists(SubscriptionMeta::class)) {
+        /** fct_subscription_meta, read from the in-memory subscriptions' meta (stored as JSON, like FluentCart). */
+        class SubscriptionMeta
+        {
+            public static function query()
+            {
+                $rows = [];
+                foreach (Subscription::$table as $subscription) {
+                    foreach ($subscription->meta as $key => $value) {
+                        $rows[] = (object) ['subscription_id' => $subscription->id, 'meta_key' => $key, 'meta_value' => json_encode($value)];
+                    }
+                }
+                return new SubscriptionMetaQuery($rows);
+            }
+        }
+
+        class SubscriptionMetaQuery
+        {
+            private array $rows;
+
+            public function __construct(array $rows)
+            {
+                $this->rows = $rows;
+            }
+
+            public function where($column, $operator, $value = null)
+            {
+                if (func_num_args() === 2) {
+                    [$operator, $value] = ['=', $operator];
+                }
+                $this->rows = array_values(array_filter($this->rows, function ($row) use ($column, $operator, $value) {
+                    $actual = $row->{$column};
+                    switch ($operator) {
+                        case '!=':
+                            return $actual != $value;
+                        case 'like':
+                            $pattern = '/^' . str_replace('%', '.*', preg_quote($value, '/')) . '$/s';
+                            return (bool) preg_match($pattern, (string) $actual);
+                        default:
+                            return $actual == $value;
+                    }
+                }));
+                return $this;
+            }
+
+            public function exists(): bool
+            {
+                return $this->rows !== [];
+            }
+        }
+    }
+
+    if (!class_exists(Order::class)) {
+        class Order
+        {
+            /** Orders by id, standing in for fct_orders. */
+            public static array $table = [];
+
+            public function __construct(array $attributes = [])
+            {
+                foreach ($attributes as $key => $value) {
+                    $this->{$key} = $value;
+                }
+                if (isset($this->id)) {
+                    self::$table[$this->id] = $this;
+                }
+            }
+
+            public static function query()
+            {
+                return new OrderTransactionQuery(self::$table);
+            }
+        }
+    }
+}
+
+namespace FluentCart\App\Modules\Subscriptions\Services {
+    if (!class_exists(SystemChargeService::class)) {
+        /** Records the calls the gateway makes into FluentCart's charge engine. */
+        class SystemChargeService
+        {
+            public static array $calls = [];
+            /** What chargeNow() answers. */
+            public static $chargeNowResult = ['status' => 'paid', 'message' => 'Paid.'];
+
+            public static function demoteToManual($subscription, string $reason)
+            {
+                self::$calls[] = ['demoteToManual', $subscription->id, $reason];
+                $subscription->collection_method = 'manual';
+            }
+
+            public static function clearFailureState($subscription)
+            {
+                self::$calls[] = ['clearFailureState', $subscription->id];
+            }
+
+            public static function chargeNow($invoice, $subscription, $actorId = 0)
+            {
+                self::$calls[] = ['chargeNow', $invoice->id, $subscription->id, $actorId];
+                return self::$chargeNowResult;
+            }
+        }
+    }
+}
+
+namespace FluentCart\Api\Resource {
+    if (!class_exists(CustomerResource::class)) {
+        class CustomerResource
+        {
+            public static $current = null;
+
+            public static function getCurrentCustomer(bool $createIfNotExists = false): ?object
+            {
+                return self::$current;
             }
         }
     }
