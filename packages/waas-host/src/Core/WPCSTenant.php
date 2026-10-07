@@ -14,12 +14,15 @@ class WPCSTenant
     public const WPCS_TENANT_PUBLIC_KEY_META = 'WPCS_TENANT_PUBLIC_KEY_META';
     public const WPCS_TENANT_PRIVATE_KEY_META = 'WPCS_TENANT_PRIVATE_KEY_META';
     public const WPCS_DEFAULT_USER_ROLE = 'wpcs_host_settings_default_user_role';
+    /** Unix time at which a suspended store is deleted. */
+    public const WPCS_TENANT_DELETE_AT_META = 'WPCS_TENANT_DELETE_AT_META';
 
     public const WPCS_TENANT_STATE = 'WPCS_TENANT_STATE';
     public const PROVISIONING = 'Provisioning';
     public const LINKING_DOMAIN = 'Linking Domain';
     public const REQUESTING_SSL = 'Requesting SSL';
     public const READY = 'Ready';
+    public const SUSPENDED = 'Suspended';
     public const DELETED = 'Deleted';
 
     private $post_id;

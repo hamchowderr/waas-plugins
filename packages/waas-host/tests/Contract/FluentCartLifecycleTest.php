@@ -70,11 +70,12 @@ class FluentCartLifecycleTest extends TestCase
         $this->manager = new TenantsSubscriptionManager($service);
         $this->integration = new WaasProvisioningIntegration($service, $store);
 
-        // Wire the two actions the integration fires to the shared store-creation code.
+        // Wire the two actions the integration fires to the shared code. Cancellation is wired straight to the
+        // grace-period deletion: the mock has no suspend example yet (waas-api-2hl.5); the unit tests cover suspend.
         Actions\expectDone('wpcs_subscription_created')->zeroOrMoreTimes()
             ->whenHappen(fn ($id, $order) => $this->manager->create_tenant_when_subscription_created($id, $order));
         Actions\expectDone('wpcs_subscription_expired')->zeroOrMoreTimes()
-            ->whenHappen(fn ($id) => $this->manager->remove_tenant_when_subscription_expired($id));
+            ->whenHappen(fn ($id) => $this->manager->delete_suspended_tenant($id));
     }
 
     protected function tearDown(): void
@@ -121,9 +122,10 @@ class FluentCartLifecycleTest extends TestCase
         $this->assertSame([], $this->requests);
     }
 
-    public function test_cancel_deletes_the_store_by_external_id(): void
+    public function test_cancel_ends_with_deleting_the_suspended_store_by_external_id(): void
     {
         $this->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META] = 'store-1042';
+        $this->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_TENANT_STATE] = WPCSTenant::SUSPENDED;
         $this->mock_example('Delete tenant: Scheduled');
 
         $this->run_feed('subscription_canceled');

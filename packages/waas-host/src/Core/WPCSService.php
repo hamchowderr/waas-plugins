@@ -145,6 +145,40 @@ class WPCSService
         return $this->httpService->delete('/v1/tenants?externalId=' . $args['external_id']);
     }
 
+    /**
+     * Take the store offline, keeping its data. With $take_backup the API backs it up first.
+     */
+    public function suspend_tenant($external_id, bool $take_backup = true)
+    {
+        return $this->httpService->post('/v1/tenants/suspend?externalId=' . $external_id, [
+            'takeBackup' => $take_backup,
+        ]);
+    }
+
+    public function resume_tenant($external_id)
+    {
+        return $this->httpService->post('/v1/tenants/resume?externalId=' . $external_id, []);
+    }
+
+    public function create_tenant_backup($external_id)
+    {
+        return $this->httpService->post('/v1/tenants/backups?externalId=' . $external_id, []);
+    }
+
+    /** The tenant's backups, newest first, also after the tenant was deleted. */
+    public function get_tenant_backups($external_id): array
+    {
+        return (array) $this->httpService->get('/v1/tenants/backups?externalId=' . $external_id);
+    }
+
+    /** Re-create a deleted tenant, with the same externalId and domains, from one of its backups. */
+    public function restore_tenant($external_id, string $backup_id)
+    {
+        return $this->httpService->post('/v1/tenants/restore?externalId=' . $external_id, [
+            'backupId' => $backup_id,
+        ]);
+    }
+
     public function add_tenant_domain($args)
     {
         $this->httpService->post('/v1/tenants/domains?externalId=' . $args['external_id'], [

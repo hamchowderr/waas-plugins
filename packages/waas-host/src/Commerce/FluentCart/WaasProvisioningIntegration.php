@@ -11,17 +11,17 @@ use WaaSHost\Features\PluginBootstrap;
 /**
  * Product integration that makes a FluentCart product a website plan. Its feed stores
  * the role and snapshot group; its triggers create the store (subscription activated)
- * and remove it (canceled, end of term, or access revoked). FluentCart runs product
+ * and suspend it (canceled, end of term, or access revoked; deleted after the grace period). FluentCart runs product
  * feeds in the background through Action Scheduler, outside the payment request.
  */
 class WaasProvisioningIntegration extends BaseIntegrationManager
 {
     public const KEY = 'waas_provisioning';
 
-    /** Triggers that create the store. Creation is idempotent per subscription. */
+    /** Triggers that create the store, or resume it if it is suspended. Creation is idempotent per subscription. */
     public const CREATE_TRIGGERS = ['subscription_activated', 'subscription_reactivated', 'order_paid_done'];
 
-    /** Triggers that remove the store, besides any revoke hook FluentCart flags. */
+    /** Triggers that suspend the store, besides any revoke hook FluentCart flags. */
     public const REMOVE_TRIGGERS = ['subscription_canceled', 'subscription_eot', 'subscription_expired_validity'];
 
     public $scopes = ['product'];
@@ -35,7 +35,7 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
 
         $this->wpcs_service = $wpcs_service;
         $this->store = $store;
-        $this->description = __('Create a website for the customer when they subscribe to this product, and remove it when the subscription ends.', WPCS_WAAS_HOST_TEXTDOMAIN);
+        $this->description = __('Create a website for the customer when they subscribe to this product. When the subscription ends, the website is backed up and taken offline, then deleted after the grace period set in the WaaS settings.', WPCS_WAAS_HOST_TEXTDOMAIN);
         $this->disableGlobalSettings = true;
     }
 
@@ -111,7 +111,7 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
             [
                 'key' => 'watch_on_access_revoke',
                 'component' => 'yes-no-checkbox',
-                'checkbox_label' => __('Remove the website on refund or when subscription access expires', WPCS_WAAS_HOST_TEXTDOMAIN),
+                'checkbox_label' => __('Take the website offline on refund or when subscription access expires', WPCS_WAAS_HOST_TEXTDOMAIN),
             ],
             $this->actionFields(),
         ];
@@ -146,7 +146,7 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
                 return; // never created
             }
             do_action('wpcs_subscription_expired', $subscription_id);
-            $order->addLog(__('Website removed', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s)', $subscription_id, $trigger), 'info', 'WaaS');
+            $order->addLog(__('Website suspended', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s)', $subscription_id, $trigger), 'info', 'WaaS');
             return;
         }
 

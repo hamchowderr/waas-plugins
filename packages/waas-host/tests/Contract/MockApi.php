@@ -53,11 +53,13 @@ trait MockApi
 
         $header_lines = array_map(fn ($key, $value) => $key . ': ' . $value, array_keys($headers), $headers);
 
-        // The public mock sometimes hangs on a request without answering. That says nothing about the plugin,
-        // so a timed-out request is sent again, up to 3 times in all; any other error is returned as is.
+        // The public mock sometimes hangs, or answers with an error of its own instead of the example. That says
+        // nothing about the plugin, so such a request is sent again, up to 3 times in all; any other error is
+        // returned as is.
         for ($attempt = 1; ; $attempt++) {
             [$body, $code, $errno, $error] = $this->send($method, $url, $header_lines, $args);
-            if ($errno !== CURLE_OPERATION_TIMEDOUT || $attempt >= 3) {
+            $mock_failed = $errno === CURLE_OPERATION_TIMEDOUT || self::is_mock_error($body);
+            if (!$mock_failed || $attempt >= 3) {
                 break;
             }
         }
@@ -67,6 +69,20 @@ trait MockApi
         }
 
         return ['body' => $body, 'response' => ['code' => $code]];
+    }
+
+    /**
+     * The mock's own failure, not an example: {"error": {"name": "serverError", "header": "Unable to mock request"}}
+     * (500), or "syncError" / "Unable to load environments" (400). Examples answer with the API's own bodies, which
+     * never have an "error" object.
+     *
+     * @param string|false $body
+     */
+    private static function is_mock_error($body): bool
+    {
+        $decoded = is_string($body) ? json_decode($body, true) : null;
+
+        return is_array($decoded) && isset($decoded['error']['name'], $decoded['error']['header']);
     }
 
     /** @return array{0: string|false, 1: int, 2: int, 3: string} body, status code, curl error number, curl error */

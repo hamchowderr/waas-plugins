@@ -29,6 +29,44 @@ class WPCSServiceTest extends TestCase
         $this->service->delete_tenant(['external_id' => 'ext-123']);
     }
 
+    public function test_suspend_tenant_asks_for_a_backup_by_default(): void
+    {
+        $this->http->expects('post')
+            ->with('/v1/tenants/suspend?externalId=ext-123', ['takeBackup' => true])
+            ->andReturn((object) ['externalId' => 'ext-123', 'backupId' => 'bk-1']);
+
+        $result = $this->service->suspend_tenant('ext-123');
+
+        $this->assertSame('bk-1', $result->backupId);
+    }
+
+    public function test_resume_tenant_posts_an_empty_body_by_external_id(): void
+    {
+        $this->http->expects('post')
+            ->with('/v1/tenants/resume?externalId=ext-123', [])
+            ->andReturn((object) ['externalId' => 'ext-123']);
+
+        $this->service->resume_tenant('ext-123');
+    }
+
+    public function test_restore_tenant_posts_the_backup_id_by_external_id(): void
+    {
+        $this->http->expects('post')
+            ->with('/v1/tenants/restore?externalId=ext-123', ['backupId' => 'bk-1'])
+            ->andReturn((object) ['externalId' => 'ext-123', 'backupId' => 'bk-1']);
+
+        $this->service->restore_tenant('ext-123', 'bk-1');
+    }
+
+    public function test_tenant_backups_are_listed_and_created_by_external_id(): void
+    {
+        $this->http->expects('get')->with('/v1/tenants/backups?externalId=ext-123')->andReturn([(object) ['id' => 'bk-1']]);
+        $this->http->expects('post')->with('/v1/tenants/backups?externalId=ext-123', [])->andReturn((object) ['backupId' => 'bk-2']);
+
+        $this->assertSame('bk-1', $this->service->get_tenant_backups('ext-123')[0]->id);
+        $this->assertSame('bk-2', $this->service->create_tenant_backup('ext-123')->backupId);
+    }
+
     public function test_update_tenant_puts_filtered_payload_by_external_id(): void
     {
         $this->http->expects('put')

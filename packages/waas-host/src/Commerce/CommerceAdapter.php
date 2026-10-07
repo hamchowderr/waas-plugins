@@ -21,8 +21,11 @@ interface CommerceAdapter
 
     /**
      * Register the cart's own hooks: plan settings on products, the website-name
-     * field at checkout, subscription start/stop events (firing
-     * wpcs_subscription_created / wpcs_subscription_expired), and the customer page.
+     * field at checkout, subscription events, and the customer page. Events:
+     * wpcs_subscription_created (active; firing it again for a subscription that has a
+     * store resumes or restores that store), wpcs_subscription_suspended (on hold),
+     * wpcs_subscription_reactivated (active after a hold) and wpcs_subscription_expired
+     * (cancelled or expired).
      */
     public function boot(WPCSService $wpcs_service): void;
 
