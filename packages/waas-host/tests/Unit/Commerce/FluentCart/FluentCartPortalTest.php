@@ -151,8 +151,51 @@ class FluentCartPortalTest extends TestCase
         $this->assertSame(1, substr_count($html, 'wpcs-choose-website-name"'));
     }
 
-    public function test_the_new_name_link_goes_to_the_website_page(): void
+    public function test_the_new_name_link_goes_to_the_website_page_also_after_logging_in(): void
     {
-        $this->assertSame('https://storefront.example/account/website', $this->portal->website_page_url());
+        Functions\when('add_query_arg')->alias(fn ($key, $value, $url) => $url . '?' . $key . '=' . $value);
+
+        $this->assertSame('https://storefront.example/account/website?redirect_to=https%3A%2F%2Fstorefront.example%2Faccount%2Fwebsite', $this->portal->website_page_url());
+    }
+
+    private function render_after_result(string $code, string $for): string
+    {
+        $_GET = ['wpcs_website_name' => $code, 'wpcs_website_name_for' => $for];
+        Functions\when('sanitize_text_field')->returnArg();
+        Functions\when('wp_unslash')->returnArg();
+        Functions\when('sanitize_key')->returnArg();
+        Functions\when('admin_url')->alias(fn ($path = '') => 'https://storefront.example/wp-admin/' . $path);
+        Functions\when('wp_nonce_field')->justReturn('');
+        $this->domain_settings->allows('render_edit_domain');
+        try {
+            ob_start();
+            $this->portal->render();
+            return ob_get_clean();
+        } finally {
+            $_GET = [];
+        }
+    }
+
+    public function test_a_refused_name_for_a_website_no_longer_listed_is_still_explained(): void
+    {
+        // 902 waited for a name; its subscription was cancelled before the customer submitted the open form.
+        $html = $this->render_after_result('not_active', '902');
+
+        $this->assertStringContainsString('This subscription is not active', $html);
+        $this->assertSame([900, 901], $this->portal->current_user_websites());
+        $this->assertStringNotContainsString('not active', $this->render_after_result('not_active', '903'), "not for someone else's subscription");
+    }
+
+    public function test_with_several_websites_the_result_shows_at_its_own_one_only(): void
+    {
+        $this->meta[901][WPCSTenant::WPCS_TENANT_STATE] = WPCSTenant::NEEDS_NEW_NAME;
+        $this->meta[902] = [WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::NEEDS_NEW_NAME];
+
+        $html = $this->render_after_result('taken', '902');
+
+        $this->assertSame(1, substr_count($html, 'already taken'));
+        $sections = explode('<section', $html);
+        $this->assertStringContainsString('already taken', end($sections), "902's section is the last one");
+        $this->assertSame(2, substr_count($html, 'wpcs-choose-website-name"'));
     }
 }

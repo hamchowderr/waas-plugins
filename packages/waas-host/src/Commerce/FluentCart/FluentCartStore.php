@@ -14,10 +14,21 @@ use FluentCart\App\Services\URL;
  */
 class FluentCartStore
 {
+    /** Subscription statuses FluentCart grants access with (its "validable" statuses). */
+    public const ACTIVE_STATUSES = ['active', 'trialing'];
+
     /** @return Subscription|null */
     public function find_subscription($subscription_id)
     {
         return Subscription::query()->find((int) $subscription_id);
+    }
+
+    /** The subscription's status now, '' when there is no such subscription. */
+    public function get_subscription_status($subscription_id): string
+    {
+        $subscription = $this->find_subscription($subscription_id);
+
+        return $subscription ? (string) $subscription->status : '';
     }
 
     /**

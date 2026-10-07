@@ -34,7 +34,9 @@ class TenantsAddOnSubscriptionManager
         $commerce = Commerce::require_adapter();
         $tenant_external_id = (string) $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META);
         if ($tenant_external_id === '') {
-            return null; // no store to update
+            // No store yet. One waiting for a new name gets the roles when it is created.
+            NameConflicts::set_roles($subscription_id, $args['roles']);
+            return null;
         }
 
         $this->wpcsService->update_tenant($tenant_external_id, [

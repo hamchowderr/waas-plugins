@@ -34,4 +34,7 @@ interface SubscriptionPlugin
 
     /** The subscription's page in My Account. */
     public function get_subscription_url(\WC_Order $subscription): string;
+
+    /** True while the subscription is active (see CommerceAdapter::is_subscription_active). */
+    public function is_subscription_active(\WC_Order $subscription): bool;
 }

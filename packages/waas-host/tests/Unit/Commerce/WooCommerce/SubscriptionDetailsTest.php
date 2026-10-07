@@ -98,4 +98,23 @@ class SubscriptionDetailsTest extends TestCase
 
         $this->assertSame('', $this->render(5));
     }
+
+    public function test_a_refused_new_name_is_explained_although_the_panel_is_gone(): void
+    {
+        // The wait was paused (subscription cancelled) after the customer opened the page with the form.
+        $this->cart->meta[5] = [WPCSTenant::WPCS_NAME_CONFLICT_META => ['name' => 'Apex Research', 'paused' => true], WPCSTenant::WPCS_TENANT_STATE => ''];
+        $_GET = ['wpcs_website_name' => 'not_active', 'wpcs_website_name_for' => '5'];
+        Functions\when('sanitize_text_field')->returnArg();
+        Functions\when('wp_unslash')->returnArg();
+        Functions\when('sanitize_key')->returnArg();
+
+        try {
+            $html = $this->render(5);
+        } finally {
+            $_GET = [];
+        }
+
+        $this->assertStringContainsString('This subscription is not active', $html);
+        $this->assertStringNotContainsString('Website status', $html);
+    }
 }
