@@ -99,4 +99,34 @@ class FluentCartPortalTest extends TestCase
     {
         $this->assertSame([], $this->portal->add_subscription_actions([], ['subscription' => (object) ['id' => 902]]));
     }
+
+    public function test_a_website_being_set_up_shows_with_the_customer_wording_and_no_domain_form(): void
+    {
+        $this->meta[902] = [WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::QUEUED];
+        $this->domain_settings->allows('render_edit_domain')->with(900);
+        $this->domain_settings->allows('render_edit_domain')->with(901);
+        $this->domain_settings->expects('render_edit_domain')->with(902)->never();
+
+        ob_start();
+        $this->portal->render();
+        $html = ob_get_clean();
+
+        $this->assertSame([900, 901, 902], $this->portal->current_user_websites());
+        $this->assertStringContainsString('Your website', $html);
+        $this->assertStringContainsString('Status: Setting up your website', $html);
+        $this->assertStringNotContainsString('Status: Queued', $html);
+    }
+
+    public function test_a_failed_setup_shows_as_delayed(): void
+    {
+        $this->meta[900][WPCSTenant::WPCS_TENANT_STATE] = WPCSTenant::FAILED;
+        $this->domain_settings->allows('render_edit_domain');
+
+        ob_start();
+        $this->portal->render();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString('Status: Setup delayed — we&#039;re on it', $html);
+        $this->assertStringNotContainsString('Status: Failed', $html);
+    }
 }

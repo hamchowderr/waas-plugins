@@ -15,16 +15,24 @@ final class SubscriptionDetails
     public static function render($subscription_id): void
     {
         $commerce = Commerce::require_adapter();
-        if (empty($commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META))) {
+        $external_id = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META);
+        $state = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_STATE);
+        if (!WPCSTenant::shown_to_customer($external_id, $state)) {
             return;
         }
+        $has_store = !empty($external_id);
 
-        do_action('wpcs_after_subscription_details_html', $subscription_id);
+        if ($has_store) {
+            do_action('wpcs_after_subscription_details_html', $subscription_id); // the custom domain form
+        }
 
-        $status = (string) (new WPCSTenant($subscription_id))->get_status();
+        $status = WPCSTenant::customer_status_label($state);
         $username = SingleLoginService::get_formatted_username($subscription_id);
         ?>
         <p class="wpcs-tenant-status"><?php esc_html_e('Website status:', WPCS_WAAS_HOST_TEXTDOMAIN); ?> <?php echo esc_html($status); ?></p>
+        <?php if (!$has_store) {
+            return; // nothing to log in to yet
+        } ?>
         <p>
             <a href="<?php echo esc_url(SingleLoginService::get_login_link($subscription_id)); ?>" target="_blank" rel="noopener" class="wpcs-single-login-button">
                 <?php echo esc_html(sprintf(__('Login as: %s', WPCS_WAAS_HOST_TEXTDOMAIN), $username)); ?>

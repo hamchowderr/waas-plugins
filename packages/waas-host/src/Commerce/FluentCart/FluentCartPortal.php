@@ -54,7 +54,10 @@ class FluentCartPortal
 
         return array_values(array_filter($ids, function ($subscription_id) use ($user_id) {
             return $this->adapter->get_customer_id($subscription_id) === $user_id
-                && !empty($this->adapter->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META));
+                && WPCSTenant::shown_to_customer(
+                    $this->adapter->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META),
+                    $this->adapter->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_STATE)
+                );
         }));
     }
 
@@ -72,13 +75,15 @@ class FluentCartPortal
             $status = $this->adapter->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_STATE) ?: WPCSTenant::PROVISIONING;
 
             echo '<section class="wpcs-website">';
-            echo '<h3>' . esc_html((string) $domain) . '</h3>';
-            echo '<p>' . esc_html__('Status:', WPCS_WAAS_HOST_TEXTDOMAIN) . ' ' . esc_html((string) $status) . '</p>';
+            echo '<h3>' . esc_html((string) ($domain ?: __('Your website', WPCS_WAAS_HOST_TEXTDOMAIN))) . '</h3>';
+            echo '<p>' . esc_html__('Status:', WPCS_WAAS_HOST_TEXTDOMAIN) . ' ' . esc_html(WPCSTenant::customer_status_label($status)) . '</p>';
             if ($status === WPCSTenant::READY) {
                 echo '<p><a class="fct-btn fct-btn-primary" target="_blank" rel="noopener" href="' . esc_url(SingleLoginService::get_login_link($subscription_id)) . '">'
                     . esc_html__('Log in to your website', WPCS_WAAS_HOST_TEXTDOMAIN) . '</a></p>';
             }
-            $this->domain_settings->render_edit_domain($subscription_id);
+            if (!empty($this->adapter->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META))) {
+                $this->domain_settings->render_edit_domain($subscription_id);
+            }
             echo '</section>';
         }
     }

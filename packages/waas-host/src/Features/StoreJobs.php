@@ -25,8 +25,11 @@ class StoreJobs
     public const SWEEP_HOOK = 'wpcs_sweep_store_jobs';
     public const RETRY_ACTION = 'wpcs_retry_store_jobs';
     public const GROUP = 'waas-host';
-    /** Seconds to wait after the 1st, 2nd, ... failure; one more failure after the last marks the store Failed. */
-    public const RETRY_DELAYS = [60, 300, 900, 3600, 10800, 21600];
+    /**
+     * Seconds to wait after the 1st, 2nd, ... failure; one more failure after the last marks the store Failed and
+     * alerts the admin. About two hours in all.
+     */
+    public const RETRY_DELAYS = [60, 300, 900, 1800, 3600];
     /** A runner holding the lock longer than this is assumed dead. */
     public const LOCK_TTL = 600;
 
@@ -280,7 +283,27 @@ class StoreJobs
         (new WPCSTenant($subscription_id))->update_status(WPCSTenant::FAILED);
         error_log(sprintf('WaaS Host: store job "%s" for subscription %s failed %d times: %s', $queue[0]['op'], $subscription_id, $attempts, $error->getMessage()));
 
+        $this->email_admin($subscription_id, $queue[0]['op'], $attempts, $error->getMessage());
+
         do_action('wpcs_store_job_failed', $subscription_id, $queue[0]['op'], $error->getMessage());
+    }
+
+    /** Once per failure: a failed store runs nothing more (so fails no more) until an admin retries it. */
+    private function email_admin($subscription_id, string $op, int $attempts, string $error): void
+    {
+        $subject = sprintf(__('[%s] A website could not be set up or updated', WPCS_WAAS_HOST_TEXTDOMAIN), wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES));
+        $message = sprintf(
+            __("The provisioning API kept failing for subscription #%1\$s.\n\nJob: %2\$s\nTries: %3\$d\nLast error: %4\$s\n\nThe customer sees \"Setup delayed\". Retry it from the notice in the WordPress admin once the API works again:\n%5\$s", WPCS_WAAS_HOST_TEXTDOMAIN),
+            $subscription_id,
+            $op,
+            $attempts,
+            $error,
+            admin_url()
+        );
+
+        if (!wp_mail((string) get_option('admin_email'), $subject, $message)) {
+            error_log('WaaS Host: could not email the admin about the failed store job for subscription ' . $subscription_id);
+        }
     }
 
     private function queue($subscription_id): array

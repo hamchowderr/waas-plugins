@@ -95,6 +95,39 @@ class StoreJobsTest extends StoreJobsTestCase
         $this->assertSame([7 => $failure], $this->jobs->failed_stores());
     }
 
+    public function test_retries_take_about_two_hours_before_the_store_is_marked_failed(): void
+    {
+        $this->assertSame([60, 300, 900, 1800, 3600], StoreJobs::RETRY_DELAYS);
+        $this->assertLessThanOrEqual(2 * 3600, array_sum(StoreJobs::RETRY_DELAYS));
+    }
+
+    public function test_the_admin_gets_one_email_per_failure_not_one_per_retry(): void
+    {
+        $this->failures['a'] = 99;
+        $this->jobs->enqueue(7, 'a');
+
+        for ($i = 0; $i <= count(StoreJobs::RETRY_DELAYS) + 3; $i++) {
+            $this->run_due(7, true);
+            $this->jobs->run(7); // even a stray runner
+        }
+        $this->assertCount(1, $this->mails);
+        [$to, $subject, $message] = $this->mails[0];
+        $this->assertSame('ops@storefront.example', $to);
+        $this->assertStringContainsString('Peptide Storefront', $subject);
+        $this->assertStringContainsString('subscription #7', $message);
+        $this->assertStringContainsString('Job: a', $message);
+        $this->assertStringContainsString('Tries: 6', $message);
+        $this->assertStringContainsString('Last error: a failed', $message);
+        $this->assertStringContainsString('https://storefront.example/wp-admin/', $message);
+
+        // Retried by the admin and failing again is a new failure: one more email.
+        $this->jobs->retry(7);
+        for ($i = 0; $i <= count(StoreJobs::RETRY_DELAYS); $i++) {
+            $this->run_due(7, true);
+        }
+        $this->assertCount(2, $this->mails);
+    }
+
     public function test_a_failed_store_keeps_new_work_and_its_state_for_the_retry(): void
     {
         $this->failures['a'] = 99;
