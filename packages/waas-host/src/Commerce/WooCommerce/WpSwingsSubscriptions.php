@@ -15,6 +15,9 @@ class WpSwingsSubscriptions implements SubscriptionPlugin
 {
     public const STATUS_META = 'wps_subscription_status';
 
+    /** @var array<int, true> subscription objects (by spl_object_id) whose save in progress writes the status */
+    private array $saving_status = [];
+
     public function get_id(): string
     {
         return 'wp-swings';
@@ -42,6 +45,7 @@ class WpSwingsSubscriptions implements SubscriptionPlugin
         add_action('wps_sfw_subscription_cancel', [$this, 'on_ended'], 10, 1);
         add_action('wps_sfw_expire_subscription_scheduler', [$this, 'on_ended'], 10, 1);
 
+        add_action('woocommerce_before_order_object_save', [$this, 'on_before_order_save'], 10, 1);
         add_action('woocommerce_after_order_object_save', [$this, 'on_order_saved'], 10, 1);
         add_action('added_post_meta', [$this, 'on_post_meta_written'], 10, 4);
         add_action('updated_post_meta', [$this, 'on_post_meta_written'], 10, 4);
@@ -69,13 +73,36 @@ class WpSwingsSubscriptions implements SubscriptionPlugin
     }
 
     /**
+     * Notes whether this save writes the status meta. A save that doesn't is not a status change: the object can
+     * hold an old status, e.g. one WooCommerce cached before WP Swings wrote a new one with update_post_meta.
+     *
+     * @param \WC_Data $order
+     */
+    public function on_before_order_save($order): void
+    {
+        if (!$order instanceof \WC_Order || $order->get_type() !== $this->get_order_type()) {
+            return;
+        }
+
+        foreach ($order->get_meta_data() as $meta) {
+            if ($meta->key === self::STATUS_META && (empty($meta->id) || !empty($meta->get_changes()))) {
+                $this->saving_status[spl_object_id($order)] = true;
+                return;
+            }
+        }
+    }
+
+    /**
      * @param \WC_Data $order
      */
     public function on_order_saved($order): void
     {
-        if ($order instanceof \WC_Order && $order->get_type() === $this->get_order_type()) {
-            $this->on_status_written($order->get_id(), (string) $order->get_meta(self::STATUS_META));
+        if (!$order instanceof \WC_Order || !isset($this->saving_status[spl_object_id($order)])) {
+            return;
         }
+
+        unset($this->saving_status[spl_object_id($order)]);
+        $this->on_status_written($order->get_id(), (string) $order->get_meta(self::STATUS_META));
     }
 
     public function on_post_meta_written($meta_id, $post_id, $meta_key, $meta_value): void
