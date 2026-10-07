@@ -1,0 +1,125 @@
+name: Release plugin
+# Builds, signs and publishes one plugin to our update channel (waas-hw4).
+# Tag the commit on main: waas-host-v2.3.0, waas-client-v2.3.0, waas-payments-v0.2.0 (stable), or
+# ...-v2.4.0-beta.1 (beta channel only). Run it by hand for a dry run: it builds and signs with a
+# throwaway key and uploads nothing. Promote a tested beta to stable with the "Promote release" workflow.
+#
+# Secrets: WAAS_RELEASE_SIGNING_KEY (ed25519 private key PEM), R2_RELEASES_ACCESS_KEY_ID and
+# R2_RELEASES_SECRET_ACCESS_KEY (an R2 token for the releases bucket only).
+# Variables: R2_ENDPOINT (https://<account id>.r2.cloudflarestorage.com), R2_RELEASES_BUCKET (default waas-releases).
+on:
+  push:
+    tags:
+      - 'waas-host-v*'
+      - 'waas-client-v*'
+      - 'waas-payments-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to dry-run, like waas-host-v2.3.0-beta.1 (builds the selected branch; nothing is uploaded)'
+        required: true
+
+permissions:
+  contents: read
+
+# One release at a time, so two runs never move a channel at once.
+concurrency:
+  group: plugin-releases
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: ${{ inputs.tag || github.ref_name }}${{ github.event_name != 'push' && ' (dry run)' || '' }}
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      DRY_RUN: ${{ github.event_name != 'push' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read the tag
+        id: tag
+        run: |
+          if [[ ! $TAG =~ ^(waas-host|waas-client|waas-payments)-v([0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?)$ ]]; then
+            echo "::error::$TAG is not <package>-v<x.y.z> or <package>-v<x.y.z>-beta.<n>"
+            exit 1
+          fi
+          echo "package=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+          echo "version=${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
+          . scripts/release/lib.sh && package_info "${BASH_REMATCH[1]}" && echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
+
+      - name: Releases come from main
+        if: env.DRY_RUN != 'true'
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::$TAG is not on main"; exit 1; }
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
+          coverage: none
+          tools: composer:v2
+
+      - name: The plugins' updater copies are in sync
+        run: scripts/sync-updater.sh --check
+
+      - name: Build
+        id: build
+        run: echo "sha256=$(scripts/release/build.sh ${{ steps.tag.outputs.package }} ${{ steps.tag.outputs.version }} dist | tail -1)" >> "$GITHUB_OUTPUT"
+
+      - name: Sign
+        id: sign
+        env:
+          SIGNING_KEY: ${{ secrets.WAAS_RELEASE_SIGNING_KEY }}
+        run: |
+          umask 077
+          key="$RUNNER_TEMP/release-key.pem"
+          if [ "$DRY_RUN" = true ]; then
+            echo "Dry run: signing with a throwaway key"
+            openssl genpkey -algorithm ed25519 -out "$key"
+          else
+            [ -n "$SIGNING_KEY" ] || { echo "::error::The WAAS_RELEASE_SIGNING_KEY secret is not set"; exit 1; }
+            printf '%s\n' "$SIGNING_KEY" > "$key"
+          fi
+          echo "signature=$(scripts/release/sign.sh ${{ steps.tag.outputs.slug }} ${{ steps.tag.outputs.version }} ${{ steps.build.outputs.sha256 }} "$key")" >> "$GITHUB_OUTPUT"
+          echo "public_key=$(scripts/release/public-key.sh "$key")" >> "$GITHUB_OUTPUT"
+          rm -f "$key"
+
+      - name: Verify as the plugins will
+        run: |
+          zip="dist/${{ steps.tag.outputs.slug }}.zip"
+          if [ "$DRY_RUN" = true ]; then
+            php scripts/release/verify.php ${{ steps.tag.outputs.slug }} ${{ steps.tag.outputs.version }} "$zip" "${{ steps.sign.outputs.signature }}" "${{ steps.sign.outputs.public_key }}"
+          else
+            # Only the keys built into the plugins: a release they couldn't verify is never uploaded.
+            php scripts/release/verify.php ${{ steps.tag.outputs.slug }} ${{ steps.tag.outputs.version }} "$zip" "${{ steps.sign.outputs.signature }}"
+          fi
+
+      - name: Manifest
+        run: |
+          git tag -l --format='%(contents)' "$TAG" > "$RUNNER_TEMP/changelog"
+          scripts/release/manifest.sh ${{ steps.tag.outputs.package }} ${{ steps.tag.outputs.version }} "dist/${{ steps.tag.outputs.slug }}.zip" "${{ steps.sign.outputs.signature }}" "$RUNNER_TEMP/changelog" > dist/manifest.json
+          cat dist/manifest.json
+
+      - name: Keep the build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.tag.outputs.slug }}-${{ steps.tag.outputs.version }}${{ env.DRY_RUN == 'true' && '-dry-run' || '' }}
+          path: dist/
+          retention-days: 90
+
+      - name: Publish
+        if: env.DRY_RUN != 'true'
+        env:
+          R2_ENDPOINT: ${{ vars.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_RELEASES_BUCKET || 'waas-releases' }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_RELEASES_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_RELEASES_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          # R2 rejects the checksums newer AWS CLIs send by default.
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+        run: scripts/release/publish.sh ${{ steps.tag.outputs.package }} dist

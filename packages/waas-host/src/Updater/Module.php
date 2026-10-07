@@ -2,111 +2,45 @@
 
 namespace WaaSHost\Updater;
 
+use WaaSHost\Core\ConfigService;
+
 // Exit if accessed directly
 if ( !defined( 'ABSPATH' ) )
     exit;
 
+/**
+ * Updates for WaaS Host from our own channel (waas-hw4; see Updater). Also hands the storefront's
+ * API credentials to our other plugins' updaters (waas-payments) through 'waas_update_credentials'.
+ */
 class Module
 {
-    private static $remote_data = null;
-
-    /**
-     * Updates come only from our own channel. Until there is one, no update is ever checked or offered,
-     * so WordPress can't replace this fork with the upstream (Daxez/waas-wpcs) plugin. Stores get new
-     * plugin versions through template versions and the storefront through deploys.
-     */
-    public static function info_url()
+    public static function init(ConfigService $config)
     {
-        return defined('WAAS_UPDATE_INFO_URL') ? WAAS_UPDATE_INFO_URL : null;
+        add_filter('waas_update_credentials', function ($credentials) use ($config) {
+            return is_array($credentials) ? $credentials : self::credentials($config);
+        });
+
+        $updater = new Updater([
+            'slug' => WPCS_WAAS_HOST_SLUG,
+            'name' => 'WaaS Host',
+            'basename' => WPCS_WAAS_HOST_BASENAME,
+            'version' => WPCS_WAAS_HOST_VERSION,
+            'update_uri' => WPCS_WAAS_HOST_UPDATE_URI,
+        ]);
+        $updater->register();
+        return $updater;
     }
 
-    public static function init()
+    /** The provisioning API's base URL, key and secret, or null when any is missing. */
+    public static function credentials(ConfigService $config)
     {
-        if(!self::info_url())
+        $base_url = $config->get_api_base_url();
+        $key = $config->get_api_key();
+        $secret = $config->get_api_secret();
+        if (empty($base_url) || empty($key) || empty($secret))
         {
-            return;
+            return null;
         }
-
-        add_filter( 'update_plugins_'.WPCS_WAAS_HOST_UPDATE_URI, [__CLASS__, 'maybe_show_update_available'], 10, 3 );
-        add_filter( 'plugins_api', [__CLASS__, 'modify_plugin_details'], 10, 3 );
-    }
-
-    public static function maybe_show_update_available($update, array $plugin_data, string $plugin_file)
-    {
-        // only check this plugin
-        if($plugin_file !== WPCS_WAAS_HOST_BASENAME)
-        {
-            return $update;
-        }
-
-        // already done update check elsewhere
-        if (!empty($update))
-        {
-            return $update;
-        }
-
-        $response = self::get_remote_data();
-        if(is_wp_error($response))
-        {
-            return $update;
-        }
-
-        $body = $response;
-        $latest_version = $body->version;
-        
-        // Is our version higher than the remote one? -1 if not, meaning an update is available.
-        if(version_compare(WPCS_WAAS_HOST_VERSION, $latest_version) >= 0)
-        {
-            return $update;
-        }
-
-        return (array) $body;
-    }
-
-    public static function get_remote_data()
-    {
-        if(!self::$remote_data)
-        {
-            if(!self::info_url())
-            {
-                self::$remote_data = new \WP_Error('waas_updater_disabled', 'No update channel is configured.');
-                return self::$remote_data;
-            }
-
-            $response = wp_remote_get(self::info_url());
-
-            if(is_wp_error($response))
-            {
-                // Cache the failure so one page load doesn't retry, and never read 'body' off a WP_Error.
-                self::$remote_data = $response;
-                return self::$remote_data;
-            }
-
-            self::$remote_data = json_decode($response['body']);
-            self::$remote_data->sections = (array) self::$remote_data->sections;
-        }
-
-        return self::$remote_data;
-    }
-
-    public static function modify_plugin_details( $result, $action = null, $args = null )
-    {
-		if( $action !== 'plugin_information' )
-        {
-            return $result;
-        }
-
-        if($args->slug !== WPCS_WAAS_HOST_SLUG)
-        {
-            return $result;
-        }
-		
-        $response = self::get_remote_data();
-        if(is_wp_error($response))
-        {
-            return $result;
-        }
-
-        return $response;
+        return ['base_url' => $base_url, 'key' => $key, 'secret' => $secret];
     }
 }

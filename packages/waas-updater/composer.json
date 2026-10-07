@@ -1,0 +1,26 @@
+{
+  "name": "otaku/waas-updater",
+  "description": "Updates for our WordPress plugins from our own channel (the provisioning API). Copied into each plugin by scripts/sync-updater.sh; not installed on its own.",
+  "type": "library",
+  "license": "GPL-3.0-or-later",
+  "autoload": {
+    "psr-4": {
+      "WaaSUpdater\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
+  "require": {
+    "php": ">=7.4"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.6",
+    "brain/monkey": "^2.6"
+  },
+  "scripts": {
+    "test": "phpunit"
+  }
+}

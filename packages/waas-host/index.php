@@ -70,7 +70,7 @@ new AdminWpcsHome($wpcsConfigService);
 new AdminWpcsSettings($wpcsService, $wpcsConfigService);
 WaaSHost\Assets\Module::init();
 
-WaaSHost\Updater\Module::init();
+WaaSHost\Updater\Module::init($wpcsConfigService);
 new WaaSHost\Migrations\Module($wpcsService);
 Notifications::init();
 
