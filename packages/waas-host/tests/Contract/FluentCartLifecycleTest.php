@@ -15,6 +15,7 @@ use WaaSHost\Core\HttpService;
 use WaaSHost\Core\PrivateKeyStore;
 use WaaSHost\Core\WPCSService;
 use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Features\StoreJobs;
 use WaaSHost\Features\TenantsSubscriptionManager;
 
 /**
@@ -34,6 +35,7 @@ class FluentCartLifecycleTest extends TestCase
     private $order;
     private WaasProvisioningIntegration $integration;
     private TenantsSubscriptionManager $manager;
+    private StoreJobs $jobs;
 
     protected function setUp(): void
     {
@@ -67,7 +69,8 @@ class FluentCartLifecycleTest extends TestCase
 
         Commerce::register(new FluentCartAdapter($store));
         $service = new WPCSService(new HttpService(new ConfigService()));
-        $this->manager = new TenantsSubscriptionManager($service);
+        $this->jobs = $this->use_store_jobs();
+        $this->manager = new TenantsSubscriptionManager($service, $this->jobs);
         $this->integration = new WaasProvisioningIntegration($service, $store);
 
         // Wire the two actions the integration fires to the shared code. Cancellation is wired straight to the
@@ -91,6 +94,8 @@ class FluentCartLifecycleTest extends TestCase
             'is_revoke_hook' => $is_revoke,
             'event_data' => ['subscription' => (object) ['id' => self::SUBSCRIPTION_ID]],
         ]);
+        // The feed only queued the API work; run it as Action Scheduler would.
+        $this->jobs->run(self::SUBSCRIPTION_ID);
     }
 
     public function test_activation_creates_the_store_from_the_product_feed(): void
