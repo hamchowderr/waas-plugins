@@ -8,13 +8,17 @@ use WaaSHost\Features\SingleLoginService;
 use WaaSHost\Features\UserAccountSubscriptionsSettings;
 
 /**
- * The customer's websites in FluentCart's customer portal: a "Website" tab with status,
- * one-click login and the domain form, plus links on each subscription. The form lives
- * on its own tab because the subscription panel strips form inputs.
+ * The customer's websites in FluentCart's customer portal: a "My website" tab (right after
+ * Dashboard) with status, one-click login and the domain form, a notice above every other
+ * portal page while a website is ready, and links on each subscription. The form lives on
+ * its own tab because the subscription panel strips form inputs.
  */
 class FluentCartPortal
 {
     public const ENDPOINT = 'website';
+
+    /** Lucide "globe", in the 20px outline style of FluentCart's own menu icons. */
+    private const ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>';
 
     private FluentCartAdapter $adapter;
     private FluentCartStore $store;
@@ -29,12 +33,16 @@ class FluentCartPortal
         add_action('fluent_cart/init', [$this, 'register_endpoint']);
         add_filter('fluent_cart/customer_portal/subscription_data', [$this, 'add_subscription_actions'], 10, 2);
         add_filter('wpcs_choose_website_name_url', [$this, 'website_page_url']);
+        add_filter('wpcs_website_page_url', [$this, 'website_page_url']);
+        // FluentCart puts custom tabs just before Profile; this runs after that and moves ours up.
+        add_filter('fluent_cart/global_customer_menu_items', [$this, 'move_menu_item_after_dashboard'], 20);
+        // Before FluentCart's own content (priority 10), so the notice sits above the page.
+        add_action('fluent_cart/customer_app', [$this, 'render_ready_notice'], 5);
     }
 
     /**
-     * The form for a new website name is on the Website page, not FluentCart's subscription page. The link is also
-     * in an email: a customer who is logged out logs in through the portal, which then goes to its redirect_to (by
-     * default the portal's first page).
+     * The Website page, for links in emails (website ready, choose a new name): a customer who is logged out logs in
+     * through the portal, which then goes to its redirect_to (by default the portal's first page).
      */
     public function website_page_url(): string
     {
@@ -50,9 +58,58 @@ class FluentCartPortal
         }
 
         fluent_cart_api()->addCustomerDashboardEndpoint(self::ENDPOINT, [
-            'title' => __('Website', WPCS_WAAS_HOST_TEXTDOMAIN),
+            'title' => __('My website', WPCS_WAAS_HOST_TEXTDOMAIN),
+            'icon_svg' => self::ICON_SVG,
             'render_callback' => [$this, 'render'],
         ]);
+    }
+
+    /** @param array<string, array> $items FluentCart's customer menu, keyed by slug. */
+    public function move_menu_item_after_dashboard($items)
+    {
+        if (!is_array($items) || !isset($items[self::ENDPOINT], $items['dashboard'])) {
+            return $items;
+        }
+
+        $website = $items[self::ENDPOINT];
+        unset($items[self::ENDPOINT]);
+
+        $moved = [];
+        foreach ($items as $slug => $item) {
+            $moved[$slug] = $item;
+            if ($slug === 'dashboard') {
+                $moved[self::ENDPOINT] = $website;
+            }
+        }
+
+        return $moved;
+    }
+
+    /** A short notice above the other portal pages for each ready website, with its login and the Website tab. */
+    public function render_ready_notice()
+    {
+        if (apply_filters('fluent_cart/customer_portal/active_tab', '') === self::ENDPOINT) {
+            return; // the Website tab shows it all already
+        }
+
+        foreach ($this->current_user_websites() as $subscription_id) {
+            if ($this->adapter->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_STATE) !== WPCSTenant::READY) {
+                continue;
+            }
+            $domain = $this->adapter->get_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META)
+                ?: $this->adapter->get_subscription_meta($subscription_id, WPCSTenant::WPCS_BASE_DOMAIN_NAME_META);
+
+            echo '<div class="wpcs-website-ready-notice fct-alert fct-alert-success" style="margin-bottom:16px">';
+            echo '<p>' . sprintf(
+                /* translators: %s: the website's domain */
+                esc_html__('Your website %s is ready.', WPCS_WAAS_HOST_TEXTDOMAIN),
+                '<strong>' . esc_html((string) ($domain ?: __('Your website', WPCS_WAAS_HOST_TEXTDOMAIN))) . '</strong>'
+            ) . ' ';
+            echo '<a class="fct-btn fct-btn-primary" target="_blank" rel="noopener" href="' . esc_url(SingleLoginService::get_login_link($subscription_id)) . '">'
+                . esc_html__('Log in to your website', WPCS_WAAS_HOST_TEXTDOMAIN) . '</a> ';
+            echo '<a href="' . esc_url($this->store->get_portal_url(self::ENDPOINT)) . '">' . esc_html__('Manage website', WPCS_WAAS_HOST_TEXTDOMAIN) . '</a></p>';
+            echo '</div>';
+        }
     }
 
     /** Subscriptions of the current user. @return int[] */
