@@ -462,6 +462,21 @@ class SubscriptionBillingTest extends TestCase
         $this->assertSame([['clearFailureState', 3], ['chargeNow', 8, 3, 5]], SystemChargeService::$calls);
     }
 
+    public function test_a_card_still_used_by_another_subscription_is_not_deleted(): void
+    {
+        // Authorize.Net keeps one payment profile per card on a customer profile, so a customer's two
+        // subscriptions on the same card share it.
+        $subscription = $this->withSavedCard($this->subscription());
+        $this->withSavedCard(new Subscription(['id' => 4, 'uuid' => 'other-sub', 'order' => $this->order()]));
+        Actions\expectDone('fluent_cart/subscriptions/system_payment_method_updated')->once();
+
+        $result = (new CardUpdate($this->gateway))->update($subscription, self::TOKEN, 'nonce-value');
+
+        $this->assertSame(200, $result['status']);
+        $this->assertSame('540022574', $subscription->meta['active_payment_method']['vendor_method_id']);
+        $this->assertSame([], $this->driver->deleted, 'subscription 4 still renews on it');
+    }
+
     public function test_a_card_update_with_nothing_overdue_charges_nothing(): void
     {
         $subscription = $this->withSavedCard($this->subscription());

@@ -278,7 +278,7 @@ class PaymentConfirmation
             );
 
             if ($replaced) {
-                self::deleteCard($this->gateway, $replaced);
+                self::deleteCard($this->gateway, $replaced, $subscription->id);
                 // The previous card's decline no longer applies.
                 SystemChargeService::clearFailureState($subscription);
             }
@@ -305,9 +305,16 @@ class PaymentConfirmation
         );
     }
 
-    /** Best effort: a card left behind at Authorize.Net is never charged. */
-    public static function deleteCard(AuthorizeNetGateway $gateway, array $card): void
+    /**
+     * Deletes a replaced card at Authorize.Net unless another subscription still renews on it. Best effort: a card
+     * left behind is never charged.
+     */
+    public static function deleteCard(AuthorizeNetGateway $gateway, array $card, $subscriptionId): void
     {
+        if (SavedCard::isUsedByAnotherSubscription($card, $subscriptionId)) {
+            return;
+        }
+
         $driver = $gateway->driver($card['env'] === 'sandbox');
         if ($driver instanceof RecurringGatewayDriver) {
             $driver->deleteSavedPaymentMethod($card['customer_ref'], $card['method_ref']);
