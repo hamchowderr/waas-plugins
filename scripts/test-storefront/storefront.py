@@ -17,6 +17,7 @@ import base64
 import json
 import os
 import secrets
+import shutil
 import string
 import subprocess
 import sys
@@ -166,8 +167,9 @@ def build():
     os.makedirs(pkg)
     for name in ('waas-host', 'waas-payments'):
         src = os.path.join(out, name)
-        subprocess.run(['cp', '-R', os.path.join(ROOT, 'packages', name), src], check=True)
-        subprocess.run(['rm', '-rf', 'vendor', 'tests', 'phpunit.xml.dist', 'node_modules'], cwd=src, check=True)
+        # Skip the dev vendor (it can be gigabytes after running the tests); --no-dev installs below rebuild it.
+        shutil.copytree(os.path.join(ROOT, 'packages', name), src,
+                        ignore=shutil.ignore_patterns('vendor', 'tests', 'phpunit.xml.dist', 'node_modules', '.phpunit*'))
         subprocess.run(['composer', 'install', '--no-dev', '-q'], cwd=src, check=True)
         subprocess.run(['zip', '-qr9', os.path.join(pkg, name + '.zip'), name], cwd=out, check=True)
     subprocess.run(['cp'] + [os.path.join(HERE, 'remote', f) for f in os.listdir(os.path.join(HERE, 'remote'))] + [pkg], check=True)
@@ -191,7 +193,12 @@ def push():
         api('POST', f'/services/{uuid}/restart')
         time.sleep(15)
         wait_healthy(uuid)
-        run(uuid, f'printenv WAAS_PKG > /opt/wpcli/pkg/c{i:02d}')
+        try:
+            run(uuid, f'printenv WAAS_PKG > /opt/wpcli/pkg/c{i:02d}')
+        except SystemExit:
+            # Coolify sometimes reports the service healthy just before a container restarts once more.
+            wait_healthy(uuid)
+            run(uuid, f'printenv WAAS_PKG > /opt/wpcli/pkg/c{i:02d}')
     run(uuid, f'cd /opt/wpcli/pkg && cat c* | tr -d "\\n" | base64 -d > p.txz && rm -rf {REMOTE} && mkdir -p {REMOTE} && tar -xJf p.txz -C {REMOTE} && ls {REMOTE}')
     # Drop the package variable again.
     api('PATCH', f'/services/{uuid}', {'docker_compose_raw': compose(False)})
