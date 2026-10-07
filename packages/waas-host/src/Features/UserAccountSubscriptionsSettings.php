@@ -13,6 +13,12 @@ class UserAccountSubscriptionsSettings
     public const DOMAIN_NONCE_FIELD = 'wpcs_domain_nonce';
     public const DOMAIN_NONCE_ACTION = 'wpcs_update_domain_';
 
+    /** What stores hosted on WPCS used, by region; only shown while both DNS settings are empty. */
+    private const LEGACY_WPCS_DNS = [
+        'us1' => [['54.166.55.112', '54.163.0.37', '174.129.101.20'], 'public.us1.wpcs.io'],
+        'eu1' => [['54.74.209.56', '54.75.81.37', '54.216.187.86'], 'public.eu1.wpcs.io'],
+    ];
+
     private WPCSService $wpcsService;
     private ConfigService $config;
     private string $domain_error = '';
@@ -58,13 +64,23 @@ class UserAccountSubscriptionsSettings
         $this->render_dns_instructions();
     }
 
-    /** DNS records for a custom domain, from the storefront's DNS settings. Nothing when neither is set. */
+    /**
+     * DNS records for a custom domain, from the storefront's DNS settings. While neither is set, a store on a
+     * WPCS region keeps that region's WPCS values; with no region either, the customer is told to contact support.
+     */
     public function render_dns_instructions()
     {
         $a_records = $this->config->get_dns_a_records();
         $cname_target = $this->config->get_dns_cname_target();
         if (!$a_records && $cname_target === '') {
-            return;
+            $legacy = self::LEGACY_WPCS_DNS[strtolower((string) get_option('wpcs_credentials_region_setting', ''))] ?? null;
+            if ($legacy === null) {
+                echo '<div class="wpcs-ip-instructions"><p>'
+                    . esc_html('Custom domains are not set up on this store yet. Please contact support to connect your domain.')
+                    . '</p></div>';
+                return;
+            }
+            [$a_records, $cname_target] = $legacy;
         }
 
         echo '<div class="wpcs-ip-instructions">';

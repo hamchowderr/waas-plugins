@@ -179,12 +179,24 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
         $this->assertStringNotContainsString('wpcs.io', $html);
     }
 
-    public function test_no_dns_instructions_when_nothing_is_configured(): void
+    public function test_without_settings_a_wpcs_store_keeps_its_region_records(): void
     {
-        // The region setting no longer picks WPCS's records.
-        $this->stubDnsOptions(['wpcs_credentials_region_setting' => 'us1']);
+        $this->stubDnsOptions(['wpcs_credentials_region_setting' => 'US1']);
 
-        $this->assertSame('', $this->renderDnsInstructions());
+        $html = $this->renderDnsInstructions();
+
+        $this->assertStringContainsString("<pre>54.166.55.112\n54.163.0.37\n174.129.101.20</pre>", $html);
+        $this->assertStringContainsString('<pre>public.us1.wpcs.io</pre>', $html);
+    }
+
+    public function test_without_settings_or_region_customers_are_told_to_contact_support(): void
+    {
+        $this->stubDnsOptions([]);
+
+        $html = $this->renderDnsInstructions();
+
+        $this->assertStringContainsString('contact support', $html);
+        $this->assertStringNotContainsString('<pre>', $html);
     }
 
     public function test_only_the_configured_record_is_shown(): void
