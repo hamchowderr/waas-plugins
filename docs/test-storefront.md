@@ -2,6 +2,8 @@
 
 A throwaway WordPress storefront for testing the whole chain end to end: storefront checkout → waas-host → the live provisioning API → a real store on Coolify. It's not the owner's business site, and it holds no real customer data.
 
+A second storefront, on WooCommerce with WP Swings' Subscriptions for WooCommerce, is built by the same script with `--cart woo`: see [test-storefront-woo.md](test-storefront-woo.md).
+
 | | |
 |---|---|
 | URL | https://storefront-test.191.101.15.236.sslip.io (Let's Encrypt, HTTP-01) |
