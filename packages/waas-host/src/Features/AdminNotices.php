@@ -7,6 +7,8 @@ use WaaSHost\Core\ConfigService;
 class AdminNotices
 {
     const REFRESH_ROLES_FAILED_NOTICE = 'refresh_roles_failed_notice';
+    /** The plugin's own admin pages, the only places the DNS settings warning shows. */
+    const PLUGIN_PAGES = ['wpcs-admin', 'wpcs-admin-settings'];
 
     private static ConfigService $config;
 
@@ -20,7 +22,8 @@ class AdminNotices
     /** The customer's domain page leaves out any DNS record whose setting is empty. */
     public static function show_dns_settings_missing_notice()
     {
-        if (!current_user_can('manage_options')) {
+        $page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
+        if (!in_array($page, static::PLUGIN_PAGES, true) || !current_user_can('manage_options')) {
             return;
         }
 
@@ -37,7 +40,7 @@ class AdminNotices
 
         $settings_url = admin_url('admin.php?page=wpcs-admin-settings');
         echo '<div class="notice notice-warning"><p>'
-            . esc_html('Custom domain DNS settings missing: ' . implode(', ', $missing) . '. Customers get no DNS instructions for these on their domain page. ')
+            . esc_html('Custom domain DNS settings missing: ' . implode(', ', $missing) . '. Customers get no DNS instructions for these on their domain page; with neither set, they are told to contact support. ')
             . '<a href="' . esc_url($settings_url) . '">' . esc_html('Set them in Settings') . '</a>.</p></div>';
     }
 

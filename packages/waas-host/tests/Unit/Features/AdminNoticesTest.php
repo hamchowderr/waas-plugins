@@ -20,7 +20,16 @@ class AdminNoticesTest extends TestCase
         Functions\when('admin_url')->alias(fn ($path) => 'https://store.example/wp-admin/' . $path);
         Functions\when('esc_html')->returnArg();
         Functions\when('esc_url')->returnArg();
+        Functions\when('sanitize_key')->alias(fn ($key) => strtolower((string) $key));
+        Functions\when('wp_unslash')->returnArg();
+        $_GET['page'] = 'wpcs-admin-settings';
         AdminNotices::init(new ConfigService());
+    }
+
+    protected function tearDown(): void
+    {
+        $_GET = [];
+        parent::tearDown();
     }
 
     public function test_notice_names_the_missing_dns_settings(): void
@@ -52,6 +61,22 @@ class AdminNoticesTest extends TestCase
     {
         Functions\when('current_user_can')->justReturn(false);
 
+        $this->assertSame('', $this->renderNotice());
+    }
+
+    public function test_notice_shows_on_the_plugin_home_page(): void
+    {
+        $_GET['page'] = 'wpcs-admin';
+
+        $this->assertStringContainsString('DNS settings missing', $this->renderNotice());
+    }
+
+    public function test_no_notice_on_other_admin_pages(): void
+    {
+        $_GET = [];
+        $this->assertSame('', $this->renderNotice());
+
+        $_GET['page'] = 'woocommerce';
         $this->assertSame('', $this->renderNotice());
     }
 
