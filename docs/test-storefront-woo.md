@@ -65,7 +65,7 @@ scripts/test-storefront/storefront.py --cart woo setup    # bootstrap install pl
 Never paste Stripe keys into a chat. Use one of these:
 
 - **Connect flow (preferred).** In wp-admin, go to **WooCommerce** → **Settings** → **Payments** → **Stripe**. Choose the option to connect a **test** account (sandbox), log in to Stripe, and approve. The plugin stores the test keys and sets up the webhook itself. Keep **Test mode** on.
-- **Keys as Coolify variables.** In the Stripe dashboard, switch to **Test mode** (or your sandbox), then open **Developers** → **API keys**. In Coolify, on **storefront-woo-test** → Environment Variables, add `STRIPE_TEST_PUBLISHABLE_KEY` (`pk_test_…`) and `STRIPE_TEST_SECRET_KEY` (`sk_test_…`), and lock both. Restart the service, then run `storefront.py --cart woo setup payments`. That step only accepts `pk_test_` / `sk_test_` keys and prints no secrets.
+- **Keys as Coolify variables.** In the Stripe dashboard, switch to **Test mode** (or your sandbox), then open **Developers** → **API keys**. In Coolify, on **storefront-woo-test** → Environment Variables, `STRIPE_TEST_PUBLISHABLE_KEY` and `STRIPE_TEST_SECRET_KEY` are already listed, empty (they come from the compose file). Fill in the `pk_test_…` and `sk_test_…` values, and lock both. Restart the service, then run `storefront.py --cart woo setup payments`. That step only accepts `pk_test_` / `sk_test_` keys and prints no secrets.
 
 Stripe test card: `4242 4242 4242 4242`, any future expiry date, any CVC.
 
