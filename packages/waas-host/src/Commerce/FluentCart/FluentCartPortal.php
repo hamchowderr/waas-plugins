@@ -31,10 +31,16 @@ class FluentCartPortal
         add_filter('wpcs_choose_website_name_url', [$this, 'website_page_url']);
     }
 
-    /** The form for a new website name is on the Website page, not FluentCart's subscription page. */
+    /**
+     * The form for a new website name is on the Website page, not FluentCart's subscription page. The link is also
+     * in an email: a customer who is logged out logs in through the portal, which then goes to its redirect_to (by
+     * default the portal's first page).
+     */
     public function website_page_url(): string
     {
-        return $this->store->get_portal_url(self::ENDPOINT);
+        $url = $this->store->get_portal_url(self::ENDPOINT);
+
+        return add_query_arg('redirect_to', rawurlencode($url), $url);
     }
 
     public function register_endpoint()
@@ -49,8 +55,8 @@ class FluentCartPortal
         ]);
     }
 
-    /** Subscriptions of the current user that have a website. @return int[] */
-    public function current_user_websites(): array
+    /** Subscriptions of the current user. @return int[] */
+    private function current_user_subscription_ids(): array
     {
         $user_id = get_current_user_id();
         if ($user_id === 0) {
@@ -60,18 +66,30 @@ class FluentCartPortal
         $user = wp_get_current_user();
         $ids = $this->store->find_user_subscription_ids($user_id, (string) $user->user_email);
 
-        return array_values(array_filter($ids, function ($subscription_id) use ($user_id) {
-            return $this->adapter->get_customer_id($subscription_id) === $user_id
-                && WPCSTenant::shown_to_customer(
-                    $this->adapter->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META),
-                    $this->adapter->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_STATE)
-                );
+        return array_values(array_filter($ids, fn ($subscription_id) => $this->adapter->get_customer_id($subscription_id) === $user_id));
+    }
+
+    /** Subscriptions of the current user that have a website. @return int[] */
+    public function current_user_websites(): array
+    {
+        return array_values(array_filter($this->current_user_subscription_ids(), function ($subscription_id) {
+            return WPCSTenant::shown_to_customer(
+                $this->adapter->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META),
+                $this->adapter->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_STATE)
+            );
         }));
     }
 
     public function render()
     {
         $websites = $this->current_user_websites();
+
+        // A new name submitted for a website that is no longer listed (its subscription stopped meanwhile).
+        $result_for = NameConflicts::result_subscription_id();
+        if ($result_for !== null && !in_array((int) $result_for, $websites, true) && in_array((int) $result_for, $this->current_user_subscription_ids(), true)) {
+            NameConflicts::render_result($result_for);
+        }
+
         if (!$websites) {
             echo '<p>' . esc_html__('You have no websites yet. They appear here a few minutes after you subscribe to a website plan.', WPCS_WAAS_HOST_TEXTDOMAIN) . '</p>';
             return;
@@ -84,6 +102,7 @@ class FluentCartPortal
 
             echo '<section class="wpcs-website">';
             echo '<h3>' . esc_html((string) ($domain ?: __('Your website', WPCS_WAAS_HOST_TEXTDOMAIN))) . '</h3>';
+            NameConflicts::render_result($subscription_id);
             echo '<p>' . esc_html__('Status:', WPCS_WAAS_HOST_TEXTDOMAIN) . ' ' . esc_html(WPCSTenant::customer_status_label($status)) . '</p>';
             if ($status === WPCSTenant::READY) {
                 echo '<p><a class="fct-btn fct-btn-primary" target="_blank" rel="noopener" href="' . esc_url(SingleLoginService::get_login_link($subscription_id)) . '">'

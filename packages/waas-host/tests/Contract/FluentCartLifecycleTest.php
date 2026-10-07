@@ -32,6 +32,7 @@ class FluentCartLifecycleTest extends TestCase
 
     /** @var array<int, array<string, mixed>> fct_subscription_meta */
     private array $meta = [];
+    private bool $canceled = false;
     private $order;
     private WaasProvisioningIntegration $integration;
     private TenantsSubscriptionManager $manager;
@@ -65,6 +66,8 @@ class FluentCartLifecycleTest extends TestCase
         $store->allows('get_plan_feed')->with(101)->andReturn(['enabled' => 'yes', 'role' => 'peptide-store', 'group_name' => 'peptide-starter']);
         $store->allows('get_plan_feed')->with(102)->andReturnNull();
         $store->allows('get_order_meta')->with($this->order, WPCSTenant::WPCS_WEBSITE_NAME_META)->andReturn('Apex Research');
+        // The feeds run after FluentCart changed the subscription; a cancel finds it canceled.
+        $store->allows('get_subscription_status')->andReturnUsing(fn () => $this->canceled ? 'canceled' : 'active');
         $store->allows('get_subscription_customer')->andReturn(['user_id' => 7, 'email' => 'owner@apexresearch.example', 'name' => 'Jordan Reyes']);
 
         Commerce::register(new FluentCartAdapter($store));
@@ -89,6 +92,7 @@ class FluentCartLifecycleTest extends TestCase
 
     private function run_feed(string $trigger, string $is_revoke = 'no'): void
     {
+        $this->canceled = in_array($trigger, ['subscription_canceled', 'subscription_eot', 'subscription_expired_validity'], true);
         $this->integration->processAction($this->order, [
             'trigger' => $trigger,
             'is_revoke_hook' => $is_revoke,

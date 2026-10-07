@@ -146,6 +146,12 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
                 && !is_array($this->store->get_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META))) {
                 return; // never created, and not waiting for a new name
             }
+            // Feeds run in the background, so a cancel can be handled after the reactivation that followed it. A
+            // refund (revoke) leaves the subscription active, so it always counts.
+            if (!$is_revoke && in_array($this->store->get_subscription_status($subscription_id), FluentCartStore::ACTIVE_STATUSES, true)) {
+                $order->addLog(__('Website kept', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s): the subscription is active again', $subscription_id, $trigger), 'info', 'WaaS');
+                return;
+            }
             do_action('wpcs_subscription_expired', $subscription_id);
             $order->addLog(__('Website suspended', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s)', $subscription_id, $trigger), 'info', 'WaaS');
             return;

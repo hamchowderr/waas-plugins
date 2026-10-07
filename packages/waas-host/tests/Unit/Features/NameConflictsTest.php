@@ -11,6 +11,7 @@ use WaaSHost\Core\WPCSService;
 use WaaSHost\Core\WPCSTenant;
 use WaaSHost\Features\NameConflicts;
 use WaaSHost\Features\StoreJobs;
+use WaaSHost\Features\TenantsAddOnSubscriptionManager;
 use WaaSHost\Features\TenantsSubscriptionManager;
 
 /**
@@ -27,12 +28,14 @@ class NameConflictsTest extends StoreJobsTestCase
     private NameConflicts $conflicts;
     private TenantsSubscriptionManager $manager;
     private array $uuids;
+    /** wp_safe_redirect calls */
+    private array $redirects = [];
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->wpcs = Mockery::mock(WPCSService::class);
-        $this->conflicts = new NameConflicts($this->wpcs, $this->jobs);
+        $this->conflicts = new NameConflictsWithoutExit($this->wpcs, $this->jobs);
         $this->manager = new TenantsSubscriptionManager($this->wpcs, $this->jobs, $this->conflicts);
 
         $this->options['wpcs_host_settings_root_domain'] = 'stores.waas.example';
@@ -45,6 +48,51 @@ class NameConflictsTest extends StoreJobsTestCase
         Functions\when('apply_filters')->returnArg(2);
         $this->uuids = [self::FIRST_ID, self::SECOND_ID];
         Functions\when('wp_generate_uuid4')->alias(fn () => array_shift($this->uuids));
+        Functions\when('sanitize_key')->alias(fn ($v) => preg_replace('/[^a-z0-9_\-]/', '', strtolower((string) $v)));
+        Functions\when('esc_html')->returnArg();
+        Functions\when('esc_attr')->returnArg();
+        Functions\when('add_query_arg')->alias(fn (array $args, string $url) => $url . '?' . implode('&', array_map(fn ($k, $v) => "$k=$v", array_keys($args), $args)));
+        Functions\when('wp_safe_redirect')->alias(function ($url) {
+            $this->redirects[] = $url;
+            return true;
+        });
+    }
+
+    protected function tearDown(): void
+    {
+        $_POST = [];
+        $_GET = [];
+        parent::tearDown();
+    }
+
+    /** The customer submits the form; $nonce_ok is false for a page opened before its nonce expired. */
+    private function submit(string $name, bool $nonce_ok = true): void
+    {
+        $_POST = ['subscription_id' => '901', 'website_name' => $name, '_wpnonce' => 'nonce'];
+        Functions\when('wp_verify_nonce')->alias(fn ($nonce, $action) => $nonce_ok && $action === 'wpcs_choose_website_name_901' ? 1 : false);
+        Functions\when('get_current_user_id')->justReturn(7);
+        $this->conflicts->handle_choose_request();
+    }
+
+    /** The page the customer is sent back to, as it renders the result. */
+    private function result_shown_after_redirect($subscription_id = 901): string
+    {
+        $query = parse_url(end($this->redirects), PHP_URL_QUERY);
+        parse_str((string) $query, $_GET);
+        ob_start();
+        NameConflicts::render_result($subscription_id);
+
+        return ob_get_clean();
+    }
+
+    private function admin_notice(): string
+    {
+        Functions\when('current_user_can')->justReturn(true);
+        Functions\when('_n')->alias(fn ($single, $plural, $n) => $n === 1 ? $single : $plural);
+        ob_start();
+        $this->conflicts->show_admin_notice();
+
+        return ob_get_clean();
     }
 
     private function meta(string $key, $subscription_id = 901)
@@ -205,8 +253,8 @@ class NameConflictsTest extends StoreJobsTestCase
     public function test_only_the_subscription_s_customer_can_choose_the_name(): void
     {
         $this->parked();
-        $_POST = ['subscription_id' => '901', 'website_name' => 'Apex Labs'];
-        Functions\expect('check_admin_referer')->once()->with('wpcs_choose_website_name_901');
+        $_POST = ['subscription_id' => '901', 'website_name' => 'Apex Labs', '_wpnonce' => 'nonce'];
+        Functions\expect('wp_verify_nonce')->once()->with('nonce', 'wpcs_choose_website_name_901')->andReturn(1);
         Functions\when('get_current_user_id')->justReturn(8); // the subscription's customer is user 7
         Functions\when('esc_html__')->returnArg();
         Functions\when('wp_die')->alias(function () {
@@ -295,5 +343,156 @@ class NameConflictsTest extends StoreJobsTestCase
         $this->assertSame(WPCSTenant::NEEDS_NEW_NAME, $this->meta(WPCSTenant::WPCS_TENANT_STATE));
         $this->assertSame([], $this->queue(901));
         $this->assertSame('', $this->meta(WPCSTenant::WPCS_DOMAIN_NAME_META));
+    }
+
+    public function test_a_submit_from_a_page_opened_before_the_cancel_is_refused_and_the_page_says_why(): void
+    {
+        $this->parked();
+        $this->manager->suspend_tenant_when_subscription_expired(901);
+        $this->wpcs->expects('domain_available')->never();
+
+        $this->submit('Apex Labs');
+
+        $this->assertSame(['https://storefront.example/account/subscriptions/901?wpcs_website_name=not_active&wpcs_website_name_for=901#wpcs-website-name-result-901'], $this->redirects);
+        $this->assertStringContainsString('This subscription is not active', $this->result_shown_after_redirect());
+        $this->assertSame([], $this->queue(901));
+    }
+
+    public function test_each_result_is_shown_by_its_code_and_only_at_its_own_website(): void
+    {
+        $this->parked();
+        $this->wpcs->expects('domain_available')->twice()->andReturn(false, true);
+
+        $this->submit('Apex Labs');
+        $this->assertStringContainsString('already taken', $this->result_shown_after_redirect());
+        $this->assertSame('', $this->result_shown_after_redirect(902), 'another website on the same page shows nothing');
+
+        $this->submit('Apex Labs Two');
+        $this->assertStringContainsString('setting up your website with its new name', $this->result_shown_after_redirect());
+
+        // Text put in the URL by someone else is never shown.
+        $_GET = [NameConflicts::RESULT_ARG => 'Your account is locked, call 555-0100', NameConflicts::RESULT_FOR_ARG => '901'];
+        ob_start();
+        NameConflicts::render_result(901);
+        $this->assertSame('', ob_get_clean());
+    }
+
+    public function test_two_submits_at_once_queue_one_create(): void
+    {
+        $this->parked();
+        // A lock left by a request that died long ago doesn't count.
+        $this->options['wpcs_choose_name_lock_' . md5('901')] = time() - 120;
+        $second = null;
+        $calls = 0;
+        // The second submit (another tab, a double click) arrives while the first waits for the API.
+        $this->wpcs->allows('domain_available')->andReturnUsing(function () use (&$second, &$calls) {
+            if (++$calls === 1) {
+                $second = $this->conflicts->choose_new_name(901, 'Apex Labs Two') ?? 'queued';
+            }
+            return true;
+        });
+
+        $this->assertNull($this->conflicts->choose_new_name(901, 'Apex Labs'));
+
+        $this->assertStringContainsString('being saved right now', (string) $second);
+        $this->assertCount(1, $this->queue(901));
+        $this->assertSame('Apex Labs', $this->queue(901)[0]['args']['request']['name']);
+        $this->assertArrayNotHasKey('wpcs_choose_name_lock_' . md5('901'), $this->options, 'the lock is released');
+    }
+
+    public function test_a_page_left_open_too_long_asks_for_the_name_again_instead_of_failing(): void
+    {
+        $this->parked();
+        $this->wpcs->expects('domain_available')->never();
+
+        $this->submit('Apex Labs', false);
+
+        $this->assertStringContainsString('open too long', $this->result_shown_after_redirect());
+        $this->assertSame(WPCSTenant::NEEDS_NEW_NAME, $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+        $this->assertSame([], $this->queue(901));
+    }
+
+    public function test_a_customer_logged_out_meanwhile_is_sent_back_to_their_page(): void
+    {
+        $this->parked();
+        $_POST = ['subscription_id' => '901', 'website_name' => 'Apex Labs'];
+        $this->wpcs->expects('domain_available')->never();
+
+        $this->conflicts->handle_logged_out_request();
+
+        $this->assertSame(['https://storefront.example/account/subscriptions/901'], $this->redirects);
+        $this->assertSame([], $this->queue(901));
+    }
+
+    public function test_the_admin_notice_counts_the_stores_the_customer_can_still_name_after_each_transition(): void
+    {
+        $this->parked();
+        $this->assertStringContainsString('1 website is waiting', $this->admin_notice(), 'parked');
+
+        $this->manager->suspend_tenant_on_hold(901);
+        $this->assertSame('', $this->admin_notice(), 'paused');
+
+        $this->manager->resume_suspended_tenant(901);
+        $this->assertStringContainsString('1 website is waiting', $this->admin_notice(), 'reactivated');
+
+        $this->wpcs->expects('domain_available')->andReturn(true);
+        $this->assertNull($this->conflicts->choose_new_name(901, 'Apex Labs'));
+        $this->assertSame('', $this->admin_notice(), 'renamed');
+
+        $this->wpcs->expects('create_tenant')->andThrow(new \Exception('Failed: 400 {"message":"Domain apex-labs.stores.waas.example is already in use"}'));
+        $this->run_due(901);
+        $this->assertStringContainsString('Subscription #901: "Apex Labs" was taken', $this->admin_notice(), 'taken again before the create');
+
+        // The subscription was deleted in the cart (or cancelled without an event): the cart no longer has it active.
+        $this->cart->inactive[901] = true;
+        $this->assertSame('', $this->admin_notice(), 'no longer active in the cart');
+    }
+
+    public function test_a_reactivation_the_cart_does_not_confirm_keeps_the_wait_paused(): void
+    {
+        $this->parked();
+        $this->manager->suspend_tenant_when_subscription_expired(901);
+        $this->cart->inactive[901] = true; // a reactivation handled after the cancel that followed it
+
+        $this->manager->create_tenant_when_subscription_created(901, null);
+        $this->manager->resume_suspended_tenant(901);
+
+        $this->assertSame('', $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+        $this->assertTrue($this->meta(WPCSTenant::WPCS_NAME_CONFLICT_META)['paused']);
+    }
+
+    public function test_the_new_name_is_refused_when_the_cart_says_the_subscription_is_not_active(): void
+    {
+        $this->parked();
+        $this->cart->inactive[901] = true; // no event paused the wait
+        $this->wpcs->expects('domain_available')->never();
+
+        $this->assertStringContainsString('not active', $this->conflicts->choose_new_name(901, 'Apex Labs'));
+        $this->assertSame([], $this->queue(901));
+    }
+
+    public function test_a_plan_change_while_waiting_reaches_the_store_when_it_is_created(): void
+    {
+        $add_ons = new TenantsAddOnSubscriptionManager($this->wpcs, $this->jobs);
+        $this->bought();
+        $add_ons->update_tenant_roles(901, ['peptide-store', 'peptide-pro']); // queued behind the create
+        $this->wpcs->expects('update_tenant')->never();
+        $this->create_refused_as_taken();
+
+        $this->wpcs->expects('domain_available')->andReturn(true);
+        $this->assertNull($this->conflicts->choose_new_name(901, 'Apex Labs'));
+        $this->wpcs->expects('create_tenant')->once()->with(Mockery::on(fn ($args) => $args['php_constants']['WPCS_TENANT_ROLES']['value'] === 'peptide-store,peptide-pro'))
+            ->andReturn((object) ['externalId' => self::SECOND_ID, 'baseDomain' => 't-1.stores.waas.example', 'customDomain' => 'apex-labs.stores.waas.example']);
+        $this->run_due(901);
+
+        $this->assertSame(['peptide-store', 'peptide-pro'], $this->meta(WPCSTenant::WPCS_SUBSCRIPTION_USER_ROLES));
+    }
+}
+
+/** A redirect ends the request with exit; in the tests the test goes on. */
+class NameConflictsWithoutExit extends NameConflicts
+{
+    protected function finish(): void
+    {
     }
 }

@@ -64,4 +64,10 @@ interface CommerceAdapter
 
     /** Customer-facing page for the subscription on the storefront. */
     public function get_subscription_url($subscription_id): string;
+
+    /**
+     * True while the cart says the customer has the subscription now: active, or in its trial (or, where the cart
+     * has it, cancelled but paid until the end of the term). False for a subscription that doesn't exist.
+     */
+    public function is_subscription_active($subscription_id): bool;
 }

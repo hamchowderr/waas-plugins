@@ -206,7 +206,8 @@ class TenantsSubscriptionManager
         $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META, $external_id);
         $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, $domain_name);
         $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_BASE_DOMAIN_NAME_META, $base_domain);
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_SUBSCRIPTION_USER_ROLES, [$store['product_role']]);
+        // 'roles' is set when the plan changed while the store waited for a new name.
+        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_SUBSCRIPTION_USER_ROLES, $store['roles'] ?? [$store['product_role']]);
 
         $this->store_linked($subscription_id);
 

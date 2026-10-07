@@ -17,6 +17,8 @@ class FakeCommerceAdapter implements CommerceAdapter
     public array $meta = [];
     public bool $booted = false;
     public int $customer_id = 7;
+    /** @var array<int|string, true> subscriptions the cart reports as not active */
+    public array $inactive = [];
 
     public function __construct(string $id = 'fake', bool $available = true)
     {
@@ -95,5 +97,10 @@ class FakeCommerceAdapter implements CommerceAdapter
     public function get_subscription_url($subscription_id): string
     {
         return "https://storefront.example/account/subscriptions/$subscription_id";
+    }
+
+    public function is_subscription_active($subscription_id): bool
+    {
+        return !isset($this->inactive[$subscription_id]);
     }
 }

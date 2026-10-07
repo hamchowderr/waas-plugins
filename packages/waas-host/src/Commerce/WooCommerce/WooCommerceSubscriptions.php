@@ -102,6 +102,16 @@ class WooCommerceSubscriptions implements SubscriptionPlugin
     }
 
     /**
+     * Pending-cancel counts: the customer has paid until the end of the term.
+     *
+     * @param \WC_Subscription $subscription
+     */
+    public function is_subscription_active(\WC_Order $subscription): bool
+    {
+        return $subscription->has_status(['active', 'pending-cancel']);
+    }
+
+    /**
      * @param \WC_Order_Item_Product[] $items
      * @return string[] the non-empty roles of the items' products
      */

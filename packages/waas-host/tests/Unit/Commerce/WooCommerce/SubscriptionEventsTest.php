@@ -256,4 +256,30 @@ class SubscriptionEventsTest extends TestCase
         SubscriptionEvents::activated(900, Mockery::mock('WC_Order'));
         SubscriptionEvents::ended(900);
     }
+
+    private function refunded_order(int $id, int $subscription_id)
+    {
+        $order = Mockery::mock('WC_Order');
+        $order->allows('get_type')->andReturn('shop_order');
+        $order->allows('get_id')->andReturn($id);
+        $order->allows('get_meta')->with('wps_subscription_id')->andReturn((string) $subscription_id);
+
+        return $order;
+    }
+
+    public function test_wp_swings_a_full_refund_of_the_order_that_started_the_subscription_ends_it(): void
+    {
+        $this->commerce->meta[900][WPCSTenant::WPCS_NAME_CONFLICT_META] = ['name' => 'Apex Research'];
+        $subscription = Mockery::mock('WPS_Subscription', 'WC_Order');
+        $subscription->allows('get_type')->andReturn('wps_subscriptions');
+        $subscription->allows('get_parent_id')->andReturn(500);
+        $order = $this->refunded_order(500, 900);
+        $renewal = $this->refunded_order(501, 900); // a renewal refund doesn't take back the subscription
+        Functions\when('wc_get_order')->alias(fn ($id) => [900 => $subscription, 500 => $order, 501 => $renewal][$id] ?? false);
+        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+
+        $plugin = new WpSwingsSubscriptions();
+        $plugin->on_order_refunded(501);
+        $plugin->on_order_refunded(500);
+    }
 }

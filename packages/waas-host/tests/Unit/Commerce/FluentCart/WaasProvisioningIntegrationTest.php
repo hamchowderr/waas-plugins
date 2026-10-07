@@ -25,6 +25,7 @@ class WaasProvisioningIntegrationTest extends TestCase
         $this->order = Mockery::mock();
         $this->order->id = 500;
         $this->order->allows('addLog');
+        $this->store->allows('get_subscription_status')->with(900)->andReturn('canceled')->byDefault();
         $this->integration = new WaasProvisioningIntegration(Mockery::mock(WPCSService::class), $this->store);
     }
 
@@ -152,5 +153,28 @@ class WaasProvisioningIntegrationTest extends TestCase
         Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
 
         $this->run_feed('subscription_canceled');
+    }
+
+    /** @dataProvider stale_removal_events */
+    public function test_a_cancel_handled_after_the_subscription_became_active_again_is_ignored_but_a_refund_counts(string $trigger, bool $waiting): void
+    {
+        // Canceled, then reactivated; FluentCart runs the feeds in the background and the reactivation ran first.
+        $this->has_store(!$waiting);
+        $this->store->allows('get_subscription_meta')->with(900, WPCSTenant::WPCS_NAME_CONFLICT_META)->andReturn($waiting ? ['name' => 'Apex Research'] : '');
+        $this->store->allows('get_subscription_status')->with(900)->andReturn('active');
+        // Only the refund: it leaves the subscription active.
+        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+
+        $this->run_feed($trigger);
+        $this->run_feed('order_fully_refunded', ['is_revoke_hook' => 'yes']);
+    }
+
+    public function stale_removal_events(): array
+    {
+        return [
+            'canceled, store' => ['subscription_canceled', false],
+            'canceled, waiting for a name' => ['subscription_canceled', true],
+            'end of term, waiting for a name' => ['subscription_eot', true],
+        ];
     }
 }

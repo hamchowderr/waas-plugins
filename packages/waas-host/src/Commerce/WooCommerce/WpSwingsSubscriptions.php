@@ -44,6 +44,8 @@ class WpSwingsSubscriptions implements SubscriptionPlugin
         // Fired for cancellations by the customer, an admin and the payment gateways.
         add_action('wps_sfw_subscription_cancel', [$this, 'on_ended'], 10, 1);
         add_action('wps_sfw_expire_subscription_scheduler', [$this, 'on_ended'], 10, 1);
+        // WP Swings leaves the subscription active when its order is refunded; WooCommerce Subscriptions cancels it.
+        add_action('woocommerce_order_fully_refunded', [$this, 'on_order_refunded'], 10, 1);
 
         add_action('woocommerce_before_order_object_save', [$this, 'on_before_order_save'], 10, 1);
         add_action('woocommerce_after_order_object_save', [$this, 'on_order_saved'], 10, 1);
@@ -69,6 +71,22 @@ class WpSwingsSubscriptions implements SubscriptionPlugin
     {
         if ($this->get_subscription($subscription_id) !== null) {
             SubscriptionEvents::ended((int) $subscription_id);
+        }
+    }
+
+    /** The order that started a subscription was fully refunded: the subscription ends, as if it were cancelled. */
+    public function on_order_refunded($order_id): void
+    {
+        $order = wc_get_order($order_id);
+        if (!$order instanceof \WC_Order || $order->get_type() === $this->get_order_type()) {
+            return;
+        }
+
+        $subscription_id = (int) $order->get_meta('wps_subscription_id');
+        $subscription = $subscription_id ? $this->get_subscription($subscription_id) : null;
+        $parent = $subscription !== null ? $this->get_parent_order($subscription) : null;
+        if ($parent !== null && $parent->get_id() === $order->get_id()) {
+            SubscriptionEvents::ended($subscription_id);
         }
     }
 
@@ -143,6 +161,11 @@ class WpSwingsSubscriptions implements SubscriptionPlugin
     public function get_subscription_url(\WC_Order $subscription): string
     {
         return (string) wc_get_endpoint_url('show-subscription', (string) $subscription->get_id(), wc_get_page_permalink('myaccount'));
+    }
+
+    public function is_subscription_active(\WC_Order $subscription): bool
+    {
+        return $subscription->get_meta(self::STATUS_META) === 'active';
     }
 
     private function get_subscription($subscription_id): ?\WC_Order
