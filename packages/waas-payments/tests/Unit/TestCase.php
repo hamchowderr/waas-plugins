@@ -18,6 +18,7 @@ abstract class TestCase extends PHPUnitTestCase
     {
         parent::setUp();
         Monkey\setUp();
+        \FluentCart\App\Models\OrderTransaction::$table = [];
 
         Functions\stubTranslationFunctions();
         Functions\when('is_wp_error')->alias(fn ($value) => $value instanceof \WP_Error);
