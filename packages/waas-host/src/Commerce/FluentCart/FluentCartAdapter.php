@@ -8,6 +8,7 @@ use WaaSHost\Commerce\PlanPurchase;
 use WaaSHost\Core\WPCSService;
 use WaaSHost\Core\WPCSTenant;
 use WaaSHost\Features\UserAccountSubscriptionsSettings;
+use WaaSHost\Migrations\FluentCartFeedTriggers;
 
 /**
  * FluentCart (1.7+), which has subscriptions built in. Subscription ids are
@@ -49,6 +50,7 @@ class FluentCartAdapter implements CommerceAdapter
 
         add_action('fluent_cart/init', function () use ($wpcs_service, $store) {
             (new WaasProvisioningIntegration($wpcs_service, $store))->register();
+            (new FluentCartFeedTriggers($store))->maybe_run();
         });
 
         new FluentCartCheckout($wpcs_service, $this, $store);

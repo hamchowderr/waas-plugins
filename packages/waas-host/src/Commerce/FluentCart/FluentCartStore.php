@@ -7,6 +7,7 @@ use FluentCart\App\Models\ProductMeta;
 use FluentCart\App\Models\Subscription;
 use FluentCart\App\Models\SubscriptionMeta;
 use FluentCart\App\Services\URL;
+use WaaSHost\Migrations\FluentCartFeedTriggers;
 
 /**
  * The only class that reads FluentCart's models, so the adapter, checkout and
@@ -101,6 +102,40 @@ class FluentCartStore
         }
 
         return null;
+    }
+
+    /**
+     * Gives every WaaS feed whose triggers are exactly $old_triggers (in any order) the current defaults, which add
+     * $trigger (FluentCartFeedTriggers).
+     *
+     * @return int feeds updated
+     */
+    public function add_feed_trigger(array $old_triggers, string $trigger): int
+    {
+        $feeds = ProductMeta::query()
+            ->where('object_type', 'product_integration')
+            ->where('meta_key', WaasProvisioningIntegration::KEY)
+            ->get();
+
+        $updated = 0;
+        foreach ($feeds as $feed) {
+            $settings = $feed->meta_value;
+            if (!is_array($settings)) {
+                continue;
+            }
+
+            $triggers = FluentCartFeedTriggers::updated_triggers((array) ($settings['event_trigger'] ?? []));
+            if ($triggers === null || !in_array($trigger, $triggers, true)) {
+                continue;
+            }
+
+            $settings['event_trigger'] = $triggers;
+            $feed->meta_value = $settings;
+            $feed->save();
+            $updated++;
+        }
+
+        return $updated;
     }
 
     public function has_plan_feed(): bool
