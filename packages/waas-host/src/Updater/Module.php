@@ -9,10 +9,24 @@ if ( !defined( 'ABSPATH' ) )
 class Module
 {
     private static $remote_data = null;
-    private static $info_url = 'https://github.com/Daxez/waas-wpcs/releases/latest/download/wpcs-waas-host-info.json';
+
+    /**
+     * Updates come only from our own channel. Until there is one, no update is ever checked or offered,
+     * so WordPress can't replace this fork with the upstream (Daxez/waas-wpcs) plugin. Stores get new
+     * plugin versions through template versions and the storefront through deploys.
+     */
+    public static function info_url()
+    {
+        return defined('WAAS_UPDATE_INFO_URL') ? WAAS_UPDATE_INFO_URL : null;
+    }
 
     public static function init()
     {
+        if(!self::info_url())
+        {
+            return;
+        }
+
         add_filter( 'update_plugins_'.WPCS_WAAS_HOST_UPDATE_URI, [__CLASS__, 'maybe_show_update_available'], 10, 3 );
         add_filter( 'plugins_api', [__CLASS__, 'modify_plugin_details'], 10, 3 );
     }
@@ -53,12 +67,19 @@ class Module
     {
         if(!self::$remote_data)
         {
-            $response = wp_remote_get(self::$info_url);
+            if(!self::info_url())
+            {
+                self::$remote_data = new \WP_Error('waas_updater_disabled', 'No update channel is configured.');
+                return self::$remote_data;
+            }
 
+            $response = wp_remote_get(self::info_url());
 
             if(is_wp_error($response))
             {
+                // Cache the failure so one page load doesn't retry, and never read 'body' off a WP_Error.
                 self::$remote_data = $response;
+                return self::$remote_data;
             }
 
             self::$remote_data = json_decode($response['body']);
