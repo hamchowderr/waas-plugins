@@ -97,14 +97,25 @@ Only needed for a different sandbox account, or if the keys are rotated.
 
 ## Stripe (test) and PayPal (sandbox)
 
-For subscriptions billed by Stripe or PayPal ("Gateway managed" subscription mode). The storefront is switched to that mode separately; until then it runs store-managed with the Card gateway.
+For subscriptions billed by Stripe or PayPal ("Gateway managed" subscription mode).
+
+### Subscription mode
+
+FluentCart's subscription mode is set for the whole store (**FluentCart** → **Settings** → **Store Settings**), and each subscription keeps the mode it was bought under. Switching never changes existing subscriptions.
+
+```shell
+scripts/test-storefront/storefront.py setup payments --mode gateway   # Gateway managed: Stripe and PayPal bill the renewals
+scripts/test-storefront/storefront.py setup payments                  # back to store-managed (the default), for the Card gateway
+```
+
+Under Gateway managed, FluentCart doesn't offer the Card gateway for a subscription cart, so new plans are bought with Stripe or PayPal. The store-managed renewal charge setting is left as it is. `setup payments` and a full `setup` without `--mode gateway` switch the store back to store-managed, so pass the flag while the storefront is meant to stay Gateway managed.
 
 **Webhooks are mandatory.** Under Gateway managed, Stripe or PayPal bills the renewals. A paid renewal, a failed payment, a cancel or suspend made in the provider's dashboard, and a refund reach FluentCart only through the webhook. waas-host acts on what FluentCart records. Without the webhook, the website stays online after the customer stops paying, and a paused or cancelled plan never takes it offline.
 
 ### Stripe (test mode)
 
-1. In WordPress go to **FluentCart** → **Settings** → **Payments** → **Stripe**, open the **Test credentials** tab and click **Connect with Stripe** (or **Or Setup keys manually**: the test publishable key `pk_test_…` and secret key `sk_test_…` from the Stripe dashboard, **Developers** → **API keys**, with **Test mode** on). Turn the method on and click **Save**.
-2. In the Stripe dashboard, with **Test mode** on, go to **Developers** → **Webhooks** → **Add endpoint**. The link under **Webhook URL** in FluentCart's Stripe settings opens this page with the events already ticked.
+1. In WordPress go to **FluentCart** → **Settings** → **Payments** → **Stripe** (`/wp-admin/admin.php?page=fluent-cart#/settings/payments/stripe`). The store is in test mode, so work in the **Test credentials** tab. Click **Connect with Stripe** and log in to Stripe (or use **Or Setup keys manually**: the test publishable key `pk_test_…` and secret key `sk_test_…` from the Stripe dashboard, **Developers** → **API keys**, with **Test mode** on). Turn the method on and click **Save**.
+2. **The webhook.** FluentCart shows its URL under **Webhook URL** on the same Stripe settings page, with a link that opens Stripe's **Add endpoint** page with the events ticked. Connect passes this URL to FluentCart's connect service, but nothing in FluentCart creates the endpoint or shows that one exists. So check in the Stripe dashboard, with **Test mode** on, under **Developers** → **Webhooks**: if an endpoint with this URL is already listed, leave it; otherwise add it (steps 3–5).
 3. Endpoint URL:
 
    ```
@@ -118,7 +129,7 @@ Test card: `4242 4242 4242 4242`, any future expiry date, any CVC.
 
 ### PayPal (sandbox)
 
-1. **FluentCart** → **Settings** → **Payments** → **PayPal**, **Test credentials** tab.
+1. **FluentCart** → **Settings** → **Payments** → **PayPal** (`/wp-admin/admin.php?page=fluent-cart#/settings/payments/paypal`), **Test credentials** tab.
 2. **Connect** (recommended): click **Connect with PayPal** and log in with a sandbox business account from https://developer.paypal.com (**Testing Tools** → **Sandbox Accounts**). FluentCart registers the webhook itself; **Webhook Info** then says the webhook is connected and lists its events. Nothing else to set up.
 3. **Manual keys** (only if Connect isn't used): at https://developer.paypal.com, under **Apps & Credentials** (Sandbox), open or create a REST app, then:
    1. Copy its **Client ID** and **Secret** into FluentCart.
@@ -156,5 +167,6 @@ The WordPress image has no mail program, so nothing is sent until FluentSMTP has
 
 ## Notes
 
-- **Card subscriptions** need FluentCart's store-managed mode. Under "Gateway managed" (FluentCart's default), FluentCart doesn't offer the Card gateway for a subscription cart. The `payments` step sets store-managed mode for the whole store.
+- **Card subscriptions** need FluentCart's store-managed mode. Under "Gateway managed" (FluentCart's default), FluentCart doesn't offer the Card gateway for a subscription cart. The `payments` step sets store-managed mode for the whole store, or Gateway managed with `--mode gateway` (see [Subscription mode](#subscription-mode)).
+- **Plugin updates for FluentCart and FluentSMTP.** The `plugins` step installs them only when they are missing, and otherwise just activates them. Updating them is a separate, deliberate step: in wp-admin, or `storefront.py run 'sh /opt/wpcli/x/wp plugin update fluent-cart'`.
 - **Plugin updates.** Don't apply plugin updates that WordPress offers for WaaS Host, WaaS Client or WaaS Payments. Update them with `push` from this repo.

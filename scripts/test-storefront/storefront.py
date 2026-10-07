@@ -5,6 +5,7 @@ docs/test-storefront-woo.md.
     storefront.py [--cart woo] create            # project, service, variables (password generated, never printed)
     storefront.py [--cart woo] push              # build the plugins and copy them into the service
     storefront.py [--cart woo] setup [steps]     # bootstrap, install, plugins, configure, pages, product, payments, cron
+    storefront.py setup payments --mode gateway  # FluentCart's subscription mode: store (default) or gateway
     storefront.py [--cart woo] run '<command>'   # one shell command in the wordpress container, as root
     storefront.py [--cart woo] remove            # delete the service with its volumes, then the project if empty
 
@@ -249,11 +250,28 @@ def ensure_cron_task(uuid):
     print(f'{CRON_TASK} task created')
 
 
-def setup(steps):
+PAYMENT_MODES = ['store', 'gateway']
+
+
+def setup(args):
+    # --mode picks FluentCart's subscription mode for the payments step: store (store-managed, the default) or
+    # gateway (Gateway managed: Stripe and PayPal bill the renewals).
+    mode = None
+    if '--mode' in args:
+        i = args.index('--mode')
+        if i + 1 >= len(args) or args[i + 1] not in PAYMENT_MODES:
+            sys.exit('--mode takes one of: ' + ', '.join(PAYMENT_MODES))
+        if CART is not CARTS['fluentcart']:
+            sys.exit('--mode is for the FluentCart storefront')
+        mode = args[i + 1]
+        args = args[:i] + args[i + 2:]
+    steps = args or STEPS
+    if mode and 'payments' not in steps:
+        sys.exit('--mode applies to the payments step')
     uuid = service_uuid()
-    for step in steps or STEPS:
+    for step in steps:
         print(f'== {step}')
-        run(uuid, f'sh {REMOTE}/setup.sh {step}')
+        run(uuid, f'sh {REMOTE}/setup.sh {step}' + (f' {mode}' if step == 'payments' and mode else ''))
         if step == 'cron':
             ensure_cron_task(uuid)
 
