@@ -154,7 +154,11 @@ class AuthorizeNetGateway extends AbstractPaymentGateway
         ));
 
         if (!$result->success) {
-            return new \WP_Error('waas_payments_refund_failed', $result->message);
+            $message = $result->message;
+            if (FailedRefundRollback::undo($transaction, (int) $amount)) {
+                $message .= ' ' . __('Nothing was refunded and the order is unchanged.', 'waas-payments');
+            }
+            return new \WP_Error('waas_payments_refund_failed', $message);
         }
 
         // Refund.php:85-91 stores this as the refund transaction's vendor_charge_id.

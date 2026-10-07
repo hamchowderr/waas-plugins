@@ -9,6 +9,7 @@ use WaaSHost\Core\Exceptions\InvalidDomainException;
 class WPCSService
 {
     const CAN_REACH_API_OPTION_NAME = 'WPCS_CAN_REACH_API';
+    const GROUP_NAMES_TRANSIENT = 'wpcs_available_group_names';
 
     private HttpService $httpService;
 
@@ -80,6 +81,29 @@ class WPCSService
     /**
      * @throws \Exception
      */
+    /**
+     * get_available_groupnames() for admin screens: cached for 10 minutes, and an empty list when the API can't be
+     * reached, so a product editor still opens.
+     */
+    public function get_available_groupnames_cached(): array
+    {
+        $cached = get_transient(self::GROUP_NAMES_TRANSIENT);
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        try {
+            $group_names = $this->get_available_groupnames();
+        } catch (\Throwable $e) {
+            error_log('WaaS Host: could not load snapshot groups: ' . $e->getMessage());
+            return [];
+        }
+
+        set_transient(self::GROUP_NAMES_TRANSIENT, $group_names, 10 * MINUTE_IN_SECONDS);
+
+        return $group_names;
+    }
+
     public function get_available_groupnames()
     {
         $snapshots = $this->httpService->get('/v1/snapshots?onlyProductionVersion=true');
@@ -206,11 +230,18 @@ class WPCSService
         }
 
 
-        if (wp_remote_retrieve_response_code($response) == 400) {
+        $code = (int) wp_remote_retrieve_response_code($response);
+        if ($code === 400) {
             throw new InvalidDomainException("Domain was not valid!");
         }
 
-        return json_decode($response['body'])->available;
+        // Anything but a 200 with a boolean answer (401/403 credentials, 5xx, a proxy page) is an error, not "taken".
+        $body = json_decode((string) wp_remote_retrieve_body($response));
+        if ($code !== 200 || !is_object($body) || !isset($body->available) || !is_bool($body->available)) {
+            throw new \Exception('Unexpected answer from the domain availability check: HTTP ' . $code);
+        }
+
+        return $body->available;
     }
 
     /**

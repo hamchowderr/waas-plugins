@@ -2,6 +2,8 @@
 
 namespace WaaSHost\Integrations\SelfServiceDashboard;
 
+use WaaSHost\Features\AddonProductCategory;
+
 class SelfServiceDashboardIntegration
 {
     public static function init()
@@ -27,6 +29,8 @@ class SelfServiceDashboardIntegration
             $src = plugin_dir_url( __FILE__ ) . "/assets/js/$script_name";
             $version = date("ymd-Gis", filemtime( plugin_dir_path( __FILE__ ) . "assets/js/$script_name" ));
             wp_enqueue_script('add-on-loading-indicator', $src, ['jquery'], $version, true);
+            // The admin URL, not /wp-admin/: WordPress may live in a subdirectory.
+            wp_localize_script('add-on-loading-indicator', 'wpcsAddOnLoadingIndicator', ['spinner' => admin_url('images/spinner.gif')]);
         }
     }
 
@@ -40,7 +44,7 @@ class SelfServiceDashboardIntegration
         $args['tax_query'][] = [
             'taxonomy' => 'product_cat',
             'field' => 'slug',
-            'terms' => 'add-on',
+            'terms' => AddonProductCategory::TERM_SLUG,
         ];
 
         return $args;

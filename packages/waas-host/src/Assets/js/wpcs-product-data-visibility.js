@@ -12,7 +12,7 @@ jQuery(function($){
 
     manageProductOptionsTab();
 
-    wpcsProductCheckbox.change(function(){
+    wpcsProductCheckbox.on('change', function(){
         manageProductOptionsTab();
     });
 });

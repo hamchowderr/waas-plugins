@@ -2,7 +2,9 @@
 
 namespace Tests\Unit\Core;
 
+use Brain\Monkey\Functions;
 use Mockery;
+use WaaSHost\Core\Exceptions\InvalidDomainException;
 use Tests\Unit\TestCase;
 use WaaSHost\Core\HttpService;
 use WaaSHost\Core\WPCSService;
@@ -180,5 +182,81 @@ class WPCSServiceTest extends TestCase
             ]);
 
         $this->assertSame(['peptides', 'supplements'], $this->service->get_available_groupnames());
+    }
+
+    private function availability_response(int $code, string $body): void
+    {
+        $this->http->expects('getraw')->with('/v1/tenants/domains/available?domain=apex.stores.example')
+            ->andReturn(['response' => ['code' => $code], 'body' => $body]);
+        Functions\when('is_wp_error')->justReturn(false);
+        Functions\when('wp_remote_retrieve_response_code')->alias(fn ($r) => $r['response']['code']);
+        Functions\when('wp_remote_retrieve_body')->alias(fn ($r) => $r['body']);
+    }
+
+    public function test_domain_available_reads_a_200_answer(): void
+    {
+        $this->availability_response(200, '{"available":false}');
+
+        $this->assertFalse($this->service->domain_available('apex.stores.example'));
+    }
+
+    public function test_domain_available_turns_a_400_into_an_invalid_domain(): void
+    {
+        $this->availability_response(400, '{"statusCode":400,"message":"bad"}');
+        $this->expectException(InvalidDomainException::class);
+
+        $this->service->domain_available('apex.stores.example');
+    }
+
+    /** @dataProvider broken_answers */
+    public function test_domain_available_treats_any_other_answer_as_an_error_not_as_taken(int $code, string $body): void
+    {
+        // Regression for M6: these used to read ->available off the error body (null: "taken", plus a warning).
+        $this->availability_response($code, $body);
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('HTTP ' . $code);
+
+        $this->service->domain_available('apex.stores.example');
+    }
+
+    public function broken_answers(): array
+    {
+        return [
+            'bad credentials' => [403, ''],
+            'unauthorised' => [401, '{"message":"no"}'],
+            'server error' => [500, '<html>Bad gateway</html>'],
+            '200 without an answer' => [200, '{"statusCode":1}'],
+            '200 with a string' => [200, '{"available":"yes"}'],
+        ];
+    }
+
+    public function test_group_names_for_admin_screens_are_cached(): void
+    {
+        Functions\when('get_transient')->justReturn(['peptide-starter']);
+        $this->http->expects('get')->never();
+
+        $this->assertSame(['peptide-starter'], $this->service->get_available_groupnames_cached());
+    }
+
+    public function test_group_names_for_admin_screens_are_loaded_once_then_cached_for_ten_minutes(): void
+    {
+        if (!defined('MINUTE_IN_SECONDS')) {
+            define('MINUTE_IN_SECONDS', 60);
+        }
+        Functions\when('get_transient')->justReturn(false);
+        $this->http->expects('get')->andReturn([(object) ['groupName' => 'peptide-starter']]);
+        Functions\expect('set_transient')->once()->with(WPCSService::GROUP_NAMES_TRANSIENT, ['peptide-starter'], 600);
+
+        $this->assertSame(['peptide-starter'], $this->service->get_available_groupnames_cached());
+    }
+
+    public function test_group_names_for_admin_screens_are_empty_when_the_api_is_down(): void
+    {
+        // Regression for H11: the product editor called the API directly and the exception went uncaught.
+        Functions\when('get_transient')->justReturn(false);
+        $this->http->expects('get')->andThrow(new \Exception('Failed: cURL error 7'));
+        Functions\expect('set_transient')->never();
+
+        $this->assertSame([], $this->service->get_available_groupnames_cached());
     }
 }

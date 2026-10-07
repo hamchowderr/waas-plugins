@@ -8,7 +8,6 @@ use WaaSHost\Commerce\PlanPurchase;
 use WaaSHost\Core\WPCSProduct;
 use WaaSHost\Core\WPCSService;
 use WaaSHost\Core\WPCSTenant;
-use WaaSHost\Features\AddonProductCategory;
 use WaaSHost\Features\PluginBootstrap;
 use WaaSHost\Features\UserAccountSubscriptionsSettings;
 use WaaSHost\Features\UserWcTenantsCheckout;
@@ -82,7 +81,6 @@ class WooCommerceAdapter implements CommerceAdapter
             SelfServiceDashboardIntegration::init();
         }
 
-        AddonProductCategory::init();
         new PluginBootstrap();
 
         add_action('before_woocommerce_init', [$this, 'declare_woocommerce_compatibility']);

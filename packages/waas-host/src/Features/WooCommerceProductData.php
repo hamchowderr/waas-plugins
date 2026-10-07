@@ -28,7 +28,7 @@ class WooCommerceProductData
             'label' => __('WPCS', WPCS_WAAS_HOST_TEXTDOMAIN),
             'priority' => 50,
             'target' => self::WPCS_PRODUCT_DATA_TAB_TARGET,
-            'class'    => ['show_if_simple'],
+            'class'    => ['show_if_simple', 'show_if_subscription'],
         ];
 
         return $tabs;
@@ -55,33 +55,20 @@ class WooCommerceProductData
         }
 
         $role_options = [];
-        foreach (get_option(PluginBootstrap::ROLES_WP_OPTION, []) as $role_slug => $role_data) {
-            $role_options[$role_slug] = $role_data->title;
+        foreach (self::roles() as $role_slug => $role_title) {
+            $role_options[$role_slug] = $role_title;
         }
 
         $available_groupnames = [
             '' => _x('None', 'Option name when no tenant snapshot chosen', WPCS_WAAS_HOST_TEXTDOMAIN),
         ];
-        foreach ($this->wpcsService->get_available_groupnames() as $groupname) {
+        // Cached, and empty when the API is down: the product editor must still open.
+        foreach ($this->wpcsService->get_available_groupnames_cached() as $groupname) {
             $available_groupnames[$groupname] = $groupname;
         }
 
         ?>
         <div id="<?php echo self::WPCS_PRODUCT_DATA_TAB_TARGET; ?>" class="panel woocommerce_options_panel">
-            <div>
-                <?php
-                // \woocommerce_wp_select([
-                //     'id'            => WPCSProduct::WPCS_PRODUCT_TYPE_META,
-                //     'label'         => __( 'Type', WPCS_WAAS_HOST_TEXTDOMAIN),
-                //     'description'   => __( 'The type of this product, it\'s self explanatory really..', WPCS_WAAS_HOST_TEXTDOMAIN),
-                //     'options'  		=> [
-                //         WPCSProduct::WPCS_PRODUCT_TYPE_BASE_PRODUCT => __('Base product', WPCS_WAAS_HOST_TEXTDOMAIN),
-                //         WPCSProduct::WPCS_PRODUCT_TYPE_ADDON => __('Add-on', WPCS_WAAS_HOST_TEXTDOMAIN),
-                //     ],
-                //     'desc_tip'    	=> false,
-                // ]);
-                ?>
-            </div>
             <div>
                 <?php \woocommerce_wp_select([
                     'id'            => WPCSProduct::WPCS_PRODUCT_ROLE_META,
@@ -115,24 +102,35 @@ class WooCommerceProductData
     {
         $product = new WPCSProduct($post_id);
 
-        if (array_key_exists(WPCSProduct::WPCS_PRODUCT_ROLE_META, $_POST)) {
-            $product->update_role($_POST[WPCSProduct::WPCS_PRODUCT_ROLE_META]);
+        if (isset($_POST[WPCSProduct::WPCS_PRODUCT_ROLE_META])) {
+            $role = sanitize_text_field(wp_unslash($_POST[WPCSProduct::WPCS_PRODUCT_ROLE_META]));
+            // Only a role the template defines (or none); anything else would give the store no plugins.
+            if ($role === '' || array_key_exists($role, self::roles())) {
+                $product->update_role($role);
+            }
         }
 
-        if (array_key_exists(WPCSProduct::WPCS_PRODUCT_TYPE_META, $_POST)) {
-            $product->store_type($_POST[WPCSProduct::WPCS_PRODUCT_TYPE_META]);
+        if (isset($_POST[WPCSProduct::WPCS_PRODUCT_GROUPNAME_META])) {
+            $product->update_tenant_snapshot_group_name(sanitize_text_field(wp_unslash($_POST[WPCSProduct::WPCS_PRODUCT_GROUPNAME_META])));
+        }
+    }
+
+    /** @return array<string, string> role slug => title, from the roles the template published */
+    private static function roles(): array
+    {
+        $roles = [];
+        foreach ((array) get_option(PluginBootstrap::ROLES_WP_OPTION, []) as $slug => $role) {
+            $roles[(string) $slug] = is_object($role) && isset($role->title) ? (string) $role->title : (string) $slug;
         }
 
-        if (array_key_exists(WPCSProduct::WPCS_PRODUCT_GROUPNAME_META, $_POST)) {
-            $product->update_tenant_snapshot_group_name($_POST[WPCSProduct::WPCS_PRODUCT_GROUPNAME_META]);
-        }
+        return $roles;
     }
 
     public function display_product_type($product_type_options)
     {
         $product_type_options[WPCSProduct::IS_WPCS_PRODUCT_META] = [
             "id"            => WPCSProduct::IS_WPCS_PRODUCT_META,
-            "wrapper_class" => "show_if_simple",
+            "wrapper_class" => "show_if_simple show_if_subscription",
             "label"         => __("WPCS Product", WPCS_WAAS_HOST_TEXTDOMAIN),
             "description"   => __("WPCS Products use WPCS to provision and update Tenants running on WPCS.", WPCS_WAAS_HOST_TEXTDOMAIN),
             "default"       => "no",
