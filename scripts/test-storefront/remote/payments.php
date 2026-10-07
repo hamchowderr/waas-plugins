@@ -1,17 +1,32 @@
 <?php
-// FluentCart in test mode with store-managed subscriptions and automatic renewal charges; FluentCart's
-// offline gateway on; the waas-payments Card gateway in Authorize.Net sandbox mode. The Card credentials
-// come from AUTHNET_LOGIN_ID / AUTHNET_TRANSACTION_KEY in the container's environment (locked Coolify
-// variables); without them the gateway stays off for the owner to fill in. Prints no secrets.
+// FluentCart in test mode; FluentCart's offline gateway on; the waas-payments Card gateway in Authorize.Net
+// sandbox mode. The Card credentials come from AUTHNET_LOGIN_ID / AUTHNET_TRANSACTION_KEY in the container's
+// environment (locked Coolify variables); without them the gateway stays off for the owner to fill in. Prints no
+// secrets.
+//
+// The subscription mode is the argument: `store` (default) for store-managed subscriptions with automatic renewal
+// charges, the only mode the Card gateway sells subscriptions in; `gateway` for Gateway managed, where Stripe and
+// PayPal bill the renewals. FluentCart stamps the mode on each subscription at checkout, so switching never changes
+// existing subscriptions. Gateway mode leaves the store-managed renewal charge setting as it is (it applies only to
+// store-managed subscriptions).
 use FluentCart\App\Helpers\Helper;
 use FluentCart\App\Models\Meta;
 use WaaSPayments\Gateway\AuthorizeNetGateway;
 
+$mode = $args[0] ?? 'store';
+if (!in_array($mode, ['store', 'gateway'], true)) {
+    WP_CLI::error('payments takes store or gateway');
+}
+
 $store = get_option('fluent_cart_store_settings', []);
 $store = is_array($store) ? $store : [];
 $store['order_mode'] = 'test';
-$store['subscription_management_mode'] = 'store_managed';
-$store['subscription_system_charge'] = 'yes';
+if ($mode === 'gateway') {
+    $store['subscription_management_mode'] = 'gateway_managed';
+} else {
+    $store['subscription_management_mode'] = 'store_managed';
+    $store['subscription_system_charge'] = 'yes';
+}
 update_option('fluent_cart_store_settings', $store);
 \FluentCart\Api\StoreSettings::clearCache();
 

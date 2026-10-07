@@ -1,6 +1,6 @@
 #!/bin/sh
 # Test storefront setup steps, run by Coolify scheduled tasks as root in the wordpress container.
-#   sh /opt/wpcli/x/setup.sh <step>
+#   sh /opt/wpcli/x/setup.sh <step> [payments mode: store|gateway]
 # Steps, in order: bootstrap install plugins configure pages product payments cron (check any time).
 set -eu
 X=/opt/wpcli/x
@@ -19,8 +19,12 @@ case "${1:-}" in
     $WP option update blog_public 0
     $WP rewrite structure '/%postname%/' --hard ;;
   plugins)
-    $WP plugin install fluent-cart --activate
-    $WP plugin install fluent-smtp --activate
+    # wordpress.org plugins: install once, then just activate. Re-installing one that a newer release exists for
+    # fails ("Destination folder already exists"); updating them is a separate step, done on purpose.
+    for p in fluent-cart fluent-smtp; do
+      $WP plugin is-installed $p || $WP plugin install $p
+      $WP plugin activate $p
+    done
     $WP plugin install $X/waas-host.zip --activate --force
     $WP plugin install $X/waas-payments.zip --activate --force
     $WP plugin list ;;
@@ -39,7 +43,9 @@ case "${1:-}" in
   product)
     $WP eval-file $X/product.php --user=admin ;;
   payments)
-    $WP eval-file $X/payments.php --user=admin ;;
+    # Subscription mode: store (store-managed, the default) or gateway (Gateway managed: Stripe and PayPal bill).
+    case "${2:-store}" in store|gateway) ;; *) echo "payments takes store or gateway"; exit 2 ;; esac
+    $WP eval-file $X/payments.php "${2:-store}" --user=admin ;;
   cron)
     # WordPress no longer runs cron on page loads; the service's every-minute wp-cron task does.
     $WP config set DISABLE_WP_CRON true --raw --type=constant
