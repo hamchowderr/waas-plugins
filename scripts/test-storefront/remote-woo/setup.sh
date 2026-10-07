@@ -21,10 +21,12 @@ case "${1:-}" in
     $WP option update blog_public 0
     $WP rewrite structure '/%postname%/' --hard ;;
   plugins)
-    $WP plugin install woocommerce --activate
-    $WP plugin install subscriptions-for-woocommerce --activate
-    $WP plugin install woocommerce-gateway-stripe --activate
-    $WP plugin install fluent-smtp --activate
+    # wordpress.org plugins: install once, then leave updates to wp-admin. Re-installing one that a newer release
+    # exists for fails ("Destination folder already exists").
+    for p in woocommerce subscriptions-for-woocommerce woocommerce-gateway-stripe fluent-smtp; do
+      $WP plugin is-installed $p || $WP plugin install $p
+      $WP plugin activate $p
+    done
     $WP plugin install $X/waas-host.zip --activate --force
     # Test-only: lets Cash on delivery pay for a subscription (see waas-test-storefront-cod-shim.php).
     mkdir -p /var/www/html/wp-content/mu-plugins
