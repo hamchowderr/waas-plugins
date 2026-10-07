@@ -1,7 +1,7 @@
 #!/bin/sh
 # Test storefront setup steps, run by Coolify scheduled tasks as root in the wordpress container.
 #   sh /opt/wpcli/x/setup.sh <step>
-# Steps, in order: bootstrap install plugins configure pages product payments (check any time).
+# Steps, in order: bootstrap install plugins configure pages product payments cron (check any time).
 set -eu
 X=/opt/wpcli/x
 WP="sh $X/wp"
@@ -38,6 +38,10 @@ case "${1:-}" in
     $WP eval-file $X/product.php --user=admin ;;
   payments)
     $WP eval-file $X/payments.php --user=admin ;;
+  cron)
+    # WordPress no longer runs cron on page loads; the service's every-minute wp-cron task does.
+    $WP config set DISABLE_WP_CRON true --raw --type=constant
+    $WP config get DISABLE_WP_CRON ;;
   check)
     $WP eval-file $X/check.php ;;
   *) echo "unknown step"; exit 2 ;;

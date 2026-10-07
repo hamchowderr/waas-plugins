@@ -37,7 +37,12 @@ REMOTE = '/opt/wpcli/x'  # on the wpcli volume, so it survives restarts
 # Coolify sends a service's .env to the server as one shell argument (128 KB at most), so the
 # package goes up in chunks, one restart each. 45 KB already failed; 20 KB works.
 CHUNK = 20000
-STEPS = ['bootstrap', 'install', 'plugins', 'configure', 'pages', 'product', 'payments']
+STEPS = ['bootstrap', 'install', 'plugins', 'configure', 'pages', 'product', 'payments', 'cron']
+# WP-cron only fires on page loads, and Action Scheduler starts its queue from wp-admin requests only,
+# so a quiet storefront leaves paid orders unprovisioned. This task runs both every minute instead
+# (the `cron` step also sets DISABLE_WP_CRON).
+CRON_TASK = 'wp-cron'
+CRON_COMMAND = f'sh {REMOTE}/wp action-scheduler run --quiet; sh {REMOTE}/wp cron event run --due-now --quiet'
 
 
 def api(method, path, body=None):
@@ -198,11 +203,25 @@ def push():
     wait_healthy(uuid)
 
 
+def ensure_cron_task(uuid):
+    tasks = api('GET', f'/services/{uuid}/scheduled-tasks') or []
+    if any(t['name'] == CRON_TASK for t in tasks):
+        print(f'{CRON_TASK} task exists')
+        return
+    api('POST', f'/services/{uuid}/scheduled-tasks', {
+        'name': CRON_TASK, 'command': CRON_COMMAND, 'container': CONTAINER,
+        'frequency': '* * * * *', 'timeout': 300, 'enabled': True,
+    })
+    print(f'{CRON_TASK} task created')
+
+
 def setup(steps):
     uuid = service_uuid()
     for step in steps or STEPS:
         print(f'== {step}')
         run(uuid, f'sh {REMOTE}/setup.sh {step}')
+        if step == 'cron':
+            ensure_cron_task(uuid)
 
 
 def remove():
