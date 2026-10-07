@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [waas-host, waas-client]
+        package: [waas-host, waas-client, waas-payments]
         php: ["8.1", "8.3"]
     defaults:
       run:
@@ -29,6 +29,22 @@ jobs:
         run: composer install --no-interaction --no-progress
       - name: Run unit tests
         run: composer test -- --exclude-group mock
+
+  js:
+    name: waas-payments checkout script tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/waas-payments
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run checkout script tests
+        run: node --test 'tests/js/*.test.mjs'
 
   contract:
     # Runs the plugin's real API client against the public Postman mock. It depends on an outside service,
