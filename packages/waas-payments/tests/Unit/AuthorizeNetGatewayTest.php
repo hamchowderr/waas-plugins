@@ -32,7 +32,7 @@ class AuthorizeNetGatewayTest extends TestCase
         });
     }
 
-    public function test_it_offers_payments_and_refunds_but_not_subscriptions(): void
+    public function test_it_offers_payments_and_refunds_but_not_gateway_billed_subscriptions(): void
     {
         $gateway = $this->gateway();
 
@@ -55,10 +55,10 @@ class AuthorizeNetGatewayTest extends TestCase
         $this->assertSame([], $this->driver->charges, 'nothing is charged before the card form returns a token');
     }
 
-    public function test_a_subscription_order_is_refused(): void
+    public function test_a_gateway_billed_subscription_order_is_refused(): void
     {
         $result = $this->gateway()->makePaymentFromPaymentInstance(
-            new PaymentInstance((object) ['id' => 7], (object) ['uuid' => 'trx-abc'], (object) ['collection_method' => 'manual'])
+            new PaymentInstance((object) ['id' => 7], (object) ['uuid' => 'trx-abc'], (object) ['collection_method' => 'automatic'])
         );
 
         $this->assertInstanceOf(\WP_Error::class, $result);
