@@ -59,6 +59,16 @@ On FluentCart:
 3. Checkout asks for a **Website name** whenever the cart holds such a product, and checks that the name is free.
 4. Customers find their websites under **Website** in the customer portal: status, one-click login and their own domain. Each subscription there also links to them.
 
+On WooCommerce:
+
+1. Use WP Swings' free **Subscriptions for WooCommerce** (the default) or the paid **WooCommerce Subscriptions**. When both are active, Subscriptions for WooCommerce is used; the `wpcs_woocommerce_subscription_plugin` filter can pick the other.
+2. Make a subscription product and tick the WaaS product option on it, with its role and snapshot group.
+3. Checkout asks for a **Website name** when the cart holds such a product, in block checkout and classic checkout alike, and checks that the name is free.
+4. The website is created when the subscription becomes active. Going on hold fires `wpcs_subscription_suspended`, becoming active again fires `wpcs_subscription_reactivated`, and cancellation or expiry fires `wpcs_subscription_expired`.
+5. Customers see the website's status, one-click login and domain form on the subscription's page in My Account.
+
+Store data is kept with WooCommerce's order API, so it works with High-Performance Order Storage on (with or without sync) and off.
+
 FluentCart creates the website in the background, through Action Scheduler, so it appears a few minutes after payment.
 
 ## API base URL
