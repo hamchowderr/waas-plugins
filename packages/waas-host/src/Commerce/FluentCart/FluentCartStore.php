@@ -33,6 +33,23 @@ class FluentCartStore
     }
 
     /**
+     * When the subscription's paid period ends: its next billing date (FluentCart keeps it on a cancel), as a unix
+     * time. 0 when there is none.
+     */
+    public function get_paid_through($subscription_id): int
+    {
+        $subscription = $this->find_subscription($subscription_id);
+        $date = $subscription ? (string) $subscription->next_billing_date : '';
+        if ($date === '' || strpos($date, '0000-00-00') === 0) {
+            return 0;
+        }
+
+        $time = strtotime($date . ' UTC');
+
+        return $time === false ? 0 : $time;
+    }
+
+    /**
      * The subscription a subscription order started (renewals point at their parent order).
      *
      * @return Subscription|null

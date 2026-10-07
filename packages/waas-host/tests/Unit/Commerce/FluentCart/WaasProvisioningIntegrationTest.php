@@ -30,6 +30,8 @@ class WaasProvisioningIntegrationTest extends TestCase
             $this->logs[] = $args;
         });
         $this->store->allows('get_subscription_status')->with(900)->andReturn('canceled')->byDefault();
+        // Nothing left of the paid period unless a test says otherwise: removal is immediate.
+        $this->store->allows('get_paid_through')->with(900)->andReturn(0)->byDefault();
         $this->integration = new WaasProvisioningIntegration(Mockery::mock(WPCSService::class), $this->store);
     }
 
@@ -90,6 +92,51 @@ class WaasProvisioningIntegrationTest extends TestCase
             'access expired' => ['subscription_expired_validity', 'yes'],
             'refunded' => ['order_fully_refunded', 'yes'],
         ];
+    }
+
+    public function test_a_cancel_inside_the_paid_period_keeps_the_website_until_its_end(): void
+    {
+        $this->has_store(true);
+        $until = time() + 30 * 86400;
+        $this->store->allows('get_paid_through')->with(900)->andReturn($until);
+        Actions\expectDone('wpcs_subscription_canceled_until')->once()->with(900, $until);
+        Actions\expectDone('wpcs_subscription_expired')->never();
+
+        $this->run_feed('subscription_canceled');
+
+        $this->assertSame('Website stays online until the paid period ends', $this->logs[0][0]);
+        $this->assertStringContainsString(gmdate('Y-m-d H:i', $until), $this->logs[0][1]);
+    }
+
+    /** @dataProvider immediate_removals_despite_a_paid_period */
+    public function test_refund_end_of_term_and_expired_access_stay_immediate(string $trigger, string $is_revoke): void
+    {
+        $this->has_store(true);
+        $this->store->allows('get_paid_through')->with(900)->andReturn(time() + 30 * 86400);
+        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+        Actions\expectDone('wpcs_subscription_canceled_until')->never();
+
+        $this->run_feed($trigger, ['is_revoke_hook' => $is_revoke]);
+    }
+
+    public function immediate_removals_despite_a_paid_period(): array
+    {
+        return [
+            'refunded' => ['order_fully_refunded', 'yes'],
+            'order cancelled' => ['order_status_changed_to_canceled', 'yes'],
+            'end of term' => ['subscription_eot', 'no'],
+            'access expired' => ['subscription_expired_validity', 'yes'],
+        ];
+    }
+
+    public function test_a_cancel_after_the_paid_period_is_immediate(): void
+    {
+        $this->has_store(true);
+        $this->store->allows('get_paid_through')->with(900)->andReturn(time() - 60);
+        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+        Actions\expectDone('wpcs_subscription_canceled_until')->never();
+
+        $this->run_feed('subscription_canceled');
     }
 
     public function test_removal_without_a_store_does_nothing(): void

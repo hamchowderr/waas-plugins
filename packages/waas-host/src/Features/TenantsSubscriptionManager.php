@@ -22,6 +22,8 @@ class TenantsSubscriptionManager
     public const DELETION_GRACE_DAYS_OPTION = 'wpcs_host_settings_deletion_grace_days';
     public const DEFAULT_DELETION_GRACE_DAYS = 30;
     public const DELETE_SUSPENDED_TENANT_HOOK = 'wpcs_delete_suspended_tenant';
+    /** Fires when a cancelled subscription's paid period ends. */
+    public const SUSPEND_AT_PERIOD_END_HOOK = 'wpcs_suspend_at_period_end';
 
     /** Jobs that bring a store into existence; until they have run the subscription has no externalId yet. */
     private const CREATING_JOBS = ['create', 'restore_or_create'];
@@ -40,7 +42,11 @@ class TenantsSubscriptionManager
         add_action('wpcs_subscription_suspended', [$this, 'suspend_tenant_on_hold']);
         add_action('wpcs_subscription_reactivated', [$this, 'resume_suspended_tenant']);
         add_action('wpcs_subscription_expired', [$this, 'suspend_tenant_when_subscription_expired']);
+        add_action('wpcs_subscription_canceled_until', [$this, 'suspend_at_end_of_paid_period'], 10, 2);
+        add_action(self::SUSPEND_AT_PERIOD_END_HOOK, [$this, 'paid_period_ended']);
         add_action(self::DELETE_SUSPENDED_TENANT_HOOK, [$this, 'delete_suspended_tenant']);
+        // Safety net for a lost WP-cron event: the store jobs' recurring sweep also runs suspensions that are due.
+        add_action(StoreJobs::SWEEP_HOOK, [$this, 'run_due_suspensions']);
 
         $jobs->register('create', [$this, 'job_create']);
         $jobs->register('restore_or_create', [$this, 'job_restore_or_create']);
@@ -68,6 +74,8 @@ class TenantsSubscriptionManager
             return;
         }
         if ($this->has_store($subscription_id)) {
+            // Active again before the paid period of a cancellation ended: the store simply stays.
+            $this->cancel_scheduled_suspend($subscription_id);
             $status = $this->jobs->status($subscription_id);
             if ($status === WPCSTenant::SUSPENDED) {
                 $this->resume_suspended_tenant($subscription_id);
@@ -118,6 +126,81 @@ class TenantsSubscriptionManager
     }
 
     /**
+     * Cancelled, but paid until $paid_through: the store stays online until then, and the suspension (with backup and
+     * the deletion grace period) starts at that time. A store that is already offline, or has no store yet, takes the
+     * usual path at once.
+     */
+    public function suspend_at_end_of_paid_period($subscription_id, $paid_through)
+    {
+        $paid_through = (int) $paid_through;
+        $commerce = Commerce::require_adapter();
+
+        if ($paid_through <= time()
+            || NameConflicts::is_waiting($subscription_id)
+            || !$this->has_store($subscription_id)
+            || in_array($this->jobs->status($subscription_id), [WPCSTenant::SUSPENDED, WPCSTenant::DELETED], true)
+            || !empty($commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_DELETE_AT_META))) {
+            $this->suspend_tenant_when_subscription_expired($subscription_id);
+            return;
+        }
+
+        // Carts can report one cancellation more than once: the first date stands.
+        if (!empty($commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_AT_META))) {
+            return;
+        }
+
+        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_AT_META, $paid_through);
+        wp_schedule_single_event($paid_through, self::SUSPEND_AT_PERIOD_END_HOOK, [$subscription_id]);
+        do_action('wpcs_tenant_suspend_scheduled', $subscription_id, $paid_through);
+    }
+
+    /** The paid period of a cancelled subscription is over: suspend now, unless the subscription came back. */
+    public function paid_period_ended($subscription_id)
+    {
+        $commerce = Commerce::require_adapter();
+        if (empty($commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_AT_META))) {
+            return; // reactivated meanwhile, or already handled
+        }
+
+        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_AT_META, '');
+        if ($commerce->is_subscription_active($subscription_id)) {
+            return;
+        }
+
+        $this->suspend_tenant_when_subscription_expired($subscription_id);
+    }
+
+    /** Runs suspensions whose time has passed but whose WP-cron event never fired. */
+    public function run_due_suspensions()
+    {
+        $commerce = Commerce::adapter();
+        if ($commerce === null) {
+            return;
+        }
+
+        foreach ($commerce->find_subscriptions_by_meta(WPCSTenant::WPCS_TENANT_SUSPEND_AT_META, ['']) as $subscription_id => $suspend_at) {
+            if ((int) $suspend_at > 0 && (int) $suspend_at <= time()) {
+                $this->paid_period_ended($subscription_id);
+            }
+        }
+    }
+
+    /** Forgets a suspension planned for the end of a paid period. True if there was one. */
+    private function cancel_scheduled_suspend($subscription_id): bool
+    {
+        $commerce = Commerce::require_adapter();
+        if (empty($commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_AT_META))) {
+            return false;
+        }
+
+        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_AT_META, '');
+        wp_clear_scheduled_hook(self::SUSPEND_AT_PERIOD_END_HOOK, [$subscription_id]);
+        do_action('wpcs_tenant_suspend_canceled', $subscription_id);
+
+        return true;
+    }
+
+    /**
      * On hold (failed renewal payment, or put on hold by an admin): take the store offline. No backup and no
      * deletion: both start only if the subscription is then cancelled or expires.
      */
@@ -142,6 +225,7 @@ class TenantsSubscriptionManager
             $this->name_conflicts->resume($subscription_id);
             return;
         }
+        $this->cancel_scheduled_suspend($subscription_id);
         if ($this->jobs->status($subscription_id) !== WPCSTenant::SUSPENDED) {
             return;
         }

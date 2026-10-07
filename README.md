@@ -55,7 +55,7 @@ On FluentCart:
 1. Make a subscription product.
 2. On the product, open **Integrations**, add **WaaS Provisioning**, and choose the role and snapshot group.
    - The default triggers create the website when the subscription is activated, and resume it when a subscription that expired is paid late (reactivated).
-   - They remove it when it's canceled or reaches its end of term, on expired access, and when the order that bought the subscription is refunded. Refunding a renewal order leaves the website up while the subscription stays active.
+   - They take it offline (backed up, then deleted after the grace period in the settings) when the subscription is cancelled: at the end of the period the customer paid for, with an e-mail telling them the date and the portal showing "Active until" meanwhile; reactivating before then keeps it. Refunding the order that bought the subscription, expired access or the end of term takes it offline at once. Refunding a renewal order leaves the website up while the subscription stays active.
    - Feeds made before reactivation was a default get it added on the first load after the update, unless their triggers were changed by hand.
 3. Checkout asks for a **Website name** whenever the cart holds such a product, and checks that the name is free.
 4. Customers find their websites under **My website** in the customer portal, right after Dashboard: status, one-click login and their own domain. While a website is ready, the other portal pages show a notice with its login link, and each subscription links to it. The website-ready email links to this page; a customer who is logged out logs in first and lands there.

@@ -20,6 +20,7 @@ class NotificationsTest extends TestCase
         Commerce::reset();
         Commerce::register($this->cart = new FakeCommerceAdapter());
         $this->cart->meta[5] = [WPCSTenant::WPCS_DOMAIN_NAME_META => 'apex.sites.example'];
+        Functions\stubTranslationFunctions();
         Functions\when('get_bloginfo')->justReturn('Storefront');
         Functions\when('get_site_url')->justReturn('https://storefront.example');
     }
@@ -57,5 +58,40 @@ class NotificationsTest extends TestCase
 
         $this->assertStringContainsString('href="{{ tenant_one_click_login_url }}"', $body);
         $this->assertStringContainsString('href="{{ storefront_subscription_details_url }}"', $body);
+    }
+    private function capture_mail(): array
+    {
+        $sent = [];
+        Functions\when('get_option')->alias(fn ($name, $default = false) => $name === 'date_format' ? 'F j, Y' : $default);
+        Functions\when('wp_date')->alias(fn ($format, $ts) => gmdate($format, $ts));
+        Functions\when('absint')->alias(fn ($v) => abs((int) $v));
+        Functions\when('wp_mail')->alias(function ($to, $subject, $body) use (&$sent) {
+            $sent[] = compact('to', 'subject', 'body');
+            return true;
+        });
+
+        Notifications::send_email_on_suspend_scheduled(5, gmmktime(16, 3, 29, 11, 7, 2026));
+
+        return $sent;
+    }
+
+    public function test_a_cancel_tells_the_customer_until_when_the_website_stays(): void
+    {
+        $sent = $this->capture_mail();
+
+        $this->assertCount(1, $sent);
+        $this->assertSame('owner@apexresearch.example', $sent[0]['to']);
+        $this->assertSame('Your website stays online until November 7, 2026', $sent[0]['subject']);
+        $this->assertStringContainsString('<strong>November 7, 2026</strong>', $sent[0]['body']);
+        $this->assertStringContainsString('deleted 30 days later', $sent[0]['body']);
+        $this->assertStringContainsString('https://apex.sites.example', $sent[0]['body']);
+        $this->assertStringNotContainsString('{{', $sent[0]['body']);
+    }
+
+    public function test_the_cancel_email_can_be_switched_off(): void
+    {
+        Filters\expectApplied('wpcs_suspend_scheduled_email_allowed')->andReturn(false);
+
+        $this->assertSame([], $this->capture_mail());
     }
 }

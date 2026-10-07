@@ -16,6 +16,8 @@ class WPCSTenant
     public const WPCS_DEFAULT_USER_ROLE = 'wpcs_host_settings_default_user_role';
     /** Unix time at which a suspended store is deleted. */
     public const WPCS_TENANT_DELETE_AT_META = 'WPCS_TENANT_DELETE_AT_META';
+    /** Subscription meta: when a cancelled subscription's paid period ends and the store is suspended (unix time). */
+    public const WPCS_TENANT_SUSPEND_AT_META = 'WPCS_TENANT_SUSPEND_AT_META';
 
     /** Order meta: 'yes' when checkout accepted the website name without the API's availability check. */
     public const WPCS_WEBSITE_NAME_UNVERIFIED_META = 'WPCS_WEBSITE_NAME_UNVERIFIED_META';

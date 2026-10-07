@@ -10,6 +10,69 @@ class Notifications
     public static function init()
     {
         add_action('wpcs_tenant_ready', [__CLASS__, 'send_email_on_tenant_ready'], 10, 1);
+        add_action('wpcs_tenant_suspend_scheduled', [__CLASS__, 'send_email_on_suspend_scheduled'], 10, 2);
+    }
+
+    /** The subscription was cancelled but is paid until $suspend_at: tell the customer the website stays until then. */
+    public static function send_email_on_suspend_scheduled($subscription_id, $suspend_at)
+    {
+        if (!apply_filters('wpcs_suspend_scheduled_email_allowed', true, $subscription_id)) {
+            return;
+        }
+
+        $recipient = apply_filters('wpcs_suspend_scheduled_email_recipient', Commerce::require_adapter()->get_customer_email($subscription_id), $subscription_id);
+        $replaceables = self::get_suspend_scheduled_replaceables($subscription_id, $recipient, (int) $suspend_at);
+        $subject = self::do_replacements(apply_filters('wpcs_suspend_scheduled_email_subject', self::get_default_suspend_scheduled_subject(), $subscription_id), $replaceables);
+        $body = self::do_replacements(apply_filters('wpcs_suspend_scheduled_email_body', self::get_default_suspend_scheduled_body(), $subscription_id, $recipient), $replaceables);
+        $headers = apply_filters('wpcs_suspend_scheduled_email_headers', ['Content-Type: text/html; charset=UTF-8'], $subscription_id);
+
+        wp_mail($recipient, $subject, $body, $headers);
+    }
+
+    public static function get_default_suspend_scheduled_subject()
+    {
+        return __('Your website stays online until {{ suspend_date }}', WPCS_WAAS_HOST_TEXTDOMAIN);
+    }
+
+    public static function get_default_suspend_scheduled_body()
+    {
+        return '<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Transitional //EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+        <html lang="en">
+            <body>
+                <p>Hello,</p>
+
+                &nbsp;
+
+                <p>Your subscription is cancelled. Your website <a href="{{ tenant_domain }}" target="_blank" rel="noopener">{{ tenant_domain }}</a> stays online until <strong>{{ suspend_date }}</strong>, the end of the period you paid for.</p>
+                <p>After that it is taken offline, and deleted {{ deletion_grace_days }} days later. If you change your mind before then, your website comes back as it was.</p>
+
+                &nbsp;
+
+                <p><a href="{{ tenant_one_click_login_url }}" target="_blank" rel="noopener"><strong>Manage your website</strong></a></p>
+                <p><small>Your plan and billing are in your <a href="{{ storefront_subscription_details_url }}" target="_blank" rel="noopener">subscription details</a> at <a href="{{ storefront_url }}" target="_blank" rel="noopener">{{ storefront_name }}</a>.</small></p>
+
+                &nbsp;
+
+                <p>Regards,</p>
+                <p>The <a href="{{ storefront_url }}" target="_blank" rel="noopener">{{ storefront_name }}</a> team</p>
+            </body>
+        </html>';
+    }
+
+    public static function get_suspend_scheduled_replaceables($subscription_id, $recipient, int $suspend_at): array
+    {
+        return apply_filters('wpcs_suspend_scheduled_email_replaceables', self::get_replaceables($subscription_id, $recipient) + [
+            'suspend_date' => self::format_date($suspend_at),
+            'deletion_grace_days' => (string) TenantsSubscriptionManager::get_deletion_grace_days(),
+        ], $subscription_id, $recipient);
+    }
+
+    /** A date in the site's date format, for customer-facing text. */
+    public static function format_date(int $timestamp): string
+    {
+        $format = (string) get_option('date_format') ?: 'F j, Y';
+
+        return function_exists('wp_date') ? (string) wp_date($format, $timestamp) : gmdate($format, $timestamp);
     }
 
     public static function send_email_on_tenant_ready($subscription_id)
