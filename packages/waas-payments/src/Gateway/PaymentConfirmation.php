@@ -19,6 +19,8 @@ class PaymentConfirmation
 {
     const ACTION = 'waas_payments_authorizenet_confirm';
     const NONCE = 'waas_payments_authorizenet';
+    // Longer than the 45-second Authorize.Net request timeout.
+    const LOCK_WAIT = 50;
 
     private $gateway;
 
@@ -41,20 +43,53 @@ class PaymentConfirmation
         }
 
         $transactionHash = sanitize_text_field(wp_unslash($_POST['transaction_hash'] ?? ''));
-        $transaction = $transactionHash === '' ? null : OrderTransaction::query()
-            ->where('uuid', $transactionHash)
-            ->where('payment_method', AuthorizeNetGateway::ROUTE)
-            ->first();
+        if ($transactionHash === '' || !self::lock($transactionHash)) {
+            wp_send_json(['status' => 'failed', 'message' => __('This payment is already being processed. Please wait a moment.', 'waas-payments')], 409);
+        }
 
-        // The token is opaque and must reach Authorize.Net unmodified; it is only ever sent on to them.
-        $result = $this->confirm(
-            $transaction,
-            sanitize_text_field(wp_unslash($_POST['data_descriptor'] ?? '')),
-            trim(wp_unslash((string) ($_POST['data_value'] ?? ''))),
-            sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? ''))
-        );
+        try {
+            // Loaded after taking the lock, so a second request sees the first one's result.
+            $transaction = OrderTransaction::query()
+                ->where('uuid', $transactionHash)
+                ->where('payment_method', AuthorizeNetGateway::ROUTE)
+                ->first();
+
+            // The token is opaque and must reach Authorize.Net unmodified; it is only ever sent on to them.
+            $result = $this->confirm(
+                $transaction,
+                sanitize_text_field(wp_unslash($_POST['data_descriptor'] ?? '')),
+                trim(wp_unslash((string) ($_POST['data_value'] ?? ''))),
+                sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? ''))
+            );
+        } finally {
+            self::unlock($transactionHash);
+        }
 
         wp_send_json($result['body'], $result['status']);
+    }
+
+    /**
+     * One charge attempt per transaction at a time, with a MySQL named lock: only one
+     * connection can hold it, and the database drops it if the request dies mid-charge.
+     * A second request waits for the first (up to LOCK_WAIT seconds) and then sees its result.
+     */
+    public static function lock(string $transactionHash): bool
+    {
+        global $wpdb;
+
+        return (string) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, %d)', self::lockName($transactionHash), self::LOCK_WAIT)) === '1';
+    }
+
+    public static function unlock(string $transactionHash): void
+    {
+        global $wpdb;
+
+        $wpdb->query($wpdb->prepare('SELECT RELEASE_LOCK(%s)', self::lockName($transactionHash)));
+    }
+
+    private static function lockName(string $transactionHash): string
+    {
+        return 'waas_payments_' . md5($transactionHash);
     }
 
     /**
@@ -82,6 +117,8 @@ class PaymentConfirmation
         $order = $transaction->order;
         $customer = $order->customer;
         $storeName = (new StoreSettings())->get('store_name');
+        // FluentCart assigns invoice numbers once an order is paid, so a new order has none yet.
+        $orderNumber = (string) ($order->invoice_no ?: $order->id);
         $sandbox = $this->gateway->settings->isSandbox();
 
         $result = $this->gateway->driver($sandbox)->charge(new ChargeRequest(
@@ -89,8 +126,8 @@ class PaymentConfirmation
             $tokenDescriptor,
             $tokenValue,
             [
-                'invoice_number' => (string) $order->invoice_no,
-                'description'    => trim($storeName . ' #' . $order->invoice_no),
+                'invoice_number' => $orderNumber,
+                'description'    => trim($storeName . ' #' . $orderNumber),
                 'customer_email' => (string) ($order->email ?: ($customer->email ?? '')),
                 'customer_id'    => (string) ($order->customer_id ?? ''),
                 'customer_ip'    => $customerIp,

@@ -1,4 +1,4 @@
 .waas-anet-info { margin: 0 0 10px; font-size: 13px; color: #6b7280; }
-.waas-anet-pay-button { width: 100%; box-sizing: border-box; padding: 14px 20px; border: 0; border-radius: 8px; background: #1c3141; color: #fff; font-size: 15px; font-weight: 600; line-height: 1; cursor: pointer; }
+.waas-anet-pay-button { width: 100%; box-sizing: border-box; padding: 14px 20px; border: 0; border-radius: 8px; background: #1c3141; color: #fff; font-size: 15px; font-weight: 600; line-height: 1; cursor: pointer; margin-bottom: 10px; }
 .waas-anet-pay-button:disabled { opacity: .7; cursor: not-allowed; }
 .waas-anet-error { padding-top: 10px; font-size: 14px; color: #b42318; }

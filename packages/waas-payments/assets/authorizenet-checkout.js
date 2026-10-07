@@ -36,6 +36,7 @@
             this.config = config;
             this.transactionHash = null;
             this.busy = false;
+            this.placingOrder = false;
         }
 
         init() {
@@ -106,14 +107,17 @@
             // A declined card keeps the same order: the customer just tries another card.
             if (!this.transactionHash) {
                 this.setBusy(true, $t('Processing...'));
+                this.placingOrder = true;
                 let response;
                 try {
                     response = await this.orderHandler();
                 } catch (error) {
+                    this.placingOrder = false;
                     this.setBusy(false);
                     this.showError(error && error.message ? error.message : $t('Payment failed. Please try again.'));
                     return;
                 }
+                this.placingOrder = false;
                 this.setBusy(false);
 
                 // FluentCart already showed why the order could not be placed.
@@ -126,10 +130,17 @@
             this.openCardForm();
         }
 
-        /** The order was placed by FluentCart's own submit (e.g. Enter in a field). */
+        /**
+         * FluentCart fires this after every placed order, including the ones pay() placed
+         * through orderHandler; only an order placed by FluentCart's own submit (e.g. Enter in
+         * a field) should open the card form from here.
+         */
         handleNextAction(response) {
+            if (this.placingOrder || this.busy) {
+                return;
+            }
             const hash = response && response.data && response.data.transaction_hash;
-            if (hash) {
+            if (hash && hash !== this.transactionHash) {
                 this.transactionHash = hash;
                 this.openCardForm();
             }
@@ -148,6 +159,9 @@
         }
 
         onToken(response) {
+            if (this.busy) {
+                return;
+            }
             if (!response || !response.messages || response.messages.resultCode === 'Error') {
                 const messages = (response && response.messages && response.messages.message) || [];
                 this.showError(messages.map((m) => m.text).join(' ') || $t('Payment failed. Please try again.'));

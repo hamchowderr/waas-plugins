@@ -83,6 +83,17 @@ class PaymentConfirmationTest extends TestCase
         $this->assertSame($transaction, StatusHelper::$synced[0][1]);
     }
 
+    public function test_a_new_order_without_an_invoice_number_is_sent_with_its_order_id(): void
+    {
+        $transaction = $this->pendingTransaction();
+        $transaction->order->invoice_no = '';
+
+        $this->confirmation->confirm($transaction, self::TOKEN, 'nonce-value');
+
+        $this->assertSame('7', $this->driver->charges[0]->invoiceNumber);
+        $this->assertSame('Peptide Test Store #7', $this->driver->charges[0]->description);
+    }
+
     public function test_confirming_a_paid_transaction_again_does_not_charge_twice(): void
     {
         $transaction = $this->pendingTransaction(['status' => 'succeeded']);
