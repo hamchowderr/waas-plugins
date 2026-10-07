@@ -69,15 +69,23 @@ def service_uuid():
     sys.exit(f'No service named {SERVICE}; run create first')
 
 
-def wait_healthy(uuid, minutes=10):
+def healthy(uuid, minutes):
     deadline = time.time() + minutes * 60
     while time.time() < deadline:
         time.sleep(8)
         s = api('GET', f'/services/{uuid}')
         statuses = [c.get('status') or '' for c in s.get('applications', []) + s.get('databases', [])]
         if statuses and all(x.startswith('running') and 'unhealthy' not in x and 'starting' not in x for x in statuses):
-            return
-    sys.exit(f'{SERVICE} did not become healthy')
+            return True
+    return False
+
+
+def wait_healthy(uuid):
+    # A restart now and then leaves the wordpress container exited; a start brings it back.
+    if not healthy(uuid, 4):
+        api('POST', f'/services/{uuid}/start')
+        if not healthy(uuid, 8):
+            sys.exit(f'{SERVICE} did not become healthy')
 
 
 def run(uuid, command, timeout=900):
