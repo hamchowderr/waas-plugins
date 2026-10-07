@@ -18,6 +18,7 @@ One Coolify **Service** from [`scripts/test-storefront/compose.yml`](../scripts/
 Plugins:
 
 - FluentCart 1.7, from wordpress.org. Subscriptions are built in, so nothing else is needed.
+- FluentSMTP, from wordpress.org, to send email (see [Email](#email)).
 - waas-host and waas-payments, built from this repo's `packages/`.
 
 FluentCart runs in **test** order mode. waas-host uses its FluentCart adapter, the only cart installed.
@@ -91,6 +92,16 @@ Only needed for a different sandbox account, or if the keys are rotated.
 5. **Enter the new keys.** Either:
    - in WordPress: **FluentCart** → **Settings** → **Payments** → **Authorize.Net** ("Card"). Paste both values, keep **Sandbox mode** On, keep the method on, and click **Save**. The plugin verifies them and fetches the Public Client Key; or
    - in Coolify: update `AUTHNET_LOGIN_ID` / `AUTHNET_TRANSACTION_KEY`, restart the service, then run `storefront.py setup payments`.
+
+## Email
+
+The WordPress image has no mail program, so nothing is sent until FluentSMTP has a connection. That covers FluentCart's receipts and account emails, password resets, and waas-host's "Your website is ready" email, which is turned on (WaaS → Settings) and carries the store's domain and a one-click login link. FluentSMTP is installed with no connection; the owner picks a provider and enters its credentials in wp-admin.
+
+1. Go to **Settings** → **FluentSMTP**, then **Add Another Connection** (on first use, the setup wizard opens).
+2. Pick the provider: one with an API (Amazon SES, Postmark, SendGrid, Mailgun, Brevo and others) or any SMTP server. Enter its API key or SMTP host, port, username and password.
+3. Set **From Email** to an address on a domain the provider has verified (for example `noreply@otakusolutions.io`), and **From Name** to the storefront's name. Save.
+4. Open the **Email Test** tab, send a test to `admin@otakusolutions.io`, and check that it arrives (also check spam).
+5. **Email Logs** shows each email WordPress sent and whether the provider accepted it.
 
 ## Notes
 

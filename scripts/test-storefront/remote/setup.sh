@@ -20,6 +20,7 @@ case "${1:-}" in
     $WP rewrite structure '/%postname%/' --hard ;;
   plugins)
     $WP plugin install fluent-cart --activate
+    $WP plugin install fluent-smtp --activate
     $WP plugin install $X/waas-host.zip --activate --force
     $WP plugin install $X/waas-payments.zip --activate --force
     $WP plugin list ;;
@@ -29,6 +30,7 @@ case "${1:-}" in
     $WP option update wpcs_credentials_api_key_setting "$WAAS_API_KEY" >/dev/null
     $WP option update wpcs_credentials_api_secret_setting "$WAAS_API_SECRET" >/dev/null
     echo api key and secret set
+    $WP option update wpcs_notification_settings_send_tenant_ready_email on
     $WP eval-file $X/check.php ;;
   pages)
     $WP eval 'if (!(new FluentCart\Api\StoreSettings())->get("checkout_page_id")) (new FluentCart\App\CPT\Pages())->createPages();' --user=admin
