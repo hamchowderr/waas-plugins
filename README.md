@@ -111,3 +111,7 @@ Run the following command to build the plugins
 ```shell
 bash scripts/build.sh
 ```
+
+### Card payments
+
+`packages/waas-payments` adds Authorize.Net card payments to FluentCart, including subscriptions charged automatically on renewal. Subscriptions need **FluentCart > Settings > Subscriptions: Store managed** with **Automatic charge** on. See [packages/waas-payments/README.md](packages/waas-payments/README.md).
