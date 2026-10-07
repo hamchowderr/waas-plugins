@@ -25,9 +25,9 @@ case "${1:-}" in
     $WP plugin install woocommerce-gateway-stripe --activate
     $WP plugin install fluent-smtp --activate
     $WP plugin install $X/waas-host.zip --activate --force
-    # Test-only: lets Cash on delivery pay for a subscription (see waas-test-cod.php).
+    # Test-only: lets Cash on delivery pay for a subscription (see waas-test-storefront-cod-shim.php).
     mkdir -p /var/www/html/wp-content/mu-plugins
-    cp $X/waas-test-cod.php /var/www/html/wp-content/mu-plugins/
+    cp $X/waas-test-storefront-cod-shim.php /var/www/html/wp-content/mu-plugins/
     chown -R 33:33 /var/www/html/wp-content/mu-plugins
     $WP plugin list ;;
   configure)

@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name: WaaS test storefront: pay later
- * Description: Test storefront only. Lets WP Swings' Subscriptions for WooCommerce accept Cash on delivery, so the
+ * Plugin Name: WaaS test storefront shim: pay later for subscriptions
+ * Description: TEST STOREFRONT SHIM, never for a real store. Installed by scripts/test-storefront (--cart woo). Lets WP Swings' Subscriptions for WooCommerce accept Cash on delivery, so the
  * subscription lifecycle can be tested by hand without a card gateway: an admin marks the order paid (or failed).
  */
 function waas_test_cod_for_subscriptions($supported, $gateway_id)
