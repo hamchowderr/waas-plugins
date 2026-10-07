@@ -7,6 +7,8 @@ use FluentCart\App\Models\ProductMeta;
 use FluentCart\App\Models\Subscription;
 use FluentCart\App\Models\SubscriptionMeta;
 use FluentCart\App\Services\URL;
+use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Features\StoreJobs;
 use WaaSHost\Migrations\FluentCartFeedTriggers;
 
 /**
@@ -66,6 +68,32 @@ class FluentCartStore
         $subscription = $this->find_subscription($subscription_id);
 
         return $subscription ? $subscription->getMeta($key, '') : '';
+    }
+
+    /** The subscription meta that records what waas-host has done or plans for the store. */
+    public const WAAS_STATE_META = [
+        WPCSTenant::WPCS_TENANT_STATE,
+        WPCSTenant::WPCS_TENANT_DELETE_AT_META,
+        WPCSTenant::WPCS_TENANT_SUSPEND_AT_META,
+        WPCSTenant::WPCS_TENANT_SUSPEND_REASON_META,
+        WPCSTenant::WPCS_NAME_CONFLICT_META,
+        StoreJobs::QUEUE_META,
+        StoreJobs::FAILURE_META,
+    ];
+
+    /**
+     * What waas-host has recorded for the subscription's store. Compared before and after an event to tell whether
+     * waas-host acted on it.
+     */
+    public function get_waas_state($subscription_id): array
+    {
+        $subscription = $this->find_subscription($subscription_id);
+        $state = [];
+        foreach (self::WAAS_STATE_META as $key) {
+            $state[$key] = $subscription ? $subscription->getMeta($key, '') : '';
+        }
+
+        return $state;
     }
 
     public function update_subscription_meta($subscription_id, string $key, $value): void

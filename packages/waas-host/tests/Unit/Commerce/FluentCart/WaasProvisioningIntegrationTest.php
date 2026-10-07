@@ -16,6 +16,8 @@ class WaasProvisioningIntegrationTest extends TestCase
     private $store;
     private $order;
     private array $logs = [];
+    /** What get_waas_state returns: a test's action changes it to say waas-host acted. */
+    private array $state = [];
     private WaasProvisioningIntegration $integration;
 
     protected function setUp(): void
@@ -32,6 +34,9 @@ class WaasProvisioningIntegrationTest extends TestCase
         $this->store->allows('get_subscription_status')->with(900)->andReturn('canceled')->byDefault();
         // Nothing left of the paid period unless a test says otherwise: removal is immediate.
         $this->store->allows('get_paid_through')->with(900)->andReturn(0)->byDefault();
+        $this->store->allows('get_waas_state')->andReturnUsing(function () {
+            return $this->state;
+        })->byDefault();
         $this->integration = new WaasProvisioningIntegration(Mockery::mock(WPCSService::class), $this->store);
     }
 
@@ -99,11 +104,14 @@ class WaasProvisioningIntegrationTest extends TestCase
         $this->has_store(true);
         $until = time() + 30 * 86400;
         $this->store->allows('get_paid_through')->with(900)->andReturn($until);
-        Actions\expectDone('wpcs_subscription_canceled_until')->once()->with(900, $until);
+        Actions\expectDone('wpcs_subscription_canceled_until')->once()->with(900, $until)->whenHappen(function () use ($until) {
+            $this->state = [WPCSTenant::WPCS_TENANT_SUSPEND_AT_META => $until];
+        });
         Actions\expectDone('wpcs_subscription_expired')->never();
 
         $this->run_feed('subscription_canceled');
 
+        $this->assertCount(1, $this->logs);
         $this->assertSame('Website stays online until the paid period ends', $this->logs[0][0]);
         $this->assertStringContainsString(gmdate('Y-m-d H:i', $until), $this->logs[0][1]);
     }
@@ -277,5 +285,48 @@ class WaasProvisioningIntegrationTest extends TestCase
         Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
 
         $this->run_feed('order_fully_refunded', ['is_revoke_hook' => 'yes']);
+    }
+
+    public function test_the_order_note_is_written_when_waas_host_acted(): void
+    {
+        $this->has_store(true);
+        Actions\expectDone('wpcs_subscription_expired')->once()->with(900)->whenHappen(function () {
+            $this->state = [WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::SUSPENDED];
+        });
+
+        $this->run_feed('subscription_eot');
+
+        $this->assertSame([['Website suspended', 'Subscription #900 (subscription_eot)', 'info', 'WaaS']], $this->logs);
+    }
+
+    public function test_no_order_note_when_waas_host_did_nothing(): void
+    {
+        // E.g. a cancel reported a second time: the store is already suspended and its deletion planned.
+        $this->has_store(true);
+        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+
+        $this->run_feed('subscription_eot');
+
+        $this->assertSame([], $this->logs);
+    }
+
+    public function test_a_create_for_a_store_that_already_runs_leaves_no_note(): void
+    {
+        Actions\expectDone('wpcs_subscription_created')->once()->with(900, $this->order);
+
+        $this->run_feed('subscription_reactivated');
+
+        $this->assertSame([], $this->logs);
+    }
+
+    public function test_a_requested_website_gets_its_note(): void
+    {
+        Actions\expectDone('wpcs_subscription_created')->once()->with(900, $this->order)->whenHappen(function () {
+            $this->state = [WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::QUEUED];
+        });
+
+        $this->run_feed('subscription_activated');
+
+        $this->assertSame('Website requested', $this->logs[0][0]);
     }
 }

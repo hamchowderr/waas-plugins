@@ -18,6 +18,13 @@ class WPCSTenant
     public const WPCS_TENANT_DELETE_AT_META = 'WPCS_TENANT_DELETE_AT_META';
     /** Subscription meta: when a cancelled subscription's paid period ends and the store is suspended (unix time). */
     public const WPCS_TENANT_SUSPEND_AT_META = 'WPCS_TENANT_SUSPEND_AT_META';
+    /**
+     * Subscription meta: why waas-host took the store offline. A billing event: ON_HOLD (failed renewal, paused) or
+     * ENDED (cancelled, expired, refunded). Empty for a store suspended some other way, which waas-host leaves alone.
+     */
+    public const WPCS_TENANT_SUSPEND_REASON_META = 'WPCS_TENANT_SUSPEND_REASON_META';
+    public const SUSPENDED_ON_HOLD = 'on_hold';
+    public const SUSPENDED_ENDED = 'ended';
 
     /** Order meta: 'yes' when checkout accepted the website name without the API's availability check. */
     public const WPCS_WEBSITE_NAME_UNVERIFIED_META = 'WPCS_WEBSITE_NAME_UNVERIFIED_META';

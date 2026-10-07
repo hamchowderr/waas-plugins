@@ -69,6 +69,7 @@ class FluentCartLifecycleTest extends TestCase
         $store->allows('update_subscription_meta')->andReturnUsing(function ($id, $key, $value) {
             $this->meta[$id][$key] = $value;
         });
+        $store->allows('get_waas_state')->andReturnUsing(fn ($id) => array_intersect_key($this->meta[$id] ?? [], array_flip(FluentCartStore::WAAS_STATE_META)));
         $store->allows('get_order_product_ids')->with($this->order)->andReturn([101, 102]);
         $store->allows('get_plan_feed')->with(101)->andReturn(['enabled' => 'yes', 'role' => 'peptide-store', 'group_name' => 'peptide-starter']);
         $store->allows('get_plan_feed')->with(102)->andReturnNull();
