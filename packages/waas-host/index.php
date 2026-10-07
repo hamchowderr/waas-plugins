@@ -57,7 +57,7 @@ Commerce::register(new WooCommerceAdapter());
 Commerce::boot($wpcsService);
 
 new WPCSTenantStatusService($wpcsService);
-AdminNotices::init();
+AdminNotices::init($wpcsConfigService);
 new AdminWpcsHome($wpcsConfigService);
 new AdminWpcsSettings($wpcsService, $wpcsConfigService);
 WaaSHost\Assets\Module::init();

@@ -149,7 +149,7 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
     public function test_render_escapes_the_stored_domain_and_includes_the_nonce(): void
     {
         $this->cart->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_DOMAIN_NAME_META] = "x' onfocus='alert(1)";
-        Functions\when('get_option')->justReturn('eu1');
+        $this->stubDnsOptions([]);
         Functions\when('esc_attr')->alias(fn ($v) => htmlspecialchars($v, ENT_QUOTES));
         Functions\expect('wp_nonce_field')
             ->once()
@@ -163,6 +163,55 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
         $this->assertStringContainsString('name="wpcs_domain_nonce"', $html);
         $this->assertStringContainsString("value='x&#039; onfocus=&#039;alert(1)'", $html);
         $this->assertStringNotContainsString("onfocus='alert(1)'", $html);
+    }
+
+    public function test_dns_instructions_show_the_configured_records(): void
+    {
+        $this->stubDnsOptions([
+            'wpcs_dns_a_records_setting' => '203.0.113.10, 203.0.113.11',
+            'wpcs_dns_cname_target_setting' => 'sites.example.net',
+        ]);
+
+        $html = $this->renderDnsInstructions();
+
+        $this->assertStringContainsString("<pre>203.0.113.10\n203.0.113.11</pre>", $html);
+        $this->assertStringContainsString('<pre>sites.example.net</pre>', $html);
+        $this->assertStringNotContainsString('wpcs.io', $html);
+    }
+
+    public function test_without_settings_customers_are_told_to_contact_support_even_on_a_wpcs_region(): void
+    {
+        $this->stubDnsOptions(['wpcs_credentials_region_setting' => 'us1']);
+
+        $html = $this->renderDnsInstructions();
+
+        $this->assertStringContainsString('contact support', $html);
+        $this->assertStringNotContainsString('<pre>', $html);
+        $this->assertStringNotContainsString('wpcs.io', $html);
+        $this->assertStringNotContainsString('54.166.55.112', $html);
+    }
+
+    public function test_only_the_configured_record_is_shown(): void
+    {
+        $this->stubDnsOptions(['wpcs_dns_cname_target_setting' => 'sites.example.net']);
+
+        $html = $this->renderDnsInstructions();
+
+        $this->assertStringContainsString('<pre>sites.example.net</pre>', $html);
+        $this->assertStringNotContainsString('A records', $html);
+    }
+
+    private function stubDnsOptions(array $options): void
+    {
+        Functions\when('get_option')->alias(fn ($name, $default = false) => $options[$name] ?? $default);
+        Functions\when('esc_html')->alias(fn ($v) => htmlspecialchars($v, ENT_QUOTES));
+    }
+
+    private function renderDnsInstructions(): string
+    {
+        ob_start();
+        $this->settings->render_dns_instructions();
+        return ob_get_clean();
     }
 
     private function assertDomainUnchanged(): void
