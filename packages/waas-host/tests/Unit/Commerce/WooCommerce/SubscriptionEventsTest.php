@@ -156,22 +156,65 @@ class SubscriptionEventsTest extends TestCase
         $plugin->on_post_meta_written(1, 900, 'something_else', 'on-hold');
     }
 
-    public function test_wp_swings_hpos_save_reads_the_status_from_the_subscription(): void
+    public function test_wp_swings_save_that_writes_the_status_is_a_status_change(): void
     {
         $this->with_store(900);
         Actions\expectDone('wpcs_subscription_suspended')->once()->with(900);
 
-        $subscription = Mockery::mock('WPS_Subscription', 'WC_Order');
-        $subscription->allows('get_type')->andReturn('wps_subscriptions');
-        $subscription->allows('get_id')->andReturn(900);
-        $subscription->allows('get_meta')->with(WpSwingsSubscriptions::STATUS_META)->andReturn('on-hold');
-
+        $subscription = $this->wps_subscription('on-hold', $this->meta(WpSwingsSubscriptions::STATUS_META, 12, ['value' => 'on-hold']));
         $order = Mockery::mock('WC_Order');
         $order->allows('get_type')->andReturn('shop_order');
 
         $plugin = new WpSwingsSubscriptions();
+        $plugin->on_before_order_save($order);
         $plugin->on_order_saved($order);
+        $plugin->on_before_order_save($subscription);
         $plugin->on_order_saved($subscription);
+    }
+
+    /**
+     * waas-91g.18: with posts storage WP Swings writes the status with update_post_meta, so an order object
+     * WooCommerce loaded earlier still holds the old status. Saving that object for another reason (our own meta
+     * writes) must not replay the old status: on-hold -> active used to fire reactivated, suspended, reactivated.
+     */
+    public function test_wp_swings_save_of_an_object_holding_an_old_status_fires_nothing(): void
+    {
+        $this->with_store(900);
+        $this->commerce->meta[900][SubscriptionEvents::SUSPENDED_META] = '';
+        Actions\expectDone('wpcs_subscription_suspended')->never();
+        Actions\expectDone('wpcs_subscription_reactivated')->never();
+
+        $stale = $this->wps_subscription(
+            'on-hold',
+            $this->meta(WpSwingsSubscriptions::STATUS_META, 12, []),
+            $this->meta(SubscriptionEvents::SUSPENDED_META, 13, ['value' => 'yes'])
+        );
+
+        $plugin = new WpSwingsSubscriptions();
+        $plugin->on_before_order_save($stale);
+        $plugin->on_order_saved($stale);
+    }
+
+    private function wps_subscription(string $status, ...$meta_data)
+    {
+        $subscription = Mockery::mock('WPS_Subscription', 'WC_Order');
+        $subscription->allows('get_type')->andReturn('wps_subscriptions');
+        $subscription->allows('get_id')->andReturn(900);
+        $subscription->allows('get_meta')->with(WpSwingsSubscriptions::STATUS_META)->andReturn($status);
+        $subscription->allows('get_meta_data')->andReturn($meta_data);
+
+        return $subscription;
+    }
+
+    /** A WC_Meta_Data: $id 0 means not saved yet, $changes what this save writes. */
+    private function meta(string $key, int $id, array $changes)
+    {
+        $meta = Mockery::mock('WC_Meta_Data');
+        $meta->key = $key;
+        $meta->id = $id;
+        $meta->allows('get_changes')->andReturn($changes);
+
+        return $meta;
     }
 
     public function test_wp_swings_activation_passes_the_parent_order(): void

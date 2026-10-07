@@ -76,6 +76,12 @@ class AdminWpcsSettings
         register_setting('wpcs-admin', 'wpcs_credentials_api_key_setting');
         register_setting('wpcs-admin', 'wpcs_credentials_api_secret_setting');
         register_setting('wpcs-admin', 'wpcs_host_settings_root_domain');
+        register_setting('wpcs-admin', 'wpcs_dns_a_records_setting', [
+            'sanitize_callback' => [ConfigService::class, 'sanitize_ip_list']
+        ]);
+        register_setting('wpcs-admin', 'wpcs_dns_cname_target_setting', [
+            'sanitize_callback' => [ConfigService::class, 'sanitize_hostname']
+        ]);
         register_setting('wpcs-admin', WPCSTenant::WPCS_DEFAULT_USER_ROLE, [
             'default' => 'administrator',
             'sanitize_callback' => [$this, 'sanitize_user_role']
@@ -185,6 +191,44 @@ class AdminWpcsSettings
                 "id" => "wpcs_host_settings_root_domain",
                 "hint" => __("The root domain your customer's tenant will be created with. If you fill out mywaas.com, an example tenant domain will be customer.mywaas.com.", WPCS_WAAS_HOST_TEXTDOMAIN),
                 "type" => "text"
+            ]
+        );
+
+        add_settings_field(
+            'wpcs_dns_a_records_setting',
+            __('Custom domain A records', WPCS_WAAS_HOST_TEXTDOMAIN),
+            [$this, 'render_settings_field'],
+            'wpcs-admin',
+            'wpcs_host_settings',
+            [
+                "id" => "wpcs_dns_a_records_setting",
+                "disabled" => defined('WPCS_DNS_A_RECORDS'),
+                "hint" => defined('WPCS_DNS_A_RECORDS')
+                    ? __('Defined as constant', WPCS_WAAS_HOST_TEXTDOMAIN)
+                    : __("The IPs customers point their domain's A records at, separated by commas. Shown on the customer's domain page.", WPCS_WAAS_HOST_TEXTDOMAIN),
+                "type" => "text",
+                "styles" => [
+                    "width" => "100%",
+                ]
+            ]
+        );
+
+        add_settings_field(
+            'wpcs_dns_cname_target_setting',
+            __('Custom domain CNAME target', WPCS_WAAS_HOST_TEXTDOMAIN),
+            [$this, 'render_settings_field'],
+            'wpcs-admin',
+            'wpcs_host_settings',
+            [
+                "id" => "wpcs_dns_cname_target_setting",
+                "disabled" => defined('WPCS_DNS_CNAME_TARGET'),
+                "hint" => defined('WPCS_DNS_CNAME_TARGET')
+                    ? __('Defined as constant', WPCS_WAAS_HOST_TEXTDOMAIN)
+                    : __("The hostname customers point a subdomain's CNAME record at. Shown on the customer's domain page.", WPCS_WAAS_HOST_TEXTDOMAIN),
+                "type" => "text",
+                "styles" => [
+                    "width" => "100%",
+                ]
             ]
         );
 
