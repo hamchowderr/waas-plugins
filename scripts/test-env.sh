@@ -6,7 +6,7 @@
 #   scripts/test-env.sh wp ...  # run WP-CLI, e.g. scripts/test-env.sh wp plugin list
 #   scripts/test-env.sh down    # remove the containers and volumes
 #
-# Mounts packages/waas-host from this checkout, plus FluentCart, WooCommerce
+# Mounts packages/waas-host and packages/waas-payments from this checkout, plus FluentCart, WooCommerce
 # and Subscriptions for WooCommerce from wordpress.org. Images come from
 # mirror.gcr.io because Docker Hub rate-limits shared addresses. When
 # HTTPS_PROXY is set (the cloud agent proxy), WordPress sends outbound HTTP
@@ -61,6 +61,7 @@ PHP
     fi
 
     (cd "$ROOT/packages/waas-host" && composer dump-autoload -q)
+    (cd "$ROOT/packages/waas-payments" && composer dump-autoload -q)
 
     docker rm -f waas-db waas-wp >/dev/null 2>&1 || true
     docker run -d --name waas-db --network host -v waas-db-data:/var/lib/mysql \
@@ -72,6 +73,7 @@ PHP
     docker run -d --name waas-wp --network host -e AGENT_PROXY_PORT="$(proxy_port)" -e WORDPRESS_DEBUG=1 "${DB_ENV[@]}" \
         -v waas-wp-html:/var/www/html \
         -v "$ROOT/packages/waas-host:/var/www/html/wp-content/plugins/waas-host" \
+        -v "$ROOT/packages/waas-payments:/var/www/html/wp-content/plugins/waas-payments" \
         -v "$WORK/mu-plugins:/var/www/html/wp-content/mu-plugins" \
         "${plugin_mounts[@]}" "${ca_mount[@]}" "$WP_IMAGE" >/dev/null
 
@@ -83,7 +85,7 @@ PHP
         wp_cli core install --url=http://127.0.0.1 --title="WaaS Storefront (test)" \
             --admin_user=admin --admin_password=admin --admin_email=admin@example.com --skip-email
     fi
-    wp_cli plugin activate $PLUGINS waas-host
+    wp_cli plugin activate $PLUGINS waas-host waas-payments
     echo "WordPress: http://127.0.0.1/wp-admin (admin / admin)"
 }
 

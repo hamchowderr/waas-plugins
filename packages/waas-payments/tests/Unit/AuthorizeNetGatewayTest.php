@@ -113,6 +113,88 @@ class AuthorizeNetGatewayTest extends TestCase
         $this->assertSame('This payment has not settled yet.', $result->get_error_message());
     }
 
+    /**
+     * What FluentCart 1.7.0 has recorded by the time it calls processRefund
+     * (app/Services/Payments/Refund.php:42-63): a refund transaction for the amount, and the
+     * amount added to the charge's refunded_total.
+     */
+    private function chargeWithRecordedRefund(int $amount, int $alreadyRefunded = 0): OrderTransaction
+    {
+        $charge = new OrderTransaction([
+            'order_id'         => 42,
+            'transaction_type' => 'charge',
+            'status'           => 'succeeded',
+            'total'            => 5000,
+            'vendor_charge_id' => '2149186954',
+            'card_last_4'      => '1111',
+            'meta'             => $alreadyRefunded ? ['refunded_total' => $alreadyRefunded] : [],
+        ]);
+        $charge->save();
+
+        (new OrderTransaction([
+            'order_id'         => 42,
+            'transaction_type' => 'refund',
+            'status'           => 'refunded',
+            'total'            => $amount,
+            'vendor_charge_id' => '',
+            'meta'             => ['parent_id' => $charge->id, 'reason' => ''],
+        ]))->save();
+
+        $meta = $charge->meta;
+        $meta['refunded_total'] = ($meta['refunded_total'] ?? 0) + $amount;
+        $charge->meta = $meta;
+
+        return $charge;
+    }
+
+    private static function refundRows(): array
+    {
+        return array_values(array_filter(OrderTransaction::$table, fn ($row) => $row->transaction_type === 'refund'));
+    }
+
+    public function test_a_refused_refund_is_taken_back_out_of_fluentcart(): void
+    {
+        $this->driver->refundResult = DriverResult::failure('This payment has not settled yet.', '54');
+        $charge = $this->chargeWithRecordedRefund(1000);
+
+        $result = $this->gateway()->processRefund($charge, 1000, []);
+
+        $this->assertInstanceOf(\WP_Error::class, $result);
+        $this->assertSame('This payment has not settled yet. Nothing was refunded and the order is unchanged.', $result->get_error_message());
+        $this->assertSame([], self::refundRows(), 'the refund transaction FluentCart created is gone');
+        $this->assertSame(0, $charge->meta['refunded_total'], 'the charge shows nothing refunded');
+    }
+
+    public function test_a_refused_refund_keeps_earlier_refunds(): void
+    {
+        $this->driver->refundResult = DriverResult::failure('Declined.', '2');
+        $charge = $this->chargeWithRecordedRefund(1000, 500);
+        $earlier = new OrderTransaction([
+            'order_id'         => 42,
+            'transaction_type' => 'refund',
+            'status'           => 'refunded',
+            'total'            => 500,
+            'vendor_charge_id' => '2149186960',
+            'meta'             => ['parent_id' => $charge->id],
+        ]);
+        $earlier->save();
+
+        $this->gateway()->processRefund($charge, 1000, []);
+
+        $this->assertSame([$earlier], self::refundRows());
+        $this->assertSame(500, $charge->meta['refunded_total']);
+    }
+
+    public function test_an_accepted_refund_stays_recorded(): void
+    {
+        $charge = $this->chargeWithRecordedRefund(1000);
+
+        $this->assertSame('2149186960', $this->gateway()->processRefund($charge, 1000, []));
+
+        $this->assertCount(1, self::refundRows());
+        $this->assertSame(1000, $charge->meta['refunded_total']);
+    }
+
     public function test_settings_are_checked_with_authorize_net_before_activating(): void
     {
         Functions\expect('wp_remote_post')->once()->andReturn(self::fixture('auth-failed'));

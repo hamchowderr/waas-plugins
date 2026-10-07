@@ -152,6 +152,8 @@ namespace FluentCart\App\Helpers {
             public const TRANSACTION_PENDING = 'pending';
             public const TRANSACTION_FAILED = 'failed';
             public const TRANSACTION_REFUNDED = 'refunded';
+            public const TRANSACTION_TYPE_CHARGE = 'charge';
+            public const TRANSACTION_TYPE_REFUND = 'refund';
         }
     }
 
@@ -200,6 +202,12 @@ namespace FluentCart\App\Models {
                 $this->fill($attributes);
             }
 
+            /** Like FluentCart's models, an attribute that was never set reads as null. */
+            public function __get($name)
+            {
+                return null;
+            }
+
             public function fill(array $attributes)
             {
                 foreach ($attributes as $key => $value) {
@@ -211,12 +219,77 @@ namespace FluentCart\App\Models {
             public function save()
             {
                 $this->saved++;
+                if (!isset($this->id)) {
+                    $this->id = count(self::$table) ? max(array_keys(self::$table)) + 1 : 1;
+                }
+                self::$table[$this->id] = $this;
+                return true;
+            }
+
+            /** Saved transactions by id, standing in for the fct_order_transactions table. */
+            public static array $table = [];
+
+            public static function query()
+            {
+                return new OrderTransactionQuery(self::$table);
+            }
+
+            public function delete()
+            {
+                unset(self::$table[$this->id]);
                 return true;
             }
 
             public function getReceiptPageUrl($filtered = true)
             {
                 return 'https://store.test/receipt/?trx_hash=' . $this->uuid;
+            }
+        }
+    }
+
+    if (!class_exists(OrderTransactionQuery::class)) {
+        /** The where/orderBy/get subset of FluentCart's query builder that the plugin uses. */
+        class OrderTransactionQuery
+        {
+            private array $rows;
+
+            public function __construct(array $rows)
+            {
+                $this->rows = array_values($rows);
+            }
+
+            public function where($column, $value)
+            {
+                $this->rows = array_values(array_filter($this->rows, fn ($row) => ($row->{$column} ?? null) == $value));
+                return $this;
+            }
+
+            public function orderBy($column, $direction = 'ASC')
+            {
+                usort($this->rows, fn ($a, $b) => strtoupper($direction) === 'DESC' ? $b->{$column} <=> $a->{$column} : $a->{$column} <=> $b->{$column});
+                return $this;
+            }
+
+            public function get()
+            {
+                return $this->rows;
+            }
+        }
+    }
+}
+
+namespace FluentCart\App\Services\Payments {
+    if (!class_exists(PaymentHelper::class)) {
+        class PaymentHelper
+        {
+            // Same as FluentCart 1.7.0 app/Services/Payments/PaymentHelper.php:151-159.
+            public static function updateTransactionRefundedTotal($parentTransaction, $refundedAmount)
+            {
+                $meta = $parentTransaction->meta;
+                $alreadyRefunded = $meta['refunded_total'] ?? 0;
+                $meta['refunded_total'] = $alreadyRefunded + $refundedAmount;
+                $parentTransaction->meta = $meta;
+                $parentTransaction->save();
             }
         }
     }
