@@ -11,6 +11,11 @@ use WaaSHost\Core\WPCSTenant;
 
 class TenantsSubscriptionManager
 {
+    /** Days a suspended store is kept before it is deleted. */
+    public const DELETION_GRACE_DAYS_OPTION = 'wpcs_host_settings_deletion_grace_days';
+    public const DEFAULT_DELETION_GRACE_DAYS = 30;
+    public const DELETE_SUSPENDED_TENANT_HOOK = 'wpcs_delete_suspended_tenant';
+
     private WPCSService $wpcsService;
 
     public function __construct(WPCSService $wpcsService)
@@ -18,7 +23,13 @@ class TenantsSubscriptionManager
         $this->wpcsService = $wpcsService;
 
         add_action('wpcs_subscription_created', [$this, 'create_tenant_when_subscription_created'], 10, 2);
-        add_action('wpcs_subscription_expired', [$this, 'remove_tenant_when_subscription_expired']);
+        add_action('wpcs_subscription_expired', [$this, 'suspend_tenant_when_subscription_expired']);
+        add_action(self::DELETE_SUSPENDED_TENANT_HOOK, [$this, 'delete_suspended_tenant']);
+    }
+
+    public static function get_deletion_grace_days(): int
+    {
+        return max(1, absint(get_option(self::DELETION_GRACE_DAYS_OPTION, self::DEFAULT_DELETION_GRACE_DAYS)));
     }
 
     /**
@@ -29,9 +40,10 @@ class TenantsSubscriptionManager
     {
         $commerce = Commerce::require_adapter();
 
-        // abort early if the subscription already has a tenant external ID
+        // The subscription already has a store: bring it back if it was suspended, never create a second one.
         if(!empty($commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META)))
         {
+            $this->resume_suspended_tenant($subscription_id);
             return;
         }
 
@@ -92,11 +104,64 @@ class TenantsSubscriptionManager
         do_action('wpcs_tenant_linked_to_subscription', $subscription_id);
     }
 
-    public function remove_tenant_when_subscription_expired($subscription_id)
+    /**
+     * Cancelled or expired: back the store up and take it offline. It is deleted after the grace
+     * period unless the subscription becomes active again first.
+     */
+    public function suspend_tenant_when_subscription_expired($subscription_id)
     {
-        $tenant_external_id = Commerce::require_adapter()->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META);
+        $commerce = Commerce::require_adapter();
+        $tenant_external_id = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META);
+        $tenant = new WPCSTenant($subscription_id);
+
+        // Carts can report one cancellation several times (cancelled, then end of term).
+        if (empty($tenant_external_id) || in_array($tenant->get_status(), [WPCSTenant::SUSPENDED, WPCSTenant::DELETED], true)) {
+            return;
+        }
+
+        $this->wpcsService->suspend_tenant($tenant_external_id, true);
+
+        $delete_at = time() + self::get_deletion_grace_days() * DAY_IN_SECONDS;
+        $tenant->update_status(WPCSTenant::SUSPENDED);
+        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_DELETE_AT_META, $delete_at);
+        wp_schedule_single_event($delete_at, self::DELETE_SUSPENDED_TENANT_HOOK, [$subscription_id]);
+
+        do_action('wpcs_tenant_suspended', $subscription_id, $delete_at);
+    }
+
+    public function resume_suspended_tenant($subscription_id)
+    {
+        $commerce = Commerce::require_adapter();
+        $tenant = new WPCSTenant($subscription_id);
+        if ($tenant->get_status() !== WPCSTenant::SUSPENDED) {
+            return;
+        }
+
+        $this->wpcsService->resume_tenant($commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META));
+
+        wp_clear_scheduled_hook(self::DELETE_SUSPENDED_TENANT_HOOK, [$subscription_id]);
+        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_DELETE_AT_META, '');
+        $tenant->update_status(WPCSTenant::READY);
+
+        do_action('wpcs_tenant_resumed', $subscription_id);
+    }
+
+    /** End of the grace period. Does nothing if the store was resumed in the meantime. */
+    public function delete_suspended_tenant($subscription_id)
+    {
+        $commerce = Commerce::require_adapter();
+        $tenant = new WPCSTenant($subscription_id);
+        if ($tenant->get_status() !== WPCSTenant::SUSPENDED) {
+            return;
+        }
+
         $this->wpcsService->delete_tenant([
-            'external_id' => $tenant_external_id
+            'external_id' => $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META),
         ]);
+
+        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_DELETE_AT_META, '');
+        $tenant->update_status(WPCSTenant::DELETED);
+
+        do_action('wpcs_tenant_deleted', $subscription_id);
     }
 }

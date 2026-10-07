@@ -80,6 +80,10 @@ class AdminWpcsSettings
             'default' => 'administrator',
             'sanitize_callback' => [$this, 'sanitize_user_role']
         ]);
+        register_setting('wpcs-admin', TenantsSubscriptionManager::DELETION_GRACE_DAYS_OPTION, [
+            'default' => TenantsSubscriptionManager::DEFAULT_DELETION_GRACE_DAYS,
+            'sanitize_callback' => fn ($value) => max(1, absint($value)),
+        ]);
         register_setting('wpcs-admin', self::SHOULD_REMOVE_ADMINISTRATOR_PLUGIN_CAPABILITIES_OPTION, [
             'default' => 'on'
         ]);
@@ -211,6 +215,19 @@ class AdminWpcsSettings
                 "id" => self::SHOULD_REMOVE_ADMINISTRATOR_PLUGIN_CAPABILITIES_OPTION,
                 "hint" => __("Check this box if you want the administrator role in your tenants to not be able to manage plugins. Enabling or disabling this will NOT have an effect on existing tenants.", WPCS_WAAS_HOST_TEXTDOMAIN),
                 "type" => "checkbox",
+            ]
+        );
+
+        add_settings_field(
+            TenantsSubscriptionManager::DELETION_GRACE_DAYS_OPTION,
+            __('Days before a cancelled website is deleted', WPCS_WAAS_HOST_TEXTDOMAIN),
+            [$this, 'render_settings_field'],
+            'wpcs-admin',
+            'wpcs_host_settings',
+            [
+                "id" => TenantsSubscriptionManager::DELETION_GRACE_DAYS_OPTION,
+                "hint" => __("When a subscription is cancelled or expires, its website is backed up and taken offline, then deleted after this many days. If the subscription becomes active again before then, the website comes back as it was.", WPCS_WAAS_HOST_TEXTDOMAIN),
+                "type" => "number",
             ]
         );
 

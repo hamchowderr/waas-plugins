@@ -29,6 +29,26 @@ class WPCSServiceTest extends TestCase
         $this->service->delete_tenant(['external_id' => 'ext-123']);
     }
 
+    public function test_suspend_tenant_asks_for_a_backup_by_default(): void
+    {
+        $this->http->expects('post')
+            ->with('/v1/tenants/suspend?externalId=ext-123', ['takeBackup' => true])
+            ->andReturn((object) ['externalId' => 'ext-123', 'backupId' => 'bk-1']);
+
+        $result = $this->service->suspend_tenant('ext-123');
+
+        $this->assertSame('bk-1', $result->backupId);
+    }
+
+    public function test_resume_tenant_posts_an_empty_body_by_external_id(): void
+    {
+        $this->http->expects('post')
+            ->with('/v1/tenants/resume?externalId=ext-123', [])
+            ->andReturn((object) ['externalId' => 'ext-123']);
+
+        $this->service->resume_tenant('ext-123');
+    }
+
     public function test_update_tenant_puts_filtered_payload_by_external_id(): void
     {
         $this->http->expects('put')

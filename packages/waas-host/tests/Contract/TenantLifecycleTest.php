@@ -136,15 +136,17 @@ class TenantLifecycleTest extends TestCase
         $this->assertSame([], $this->requests);
     }
 
-    public function test_cancelling_deletes_the_store_by_external_id(): void
+    public function test_deletion_after_the_grace_period_deletes_the_store_by_external_id(): void
     {
         $manager = new TenantsSubscriptionManager($this->service);
         $this->cart->meta['sub-1'][WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META] = 'store-1042';
+        $this->cart->meta['sub-1'][WPCSTenant::WPCS_TENANT_STATE] = WPCSTenant::SUSPENDED;
         $this->mock_example('Delete tenant: Scheduled');
 
-        $manager->remove_tenant_when_subscription_expired('sub-1');
+        $manager->delete_suspended_tenant('sub-1');
 
         $this->assertSame('DELETE', $this->requests[0][0]);
         $this->assertStringEndsWith('/v1/tenants?externalId=store-1042', $this->requests[0][1]);
+        $this->assertSame(WPCSTenant::DELETED, $this->cart->meta['sub-1'][WPCSTenant::WPCS_TENANT_STATE]);
     }
 }
