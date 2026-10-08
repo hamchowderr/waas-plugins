@@ -70,6 +70,36 @@ Never paste Stripe keys into a chat. Use one of these:
 
 Stripe test card: `4242 4242 4242 4242`, any future expiry date, any CVC.
 
+#### Finishing Stripe (click-through)
+
+For WooCommerce Stripe Gateway 11.0.1. Never paste keys or the signing secret into a chat.
+
+1. **Open Stripe's settings.** wp-admin → **WooCommerce** → **Settings** → **Payments** → **Stripe**, or go straight to `/wp-admin/admin.php?page=wc-settings&tab=checkout&section=stripe`. It's WooCommerce's screen, not WP Swings'.
+2. **Test mode and the account.** On the **Settings** tab, under **Account details**:
+   - **Test mode** is ticked.
+   - If no test account is connected yet, click **Configure connection** → **Test** → **Connect a test account**, log in to Stripe and approve. The plugin stores the test keys.
+3. **Check the webhook.** Still under **Account details**, the **Webhooks** line says whether webhooks are set up:
+   - "Your webhooks are configured and will be sent to: …?wc-api=wc_stripe" or "Webhooks have been setup successfully": nothing more to do. Connecting a test account creates the webhook in Stripe by itself. Go to step 5.
+   - Otherwise, try **Configure webhooks** first. If that fails, set the webhook up by hand (step 4).
+4. **Webhook by hand** (only if step 3 didn't show it configured):
+   1. In the **Stripe Dashboard**, switch to **Test mode** (or the sandbox), then **Developers** → **Webhooks** → **Add endpoint**.
+   2. **Endpoint URL:** `https://storefront-woo-test.191.101.15.236.sslip.io/?wc-api=wc_stripe`
+   3. **Events:** "Select all events" works. The exact list the plugin registers itself:
+      - `account.updated`, `review.opened`, `review.closed`
+      - `source.chargeable`, `source.canceled`
+      - `charge.succeeded`, `charge.failed`, `charge.captured`, `charge.refunded`, `charge.refund.updated`, `charge.dispute.created`, `charge.dispute.closed`
+      - `payment_intent.processing`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.amount_capturable_updated`, `payment_intent.requires_action`
+      - `setup_intent.succeeded`, `setup_intent.setup_failed`
+      - `checkout.session.completed`, `checkout.session.expired`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`
+   4. Save the endpoint, then click **Reveal** under **Signing secret** and copy the `whsec_…` value.
+   5. Back in wp-admin: **Configure connection** → **Test** tab. Paste it into the **webhook secret** field below the test keys (the plugin's "Test Webhook Secret"), then **Save**.
+   6. The **Webhooks** line should now say "Webhooks have been manually configured via a webhook secret."
+5. **Turn Stripe on.** On the same screen, tick **Enable Stripe**, keep **Test mode** ticked, and click **Save changes**. Leave **Pay later (test)** on as well.
+6. **Test purchase.** In a private window, buy **Website plan (test)** (`/product/website-plan-test/`) and pay with card `4242 4242 4242 4242`, any future expiry date and any CVC.
+   - The order goes to **Processing**, and WP Swings activates the subscription.
+   - The website is set up as with Pay later (see [Testing the lifecycle](#testing-the-lifecycle)).
+   - In the Stripe Dashboard (Test), **Developers** → **Webhooks** → the endpoint shows the delivered events (`payment_intent.succeeded`, `charge.succeeded`) with status 200.
+
 ## Testing the lifecycle
 
 Use a new customer each time (a made-up name and a `+tag` address on your own mailbox), never real customer data.
