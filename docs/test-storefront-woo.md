@@ -94,11 +94,14 @@ For WooCommerce Stripe Gateway 11.0.1. Never paste keys or the signing secret in
    4. Save the endpoint, then click **Reveal** under **Signing secret** and copy the `whsec_…` value.
    5. Back in wp-admin: **Configure connection** → **Test** tab. Paste it into the **webhook secret** field below the test keys (the plugin's "Test Webhook Secret"), then **Save**.
    6. The **Webhooks** line should now say "Webhooks have been manually configured via a webhook secret."
+   7. **Keep exactly one endpoint for this URL.** If an endpoint for `…?wc-api=wc_stripe` was already added by hand in Stripe's test mode and connecting also created one, two endpoints send every event twice, and the plugin can verify only one signing secret. In **Developers** → **Webhooks**, delete the extra one. Keep the one whose signing secret the plugin holds: the connect-created one if you connected, or the manual one if you pasted its secret.
 5. **Turn Stripe on.** On the same screen, tick **Enable Stripe**, keep **Test mode** ticked, and click **Save changes**. Leave **Pay later (test)** on as well.
 6. **Test purchase.** In a private window, buy **Website plan (test)** (`/product/website-plan-test/`) and pay with card `4242 4242 4242 4242`, any future expiry date and any CVC.
    - The order goes to **Processing**, and WP Swings activates the subscription.
    - The website is set up as with Pay later (see [Testing the lifecycle](#testing-the-lifecycle)).
    - In the Stripe Dashboard (Test), **Developers** → **Webhooks** → the endpoint shows the delivered events (`payment_intent.succeeded`, `charge.succeeded`) with status 200.
+
+PayPal, for later: WP Swings' free version renews subscriptions through PayPal only with its own **WPS PayPal** gateway (`wps_paypal`, WooCommerce → Settings → Payments, with a PayPal REST app's client ID and secret, and a sandbox/test mode). The **WooCommerce PayPal Payments** plugin works with subscriptions only in WP Swings Pro.
 
 ## Testing the lifecycle
 
