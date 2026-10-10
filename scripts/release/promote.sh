@@ -14,6 +14,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 package_info "$1"
 version=$2
 valid_version "$version" || { echo "not a release version: $version" >&2; exit 1; }
+clean_r2_env
 : "${R2_ENDPOINT:?R2_ENDPOINT is not set}" "${R2_BUCKET:?R2_BUCKET is not set}"
 
 work=$(mktemp -d)
