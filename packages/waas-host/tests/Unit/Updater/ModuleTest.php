@@ -66,18 +66,15 @@ class ModuleTest extends TestCase
         $this->assertSame($other, $captured($other), 'Credentials another filter already supplied are kept.');
     }
 
-    public function test_update_hooks_are_registered_only_once_a_signing_key_is_built_in(): void
+    public function test_with_the_built_in_signing_key_the_update_hooks_are_registered_without_asking_the_api_yet(): void
     {
         Functions\expect('wp_remote_get')->never();
+        $this->assertNotEmpty(Updater::PUBLIC_KEYS);
         $this->assertInstanceOf(Updater::class, Module::init($this->config('https://waas-api.example.test', 'key-id', 'not-a-secret')));
 
-        if (empty(Updater::PUBLIC_KEYS)) {
-            $this->assertFalse(has_filter('upgrader_pre_download'));
-            $this->assertFalse(has_filter('update_plugins_wpcs-waas-host'));
-        } else {
-            $this->assertNotFalse(has_filter('upgrader_pre_download'));
-            $this->assertNotFalse(has_filter('update_plugins_wpcs-waas-host'));
-        }
+        $this->assertNotFalse(has_filter('update_plugins_wpcs-waas-host'));
+        $this->assertNotFalse(has_filter('upgrader_pre_download'));
+        $this->assertNotFalse(has_filter('plugins_api'));
     }
 
     public function test_the_copy_of_the_shared_updater_is_in_sync(): void

@@ -23,7 +23,7 @@ Settings in `wp-config.php`:
 - `WAAS_UPDATE_CHANNEL`: `stable` (default), `beta`, or `off`.
 - `WAAS_AUTO_UPDATE`: `patch` installs x.y.Z updates of the same x.y automatically. Otherwise an admin installs every update.
 
-Until `Updater::PUBLIC_KEYS` has a key, the updater registers nothing: there's nothing it could verify.
+`Updater::PUBLIC_KEYS` holds release key 1 (added 2026-10-10; its private half is the `WAAS_RELEASE_SIGNING_KEY` secret). With an empty list the updater registers nothing, since there would be nothing it could verify. Until the API has `RELEASES_S3_BUCKET`, every check gets 503 "not configured": the plugin caches that for an hour, offers nothing and shows no error.
 
 ## Releasing
 
