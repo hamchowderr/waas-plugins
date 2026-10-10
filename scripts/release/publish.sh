@@ -12,6 +12,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 [ $# -eq 2 ] || { echo "usage: $0 <package> <dir>" >&2; exit 2; }
 package_info "$1"
 dir=$2
+clean_r2_env
 : "${R2_ENDPOINT:?R2_ENDPOINT is not set}" "${R2_BUCKET:?R2_BUCKET is not set}"
 
 manifest="$dir/manifest.json"

@@ -27,6 +27,18 @@ newer_than() {
 
 # --- The releases bucket (R2, through the AWS CLI). Needs R2_ENDPOINT, R2_BUCKET and the AWS_* key.
 
+# Strips all whitespace, line breaks included, from the bucket settings and the R2 key. A secret
+# saved with a trailing newline (gh secret set NAME < file) otherwise breaks the request signature:
+# "Invalid header value ... Credential=...\n/...". Never prints the values.
+clean_r2_env() {
+  local name value
+  for name in R2_ENDPOINT R2_BUCKET AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+    value=${!name-}
+    printf -v "$name" '%s' "${value//[[:space:]]/}"
+    export "${name?}"
+  done
+}
+
 s3() { aws --endpoint-url "$R2_ENDPOINT" "$@"; }
 
 # Exit status 0 when the object exists, 1 when it doesn't; any other error stops the script.

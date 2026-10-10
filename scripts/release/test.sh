@@ -26,6 +26,10 @@ while [ $# -gt 0 ]; do
   esac
 done
 set -- "${args[@]}"
+# Like the real CLI (botocore), refuse a key or endpoint with whitespace in it.
+for v in "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY" "$R2_ENDPOINT" "$R2_BUCKET"; do
+  if [[ $v =~ [[:space:]] ]]; then echo "aws: [ERROR]: Invalid header value (whitespace in a key or setting)" >&2; exit 255; fi
+done
 path() { echo "$FAKE_S3/${1#s3://}"; }
 case "$1 $2" in
   "s3api head-object")
@@ -43,6 +47,9 @@ esac
 FAKE
 chmod +x "$work/bin/aws"
 export PATH="$work/bin:$PATH" FAKE_S3="$work/s3" R2_ENDPOINT=https://r2.invalid R2_BUCKET=waas-releases
+# Saved the way `gh secret set NAME < file` saves them: with a trailing newline, and worse.
+export AWS_ACCESS_KEY_ID=$'test-access-key\n' AWS_SECRET_ACCESS_KEY=$' test-secret-key \r\n'
+export R2_ENDPOINT=$'https://r2.invalid\n' R2_BUCKET=$'waas-releases\n'
 
 openssl genpkey -algorithm ed25519 -out "$work/key.pem" 2>/dev/null
 public=$("$here/public-key.sh" "$work/key.pem")
@@ -92,7 +99,10 @@ m="$work/dist-0.2.0/manifest.json"
 ok "the manifest has what the API reads"
 
 # Publish.
-"$here/publish.sh" waas-payments "$work/dist-0.2.0" > /dev/null
+( . "$here/lib.sh"; s3 s3api head-object --bucket "$R2_BUCKET" --key x ) 2>/dev/null && fail "the fake aws accepted a key with a newline"
+out=$("$here/publish.sh" waas-payments "$work/dist-0.2.0" 2>&1) || fail "publish with newline-terminated secrets: $out"
+grep -q 'test-access-key\|test-secret-key' <<<"$out" && fail "publish printed a key"
+ok "keys and settings with trailing newlines and spaces are cleaned, and never printed"
 cmp -s "$zip" "$FAKE_S3/waas-releases/releases/waas-payments/0.2.0/waas-payments.zip" || fail "zip not uploaded"
 [ "$(bucket channels/stable.json | jq -r .version)" = 0.2.0 ] && [ "$(bucket channels/beta.json | jq -r .version)" = 0.2.0 ] || fail "channels after 0.2.0"
 ok "a stable release goes to stable and beta"
