@@ -129,10 +129,25 @@ class UpdaterTest extends TestCase
 
     public function test_without_a_trusted_key_nothing_is_registered_or_asked(): void
     {
-        $this->assertSame([], Updater::PUBLIC_KEYS, 'Keys are added only when the owner hands over the public key.');
         $this->assertFalse($this->updater(['public_keys' => []])->register());
         $this->assertFalse(has_filter('update_plugins_wpcs-waas-host'));
         $this->assertSame([], $this->requests);
+    }
+
+    public function test_the_built_in_keys_are_ed25519_public_keys_and_turn_updates_on(): void
+    {
+        $this->assertNotEmpty(Updater::PUBLIC_KEYS);
+        foreach (Updater::PUBLIC_KEYS as $key) {
+            $raw = base64_decode($key, true);
+            $this->assertNotFalse($raw, "$key is not base64");
+            $this->assertSame(SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES, strlen($raw), "$key is not a 32-byte ed25519 public key");
+        }
+        $this->assertSame(array_values(array_unique(Updater::PUBLIC_KEYS)), Updater::PUBLIC_KEYS);
+
+        // An updater built the way the plugins build it (no public_keys given) uses them.
+        $updater = new Updater(['slug' => self::SLUG, 'name' => 'WaaS Host', 'basename' => self::BASENAME, 'version' => '2.2.7', 'update_uri' => 'wpcs-waas-host']);
+        $this->assertTrue($updater->register());
+        $this->assertNotFalse(has_filter('upgrader_pre_download'));
     }
 
     /**
