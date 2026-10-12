@@ -270,6 +270,57 @@ class AuthorizeNetSavedCardsTest extends TestCase
         $this->assertSame('1111', $result->data['card_last4']);
     }
 
+    public function test_charge_status_reads_what_a_webhook_needs_to_match_the_charge(): void
+    {
+        $this->respond(['transaction-details-captured']);
+
+        $data = $this->driver()->chargeStatus('80060612550')->data;
+
+        $this->assertSame('authCaptureTransaction', $data['transaction_type']);
+        $this->assertSame(5886, $data['auth_amount']);
+        $this->assertSame('1003', $data['invoice_number']);
+        $this->assertSame('fct178841', $data['customer_id']);
+        $this->assertSame('fct178841@example.com', $data['customer_email']);
+        $this->assertSame('528040951', $data['customer_ref']);
+        $this->assertSame('85CX1KRBZOPCEBHO38WCD6V', $data['network_trans_id']);
+    }
+
+    public function test_charge_status_of_a_refund_names_the_charge_it_refunded(): void
+    {
+        $this->respond(['transaction-details-refund']);
+
+        $result = $this->driver()->chargeStatus('80060883998');
+
+        $this->assertSame('refundTransaction', $result->data['transaction_type']);
+        $this->assertSame('refundPendingSettlement', $result->data['transaction_status']);
+        $this->assertSame('80060612550', $result->data['ref_trans_id']);
+        $this->assertSame(50, $result->data['auth_amount']);
+    }
+
+    public function test_charge_status_of_a_voided_charge_keeps_what_was_charged(): void
+    {
+        $this->respond(['transaction-details-voided']);
+
+        $result = $this->driver()->chargeStatus('80060883804');
+
+        $this->assertSame('voided', $result->data['transaction_status']);
+        $this->assertSame(RecurringGatewayDriver::STATE_FAILED, $result->data['state']);
+        $this->assertSame(0, $result->data['amount']);
+        $this->assertSame(6564, $result->data['auth_amount']);
+    }
+
+    public function test_saving_from_a_charge_of_a_returning_customer_adds_the_card_to_their_profile(): void
+    {
+        $this->respond(['customer-profile-duplicate', 'profile-from-transaction']);
+
+        $result = $this->driver()->saveFromCharge('80060612551', '');
+
+        $this->assertTrue($result->success);
+        $this->assertSame(['transId' => '80060612551'], array_diff_key($this->sent[0]['createCustomerProfileFromTransactionRequest'], ['merchantAuthentication' => 1]));
+        $this->assertSame('528040952', $this->sent[1]['createCustomerProfileFromTransactionRequest']['customerProfileId']);
+        $this->assertSame('540022573', $result->data['method_ref']);
+    }
+
     public function test_charge_status_of_an_unknown_transaction_fails(): void
     {
         $this->respond(['record-not-found']);

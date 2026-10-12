@@ -478,6 +478,49 @@ namespace FluentCart\Api\Resource {
 }
 
 namespace FluentCart\App\Services\Payments {
+    if (!class_exists(Refund::class)) {
+        class Refund
+        {
+            /** Refunds recordRefund() created, for assertions. */
+            public static array $recorded = [];
+
+            // The matching of FluentCart 1.8.0 app/Services/Payments/Refund.php:107-140, without the events.
+            public static function createOrRecordRefund($refundData, $parentTransaction)
+            {
+                $refunds = \FluentCart\App\Models\OrderTransaction::query()
+                    ->where('order_id', $parentTransaction->order_id)
+                    ->where('transaction_type', 'refund')
+                    ->get();
+
+                foreach ($refunds as $refund) {
+                    if ($refund->vendor_charge_id == $refundData['vendor_charge_id']) {
+                        $refund->wasRecentlyCreated = false;
+                        return $refund;
+                    }
+                    if (!$refund->vendor_charge_id && $refund->total == $refundData['total'] && ($refund->meta['parent_id'] ?? '') == $parentTransaction->id) {
+                        $refund->vendor_charge_id = $refundData['vendor_charge_id'];
+                        $refund->wasRecentlyCreated = false;
+                        $refund->save();
+                        return $refund;
+                    }
+                }
+
+                $refund = new \FluentCart\App\Models\OrderTransaction(array_merge([
+                    'order_id'         => $parentTransaction->order_id,
+                    'transaction_type' => 'refund',
+                    'status'           => 'refunded',
+                    'meta'             => ['parent_id' => $parentTransaction->id, 'reason' => $refundData['reason'] ?? ''],
+                ], array_diff_key($refundData, ['reason' => 1])));
+                $refund->save();
+                $refund->wasRecentlyCreated = true;
+                PaymentHelper::updateTransactionRefundedTotal($parentTransaction, $refund->total);
+                self::$recorded[] = $refund;
+
+                return $refund;
+            }
+        }
+    }
+
     if (!class_exists(PaymentHelper::class)) {
         class PaymentHelper
         {

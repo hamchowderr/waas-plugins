@@ -10,6 +10,7 @@ Recorded from the Authorize.Net sandbox (`apitest.authorize.net`) on 2026-10-07,
   - Saving cards without a charge: `customer-profile-created.json`, `customer-profile-duplicate.json`, `payment-profile-created.json` (a liveMode $0 check with a full address), `payment-profile-duplicate.json` and `payment-profile-validation-failed.json` (liveMode without an address: E00027, reason code 290).
   - Deletes: `payment-profile-deleted.json`, and `record-not-found.json` for deleting it again.
   - Lookups: `transaction-details-captured.json`, plus `transaction-list-for-customer.json` and `transaction-list-empty.json`. The customer's transaction list can take a few seconds to show a new charge.
+- Webhook lookups, recorded on 2026-10-12 (proxy address replaced as above): `transaction-details-refund.json` (a partial refund of a settled charge; it names the charge in `refTransId`) and `transaction-details-voided.json` (a voided charge: `settleAmount` drops to 0, `authAmount` stays).
 - `charge-held-for-review.json`, `refund-approved.json`: **not recordings.** A held charge needs fraud filters set up on the account, and a refund needs a charge that has settled (the sandbox settles once a day). They follow the documented format (`AnetApiSchema.xsd` in authorizenet/sdk-php and the API reference).
 
 To refresh them, run the `sandbox` test suite with `AUTHORIZENET_PRINT_RESPONSES=1` (see `tests/Sandbox/README.md`) and copy the bodies it prints.

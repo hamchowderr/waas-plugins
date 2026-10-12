@@ -37,6 +37,9 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
     // getTransactionListForCustomer: "No records found."
     const NO_RECORDS = 'I00004';
 
+    // Letters, digits and underscores only (Webhooks API).
+    const WEBHOOK_NAME = 'waas_payments';
+
     // getTransactionDetails transactionStatus values, by what they mean for a charge.
     const PAID_STATUSES = ['capturedPendingSettlement', 'settledSuccessfully', 'approvedReview'];
     const PENDING_STATUSES = ['FDSPendingReview', 'FDSAuthorizedPendingReview', 'underReview', 'authorizedPendingCapture'];
@@ -206,6 +209,12 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
 
         $response = $this->client->send('createCustomerProfileFromTransactionRequest', $fields);
 
+        // The customer already has a profile: add the card to it.
+        $existing = $customerRef === '' ? self::duplicateId($response) : '';
+        if ($existing !== '') {
+            return $this->saveFromCharge($transactionId, $existing);
+        }
+
         return $this->savedResult($response, (string) ($response['customerProfileId'] ?? $customerRef), self::lastId($response['customerPaymentProfileIdList'] ?? []));
     }
 
@@ -246,11 +255,24 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
         return DriverResult::success($transactionId, $status, [
             'state'              => self::stateOf($status),
             'transaction_status' => $status,
+            'transaction_type'   => (string) ($transaction['transactionType'] ?? ''),
             'amount'             => (int) round(((float) ($transaction['settleAmount'] ?? $transaction['authAmount'] ?? 0)) * 100),
+            // What was charged or refunded; settleAmount drops to 0 when a charge is voided.
+            'auth_amount'        => (int) round(((float) ($transaction['authAmount'] ?? 0)) * 100),
             'card_last4'         => substr((string) ($transaction['payment']['creditCard']['cardNumber'] ?? ''), -4),
             'card_brand'         => (string) ($transaction['payment']['creditCard']['cardType'] ?? ''),
             'auth_code'          => (string) ($transaction['authCode'] ?? ''),
+            'avs_result'         => (string) ($transaction['AVSResponse'] ?? ''),
+            'cvv_result'         => (string) ($transaction['cardCodeResponse'] ?? ''),
             'reason'             => (string) ($transaction['responseReasonDescription'] ?? ''),
+            // A refund's original charge.
+            'ref_trans_id'       => (string) ($transaction['refTransId'] ?? ''),
+            'invoice_number'     => (string) ($transaction['order']['invoiceNumber'] ?? ''),
+            'customer_id'        => (string) ($transaction['customer']['id'] ?? ''),
+            'customer_email'     => (string) ($transaction['customer']['email'] ?? ''),
+            // Set when a saved card was charged.
+            'customer_ref'       => (string) ($transaction['profile']['customerProfileId'] ?? ''),
+            'network_trans_id'   => (string) ($transaction['networkTransId'] ?? ''),
         ]);
     }
 
@@ -405,6 +427,68 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
             'merchant_name'     => (string) ($response['merchantName'] ?? ''),
             'is_test_mode'      => !empty($response['isTestMode']),
         ]);
+    }
+
+    /**
+     * Makes sure Authorize.Net sends these events to $url: updates this site's webhook, or
+     * creates it. Authorize.Net only creates webhooks once the account has a Signature Key.
+     * Webhooks REST API: https://developer.authorize.net/api/reference/features/webhooks.html
+     *
+     * @param string[] $eventTypes
+     */
+    public function registerWebhook(string $url, array $eventTypes): DriverResult
+    {
+        $webhooks = $this->client->rest('GET', 'webhooks');
+        if (is_wp_error($webhooks)) {
+            return DriverResult::failure(self::unreachable($webhooks), 'http_error');
+        }
+        if (isset($webhooks['status'], $webhooks['reason'])) {
+            return self::restFailure($webhooks);
+        }
+
+        $body = [
+            'name'       => self::WEBHOOK_NAME,
+            'url'        => $url,
+            'eventTypes' => array_values($eventTypes),
+            'status'     => 'active',
+        ];
+
+        $existing = null;
+        foreach ((array) $webhooks as $webhook) {
+            if (is_array($webhook) && ($webhook['url'] ?? '') === $url) {
+                $existing = $webhook;
+                break;
+            }
+        }
+
+        $response = $existing
+            ? $this->client->rest('PUT', 'webhooks/' . rawurlencode((string) $existing['webhookId']), $body)
+            : $this->client->rest('POST', 'webhooks', $body);
+
+        if (is_wp_error($response)) {
+            return DriverResult::failure(self::unreachable($response), 'http_error');
+        }
+        if (empty($response['webhookId'])) {
+            return self::restFailure($response);
+        }
+
+        return DriverResult::success((string) $response['webhookId'], (string) ($response['status'] ?? ''));
+    }
+
+    /** An error from the Webhooks REST API ({status, reason, message, details}). */
+    private static function restFailure($response): DriverResult
+    {
+        $message = (string) ($response['message'] ?? '');
+        foreach ((array) ($response['details'] ?? []) as $detail) {
+            $message .= ' ' . (string) ($detail['message'] ?? '');
+        }
+
+        // Authorize.Net answers a generic error when the account has no Signature Key.
+        if (($response['reason'] ?? '') === 'INVALID_DATA' && empty($response['details'])) {
+            $message = __('Authorize.Net would not create the webhook. Check that the account has a Signature Key (Account > Settings > Security Settings > API Credentials and Keys).', 'waas-payments');
+        }
+
+        return DriverResult::failure(trim($message) ?: __('Authorize.Net did not accept the webhook.', 'waas-payments'), (string) ($response['reason'] ?? ''));
     }
 
     /**

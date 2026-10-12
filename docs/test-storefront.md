@@ -6,12 +6,14 @@ A second storefront, on WooCommerce with WP Swings' Subscriptions for WooCommerc
 
 | | |
 |---|---|
-| URL | https://storefront-test.191.101.15.236.sslip.io (Let's Encrypt, HTTP-01) |
-| wp-admin | https://storefront-test.191.101.15.236.sslip.io/wp-admin, user `admin` (admin@otakusolutions.io) |
+| URL | https://storefront-test.otakusolutions.io (Let's Encrypt, HTTP-01) |
+| wp-admin | https://storefront-test.otakusolutions.io/wp-admin, user `admin` (admin@otakusolutions.io) |
 | Admin password | Coolify → Projects → **WaaS Storefront (test)** → production → **storefront-test** → Environment Variables → `WP_ADMIN_PASSWORD` (click the eye to show it) |
 | Provisioning API | https://waas-api.otakusolutions.io, with the test API key (Coolify variables `WAAS_API_KEY` and `WAAS_API_SECRET`, locked) |
 | Test product | **Website plan (test)**, $1.00 a month, `/item/website-plan-test/` (FluentCart product 5, variation 1), with the **WaaS Provisioning** feed |
-| Payments | FluentCart in **test** mode. Card (waas-payments, Authorize.Net **sandbox**, credentials in the locked Coolify variables `AUTHNET_LOGIN_ID` / `AUTHNET_TRANSACTION_KEY`) and FluentCart's offline gateway (shown as "Cash"). Subscriptions are **store managed** with **automatic charge** |
+| Payments | FluentCart in **test** mode. Card (waas-payments, Authorize.Net **sandbox**, credentials in the locked Coolify variables `AUTHNET_LOGIN_ID` / `AUTHNET_TRANSACTION_KEY`; the Signature Key in `AUTHNET_SIGNATURE_KEY`, which registers the store's Authorize.Net webhook) and FluentCart's offline gateway (shown as "Cash"). Subscriptions are **store managed** with **automatic charge** |
+
+The domain is an A record in the otakusolutions.io Cloudflare zone pointing at the Coolify host (191.101.15.236), set to DNS only so Let's Encrypt can reach the server. The store used to live on an sslip.io address, but some networks block hostnames with an IP address in them, so it moved.
 
 ## How it's built
 
@@ -72,7 +74,7 @@ scripts/test-storefront/storefront.py setup    # bootstrap install plugins confi
 
 ## Owner steps
 
-1. **Log in.** Copy the admin password from Coolify (see the table at the top), then log in at https://storefront-test.191.101.15.236.sslip.io/wp-admin as `admin`.
+1. **Log in.** Copy the admin password from Coolify (see the table at the top), then log in at https://storefront-test.otakusolutions.io/wp-admin as `admin`.
 2. **Lock the password variable.** Back in Coolify, lock `WP_ADMIN_PASSWORD` (the lock icon next to it). Coolify then never shows the value again, so copy it somewhere safe first. To get back in later, use WordPress's lost-password link, or set a new password with `storefront.py run`.
 3. **Check test mode.** The WordPress admin bar shows an orange **Test Mode** badge. If it says Live Mode, go to **FluentCart** → **Settings** → **Store Settings** and set the order mode to **Test**.
 
@@ -93,7 +95,7 @@ Only needed for a different sandbox account, or if the keys are rotated.
 4. **Test Mode off.** **Account** → **Settings** → **Security Settings** → **General Security Settings** → **Test Mode** should say **Live**. That is still the sandbox; in Test Mode the sandbox returns transaction ID 0.
 5. **Enter the new keys.** Either:
    - in WordPress: **FluentCart** → **Settings** → **Payments** → **Authorize.Net** ("Card"). Paste both values, keep **Sandbox mode** On, keep the method on, and click **Save**. The plugin verifies them and fetches the Public Client Key; or
-   - in Coolify: update `AUTHNET_LOGIN_ID` / `AUTHNET_TRANSACTION_KEY`, restart the service, then run `storefront.py setup payments`.
+   - in Coolify: update `AUTHNET_LOGIN_ID` / `AUTHNET_TRANSACTION_KEY` (and `AUTHNET_SIGNATURE_KEY`), restart the service, then run `storefront.py setup payments`.
 
 ## Stripe (test) and PayPal (sandbox)
 
@@ -119,7 +121,7 @@ Under Gateway managed, FluentCart doesn't offer the Card gateway for a subscript
 3. Endpoint URL:
 
    ```
-   https://storefront-test.191.101.15.236.sslip.io/?fluent-cart=fct_payment_listener_ipn&method=stripe
+   https://storefront-test.otakusolutions.io/?fluent-cart=fct_payment_listener_ipn&method=stripe
    ```
 
 4. Events: `checkout.session.completed`, `charge.succeeded`, `charge.captured`, `charge.refunded`, `charge.refund.updated`, `charge.dispute.created`, `charge.dispute.closed`, `invoice.paid`, `invoice_payment.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`, `payment_intent.succeeded`, `setup_intent.succeeded`.
@@ -136,7 +138,7 @@ Test card: `4242 4242 4242 4242`, any future expiry date, any CVC.
    2. In the app, under **Sandbox Webhooks**, click **Add Webhook** with the URL:
 
       ```
-      https://storefront-test.191.101.15.236.sslip.io/?fluent-cart=fct_payment_listener_ipn&method=paypal
+      https://storefront-test.otakusolutions.io/?fluent-cart=fct_payment_listener_ipn&method=paypal
       ```
 
    3. Select the events: `PAYMENT.SALE.COMPLETED`, `PAYMENT.SALE.REFUNDED`, `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.REFUNDED`, `BILLING.SUBSCRIPTION.CREATED`, `BILLING.SUBSCRIPTION.ACTIVATED`, `BILLING.SUBSCRIPTION.SUSPENDED`, `BILLING.SUBSCRIPTION.CANCELLED`, `BILLING.SUBSCRIPTION.EXPIRED`, `BILLING.SUBSCRIPTION.PAYMENT.FAILED`, and the `CUSTOMER.DISPUTE.*` events.

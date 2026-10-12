@@ -267,7 +267,12 @@ class PaymentConfirmation
         ];
     }
 
-    private function saveCard($subscription, DriverResult $result, bool $sandbox, bool $canSave): void
+    /**
+     * Saves the card of a subscription's payment for its renewals, or, if it couldn't be saved,
+     * keeps the card saved before or has the customer pay renewals by invoice. Also used by
+     * WebhookSync for a first payment confirmed late.
+     */
+    public function saveCard($subscription, DriverResult $result, bool $sandbox, bool $canSave): void
     {
         if ($canSave && !empty($result->data['method_ref'])) {
             $replaced = SavedCard::store($subscription, $result, $sandbox);

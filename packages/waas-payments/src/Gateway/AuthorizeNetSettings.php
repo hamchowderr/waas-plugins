@@ -23,6 +23,10 @@ class AuthorizeNetSettings extends BaseGatewaySettings
             'sandbox'           => 'yes',
             // Fetched from Authorize.Net when the settings are saved.
             'public_client_key' => '',
+            // Signs webhook notifications. Encrypted like the Transaction Key.
+            'signature_key'     => '',
+            // What happened when the webhook was last registered with Authorize.Net.
+            'webhook_status'    => '',
         ];
     }
 
@@ -53,5 +57,10 @@ class AuthorizeNetSettings extends BaseGatewaySettings
     public function getTransactionKey(): string
     {
         return (string) Helper::decryptKey($this->get('transaction_key'));
+    }
+
+    public function getSignatureKey(): string
+    {
+        return trim((string) Helper::decryptKey($this->get('signature_key')));
     }
 }

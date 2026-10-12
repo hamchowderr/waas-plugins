@@ -27,9 +27,32 @@ It covers one-time payments, refunds, and FluentCart subscriptions billed by the
 | Cancel | FluentCart cancels locally. Authorize.Net has nothing scheduled to cancel. |
 | Refund | Renewals refund like any other payment: a refund once Authorize.Net has settled the charge (it settles once a day), or a void of the full amount before that. |
 
-FluentCart stays the only source of subscription status. Authorize.Net has no schedule of its own, so nothing can drift between the two. Authorize.Net webhooks aren't needed for any of this (follow-up: beads `waas-hju.10`).
+FluentCart stays the only source of subscription status. Authorize.Net has no schedule of its own, so nothing can drift between the two. Authorize.Net webhooks aren't needed for any of this; they are an optional backstop (see [Webhooks](#webhooks)).
 
 Saved cards belong to the Authorize.Net environment that saved them: a sandbox card is never charged with live credentials. Switching modes leaves existing subscriptions unable to auto-charge until customers save a card again.
+
+## Webhooks
+
+Optional. Payments, renewals and refunds made from FluentCart all work without them. With them, FluentCart also catches up with what happens at Authorize.Net outside the store:
+
+| At Authorize.Net | In FluentCart |
+| --- | --- |
+| A refund made in the Merchant Interface | Recorded as a refund of that payment, with its Authorize.Net transaction ID. |
+| A void made in the Merchant Interface | The rest of the payment recorded as refunded. |
+| A charge approved after the site lost the answer (a timeout), or a held charge the merchant approves | The order is marked paid, as the checkout would have. The first payment of an auto-charged subscription also saves its card. A held renewal is confirmed right away rather than at FluentCart's next daily check. |
+| A held renewal the merchant declines | FluentCart's renewal check runs right away, so its retry schedule starts. |
+| A second approved charge for an order that is already paid | Nothing is changed; the order gets a note to refund one of them. |
+
+Refunds and voids made from FluentCart aren't recorded twice: FluentCart already has them.
+
+**Setup:**
+
+1. In the Authorize.Net Merchant Interface: **Account > Settings > Security Settings > API Credentials and Keys**, choose **New Signature Key** and submit. (Not "New Transaction Key", which would turn off the current one.)
+2. Paste it into **Signature Key** in FluentCart > Settings > Payments > Authorize.Net and save. Saving registers the store's webhook with Authorize.Net (Webhooks REST API), or updates it. The settings page shows whether that worked.
+
+The webhook URL is `/wp-json/waas-payments/v1/authorizenet/webhook`. It needs pretty permalinks: Authorize.Net refuses URLs with a query string, so FluentCart's own `?fluent-cart=fct_payment_listener_ipn` listener can't be used.
+
+**Security:** a notification is accepted only with a valid `X-ANET-Signature` (HMAC-SHA512 of the body with the Signature Key). Even then it only says which transaction to look at: the plugin reads that transaction back from Authorize.Net with the store's credentials before changing anything. Several stores can share one Authorize.Net account and each receives every notification, so a charge found by order number must also match the amount and the customer (or the subscription's saved card).
 
 ## Tests
 
