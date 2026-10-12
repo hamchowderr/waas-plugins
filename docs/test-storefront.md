@@ -11,7 +11,7 @@ A second storefront, on WooCommerce with WP Swings' Subscriptions for WooCommerc
 | Admin password | Coolify → Projects → **WaaS Storefront (test)** → production → **storefront-test** → Environment Variables → `WP_ADMIN_PASSWORD` (click the eye to show it) |
 | Provisioning API | https://waas-api.otakusolutions.io, with the test API key (Coolify variables `WAAS_API_KEY` and `WAAS_API_SECRET`, locked) |
 | Test product | **Website plan (test)**, $1.00 a month, `/item/website-plan-test/` (FluentCart product 5, variation 1), with the **WaaS Provisioning** feed |
-| Payments | FluentCart in **test** mode. Card (waas-payments, Authorize.Net **sandbox**, credentials in the locked Coolify variables `AUTHNET_LOGIN_ID` / `AUTHNET_TRANSACTION_KEY`) and FluentCart's offline gateway (shown as "Cash"). Subscriptions are **store managed** with **automatic charge** |
+| Payments | FluentCart in **test** mode. Card (waas-payments, Authorize.Net **sandbox**, credentials in the locked Coolify variables `AUTHNET_LOGIN_ID` / `AUTHNET_TRANSACTION_KEY`; the Signature Key in `AUTHNET_SIGNATURE_KEY`, which registers the store's Authorize.Net webhook) and FluentCart's offline gateway (shown as "Cash"). Subscriptions are **store managed** with **automatic charge** |
 
 ## How it's built
 
@@ -93,7 +93,7 @@ Only needed for a different sandbox account, or if the keys are rotated.
 4. **Test Mode off.** **Account** → **Settings** → **Security Settings** → **General Security Settings** → **Test Mode** should say **Live**. That is still the sandbox; in Test Mode the sandbox returns transaction ID 0.
 5. **Enter the new keys.** Either:
    - in WordPress: **FluentCart** → **Settings** → **Payments** → **Authorize.Net** ("Card"). Paste both values, keep **Sandbox mode** On, keep the method on, and click **Save**. The plugin verifies them and fetches the Public Client Key; or
-   - in Coolify: update `AUTHNET_LOGIN_ID` / `AUTHNET_TRANSACTION_KEY`, restart the service, then run `storefront.py setup payments`.
+   - in Coolify: update `AUTHNET_LOGIN_ID` / `AUTHNET_TRANSACTION_KEY` (and `AUTHNET_SIGNATURE_KEY`), restart the service, then run `storefront.py setup payments`.
 
 ## Stripe (test) and PayPal (sandbox)
 

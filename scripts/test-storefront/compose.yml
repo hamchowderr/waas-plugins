@@ -12,6 +12,7 @@ services:
       WAAS_API_SECRET: ${WAAS_API_SECRET}
       AUTHNET_LOGIN_ID: ${AUTHNET_LOGIN_ID:-}
       AUTHNET_TRANSACTION_KEY: ${AUTHNET_TRANSACTION_KEY:-}
+      AUTHNET_SIGNATURE_KEY: ${AUTHNET_SIGNATURE_KEY:-}
     volumes:
     - wp:/var/www/html
     - wpcli:/opt/wpcli
