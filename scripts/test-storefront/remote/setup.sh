@@ -5,7 +5,7 @@
 set -eu
 X=/opt/wpcli/x
 WP="sh $X/wp"
-URL=https://storefront-test.191.101.15.236.sslip.io
+URL=https://storefront-test.otakusolutions.io
 case "${1:-}" in
   bootstrap)
     mkdir -p /opt/wpcli

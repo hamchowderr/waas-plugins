@@ -40,7 +40,7 @@ PROJECT = 'WaaS Storefront (test)'
 # optional variables `create` copies from the session (session name -> Coolify name), all locked.
 CARTS = {
     'fluentcart': {
-        'service': 'storefront-test', 'domain': 'storefront-test.191.101.15.236.sslip.io',
+        'service': 'storefront-test', 'domain': 'storefront-test.otakusolutions.io',
         'compose': 'compose.yml', 'remote': ['remote'], 'packages': ['waas-host', 'waas-payments'],
         'secrets': {'AUTHNET_SANDBOX_LOGIN_ID': 'AUTHNET_LOGIN_ID', 'AUTHNET_SANDBOX_TRANSACTION_KEY': 'AUTHNET_TRANSACTION_KEY',
                     'AUTHNET_SANDBOX_SIGNATURE_KEY': 'AUTHNET_SIGNATURE_KEY'},
