@@ -22,7 +22,7 @@ class AdminNoticesTest extends TestCase
         Functions\when('esc_url')->returnArg();
         Functions\when('sanitize_key')->alias(fn ($key) => strtolower((string) $key));
         Functions\when('wp_unslash')->returnArg();
-        $_GET['page'] = 'wpcs-admin-settings';
+        $_GET['page'] = 'waas-admin-settings';
         AdminNotices::init(new ConfigService());
     }
 
@@ -37,7 +37,7 @@ class AdminNoticesTest extends TestCase
         $html = $this->renderNotice();
 
         $this->assertStringContainsString('A record IPs, CNAME target', $html);
-        $this->assertStringContainsString('admin.php?page=wpcs-admin-settings', $html);
+        $this->assertStringContainsString('admin.php?page=waas-admin-settings', $html);
     }
 
     public function test_notice_names_only_what_is_missing(): void
@@ -66,7 +66,7 @@ class AdminNoticesTest extends TestCase
 
     public function test_notice_shows_on_the_plugin_home_page(): void
     {
-        $_GET['page'] = 'wpcs-admin';
+        $_GET['page'] = 'waas-admin';
 
         $this->assertStringContainsString('DNS settings missing', $this->renderNotice());
     }

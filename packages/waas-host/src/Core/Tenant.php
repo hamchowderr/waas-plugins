@@ -4,34 +4,37 @@ namespace WaaSHost\Core;
 
 use WaaSHost\Commerce\Commerce;
 
-class WPCSTenant
+class Tenant
 {
-    public const WPCS_WEBSITE_NAME_META = 'WPCS_WEBSITE_NAME_META';
-    public const WPCS_DOMAIN_NAME_META = 'WPCS_DOMAIN_NAME_META';
-    public const WPCS_BASE_DOMAIN_NAME_META = 'WPCS_BASE_DOMAIN_NAME_META';
-    public const WPCS_SUBSCRIPTION_USER_ROLES = 'WPCS_SUBSCRIPTION_USER_ROLES';
-    public const WPCS_TENANT_EXTERNAL_ID_META = 'WPCS_TENANT_EXTERNAL_ID_META';
-    public const WPCS_TENANT_PUBLIC_KEY_META = 'WPCS_TENANT_PUBLIC_KEY_META';
-    public const WPCS_TENANT_PRIVATE_KEY_META = 'WPCS_TENANT_PRIVATE_KEY_META';
-    public const WPCS_DEFAULT_USER_ROLE = 'wpcs_host_settings_default_user_role';
+    public const WEBSITE_NAME_META = 'WPCS_WEBSITE_NAME_META';
+    public const DOMAIN_NAME_META = 'WPCS_DOMAIN_NAME_META';
+    public const BASE_DOMAIN_NAME_META = 'WPCS_BASE_DOMAIN_NAME_META';
+    public const SUBSCRIPTION_USER_ROLES = 'WPCS_SUBSCRIPTION_USER_ROLES';
+    public const TENANT_EXTERNAL_ID_META = 'WPCS_TENANT_EXTERNAL_ID_META';
+    public const TENANT_PUBLIC_KEY_META = 'WPCS_TENANT_PUBLIC_KEY_META';
+    /** Encrypted (see PrivateKeyStore). The leading underscore keeps it out of WooCommerce's Custom Fields box and REST meta_data. */
+    public const TENANT_PRIVATE_KEY_META = '_waas_tenant_private_key';
+    /** Where the key was kept before 2.3.0; PrivateKeyStore moves it on first read, and on update. */
+    public const LEGACY_TENANT_PRIVATE_KEY_META = 'WPCS_TENANT_PRIVATE_KEY_META';
+    public const DEFAULT_USER_ROLE = 'wpcs_host_settings_default_user_role';
     /** Unix time at which a suspended store is deleted. */
-    public const WPCS_TENANT_DELETE_AT_META = 'WPCS_TENANT_DELETE_AT_META';
+    public const TENANT_DELETE_AT_META = 'WPCS_TENANT_DELETE_AT_META';
     /** Subscription meta: when a cancelled subscription's paid period ends and the store is suspended (unix time). */
-    public const WPCS_TENANT_SUSPEND_AT_META = 'WPCS_TENANT_SUSPEND_AT_META';
+    public const TENANT_SUSPEND_AT_META = 'WPCS_TENANT_SUSPEND_AT_META';
     /**
      * Subscription meta: why waas-host took the store offline. A billing event: ON_HOLD (failed renewal, paused) or
      * ENDED (cancelled, expired, refunded). Empty for a store suspended some other way, which waas-host leaves alone.
      */
-    public const WPCS_TENANT_SUSPEND_REASON_META = 'WPCS_TENANT_SUSPEND_REASON_META';
+    public const TENANT_SUSPEND_REASON_META = 'WPCS_TENANT_SUSPEND_REASON_META';
     public const SUSPENDED_ON_HOLD = 'on_hold';
     public const SUSPENDED_ENDED = 'ended';
 
     /** Order meta: 'yes' when checkout accepted the website name without the API's availability check. */
-    public const WPCS_WEBSITE_NAME_UNVERIFIED_META = 'WPCS_WEBSITE_NAME_UNVERIFIED_META';
+    public const WEBSITE_NAME_UNVERIFIED_META = 'WPCS_WEBSITE_NAME_UNVERIFIED_META';
     /** Subscription meta while the store waits for a new name (see NameConflicts). */
-    public const WPCS_NAME_CONFLICT_META = 'WPCS_NAME_CONFLICT_META';
+    public const NAME_CONFLICT_META = 'WPCS_NAME_CONFLICT_META';
 
-    public const WPCS_TENANT_STATE = 'WPCS_TENANT_STATE';
+    public const TENANT_STATE = 'WPCS_TENANT_STATE';
     /** Asked for; the background job that creates or restores the store has not finished yet. */
     public const QUEUED = 'Queued';
     public const PROVISIONING = 'Provisioning';
@@ -57,11 +60,11 @@ class WPCSTenant
     {
         switch ((string) $state) {
             case self::QUEUED:
-                return __('Setting up your website', WPCS_WAAS_HOST_TEXTDOMAIN);
+                return __('Setting up your website', WAAS_HOST_TEXTDOMAIN);
             case self::FAILED:
-                return __('Setup delayed — we\'re on it', WPCS_WAAS_HOST_TEXTDOMAIN);
+                return __('Setup delayed — we\'re on it', WAAS_HOST_TEXTDOMAIN);
             case self::NEEDS_NEW_NAME:
-                return __('Choose a new website name', WPCS_WAAS_HOST_TEXTDOMAIN);
+                return __('Choose a new website name', WAAS_HOST_TEXTDOMAIN);
             default:
                 return (string) $state;
         }
@@ -75,11 +78,11 @@ class WPCSTenant
 
     public function get_status()
     {
-        return Commerce::require_adapter()->get_subscription_meta($this->post_id, self::WPCS_TENANT_STATE);
+        return Commerce::require_adapter()->get_subscription_meta($this->post_id, self::TENANT_STATE);
     }
 
     public function update_status($status)
     {
-        Commerce::require_adapter()->update_subscription_meta($this->post_id, self::WPCS_TENANT_STATE, $status);
+        Commerce::require_adapter()->update_subscription_meta($this->post_id, self::TENANT_STATE, $status);
     }
 }

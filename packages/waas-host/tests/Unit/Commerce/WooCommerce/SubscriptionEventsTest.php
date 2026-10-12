@@ -11,7 +11,7 @@ use WaaSHost\Commerce\Commerce;
 use WaaSHost\Commerce\WooCommerce\SubscriptionEvents;
 use WaaSHost\Commerce\WooCommerce\WooCommerceSubscriptions;
 use WaaSHost\Commerce\WooCommerce\WpSwingsSubscriptions;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\Tenant;
 
 class SubscriptionEventsTest extends TestCase
 {
@@ -33,15 +33,15 @@ class SubscriptionEventsTest extends TestCase
     public function test_activation_without_a_store_creates_one(): void
     {
         $order = Mockery::mock('WC_Order');
-        Actions\expectDone('wpcs_subscription_created')->once()->with(900, $order);
-        Actions\expectDone('wpcs_subscription_reactivated')->never();
+        Actions\expectDone('waas_subscription_created')->once()->with(900, $order);
+        Actions\expectDone('waas_subscription_reactivated')->never();
 
         SubscriptionEvents::activated(900, $order);
     }
 
     public function test_activation_without_an_order_creates_nothing(): void
     {
-        Actions\expectDone('wpcs_subscription_created')->never();
+        Actions\expectDone('waas_subscription_created')->never();
 
         SubscriptionEvents::activated(900, null);
     }
@@ -49,9 +49,9 @@ class SubscriptionEventsTest extends TestCase
     public function test_hold_then_reactivation_fire_once_each(): void
     {
         $this->with_store(900);
-        Actions\expectDone('wpcs_subscription_suspended')->once()->with(900);
-        Actions\expectDone('wpcs_subscription_reactivated')->once()->with(900);
-        Actions\expectDone('wpcs_subscription_created')->never();
+        Actions\expectDone('waas_subscription_suspended')->once()->with(900);
+        Actions\expectDone('waas_subscription_reactivated')->once()->with(900);
+        Actions\expectDone('waas_subscription_created')->never();
 
         SubscriptionEvents::suspended(900);
         SubscriptionEvents::suspended(900);
@@ -64,8 +64,8 @@ class SubscriptionEventsTest extends TestCase
     public function test_renewal_of_an_active_store_fires_nothing(): void
     {
         $this->with_store(900);
-        Actions\expectDone('wpcs_subscription_created')->never();
-        Actions\expectDone('wpcs_subscription_reactivated')->never();
+        Actions\expectDone('waas_subscription_created')->never();
+        Actions\expectDone('waas_subscription_reactivated')->never();
 
         SubscriptionEvents::activated(900, Mockery::mock('WC_Order'));
     }
@@ -73,8 +73,8 @@ class SubscriptionEventsTest extends TestCase
     public function test_end_and_hold_fire_only_for_subscriptions_with_a_store(): void
     {
         $this->with_store(900);
-        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
-        Actions\expectDone('wpcs_subscription_suspended')->never();
+        Actions\expectDone('waas_subscription_expired')->once()->with(900);
+        Actions\expectDone('waas_subscription_suspended')->never();
 
         SubscriptionEvents::ended(900);
         SubscriptionEvents::ended(901);
@@ -88,7 +88,7 @@ class SubscriptionEventsTest extends TestCase
     {
         $this->with_store(900);
         $this->commerce->meta[900][SubscriptionEvents::SUSPENDED_META] = $status === 'active' ? 'yes' : '';
-        foreach (['wpcs_subscription_reactivated', 'wpcs_subscription_suspended', 'wpcs_subscription_expired'] as $name) {
+        foreach (['waas_subscription_reactivated', 'waas_subscription_suspended', 'waas_subscription_expired'] as $name) {
             Actions\expectDone($name)->times($name === $event ? 1 : 0);
         }
 
@@ -102,10 +102,10 @@ class SubscriptionEventsTest extends TestCase
     public function woocommerce_subscriptions_statuses(): array
     {
         return [
-            'active after hold' => ['active', 'wpcs_subscription_reactivated'],
-            'on hold' => ['on-hold', 'wpcs_subscription_suspended'],
-            'cancelled' => ['cancelled', 'wpcs_subscription_expired'],
-            'expired' => ['expired', 'wpcs_subscription_expired'],
+            'active after hold' => ['active', 'waas_subscription_reactivated'],
+            'on hold' => ['on-hold', 'waas_subscription_suspended'],
+            'cancelled' => ['cancelled', 'waas_subscription_expired'],
+            'expired' => ['expired', 'waas_subscription_expired'],
             'pending cancel' => ['pending-cancel', null],
         ];
     }
@@ -115,7 +115,7 @@ class SubscriptionEventsTest extends TestCase
         $subscription = Mockery::mock('WC_Subscription', 'WC_Order');
         $subscription->allows('get_id')->andReturn(900);
         $subscription->allows('get_parent_id')->andReturn(0);
-        Actions\expectDone('wpcs_subscription_created')->once()->with(900, $subscription);
+        Actions\expectDone('waas_subscription_created')->once()->with(900, $subscription);
 
         (new WooCommerceSubscriptions())->on_status_updated($subscription, 'active', 'pending');
     }
@@ -127,7 +127,7 @@ class SubscriptionEventsTest extends TestCase
     {
         $this->with_store(900);
         $this->commerce->meta[900][SubscriptionEvents::SUSPENDED_META] = $status === 'active' ? 'yes' : '';
-        foreach (['wpcs_subscription_reactivated', 'wpcs_subscription_suspended', 'wpcs_subscription_created'] as $name) {
+        foreach (['waas_subscription_reactivated', 'waas_subscription_suspended', 'waas_subscription_created'] as $name) {
             Actions\expectDone($name)->times($name === $event ? 1 : 0);
         }
         Functions\when('get_post_type')->justReturn('wps_subscriptions');
@@ -138,9 +138,9 @@ class SubscriptionEventsTest extends TestCase
     public function wp_swings_statuses(): array
     {
         return [
-            'active after hold' => ['active', 'wpcs_subscription_reactivated'],
-            'on hold' => ['on-hold', 'wpcs_subscription_suspended'],
-            'paused' => ['paused', 'wpcs_subscription_suspended'],
+            'active after hold' => ['active', 'waas_subscription_reactivated'],
+            'on hold' => ['on-hold', 'waas_subscription_suspended'],
+            'paused' => ['paused', 'waas_subscription_suspended'],
             'cancelled (its own hook handles it)' => ['cancelled', null],
         ];
     }
@@ -148,7 +148,7 @@ class SubscriptionEventsTest extends TestCase
     public function test_wp_swings_ignores_other_post_types_and_keys(): void
     {
         $this->with_store(900);
-        Actions\expectDone('wpcs_subscription_suspended')->never();
+        Actions\expectDone('waas_subscription_suspended')->never();
         Functions\when('get_post_type')->justReturn('shop_order');
 
         $plugin = new WpSwingsSubscriptions();
@@ -159,7 +159,7 @@ class SubscriptionEventsTest extends TestCase
     public function test_wp_swings_save_that_writes_the_status_is_a_status_change(): void
     {
         $this->with_store(900);
-        Actions\expectDone('wpcs_subscription_suspended')->once()->with(900);
+        Actions\expectDone('waas_subscription_suspended')->once()->with(900);
 
         $subscription = $this->wps_subscription('on-hold', $this->meta(WpSwingsSubscriptions::STATUS_META, 12, ['value' => 'on-hold']));
         $order = Mockery::mock('WC_Order');
@@ -181,8 +181,8 @@ class SubscriptionEventsTest extends TestCase
     {
         $this->with_store(900);
         $this->commerce->meta[900][SubscriptionEvents::SUSPENDED_META] = '';
-        Actions\expectDone('wpcs_subscription_suspended')->never();
-        Actions\expectDone('wpcs_subscription_reactivated')->never();
+        Actions\expectDone('waas_subscription_suspended')->never();
+        Actions\expectDone('waas_subscription_reactivated')->never();
 
         $stale = $this->wps_subscription(
             'on-hold',
@@ -225,7 +225,7 @@ class SubscriptionEventsTest extends TestCase
         $order = Mockery::mock('WC_Order');
         $order->allows('get_type')->andReturn('shop_order');
         Functions\when('wc_get_order')->alias(fn ($id) => [900 => $subscription, 500 => $order][$id] ?? false);
-        Actions\expectDone('wpcs_subscription_created')->once()->with(900, $order);
+        Actions\expectDone('waas_subscription_created')->once()->with(900, $order);
 
         (new WpSwingsSubscriptions())->on_activated(500, 900);
     }
@@ -241,16 +241,16 @@ class SubscriptionEventsTest extends TestCase
 
     private function with_store(int $subscription_id): void
     {
-        $this->commerce->meta[$subscription_id][WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META] = 'ext-' . $subscription_id;
+        $this->commerce->meta[$subscription_id][Tenant::TENANT_EXTERNAL_ID_META] = 'ext-' . $subscription_id;
     }
 
     public function test_a_store_waiting_for_a_new_name_is_held_and_reactivated_like_a_store(): void
     {
-        $this->commerce->meta[900][WPCSTenant::WPCS_NAME_CONFLICT_META] = ['name' => 'Apex Research'];
-        Actions\expectDone('wpcs_subscription_suspended')->once()->with(900);
-        Actions\expectDone('wpcs_subscription_reactivated')->once()->with(900);
-        Actions\expectDone('wpcs_subscription_created')->never();
-        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+        $this->commerce->meta[900][Tenant::NAME_CONFLICT_META] = ['name' => 'Apex Research'];
+        Actions\expectDone('waas_subscription_suspended')->once()->with(900);
+        Actions\expectDone('waas_subscription_reactivated')->once()->with(900);
+        Actions\expectDone('waas_subscription_created')->never();
+        Actions\expectDone('waas_subscription_expired')->once()->with(900);
 
         SubscriptionEvents::suspended(900);
         SubscriptionEvents::activated(900, Mockery::mock('WC_Order'));
@@ -269,14 +269,14 @@ class SubscriptionEventsTest extends TestCase
 
     public function test_wp_swings_a_full_refund_of_the_order_that_started_the_subscription_ends_it(): void
     {
-        $this->commerce->meta[900][WPCSTenant::WPCS_NAME_CONFLICT_META] = ['name' => 'Apex Research'];
+        $this->commerce->meta[900][Tenant::NAME_CONFLICT_META] = ['name' => 'Apex Research'];
         $subscription = Mockery::mock('WPS_Subscription', 'WC_Order');
         $subscription->allows('get_type')->andReturn('wps_subscriptions');
         $subscription->allows('get_parent_id')->andReturn(500);
         $order = $this->refunded_order(500, 900);
         $renewal = $this->refunded_order(501, 900); // a renewal refund doesn't take back the subscription
         Functions\when('wc_get_order')->alias(fn ($id) => [900 => $subscription, 500 => $order, 501 => $renewal][$id] ?? false);
-        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+        Actions\expectDone('waas_subscription_expired')->once()->with(900);
 
         $plugin = new WpSwingsSubscriptions();
         $plugin->on_order_refunded(501);
@@ -297,8 +297,8 @@ class SubscriptionEventsTest extends TestCase
         // WP Swings keeps the date in site-local time; the site is at UTC-5.
         $this->wp_swings_subscription(900, (string) ($paid_through - 5 * 3600));
         Functions\when('get_option')->alias(fn ($name, $default = false) => $name === 'gmt_offset' ? '-5' : $default);
-        Actions\expectDone('wpcs_subscription_canceled_until')->once()->with(900, $paid_through);
-        Actions\expectDone('wpcs_subscription_expired')->never();
+        Actions\expectDone('waas_subscription_canceled_until')->once()->with(900, $paid_through);
+        Actions\expectDone('waas_subscription_expired')->never();
 
         (new WpSwingsSubscriptions())->on_cancelled(900, 'Cancel');
     }
@@ -311,8 +311,8 @@ class SubscriptionEventsTest extends TestCase
         $this->with_store(900);
         $this->wp_swings_subscription(900, $next_payment);
         Functions\when('get_option')->justReturn('0');
-        Actions\expectDone('wpcs_subscription_canceled_until')->never();
-        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+        Actions\expectDone('waas_subscription_canceled_until')->never();
+        Actions\expectDone('waas_subscription_expired')->once()->with(900);
 
         (new WpSwingsSubscriptions())->on_cancelled(900, $status);
     }
@@ -330,8 +330,8 @@ class SubscriptionEventsTest extends TestCase
     {
         $this->wp_swings_subscription(900, (string) (time() + 86400));
         Functions\when('get_option')->justReturn('0');
-        Actions\expectDone('wpcs_subscription_canceled_until')->never();
-        Actions\expectDone('wpcs_subscription_expired')->never();
+        Actions\expectDone('waas_subscription_canceled_until')->never();
+        Actions\expectDone('waas_subscription_expired')->never();
 
         (new WpSwingsSubscriptions())->on_cancelled(900, 'Cancel');
     }
@@ -349,8 +349,8 @@ class SubscriptionEventsTest extends TestCase
     {
         $this->with_store(900);
         $this->wp_swings_parent_order();
-        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
-        Actions\expectDone('wpcs_subscription_canceled_until')->never();
+        Actions\expectDone('waas_subscription_expired')->once()->with(900);
+        Actions\expectDone('waas_subscription_canceled_until')->never();
 
         (new WpSwingsSubscriptions())->on_order_cancelled(500);
     }
@@ -359,7 +359,7 @@ class SubscriptionEventsTest extends TestCase
     {
         // WooCommerce's timeout for unpaid orders: the subscription never started, so there is no store.
         $this->wp_swings_parent_order();
-        Actions\expectDone('wpcs_subscription_expired')->never();
+        Actions\expectDone('waas_subscription_expired')->never();
 
         (new WpSwingsSubscriptions())->on_order_cancelled(500);
 
@@ -370,7 +370,7 @@ class SubscriptionEventsTest extends TestCase
     {
         $this->with_store(900);
         $this->wp_swings_parent_order();
-        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+        Actions\expectDone('waas_subscription_expired')->once()->with(900);
 
         $plugin = new WpSwingsSubscriptions();
         $plugin->on_order_cancelled(500);

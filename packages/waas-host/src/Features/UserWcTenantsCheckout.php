@@ -3,10 +3,10 @@
 namespace WaaSHost\Features;
 
 use WaaSHost\Commerce\WooCommerce\WooCommerceAdapter;
-use WaaSHost\Core\WPCSTenant;
-use WaaSHost\Core\WPCSService;
+use WaaSHost\Core\Tenant;
+use WaaSHost\Core\ProvisioningApi;
 use WaaSHost\Core\Exceptions\InvalidDomainException;
-use WaaSHost\Core\WPCSProduct;
+use WaaSHost\Core\StoreProduct;
 use WP_Error;
 
 /**
@@ -24,21 +24,21 @@ class UserWcTenantsCheckout
     public const FIELD_ID = 'waas-host/website-name';
     public const STORE_API_NAMESPACE = 'waas-host';
 
-    private WPCSService $wpcsService;
+    private ProvisioningApi $provisioningApi;
     private WooCommerceAdapter $commerce;
     /** @var array<string, true> names accepted in this request without the API's answer */
     private array $unverified = [];
 
-    public function __construct(WPCSService $wpcsService, WooCommerceAdapter $commerce)
+    public function __construct(ProvisioningApi $provisioningApi, WooCommerceAdapter $commerce)
     {
-        $this->wpcsService = $wpcsService;
+        $this->provisioningApi = $provisioningApi;
         $this->commerce = $commerce;
 
         add_action('woocommerce_blocks_loaded', [$this, 'register_cart_data']);
         add_action('woocommerce_init', [$this, 'register_block_checkout_field']);
         add_action('woocommerce_set_additional_field_value', [$this, 'save_block_checkout_field'], 10, 4);
 
-        add_filter('woocommerce_checkout_fields', [$this, 'render_wpcs_checkout_fields']);
+        add_filter('woocommerce_checkout_fields', [$this, 'render_waas_checkout_fields']);
         add_action('woocommerce_after_checkout_validation', [$this, 'validate_classic_checkout_field'], 10, 2);
         add_action('woocommerce_checkout_create_order', [$this, 'save_classic_checkout_field'], 10, 2);
     }
@@ -54,7 +54,7 @@ class UserWcTenantsCheckout
         }
 
         foreach ($cart->get_cart() as $item) {
-            if (!(new WPCSProduct($item['product_id']))->is_wpcs_product()) {
+            if (!(new StoreProduct($item['product_id']))->is_store_product()) {
                 continue;
             }
             if (isset($item['subscription_renewal']) || isset($item['subscription_resubscribe']) || isset($item['subscription_switch'])) {
@@ -105,7 +105,7 @@ class UserWcTenantsCheckout
 
         woocommerce_register_additional_checkout_field([
             'id' => self::FIELD_ID,
-            'label' => __('Website name', WPCS_WAAS_HOST_TEXTDOMAIN),
+            'label' => __('Website name', WAAS_HOST_TEXTDOMAIN),
             'location' => 'order',
             'type' => 'text',
             'required' => ['cart' => ['properties' => ['extensions' => $needs_website_name]]],
@@ -128,19 +128,19 @@ class UserWcTenantsCheckout
     {
         $value = sanitize_text_field((string) $value);
         if ($key === self::FIELD_ID && $value !== '' && $wc_object instanceof \WC_Order) {
-            $wc_object->update_meta_data(WPCSTenant::WPCS_WEBSITE_NAME_META, $value);
+            $wc_object->update_meta_data(Tenant::WEBSITE_NAME_META, $value);
             $this->mark_unverified($wc_object, $value);
         }
     }
 
-    public function render_wpcs_checkout_fields($fields)
+    public function render_waas_checkout_fields($fields)
     {
         if ($this->cart_needs_website_name()) {
-            $fields['billing'][WPCSTenant::WPCS_WEBSITE_NAME_META] = [
-                'label' => __('Website name', WPCS_WAAS_HOST_TEXTDOMAIN),
+            $fields['billing'][Tenant::WEBSITE_NAME_META] = [
+                'label' => __('Website name', WAAS_HOST_TEXTDOMAIN),
                 'required' => true,
                 'priority' => 30,
-                'class' => apply_filters('wpcs_website_name_checkout_field_classes', ['form-row-wide']),
+                'class' => apply_filters('waas_website_name_checkout_field_classes', ['form-row-wide']),
             ];
         }
 
@@ -153,7 +153,7 @@ class UserWcTenantsCheckout
      */
     public function validate_classic_checkout_field($data, $errors): void
     {
-        $website_name = (string) ($data[WPCSTenant::WPCS_WEBSITE_NAME_META] ?? '');
+        $website_name = (string) ($data[Tenant::WEBSITE_NAME_META] ?? '');
         if ($website_name === '') {
             // Not asked for, or left empty (WooCommerce reports required fields itself).
             return;
@@ -171,9 +171,9 @@ class UserWcTenantsCheckout
      */
     public function save_classic_checkout_field($order, $data): void
     {
-        if (isset($data[WPCSTenant::WPCS_WEBSITE_NAME_META])) {
-            $value = sanitize_text_field((string) $data[WPCSTenant::WPCS_WEBSITE_NAME_META]);
-            $order->update_meta_data(WPCSTenant::WPCS_WEBSITE_NAME_META, $value);
+        if (isset($data[Tenant::WEBSITE_NAME_META])) {
+            $value = sanitize_text_field((string) $data[Tenant::WEBSITE_NAME_META]);
+            $order->update_meta_data(Tenant::WEBSITE_NAME_META, $value);
             $this->mark_unverified($order, $value);
         }
     }
@@ -182,7 +182,7 @@ class UserWcTenantsCheckout
     private function mark_unverified($order, string $website_name): void
     {
         if (isset($this->unverified[$website_name])) {
-            $order->update_meta_data(WPCSTenant::WPCS_WEBSITE_NAME_UNVERIFIED_META, 'yes');
+            $order->update_meta_data(Tenant::WEBSITE_NAME_UNVERIFIED_META, 'yes');
         }
     }
 
@@ -201,22 +201,22 @@ class UserWcTenantsCheckout
 
         $label = sanitize_title_with_dashes(remove_accents($website_name));
         if ($label === '' || strlen($label) > 63) {
-            return __('Please use a website name of 1 to 63 letters, digits and dashes.', WPCS_WAAS_HOST_TEXTDOMAIN);
+            return __('Please use a website name of 1 to 63 letters, digits and dashes.', WAAS_HOST_TEXTDOMAIN);
         }
         $domain_name = $label . '.' . $tenant_root_domain;
 
         if ($this->commerce->is_domain_taken($domain_name)) {
-            return __('Website name is already taken! Please use a different one.', WPCS_WAAS_HOST_TEXTDOMAIN);
+            return __('Website name is already taken! Please use a different one.', WAAS_HOST_TEXTDOMAIN);
         }
 
         try {
-            if ($this->wpcsService->domain_available($domain_name)) {
+            if ($this->provisioningApi->domain_available($domain_name)) {
                 return null;
             }
 
-            return __('Website name is already taken! Please use a different one.', WPCS_WAAS_HOST_TEXTDOMAIN);
+            return __('Website name is already taken! Please use a different one.', WAAS_HOST_TEXTDOMAIN);
         } catch (InvalidDomainException $e) {
-            return __('The resulting domain is not valid.', WPCS_WAAS_HOST_TEXTDOMAIN);
+            return __('The resulting domain is not valid.', WAAS_HOST_TEXTDOMAIN);
         } catch (\Throwable $e) {
             // Fail open: take the order. The name passed the storefront's own duplicate check above; if the API
             // later finds it taken, the customer is asked for a new one (NameConflicts).

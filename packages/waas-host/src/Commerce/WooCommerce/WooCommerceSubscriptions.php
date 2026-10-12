@@ -2,7 +2,8 @@
 
 namespace WaaSHost\Commerce\WooCommerce;
 
-use WaaSHost\Core\WPCSProduct;
+use WaaSHost\Core\StoreProduct;
+use WaaSHost\Core\Tenant;
 
 /**
  * WooCommerce Subscriptions (paid, by WooCommerce). Subscriptions are WC_Subscription orders of type
@@ -35,6 +36,22 @@ class WooCommerceSubscriptions implements SubscriptionPlugin
         add_action('woocommerce_subscription_details_table', [$this, 'render_details']);
         add_action('ssd_add_simple_product_before_calculate_totals', [$this, 'on_item_added'], 20, 1);
         add_action('wcs_user_removed_item', [$this, 'on_item_removed'], 20, 2);
+        add_filter('wc_subscriptions_renewal_order_data', [$this, 'exclude_secret_meta_from_renewals']);
+    }
+
+    /**
+     * WooCommerce Subscriptions copies a subscription's meta to every renewal order. The store's login key stays
+     * on the subscription only.
+     *
+     * @param mixed $data meta key => value
+     * @return mixed
+     */
+    public function exclude_secret_meta_from_renewals($data)
+    {
+        if (is_array($data)) {
+            unset($data[Tenant::TENANT_PRIVATE_KEY_META], $data[Tenant::LEGACY_TENANT_PRIVATE_KEY_META]);
+        }
+        return $data;
     }
 
     /**
@@ -71,7 +88,7 @@ class WooCommerceSubscriptions implements SubscriptionPlugin
      */
     public function on_item_added($subscription): void
     {
-        do_action('wpcs_tenant_roles_changed', $subscription->get_id(), self::roles_of($subscription->get_items()));
+        do_action('waas_tenant_roles_changed', $subscription->get_id(), self::roles_of($subscription->get_items()));
     }
 
     /**
@@ -81,7 +98,7 @@ class WooCommerceSubscriptions implements SubscriptionPlugin
     public function on_item_removed($line_item, $subscription): void
     {
         $items = array_filter($subscription->get_items(), fn ($item) => $item->get_id() !== $line_item->get_id());
-        do_action('wpcs_tenant_roles_changed', $subscription->get_id(), self::roles_of($items));
+        do_action('waas_tenant_roles_changed', $subscription->get_id(), self::roles_of($items));
     }
 
     public function get_parent_order(\WC_Order $subscription): ?\WC_Order
@@ -119,7 +136,7 @@ class WooCommerceSubscriptions implements SubscriptionPlugin
     {
         $roles = [];
         foreach ($items as $item) {
-            $role = (string) (new WPCSProduct($item->get_product_id()))->get_role();
+            $role = (string) (new StoreProduct($item->get_product_id()))->get_role();
             if ($role !== '') {
                 $roles[] = $role;
             }

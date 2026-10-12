@@ -28,30 +28,29 @@ class ConfigServiceTest extends TestCase
         $this->assertSame('https://api.example.com', (new ConfigService())->get_api_base_url());
     }
 
-    public function test_base_url_setting_overrides_region(): void
-    {
-        $this->options['wpcs_credentials_api_base_url_setting'] = 'https://api.example.com';
-        $this->options['wpcs_credentials_region_setting'] = 'eu1';
-
-        $this->assertSame('https://api.example.com', (new ConfigService())->get_api_base_url());
-    }
-
-    public function test_falls_back_to_region_host_when_no_base_url(): void
-    {
-        $this->options['wpcs_credentials_region_setting'] = 'us1';
-
-        $this->assertSame('https://api.us1.wpcs.io', (new ConfigService())->get_api_base_url());
-    }
-
-    public function test_empty_base_url_setting_falls_back_to_region(): void
+    /** The WPCS-era region setting no longer sends anything to WPCS's hosts. */
+    public function test_a_leftover_region_setting_is_ignored(): void
     {
         $this->options['wpcs_credentials_api_base_url_setting'] = '';
         $this->options['wpcs_credentials_region_setting'] = 'eu1';
 
-        $this->assertSame('https://api.eu1.wpcs.io', (new ConfigService())->get_api_base_url());
+        $this->assertFalse((new ConfigService())->get_api_base_url());
     }
 
-    public function test_false_when_neither_base_url_nor_region(): void
+    public function test_waas_constants_win_and_wpcs_constants_still_work(): void
+    {
+        define('WPCS_CONFIG_TEST_OLD_ONLY', 'old');
+        define('WPCS_CONFIG_TEST_BOTH', 'old');
+        define('WAAS_CONFIG_TEST_BOTH', 'new');
+
+        $this->assertSame('old', ConfigService::constant('CONFIG_TEST_OLD_ONLY'));
+        $this->assertSame('new', ConfigService::constant('CONFIG_TEST_BOTH'));
+        $this->assertTrue(ConfigService::has_constant('CONFIG_TEST_OLD_ONLY'));
+        $this->assertFalse(ConfigService::has_constant('CONFIG_TEST_NEITHER'));
+        $this->assertNull(ConfigService::constant('CONFIG_TEST_NEITHER'));
+    }
+
+    public function test_false_without_a_base_url(): void
     {
         $this->assertFalse((new ConfigService())->get_api_base_url());
     }
@@ -59,12 +58,12 @@ class ConfigServiceTest extends TestCase
     public function test_filter_can_change_base_url(): void
     {
         $this->options['wpcs_credentials_api_base_url_setting'] = 'https://api.example.com';
-        Filters\expectApplied('wpcs_settings_api_base_url')->once()->andReturn('http://localhost:4111/');
+        Filters\expectApplied('waas_settings_api_base_url')->once()->andReturn('http://localhost:4111/');
 
         $this->assertSame('http://localhost:4111', (new ConfigService())->get_api_base_url());
     }
 
-    public function test_credentials_incomplete_without_base_url_or_region(): void
+    public function test_credentials_incomplete_without_base_url(): void
     {
         $this->options['wpcs_credentials_api_key_setting'] = 'key';
         $this->options['wpcs_credentials_api_secret_setting'] = 'secret';

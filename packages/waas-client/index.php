@@ -6,18 +6,21 @@ require_once(ABSPATH . '/wp-admin/includes/plugin.php');
 /*
 Plugin Name: WaaS Client
 Plugin URI: https://github.com/hamchowderr/waas-plugins
-Description: This plugin is used as counterpart for the WaaS-Host plugin in repository https://github.com/hamchowderr/waas-plugins (forked from https://github.com/Daxez/waas-wpcs) and enables single sign on from the Host as well as enabling/disabling certain plugins as described by the roles settings.
-Author: WPCS
+Description: Runs on each WaaS store: one-click login from the storefront, and turns plugins on or off to match the store's plan (roles).
+Author: Otaku Solutions
 Version: 2.2.7
-Author URI: https://wpcs.io
+Author URI: https://otakusolutions.io
 Update URI: wpcs-waas-client
+License: GPL-3.0-or-later
+License URI: https://www.gnu.org/licenses/gpl-3.0.html
+Text Domain: waas-client
 */
 
-define( 'WPCS_WAAS_CLIENT_SLUG', 'wpcs-waas-client' );
-define( 'WPCS_WAAS_CLIENT_BASENAME', plugin_basename( __FILE__ ) );
-define( 'WPCS_WAAS_CLIENT_UPDATE_URI', 'wpcs-waas-client' );
-define( 'WPCS_WAAS_CLIENT_VERSION', '2.2.7' );
-define( 'WPCS_WAAS_CLIENT_TEXTDOMAIN', 'wpcs-waas-client-textdomain' );
+define( 'WAAS_CLIENT_SLUG', 'wpcs-waas-client' );
+define( 'WAAS_CLIENT_BASENAME', plugin_basename( __FILE__ ) );
+define( 'WAAS_CLIENT_UPDATE_URI', 'wpcs-waas-client' );
+define( 'WAAS_CLIENT_VERSION', '2.2.7' );
+define( 'WAAS_CLIENT_TEXTDOMAIN', 'waas-client' );
 
 use WaaSClient\Api\SingleSignOnController;
 use WaaSClient\Core\DecryptionService;

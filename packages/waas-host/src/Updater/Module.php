@@ -21,11 +21,11 @@ class Module
         });
 
         $updater = new Updater([
-            'slug' => WPCS_WAAS_HOST_SLUG,
+            'slug' => WAAS_HOST_SLUG,
             'name' => 'WaaS Host',
-            'basename' => WPCS_WAAS_HOST_BASENAME,
-            'version' => WPCS_WAAS_HOST_VERSION,
-            'update_uri' => WPCS_WAAS_HOST_UPDATE_URI,
+            'basename' => WAAS_HOST_BASENAME,
+            'version' => WAAS_HOST_VERSION,
+            'update_uri' => WAAS_HOST_UPDATE_URI,
         ]);
         $updater->register();
         return $updater;

@@ -9,14 +9,14 @@ use WaaSHost\Commerce\FluentCart\FluentCartAdapter;
 use WaaSHost\Commerce\FluentCart\FluentCartCheckout;
 use WaaSHost\Commerce\FluentCart\FluentCartStore;
 use WaaSHost\Core\Exceptions\InvalidDomainException;
-use WaaSHost\Core\WPCSService;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\ProvisioningApi;
+use WaaSHost\Core\Tenant;
 
 class FluentCartCheckoutTest extends TestCase
 {
-    private const FIELD = WPCSTenant::WPCS_WEBSITE_NAME_META;
+    private const FIELD = Tenant::WEBSITE_NAME_META;
 
-    private $wpcs;
+    private $api;
     private $store;
     private FluentCartCheckout $checkout;
     private object $plan_cart;
@@ -31,7 +31,7 @@ class FluentCartCheckoutTest extends TestCase
         Functions\when('sanitize_title_with_dashes')->alias(fn ($s) => trim(preg_replace('/[^a-z0-9]+/', '-', strtolower($s)), '-'));
         Functions\when('get_option')->alias(fn ($key, $default = '') => $key === 'wpcs_host_settings_root_domain' ? 'sites.example' : $default);
 
-        $this->wpcs = Mockery::mock(WPCSService::class);
+        $this->api = Mockery::mock(ProvisioningApi::class);
         $this->store = Mockery::mock(FluentCartStore::class);
         $this->plan_cart = (object) ['cart_data' => [['post_id' => 101]]];
         $this->other_cart = (object) ['cart_data' => [['post_id' => 102]]];
@@ -41,7 +41,7 @@ class FluentCartCheckoutTest extends TestCase
         $this->store->allows('get_plan_feed')->with(102)->andReturnNull();
         $this->store->allows('find_subscription_ids_with_meta')->andReturn([])->byDefault();
 
-        $this->checkout = new FluentCartCheckout($this->wpcs, new FluentCartAdapter($this->store), $this->store);
+        $this->checkout = new FluentCartCheckout($this->api, new FluentCartAdapter($this->store), $this->store);
     }
 
     private function validate(string $website_name, $cart = null): array
@@ -58,7 +58,7 @@ class FluentCartCheckoutTest extends TestCase
 
     public function test_carts_without_a_plan_are_not_validated(): void
     {
-        $this->wpcs->expects('domain_available')->never();
+        $this->api->expects('domain_available')->never();
 
         $this->assertSame([], $this->validate('', $this->other_cart));
     }
@@ -75,21 +75,21 @@ class FluentCartCheckoutTest extends TestCase
 
     public function test_available_name_passes(): void
     {
-        $this->wpcs->expects('domain_available')->with('apex-research.sites.example')->andReturn(true);
+        $this->api->expects('domain_available')->with('apex-research.sites.example')->andReturn(true);
 
         $this->assertSame([], $this->validate('Apex Research'));
     }
 
     public function test_taken_name_is_rejected(): void
     {
-        $this->wpcs->allows('domain_available')->andReturn(false);
+        $this->api->allows('domain_available')->andReturn(false);
 
         $this->assertArrayHasKey('taken', $this->validate('Apex Research')[self::FIELD]);
     }
 
     public function test_invalid_domain_is_rejected(): void
     {
-        $this->wpcs->allows('domain_available')->andThrow(new InvalidDomainException('bad'));
+        $this->api->allows('domain_available')->andThrow(new InvalidDomainException('bad'));
 
         $this->assertArrayHasKey('invalid', $this->validate('Apex Research')[self::FIELD]);
     }
@@ -98,22 +98,22 @@ class FluentCartCheckoutTest extends TestCase
     {
         // Chowderr's decision (waas-91g.20): fail open. It used to refuse with "try again in a minute".
         $previous = ini_set('error_log', '/dev/null');
-        $this->wpcs->allows('domain_available')->andThrow(new \Exception('Something went wrong connecting to the API'));
+        $this->api->allows('domain_available')->andThrow(new \Exception('Something went wrong connecting to the API'));
 
         $this->assertSame([], $this->validate('Apex Research'));
         ini_set('error_log', (string) $previous);
 
         $order = Mockery::mock();
         $order->expects('updateMeta')->with(self::FIELD, 'Apex Research');
-        $order->expects('updateMeta')->with(WPCSTenant::WPCS_WEBSITE_NAME_UNVERIFIED_META, 'yes');
+        $order->expects('updateMeta')->with(Tenant::WEBSITE_NAME_UNVERIFIED_META, 'yes');
         $this->checkout->save(['order' => $order, 'cart' => $this->plan_cart, 'request_data' => [self::FIELD => 'Apex Research']]);
     }
 
     public function test_a_name_another_subscription_here_has_is_refused_without_asking_the_api(): void
     {
-        $this->store->allows('find_subscription_ids_with_meta')->with(WPCSTenant::WPCS_DOMAIN_NAME_META, 'apex-research.sites.example')->andReturn([900]);
-        $this->store->allows('get_subscription_meta')->with(900, WPCSTenant::WPCS_TENANT_STATE)->andReturn(WPCSTenant::QUEUED);
-        $this->wpcs->expects('domain_available')->never();
+        $this->store->allows('find_subscription_ids_with_meta')->with(Tenant::DOMAIN_NAME_META, 'apex-research.sites.example')->andReturn([900]);
+        $this->store->allows('get_subscription_meta')->with(900, Tenant::TENANT_STATE)->andReturn(Tenant::QUEUED);
+        $this->api->expects('domain_available')->never();
 
         $this->assertArrayHasKey('taken', $this->validate('Apex Research')[self::FIELD]);
     }
@@ -121,8 +121,8 @@ class FluentCartCheckoutTest extends TestCase
     public function test_the_name_of_a_deleted_store_can_be_used_again(): void
     {
         $this->store->allows('find_subscription_ids_with_meta')->andReturn([900]);
-        $this->store->allows('get_subscription_meta')->with(900, WPCSTenant::WPCS_TENANT_STATE)->andReturn(WPCSTenant::DELETED);
-        $this->wpcs->expects('domain_available')->andReturn(true);
+        $this->store->allows('get_subscription_meta')->with(900, Tenant::TENANT_STATE)->andReturn(Tenant::DELETED);
+        $this->api->expects('domain_available')->andReturn(true);
 
         $this->assertSame([], $this->validate('Apex Research'));
     }
@@ -130,7 +130,7 @@ class FluentCartCheckoutTest extends TestCase
     public function test_without_a_root_domain_the_api_picks_the_domain(): void
     {
         Functions\when('get_option')->justReturn('');
-        $this->wpcs->expects('domain_available')->never();
+        $this->api->expects('domain_available')->never();
 
         $this->assertSame([], $this->validate('Apex Research'));
     }

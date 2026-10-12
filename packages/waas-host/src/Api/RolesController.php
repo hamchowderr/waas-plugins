@@ -2,24 +2,24 @@
 
 namespace WaaSHost\Api;
 
-use WaaSHost\Core\WPCSService;
+use WaaSHost\Core\ProvisioningApi;
 use WaaSHost\Features\AdminNotices;
 use WaaSHost\Features\PluginBootstrap;
 
 class RolesController
 {
-    public const REFRESH_NONCE_ACTION = 'wpcs_refresh_roles';
+    public const REFRESH_NONCE_ACTION = 'waas_refresh_roles';
     public const REFRESH_LOCK_TRANSIENT = 'wpcs_roles_refresh_lock';
     public const REFRESH_LOCK_SECONDS = 60;
 
-    private WPCSService $wpcsService;
+    private ProvisioningApi $provisioningApi;
 
-    public function __construct(WPCSService $wpcsService)
+    public function __construct(ProvisioningApi $provisioningApi)
     {
-        $this->wpcsService = $wpcsService;
+        $this->provisioningApi = $provisioningApi;
 
         add_action('rest_api_init', [$this, 'register_rest_routes']);
-        add_action('admin_post_wpcs_refresh_roles', [$this, 'admin_post_update_tenant_roles_list']);
+        add_action('admin_post_waas_refresh_roles', [$this, 'admin_post_update_tenant_roles_list']);
     }
 
     public function register_rest_routes()
@@ -36,7 +36,7 @@ class RolesController
 
     public static function get_refresh_url(): string
     {
-        return wp_nonce_url(admin_url('admin-post.php?action=wpcs_refresh_roles'), self::REFRESH_NONCE_ACTION);
+        return wp_nonce_url(admin_url('admin-post.php?action=waas_refresh_roles'), self::REFRESH_NONCE_ACTION);
     }
 
     public function admin_post_update_tenant_roles_list()
@@ -59,14 +59,14 @@ class RolesController
 
     public function update_tenant_roles_list()
     {
-        $wpcs_production_version = $this->wpcsService->get_production_version();
+        $production_version = $this->provisioningApi->get_production_version();
 
-        $wpcs_production_version_domain_name = $wpcs_production_version->domain;
-        if (strpos($wpcs_production_version_domain_name, 'http') !== 0) {
-            $wpcs_production_version_domain_name = 'https://' . $wpcs_production_version_domain_name;
+        $production_version_domain_name = $production_version->domain;
+        if (strpos($production_version_domain_name, 'http') !== 0) {
+            $production_version_domain_name = 'https://' . $production_version_domain_name;
         }
 
-        $response = wp_remote_get(trailingslashit($wpcs_production_version_domain_name) . 'wp-content/plugins/waas-client-data/roles.json');
+        $response = wp_remote_get(trailingslashit($production_version_domain_name) . 'wp-content/plugins/waas-client-data/roles.json');
         $response_code = wp_remote_retrieve_response_code($response);
 
         if(200 !== $response_code) {

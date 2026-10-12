@@ -3,7 +3,7 @@
 namespace WaaSHost\Features;
 
 use WaaSHost\Commerce\Commerce;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\Tenant;
 
 class PluginBootstrap
 {
@@ -65,7 +65,7 @@ class PluginBootstrap
         }
 
         $commerce = Commerce::adapter();
-        if ($commerce === null || empty($commerce->get_subscription_meta($item->get_order_id(), WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META))) {
+        if ($commerce === null || empty($commerce->get_subscription_meta($item->get_order_id(), Tenant::TENANT_EXTERNAL_ID_META))) {
             return $can_remove;
         }
 

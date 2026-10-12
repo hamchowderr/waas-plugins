@@ -1,6 +1,6 @@
 {
-  "name": "wpcs.io/waas-client",
-  "description": "This plugin is used to handle secure communication between tenant on WPCS and Storefront.",
+  "name": "otakusolutions/waas-client",
+  "description": "Runs on each WaaS store: one-click login from the storefront and plan-based plugin roles.",
   "type": "project",
   "autoload": {
     "psr-4": {
@@ -14,8 +14,8 @@
   },
   "authors": [
     {
-      "name": "WPCS.io",
-      "email": "support@wpcs.io"
+      "name": "Otaku Solutions",
+      "homepage": "https://otakusolutions.io"
     }
   ],
   "require-dev": {

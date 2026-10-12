@@ -4,7 +4,7 @@ namespace Tests\Unit\Features;
 
 use Brain\Monkey\Actions;
 use Brain\Monkey\Functions;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\Tenant;
 use WaaSHost\Features\StoreJobs;
 
 /**
@@ -31,7 +31,7 @@ class StoreJobsTest extends StoreJobsTestCase
                 return null;
             });
         }
-        $this->cart->meta[7] = [WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::READY];
+        $this->cart->meta[7] = [Tenant::TENANT_STATE => Tenant::READY];
     }
 
     public function test_enqueue_only_schedules_a_runner(): void
@@ -79,17 +79,17 @@ class StoreJobsTest extends StoreJobsTestCase
         $this->failures['a'] = 99;
         $this->jobs->enqueue(7, 'a');
         $this->jobs->enqueue(7, 'b');
-        Actions\expectDone('wpcs_store_job_failed')->once()->with(7, 'a', 'a failed');
+        Actions\expectDone('waas_store_job_failed')->once()->with(7, 'a', 'a failed');
 
         for ($i = 0; $i <= count(StoreJobs::RETRY_DELAYS); $i++) {
             $this->run_due(7, true);
         }
 
-        $this->assertSame(WPCSTenant::FAILED, $this->cart->meta[7][WPCSTenant::WPCS_TENANT_STATE]);
+        $this->assertSame(Tenant::FAILED, $this->cart->meta[7][Tenant::TENANT_STATE]);
         $failure = $this->cart->meta[7][StoreJobs::FAILURE_META];
         $this->assertSame('a', $failure['op']);
         $this->assertSame(count(StoreJobs::RETRY_DELAYS) + 1, $failure['attempts']);
-        $this->assertSame(WPCSTenant::READY, $failure['state']);
+        $this->assertSame(Tenant::READY, $failure['state']);
         $this->assertSame(['a', 'b'], array_column($this->queue(7), 'op'));
         $this->assertSame([], $this->actions, 'no more runs until an admin retries');
         $this->assertSame([7 => $failure], $this->jobs->failed_stores());
@@ -137,15 +137,15 @@ class StoreJobsTest extends StoreJobsTestCase
         }
 
         $this->jobs->enqueue(7, 'c');
-        $this->jobs->set_status(7, WPCSTenant::SUSPENDED);
+        $this->jobs->set_status(7, Tenant::SUSPENDED);
 
         $this->assertSame([], $this->actions);
-        $this->assertSame(WPCSTenant::FAILED, $this->cart->meta[7][WPCSTenant::WPCS_TENANT_STATE]);
-        $this->assertSame(WPCSTenant::SUSPENDED, $this->jobs->status(7));
+        $this->assertSame(Tenant::FAILED, $this->cart->meta[7][Tenant::TENANT_STATE]);
+        $this->assertSame(Tenant::SUSPENDED, $this->jobs->status(7));
 
         $this->failures['a'] = 0;
         $this->jobs->retry(7);
-        $this->assertSame(WPCSTenant::SUSPENDED, $this->cart->meta[7][WPCSTenant::WPCS_TENANT_STATE]);
+        $this->assertSame(Tenant::SUSPENDED, $this->cart->meta[7][Tenant::TENANT_STATE]);
         $this->assertSame('', $this->cart->meta[7][StoreJobs::FAILURE_META]);
 
         $this->run_due(7);
@@ -213,7 +213,7 @@ class StoreJobsTest extends StoreJobsTestCase
     {
         $this->cart->meta[8] = [
             StoreJobs::QUEUE_META => [['op' => 'b', 'args' => [], 'attempts' => 7]],
-            StoreJobs::FAILURE_META => ['op' => 'b', 'attempts' => 7, 'error' => 'x', 'at' => time(), 'state' => WPCSTenant::READY],
+            StoreJobs::FAILURE_META => ['op' => 'b', 'attempts' => 7, 'error' => 'x', 'at' => time(), 'state' => Tenant::READY],
         ];
 
         $this->jobs->sweep();
@@ -224,7 +224,7 @@ class StoreJobsTest extends StoreJobsTestCase
     public function test_admins_see_failed_stores_with_a_retry_link(): void
     {
         $this->cart->meta[8] = [
-            StoreJobs::FAILURE_META => ['op' => 'create', 'attempts' => 7, 'error' => 'Failed: 503', 'at' => 1791302400, 'state' => WPCSTenant::QUEUED],
+            StoreJobs::FAILURE_META => ['op' => 'create', 'attempts' => 7, 'error' => 'Failed: 503', 'at' => 1791302400, 'state' => Tenant::QUEUED],
         ];
         Functions\when('current_user_can')->justReturn(true);
         Functions\stubTranslationFunctions();
@@ -232,8 +232,8 @@ class StoreJobsTest extends StoreJobsTestCase
         Functions\when('admin_url')->alias(fn ($path = '') => 'https://storefront.example/wp-admin/' . $path);
         Functions\when('wp_nonce_url')->alias(fn ($url, $action) => $url . '&_wpnonce=nonce-for-' . $action);
         Functions\when('wp_date')->alias(fn ($format, $timestamp) => gmdate($format, $timestamp));
-        if (!defined('WPCS_WAAS_HOST_TEXTDOMAIN')) {
-            define('WPCS_WAAS_HOST_TEXTDOMAIN', 'wpcs-waas-host');
+        if (!defined('WAAS_HOST_TEXTDOMAIN')) {
+            define('WAAS_HOST_TEXTDOMAIN', 'waas-host');
         }
 
         ob_start();
@@ -243,7 +243,7 @@ class StoreJobsTest extends StoreJobsTestCase
         $this->assertStringContainsString('1 website could not be updated', $html);
         $this->assertStringContainsString('Subscription #8: &quot;create&quot; failed 7 times', $html);
         $this->assertStringContainsString('Failed: 503', $html);
-        $this->assertStringContainsString('admin-post.php?action=wpcs_retry_store_jobs&subscription_id=8&_wpnonce=nonce-for-wpcs_retry_store_jobs_8', $html);
+        $this->assertStringContainsString('admin-post.php?action=waas_retry_store_jobs&subscription_id=8&_wpnonce=nonce-for-waas_retry_store_jobs_8', $html);
     }
 
     public function test_no_notice_without_failed_stores(): void

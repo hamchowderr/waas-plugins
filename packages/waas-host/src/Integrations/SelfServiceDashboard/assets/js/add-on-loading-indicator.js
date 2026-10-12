@@ -5,14 +5,14 @@ jQuery(function ($) {
         return;
     }
 
-    const spinner = (window.wpcsAddOnLoadingIndicator || {}).spinner || '';
+    const spinner = (window.waasAddOnLoadingIndicator || {}).spinner || '';
 
     $(document).on('click', '.ssd-modal-wrapper .wpr-product-add-button .button', function () {
         const buttonContainer = $(this).parent();
-        if (buttonContainer.find('.wpcs-product-added-spinner').length) {
+        if (buttonContainer.find('.waas-product-added-spinner').length) {
             return;
         }
         buttonContainer.children().hide();
-        buttonContainer.append($('<img class="wpcs-product-added-spinner" alt="" />').attr('src', spinner));
+        buttonContainer.append($('<img class="waas-product-added-spinner" alt="" />').attr('src', spinner));
     });
 });

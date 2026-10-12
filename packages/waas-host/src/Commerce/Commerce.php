@@ -3,7 +3,7 @@
 namespace WaaSHost\Commerce;
 
 use LogicException;
-use WaaSHost\Core\WPCSService;
+use WaaSHost\Core\ProvisioningApi;
 
 /**
  * Registry of cart adapters. The first registered adapter whose cart is active
@@ -26,7 +26,7 @@ final class Commerce
     {
         if (!self::$resolved) {
             $available = array_values(array_filter(self::$adapters, fn (CommerceAdapter $a) => $a->is_available()));
-            $active = apply_filters('wpcs_commerce_adapter', $available[0] ?? null, self::$adapters);
+            $active = apply_filters('waas_commerce_adapter', $available[0] ?? null, self::$adapters);
             self::$active = $active instanceof CommerceAdapter ? $active : null;
             self::$resolved = true;
         }
@@ -50,11 +50,11 @@ final class Commerce
     }
 
     /** Boot the active adapter, if any. */
-    public static function boot(WPCSService $wpcs_service): void
+    public static function boot(ProvisioningApi $provisioning_api): void
     {
         $adapter = self::adapter();
         if ($adapter !== null) {
-            $adapter->boot($wpcs_service);
+            $adapter->boot($provisioning_api);
         }
     }
 

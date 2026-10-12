@@ -5,8 +5,8 @@ if (!defined('ABSPATH')) {
     define('ABSPATH', __DIR__ . '/');
 }
 
-if (!defined('WPCS_WAAS_HOST_TEXTDOMAIN')) {
-    define('WPCS_WAAS_HOST_TEXTDOMAIN', 'wpcs-waas-host');
+if (!defined('WAAS_HOST_TEXTDOMAIN')) {
+    define('WAAS_HOST_TEXTDOMAIN', 'waas-host');
 }
 
 require_once dirname(__DIR__) . '/vendor/autoload.php';

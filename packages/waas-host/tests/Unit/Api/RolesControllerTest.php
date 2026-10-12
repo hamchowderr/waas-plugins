@@ -6,11 +6,11 @@ use Brain\Monkey\Functions;
 use Mockery;
 use Tests\Unit\TestCase;
 use WaaSHost\Api\RolesController;
-use WaaSHost\Core\WPCSService;
+use WaaSHost\Core\ProvisioningApi;
 
 class RolesControllerTest extends TestCase
 {
-    private $wpcs;
+    private $api;
     private RolesController $controller;
 
     public static function setUpBeforeClass(): void
@@ -23,8 +23,8 @@ class RolesControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->wpcs = Mockery::mock(WPCSService::class);
-        $this->controller = new RolesController($this->wpcs);
+        $this->api = Mockery::mock(ProvisioningApi::class);
+        $this->controller = new RolesController($this->api);
 
         Functions\when('esc_html__')->returnArg();
         Functions\when('wp_die')->alias(function ($message, $code) {
@@ -36,7 +36,7 @@ class RolesControllerTest extends TestCase
     {
         Functions\when('current_user_can')->justReturn(false);
         Functions\expect('check_admin_referer')->never();
-        $this->wpcs->shouldNotReceive('get_production_version');
+        $this->api->shouldNotReceive('get_production_version');
 
         $this->expectExceptionMessage('wp_die: 403');
         $this->controller->admin_post_update_tenant_roles_list();
@@ -47,11 +47,11 @@ class RolesControllerTest extends TestCase
         Functions\when('current_user_can')->alias(fn ($cap) => $cap === 'manage_woocommerce');
         Functions\expect('check_admin_referer')
             ->once()
-            ->with('wpcs_refresh_roles')
+            ->with('waas_refresh_roles')
             ->andReturnUsing(function () {
                 throw new \RuntimeException('bad nonce');
             });
-        $this->wpcs->shouldNotReceive('get_production_version');
+        $this->api->shouldNotReceive('get_production_version');
 
         $this->expectExceptionMessage('bad nonce');
         $this->controller->admin_post_update_tenant_roles_list();
@@ -93,7 +93,7 @@ class RolesControllerTest extends TestCase
         Functions\when('admin_url')->alias(fn ($path) => 'https://shop.test/wp-admin/' . $path);
         Functions\expect('wp_nonce_url')
             ->once()
-            ->with('https://shop.test/wp-admin/admin-post.php?action=wpcs_refresh_roles', 'wpcs_refresh_roles')
+            ->with('https://shop.test/wp-admin/admin-post.php?action=waas_refresh_roles', 'waas_refresh_roles')
             ->andReturn('signed');
 
         $this->assertSame('signed', RolesController::get_refresh_url());
@@ -101,7 +101,7 @@ class RolesControllerTest extends TestCase
 
     private function expectRolesFetched(): void
     {
-        $this->wpcs->expects('get_production_version')
+        $this->api->expects('get_production_version')
             ->andReturn((object) ['domain' => 'template.example.com']);
         Functions\when('trailingslashit')->alias(fn ($url) => rtrim($url, '/') . '/');
         Functions\expect('wp_remote_get')

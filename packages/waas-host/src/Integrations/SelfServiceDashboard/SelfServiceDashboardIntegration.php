@@ -30,13 +30,13 @@ class SelfServiceDashboardIntegration
             $version = date("ymd-Gis", filemtime( plugin_dir_path( __FILE__ ) . "assets/js/$script_name" ));
             wp_enqueue_script('add-on-loading-indicator', $src, ['jquery'], $version, true);
             // The admin URL, not /wp-admin/: WordPress may live in a subdirectory.
-            wp_localize_script('add-on-loading-indicator', 'wpcsAddOnLoadingIndicator', ['spinner' => admin_url('images/spinner.gif')]);
+            wp_localize_script('add-on-loading-indicator', 'waasAddOnLoadingIndicator', ['spinner' => admin_url('images/spinner.gif')]);
         }
     }
 
     public static function rename_add_new_product_to_add_new_subscription($link)
     {
-        return str_replace('Add new product', __('Add new add-on', WPCS_WAAS_HOST_TEXTDOMAIN), $link);
+        return str_replace('Add new product', __('Add new add-on', WAAS_HOST_TEXTDOMAIN), $link);
     }
 
     public static function only_show_addons_when_adding_ons($args)

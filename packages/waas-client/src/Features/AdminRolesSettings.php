@@ -23,18 +23,18 @@ class AdminRolesSettings
 
     public function add_admin_settings_styles()
     {
-        wp_enqueue_style('wpcs-admin-styles', WAAS_PLUGIN_DIR_URI . '/assets/style.css', null, PluginBootstrap::PLUGIN_VERSION);
-        wp_enqueue_script('wpcs-admin-scripts', WAAS_PLUGIN_DIR_URI . '/assets/scripts.js', null, PluginBootstrap::PLUGIN_VERSION);
+        wp_enqueue_style('waas-admin-styles', WAAS_PLUGIN_DIR_URI . '/assets/style.css', null, PluginBootstrap::PLUGIN_VERSION);
+        wp_enqueue_script('waas-admin-scripts', WAAS_PLUGIN_DIR_URI . '/assets/scripts.js', null, PluginBootstrap::PLUGIN_VERSION);
     }
 
     public function add_roles_page()
     {
         add_submenu_page(
-            'wpcs-admin-tenant',
+            'waas-admin-tenant',
             'Roles',
             'Roles',
             'manage_options',
-            'wpcs-plugins-roles',
+            'waas-plugins-roles',
             [$this, 'render_roles_page'],
             10
         );
@@ -73,9 +73,9 @@ class AdminRolesSettings
             <?php wp_nonce_field('save_roles', 'save_roles_nonce'); ?>
             <input type="hidden" name="action" value="save_roles">
 
-            <div class="wpcs roles-container">
+            <div class="waas roles-container">
                 <?php foreach ($roles as $role_name => $role_data) : ?>
-                    <div id='wpcs-role-<?= $role_name ?>' class='wpcs single-role-container'>
+                    <div id='waas-role-<?= $role_name ?>' class='waas single-role-container'>
                         <input type='hidden' name='delete_roles[<?= $role_name ?>]' value="0" />
                         <h2><?= $role_data['title'] ?></h2>
                         <span>(<?= $role_name ?>)</span>
@@ -87,7 +87,7 @@ class AdminRolesSettings
                                 </li>
                             <?php endforeach; ?>
                         </ul>
-                        <button type="button" class='button-secondary wpcs-mark-role-delete' data-target-role='<?= $role_name ?>'>Mark
+                        <button type="button" class='button-secondary waas-mark-role-delete' data-target-role='<?= $role_name ?>'>Mark
                             Delete Role
                         </button>
                     </div>

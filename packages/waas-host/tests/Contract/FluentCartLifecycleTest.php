@@ -13,8 +13,8 @@ use WaaSHost\Commerce\FluentCart\WaasProvisioningIntegration;
 use WaaSHost\Core\ConfigService;
 use WaaSHost\Core\HttpService;
 use WaaSHost\Core\PrivateKeyStore;
-use WaaSHost\Core\WPCSService;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\ProvisioningApi;
+use WaaSHost\Core\Tenant;
 use WaaSHost\Features\StoreJobs;
 use WaaSHost\Features\TenantsSubscriptionManager;
 
@@ -73,7 +73,7 @@ class FluentCartLifecycleTest extends TestCase
         $store->allows('get_order_product_ids')->with($this->order)->andReturn([101, 102]);
         $store->allows('get_plan_feed')->with(101)->andReturn(['enabled' => 'yes', 'role' => 'peptide-store', 'group_name' => 'peptide-starter']);
         $store->allows('get_plan_feed')->with(102)->andReturnNull();
-        $store->allows('get_order_meta')->with($this->order, WPCSTenant::WPCS_WEBSITE_NAME_META)->andReturn('Apex Research');
+        $store->allows('get_order_meta')->with($this->order, Tenant::WEBSITE_NAME_META)->andReturn('Apex Research');
         // The feeds run after FluentCart changed the subscription; a cancel finds it canceled.
         $store->allows('get_subscription_status')->andReturnUsing(fn () => $this->canceled ? 'canceled' : 'active');
         $store->allows('get_paid_through')->andReturnUsing(fn () => $this->paid_through);
@@ -85,18 +85,18 @@ class FluentCartLifecycleTest extends TestCase
         $store->allows('get_subscription_customer')->andReturn(['user_id' => 7, 'email' => 'owner@apexresearch.example', 'name' => 'Jordan Reyes']);
 
         Commerce::register(new FluentCartAdapter($store));
-        $service = new WPCSService(new HttpService(new ConfigService()));
+        $service = new ProvisioningApi(new HttpService(new ConfigService()));
         $this->jobs = $this->use_store_jobs();
         $this->manager = new TenantsSubscriptionManager($service, $this->jobs);
         $this->integration = new WaasProvisioningIntegration($service, $store);
 
         // Wire the two actions the integration fires to the shared code. Cancellation is wired straight to the
         // grace-period deletion: the mock has no suspend example yet (waas-api-2hl.5); the unit tests cover suspend.
-        Actions\expectDone('wpcs_subscription_created')->zeroOrMoreTimes()
+        Actions\expectDone('waas_subscription_created')->zeroOrMoreTimes()
             ->whenHappen(fn ($id, $order) => $this->manager->create_tenant_when_subscription_created($id, $order));
-        Actions\expectDone('wpcs_subscription_expired')->zeroOrMoreTimes()
+        Actions\expectDone('waas_subscription_expired')->zeroOrMoreTimes()
             ->whenHappen(fn ($id) => $this->manager->delete_suspended_tenant($id));
-        Actions\expectDone('wpcs_subscription_canceled_until')->zeroOrMoreTimes()
+        Actions\expectDone('waas_subscription_canceled_until')->zeroOrMoreTimes()
             ->whenHappen(fn ($id, $until) => $this->manager->suspend_at_end_of_paid_period($id, $until));
     }
 
@@ -133,14 +133,14 @@ class FluentCartLifecycleTest extends TestCase
         $this->assertSame('peptide-store', $sent['phpConstants']['WPCS_TENANT_ROLES']['value']);
 
         $meta = $this->meta[self::SUBSCRIPTION_ID];
-        $this->assertSame('store-1042', $meta[WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META]);
-        $this->assertSame('apex-research.stores.waas.example', $meta[WPCSTenant::WPCS_DOMAIN_NAME_META]);
+        $this->assertSame('store-1042', $meta[Tenant::TENANT_EXTERNAL_ID_META]);
+        $this->assertSame('apex-research.stores.waas.example', $meta[Tenant::DOMAIN_NAME_META]);
         $this->assertStringContainsString('PRIVATE KEY', PrivateKeyStore::load(self::SUBSCRIPTION_ID));
     }
 
     public function test_a_second_activation_does_not_create_another_store(): void
     {
-        $this->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META] = 'store-1042';
+        $this->meta[self::SUBSCRIPTION_ID][Tenant::TENANT_EXTERNAL_ID_META] = 'store-1042';
 
         $this->run_feed('subscription_reactivated');
 
@@ -149,8 +149,8 @@ class FluentCartLifecycleTest extends TestCase
 
     public function test_cancel_ends_with_deleting_the_suspended_store_by_external_id(): void
     {
-        $this->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META] = 'store-1042';
-        $this->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_TENANT_STATE] = WPCSTenant::SUSPENDED;
+        $this->meta[self::SUBSCRIPTION_ID][Tenant::TENANT_EXTERNAL_ID_META] = 'store-1042';
+        $this->meta[self::SUBSCRIPTION_ID][Tenant::TENANT_STATE] = Tenant::SUSPENDED;
         $this->mock_example('Delete tenant: Scheduled');
 
         $this->run_feed('subscription_canceled');
@@ -161,22 +161,22 @@ class FluentCartLifecycleTest extends TestCase
 
     public function test_a_cancel_with_paid_time_left_waits_for_the_end_of_the_period(): void
     {
-        $this->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META] = 'store-1042';
-        $this->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_TENANT_STATE] = WPCSTenant::READY;
+        $this->meta[self::SUBSCRIPTION_ID][Tenant::TENANT_EXTERNAL_ID_META] = 'store-1042';
+        $this->meta[self::SUBSCRIPTION_ID][Tenant::TENANT_STATE] = Tenant::READY;
         $this->paid_through = time() + 30 * 86400;
 
         $this->run_feed('subscription_canceled');
 
         $this->assertSame([], $this->requests, 'nothing reaches the API before the end of the paid period');
-        $this->assertSame(WPCSTenant::READY, $this->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_TENANT_STATE]);
-        $this->assertSame($this->paid_through, $this->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_TENANT_SUSPEND_AT_META]);
+        $this->assertSame(Tenant::READY, $this->meta[self::SUBSCRIPTION_ID][Tenant::TENANT_STATE]);
+        $this->assertSame($this->paid_through, $this->meta[self::SUBSCRIPTION_ID][Tenant::TENANT_SUSPEND_AT_META]);
         $this->assertSame([[$this->paid_through, TenantsSubscriptionManager::SUSPEND_AT_PERIOD_END_HOOK, [self::SUBSCRIPTION_ID]]], $this->scheduled);
 
         // The end of the paid period, with the subscription still cancelled: the usual cancel path. Its suspend job is
         // not run here: the mock has no suspend example yet (waas-api-2hl.5); the unit tests run it.
         $this->manager->paid_period_ended(self::SUBSCRIPTION_ID);
 
-        $this->assertSame(WPCSTenant::SUSPENDED, $this->meta[self::SUBSCRIPTION_ID][WPCSTenant::WPCS_TENANT_STATE]);
+        $this->assertSame(Tenant::SUSPENDED, $this->meta[self::SUBSCRIPTION_ID][Tenant::TENANT_STATE]);
         $queue = $this->meta[self::SUBSCRIPTION_ID][StoreJobs::QUEUE_META];
         $this->assertSame(['suspend'], array_column($queue, 'op'));
         $this->assertTrue($queue[0]['args']['backup']);

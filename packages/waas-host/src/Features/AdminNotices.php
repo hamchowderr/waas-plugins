@@ -8,7 +8,7 @@ class AdminNotices
 {
     const REFRESH_ROLES_FAILED_NOTICE = 'refresh_roles_failed_notice';
     /** The plugin's own admin pages, the only places the DNS settings warning shows. */
-    const PLUGIN_PAGES = ['wpcs-admin', 'wpcs-admin-settings'];
+    const PLUGIN_PAGES = ['waas-admin', 'waas-admin-settings'];
 
     private static ConfigService $config;
 
@@ -38,7 +38,7 @@ class AdminNotices
             return;
         }
 
-        $settings_url = admin_url('admin.php?page=wpcs-admin-settings');
+        $settings_url = admin_url('admin.php?page=waas-admin-settings');
         echo '<div class="notice notice-warning"><p>'
             . esc_html('Custom domain DNS settings missing: ' . implode(', ', $missing) . '. Customers get no DNS instructions for these on their domain page; with neither set, they are told to contact support. ')
             . '<a href="' . esc_url($settings_url) . '">' . esc_html('Set them in Settings') . '</a>.</p></div>';

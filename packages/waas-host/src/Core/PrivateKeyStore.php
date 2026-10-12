@@ -12,7 +12,9 @@ use WaaSHost\Commerce\Commerce;
  * WordPress's auth salt. Either way a database dump alone no longer yields working login keys. Rotating that
  * secret makes the stored keys unreadable, so define the constant and keep it stable.
  *
- * Keys saved before encryption (plain PEM) are still read, and re-saved encrypted on first read.
+ * Keys saved before encryption (plain PEM) are still read, and re-saved encrypted on first read. So are keys under
+ * the old meta name (Tenant::LEGACY_TENANT_PRIVATE_KEY_META): they move to Tenant::TENANT_PRIVATE_KEY_META and the
+ * old value is cleared.
  */
 class PrivateKeyStore
 {
@@ -21,7 +23,7 @@ class PrivateKeyStore
 
     public static function save($subscription_id, string $private_key): void
     {
-        Commerce::require_adapter()->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_PRIVATE_KEY_META, self::seal($private_key));
+        Commerce::require_adapter()->update_subscription_meta($subscription_id, Tenant::TENANT_PRIVATE_KEY_META, self::seal($private_key));
     }
 
     /**
@@ -29,9 +31,20 @@ class PrivateKeyStore
      */
     public static function load($subscription_id): string
     {
-        $stored = (string) Commerce::require_adapter()->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_PRIVATE_KEY_META);
+        $commerce = Commerce::require_adapter();
+        $stored = (string) $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_PRIVATE_KEY_META);
         if ($stored === '') {
-            return '';
+            $legacy = (string) $commerce->get_subscription_meta($subscription_id, Tenant::LEGACY_TENANT_PRIVATE_KEY_META);
+            if ($legacy === '') {
+                return '';
+            }
+
+            $plaintext = self::is_sealed($legacy) ? self::open($legacy) : $legacy;
+            if ($plaintext !== '') {
+                self::save($subscription_id, $plaintext);
+                $commerce->update_subscription_meta($subscription_id, Tenant::LEGACY_TENANT_PRIVATE_KEY_META, '');
+            }
+            return $plaintext;
         }
 
         if (!self::is_sealed($stored)) {
@@ -41,6 +54,23 @@ class PrivateKeyStore
         }
 
         return self::open($stored);
+    }
+
+    /**
+     * Moves every key still under the old meta name. Returns how many subscriptions were looked at.
+     */
+    public static function migrate_legacy_keys(): int
+    {
+        $commerce = Commerce::adapter();
+        if ($commerce === null) {
+            return 0;
+        }
+
+        $legacy = $commerce->find_subscriptions_by_meta(Tenant::LEGACY_TENANT_PRIVATE_KEY_META, ['']);
+        foreach (array_keys($legacy) as $subscription_id) {
+            self::load($subscription_id);
+        }
+        return count($legacy);
     }
 
     public static function is_sealed(string $stored): bool

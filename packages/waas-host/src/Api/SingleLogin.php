@@ -6,7 +6,7 @@ use WaaSHost\Commerce\Commerce;
 use WaaSHost\Features\PluginBootstrap;
 use WaaSHost\Core\EncryptionService;
 use WaaSHost\Core\PrivateKeyStore;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\Tenant;
 use WaaSHost\Features\SingleLoginService;
 use WP_REST_Request;
 
@@ -56,8 +56,8 @@ class SingleLogin
     public static function get_login_link($subscription_id, $expiry_delay_in_seconds)
     {
         $commerce = Commerce::require_adapter();
-        $domain = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META);
-        $base_domain = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_BASE_DOMAIN_NAME_META);
+        $domain = $commerce->get_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META);
+        $base_domain = $commerce->get_subscription_meta($subscription_id, Tenant::BASE_DOMAIN_NAME_META);
 
         $domain = $domain ?: $base_domain;
 

@@ -15,7 +15,7 @@ class PluginHeaderTest extends TestCase
         $this->assertMatchesRegularExpression('/^Requires at least: \d+\.\d+$/m', $header[0]);
         $this->assertMatchesRegularExpression('/^License: GPL-3\.0-or-later$/m', $header[0]);
 
-        preg_match("/define\( 'WPCS_WAAS_HOST_TEXTDOMAIN', '([^']+)' \)/", $index, $domain);
+        preg_match("/define\( 'WAAS_HOST_TEXTDOMAIN', '([^']+)' \)/", $index, $domain);
         $this->assertMatchesRegularExpression('/^Text Domain: ' . preg_quote($domain[1], '/') . '$/m', $header[0]);
     }
 
@@ -25,7 +25,7 @@ class PluginHeaderTest extends TestCase
         $index = file_get_contents(dirname(__DIR__, 2) . '/index.php');
         preg_match('/^Version: (\S+)$/m', $index, $header);
         preg_match('/^ \* @version (\S+)$/m', $index, $docblock);
-        preg_match("/define\( 'WPCS_WAAS_HOST_VERSION', '([^']+)' \)/", $index, $constant);
+        preg_match("/define\( 'WAAS_HOST_VERSION', '([^']+)' \)/", $index, $constant);
         $this->assertSame($header[1], $docblock[1]);
         $this->assertSame($header[1], $constant[1]);
         $this->assertMatchesRegularExpression('/^Update URI: wpcs-waas-host$/m', $index);

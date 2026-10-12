@@ -7,24 +7,24 @@ use WaaSHost\Core\ConfigService;
 use WaaSHost\Core\Exceptions\InvalidApiKeyException;
 use WaaSHost\Core\Exceptions\InvalidDomainException;
 use WaaSHost\Core\HttpService;
-use WaaSHost\Core\WPCSService;
+use WaaSHost\Core\ProvisioningApi;
 
 /**
  * Runs the plugin's real API client against the provisioning API (see MockApi).
  *
  * @group mock
  */
-class WPCSServiceContractTest extends TestCase
+class ProvisioningApiContractTest extends TestCase
 {
     use MockApi;
 
-    private WPCSService $service;
+    private ProvisioningApi $service;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->use_mock_api();
-        $this->service = new WPCSService(new HttpService(new ConfigService()));
+        $this->service = new ProvisioningApi(new HttpService(new ConfigService()));
     }
 
     public function test_connection_test_succeeds(): void

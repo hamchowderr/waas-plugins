@@ -2,7 +2,7 @@
 // Read-only: the latest WP Swings subscriptions and what waas-host holds for each, one line each. No customer data.
 //   sh /opt/wpcli/x/setup.sh watch
 use WaaSHost\Commerce\Commerce;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\Tenant;
 use WaaSHost\Features\TenantsSubscriptionManager;
 
 $utc = fn ($t) => $t ? gmdate('Y-m-d H:i', (int) $t) . 'Z' : '-';
@@ -21,10 +21,10 @@ foreach ($ids as $id) {
         . ' pay=' . $sub->get_payment_method()
         . ' parent=' . ($parent ? $parent->get_id() . ':' . $parent->get_status() : '-')
         . ' next_payment=' . ($next ? $utc($next - $offset) : '-')
-        . ' | store=' . ($meta(WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META) ? 'yes' : 'no')
-        . ' state=' . ($meta(WPCSTenant::WPCS_TENANT_STATE) ?: '-')
-        . ' suspend_at=' . $utc($meta(WPCSTenant::WPCS_TENANT_SUSPEND_AT_META))
-        . ' delete_at=' . $utc($meta(WPCSTenant::WPCS_TENANT_DELETE_AT_META))
+        . ' | store=' . ($meta(Tenant::TENANT_EXTERNAL_ID_META) ? 'yes' : 'no')
+        . ' state=' . ($meta(Tenant::TENANT_STATE) ?: '-')
+        . ' suspend_at=' . $utc($meta(Tenant::TENANT_SUSPEND_AT_META))
+        . ' delete_at=' . $utc($meta(Tenant::TENANT_DELETE_AT_META))
         . ' held=' . ($meta('_waas_store_suspended') ?: '-')
         . ' cron_suspend=' . $utc(wp_next_scheduled(TenantsSubscriptionManager::SUSPEND_AT_PERIOD_END_HOOK, [$id]))
         . "\n";

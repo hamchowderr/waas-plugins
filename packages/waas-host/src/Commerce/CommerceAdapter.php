@@ -2,7 +2,7 @@
 
 namespace WaaSHost\Commerce;
 
-use WaaSHost\Core\WPCSService;
+use WaaSHost\Core\ProvisioningApi;
 
 /**
  * What the storefront needs from the cart it runs on. One adapter is active per
@@ -27,7 +27,7 @@ interface CommerceAdapter
      * wpcs_subscription_reactivated (active after a hold) and wpcs_subscription_expired
      * (cancelled or expired).
      */
-    public function boot(WPCSService $wpcs_service): void;
+    public function boot(ProvisioningApi $provisioning_api): void;
 
     /**
      * What a new store needs from the purchase: its website-plan products (with the

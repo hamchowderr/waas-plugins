@@ -4,8 +4,8 @@ namespace WaaSHost\Commerce\FluentCart;
 
 use FluentCart\App\Modules\Integrations\BaseIntegrationManager;
 use WaaSHost\Api\RolesController;
-use WaaSHost\Core\WPCSService;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\ProvisioningApi;
+use WaaSHost\Core\Tenant;
 use WaaSHost\Features\PluginBootstrap;
 
 /**
@@ -32,16 +32,16 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
 
     public $scopes = ['product'];
 
-    private WPCSService $wpcs_service;
+    private ProvisioningApi $provisioning_api;
     private FluentCartStore $store;
 
-    public function __construct(WPCSService $wpcs_service, FluentCartStore $store)
+    public function __construct(ProvisioningApi $provisioning_api, FluentCartStore $store)
     {
-        parent::__construct(__('WaaS Provisioning', WPCS_WAAS_HOST_TEXTDOMAIN), self::KEY, 20);
+        parent::__construct(__('WaaS Provisioning', WAAS_HOST_TEXTDOMAIN), self::KEY, 20);
 
-        $this->wpcs_service = $wpcs_service;
+        $this->provisioning_api = $provisioning_api;
         $this->store = $store;
-        $this->description = __('Create a website for the customer when they subscribe to this product. When the subscription ends, the website is backed up and taken offline, then deleted after the grace period set in the WaaS settings.', WPCS_WAAS_HOST_TEXTDOMAIN);
+        $this->description = __('Create a website for the customer when they subscribe to this product. When the subscription ends, the website is backed up and taken offline, then deleted after the grace period set in the WaaS settings.', WAAS_HOST_TEXTDOMAIN);
         $this->disableGlobalSettings = true;
     }
 
@@ -60,7 +60,7 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
     {
         return [
             'enabled' => 'yes',
-            'name' => __('Website plan', WPCS_WAAS_HOST_TEXTDOMAIN),
+            'name' => __('Website plan', WAAS_HOST_TEXTDOMAIN),
             'role' => '',
             'group_name' => '',
             'event_trigger' => self::DEFAULT_TRIGGERS,
@@ -77,7 +77,7 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
 
         $groups = [];
         try {
-            foreach ($this->wpcs_service->get_available_groupnames() as $group_name) {
+            foreach ($this->provisioning_api->get_available_groupnames() as $group_name) {
                 $groups[(string) $group_name] = (string) $group_name;
             }
         } catch (\Exception $e) {
@@ -87,37 +87,37 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
         $fields = [
             [
                 'key' => 'name',
-                'label' => __('Feed Title', WPCS_WAAS_HOST_TEXTDOMAIN),
+                'label' => __('Feed Title', WAAS_HOST_TEXTDOMAIN),
                 'required' => true,
                 'component' => 'text',
-                'placeholder' => __('Website plan', WPCS_WAAS_HOST_TEXTDOMAIN),
+                'placeholder' => __('Website plan', WAAS_HOST_TEXTDOMAIN),
             ],
             [
                 'key' => 'role',
-                'label' => __('Role', WPCS_WAAS_HOST_TEXTDOMAIN),
+                'label' => __('Role', WAAS_HOST_TEXTDOMAIN),
                 'component' => 'select',
                 'is_multiple' => false,
                 'required' => false,
                 'options' => $roles,
                 'inline_tip' => sprintf(
                     /* translators: %s: link that reloads the roles from the provisioning API */
-                    __('Decides which plugins the website gets. Missing a role? %s', WPCS_WAAS_HOST_TEXTDOMAIN),
-                    '<a href="' . esc_url(RolesController::get_refresh_url()) . '">' . __('Refresh roles', WPCS_WAAS_HOST_TEXTDOMAIN) . '</a>'
+                    __('Decides which plugins the website gets. Missing a role? %s', WAAS_HOST_TEXTDOMAIN),
+                    '<a href="' . esc_url(RolesController::get_refresh_url()) . '">' . __('Refresh roles', WAAS_HOST_TEXTDOMAIN) . '</a>'
                 ),
             ],
             [
                 'key' => 'group_name',
-                'label' => __('Snapshot group', WPCS_WAAS_HOST_TEXTDOMAIN),
+                'label' => __('Snapshot group', WAAS_HOST_TEXTDOMAIN),
                 'component' => 'select',
                 'is_multiple' => false,
                 'required' => false,
                 'options' => $groups,
-                'inline_tip' => __('The website starts as a copy of this snapshot group. Leave empty for the default.', WPCS_WAAS_HOST_TEXTDOMAIN),
+                'inline_tip' => __('The website starts as a copy of this snapshot group. Leave empty for the default.', WAAS_HOST_TEXTDOMAIN),
             ],
             [
                 'key' => 'watch_on_access_revoke',
                 'component' => 'yes-no-checkbox',
-                'checkbox_label' => __('Take the website offline on refund or when subscription access expires', WPCS_WAAS_HOST_TEXTDOMAIN),
+                'checkbox_label' => __('Take the website offline on refund or when subscription access expires', WAAS_HOST_TEXTDOMAIN),
             ],
             $this->actionFields(),
         ];
@@ -125,7 +125,7 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
         return [
             'fields' => $fields,
             'button_require_list' => false,
-            'integration_title' => __('WaaS Provisioning', WPCS_WAAS_HOST_TEXTDOMAIN),
+            'integration_title' => __('WaaS Provisioning', WAAS_HOST_TEXTDOMAIN),
         ];
     }
 
@@ -148,41 +148,41 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
         $subscription_id = (int) $subscription->id;
 
         if ($is_revoke || in_array($trigger, self::REMOVE_TRIGGERS, true)) {
-            if (empty($this->store->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META))
-                && !is_array($this->store->get_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META))) {
+            if (empty($this->store->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META))
+                && !is_array($this->store->get_subscription_meta($subscription_id, Tenant::NAME_CONFLICT_META))) {
                 return; // never created, and not waiting for a new name
             }
             $is_active = in_array($this->store->get_subscription_status($subscription_id), FluentCartStore::ACTIVE_STATUSES, true);
             // Feeds run in the background, so a cancel can be handled after the reactivation that followed it.
             if (!$is_revoke && $is_active) {
-                $order->addLog(__('Website kept', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s): the subscription is active again', $subscription_id, $trigger), 'info', 'WaaS');
+                $order->addLog(__('Website kept', WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s): the subscription is active again', $subscription_id, $trigger), 'info', 'WaaS');
                 return;
             }
             // A refund (revoke) leaves the subscription active, so refunding the order that bought it counts. A
             // renewal order refunded or cancelled while the subscription carries on doesn't: the customer keeps the
             // plan, as on WooCommerce, where only the parent order's refund ends the subscription.
             if ($is_revoke && $is_active && ($order->type ?? '') === 'renewal') {
-                $order->addLog(__('Website kept', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s): a renewal order, and the subscription is still active', $subscription_id, $trigger), 'info', 'WaaS');
+                $order->addLog(__('Website kept', WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s): a renewal order, and the subscription is still active', $subscription_id, $trigger), 'info', 'WaaS');
                 return;
             }
             // A customer's or admin's cancel keeps the website until the end of the period they paid for. A refund or
             // revoked access, the end of term, or a cancel with nothing left of the period takes it offline now.
             $paid_through = (!$is_revoke && $trigger === 'subscription_canceled') ? $this->store->get_paid_through($subscription_id) : 0;
             if ($paid_through > time()) {
-                WaasEventNotes::fire($this->store, $order, $subscription_id, 'wpcs_subscription_canceled_until', [$paid_through],
-                    __('Website stays online until the paid period ends', WPCS_WAAS_HOST_TEXTDOMAIN),
+                WaasEventNotes::fire($this->store, $order, $subscription_id, 'waas_subscription_canceled_until', [$paid_through],
+                    __('Website stays online until the paid period ends', WAAS_HOST_TEXTDOMAIN),
                     sprintf('Subscription #%d (%s): until %s UTC', $subscription_id, $trigger, gmdate('Y-m-d H:i', $paid_through))
                 );
                 return;
             }
-            WaasEventNotes::fire($this->store, $order, $subscription_id, 'wpcs_subscription_expired', [],
-                __('Website suspended', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s)', $subscription_id, $trigger));
+            WaasEventNotes::fire($this->store, $order, $subscription_id, 'waas_subscription_expired', [],
+                __('Website suspended', WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s)', $subscription_id, $trigger));
             return;
         }
 
         if (in_array($trigger, self::CREATE_TRIGGERS, true)) {
-            WaasEventNotes::fire($this->store, $order, $subscription_id, 'wpcs_subscription_created', [$order],
-                __('Website requested', WPCS_WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s)', $subscription_id, $trigger));
+            WaasEventNotes::fire($this->store, $order, $subscription_id, 'waas_subscription_created', [$order],
+                __('Website requested', WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s)', $subscription_id, $trigger));
         }
     }
 }

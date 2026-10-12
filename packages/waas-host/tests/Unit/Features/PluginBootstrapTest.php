@@ -7,7 +7,7 @@ use Mockery;
 use Tests\FakeCommerceAdapter;
 use Tests\Unit\TestCase;
 use WaaSHost\Commerce\Commerce;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\Tenant;
 use WaaSHost\Features\PluginBootstrap;
 
 class PluginBootstrapTest extends TestCase
@@ -24,7 +24,7 @@ class PluginBootstrapTest extends TestCase
         Commerce::reset();
         $this->cart = new FakeCommerceAdapter();
         Commerce::register($this->cart);
-        $this->cart->meta[500] = [WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META => 'store-1042'];
+        $this->cart->meta[500] = [Tenant::TENANT_EXTERNAL_ID_META => 'store-1042'];
         Functions\when('wp_get_post_terms')->alias(fn ($id) => $id === self::ADDON ? ['add-on'] : []);
         $this->bootstrap = new PluginBootstrap();
     }

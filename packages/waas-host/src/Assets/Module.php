@@ -11,9 +11,9 @@ class Module
     public static function init()
     {
         add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_confirm_cancel_button']);
-        add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_wpcs_product_data_visibility']);
-        add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_wpcs_settings_home_styles']);
-        add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_wpcs_settings_styles']);
+        add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_waas_product_data_visibility']);
+        add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_waas_settings_home_styles']);
+        add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_waas_settings_styles']);
     }
 
     public static function enqueue_confirm_cancel_button()
@@ -28,37 +28,37 @@ class Module
         }
     }
 
-    public static function enqueue_wpcs_product_data_visibility()
+    public static function enqueue_waas_product_data_visibility()
     {
-        $script_name = 'wpcs-product-data-visibility.js';
+        $script_name = 'waas-product-data-visibility.js';
         $src = plugin_dir_url( __FILE__ ) . "/js/$script_name";
         $version = date("ymd-Gis", filemtime( plugin_dir_path( __FILE__ ) . "js/$script_name" ));
-        wp_enqueue_script('wpcs-product-data-visibility', $src, ['jquery'], $version, true);
+        wp_enqueue_script('waas-product-data-visibility', $src, ['jquery'], $version, true);
     }
 
-    public static function enqueue_wpcs_settings_home_styles($hook)
+    public static function enqueue_waas_settings_home_styles($hook)
     {
         // Only load on the actual home settings page
-        if($hook !== 'toplevel_page_wpcs-admin') {
+        if($hook !== 'toplevel_page_waas-admin') {
             return;
         }
 
-        $style_name = 'wpcs-settings-home.css';
+        $style_name = 'waas-settings-home.css';
         $src = plugin_dir_url( __FILE__ ) . "/css/$style_name";
         $version = date("ymd-Gis", filemtime( plugin_dir_path( __FILE__ ) . "css/$style_name" ));
-        wp_enqueue_style('wpcs-settings-home-style', $src, [], $version);
+        wp_enqueue_style('waas-settings-home-style', $src, [], $version);
     }
 
-    public static function enqueue_wpcs_settings_styles($hook)
+    public static function enqueue_waas_settings_styles($hook)
     {
         // Only load on the actual home settings page
-        if($hook !== 'wpcs-io_page_wpcs-admin-settings') {
+        if($hook !== 'waas_page_waas-admin-settings') {
             return;
         }
 
-        $style_name = 'wpcs-settings.css';
+        $style_name = 'waas-settings.css';
         $src = plugin_dir_url( __FILE__ ) . "/css/$style_name";
         $version = date("ymd-Gis", filemtime( plugin_dir_path( __FILE__ ) . "css/$style_name" ));
-        wp_enqueue_style('wpcs-settings-style', $src, [], $version);
+        wp_enqueue_style('waas-settings-style', $src, [], $version);
     }
 }

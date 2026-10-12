@@ -7,7 +7,7 @@ use Brain\Monkey\Functions;
 use Tests\FakeCommerceAdapter;
 use Tests\Unit\TestCase;
 use WaaSHost\Commerce\Commerce;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\Tenant;
 use WaaSHost\Features\Notifications;
 
 class NotificationsTest extends TestCase
@@ -19,7 +19,7 @@ class NotificationsTest extends TestCase
         parent::setUp();
         Commerce::reset();
         Commerce::register($this->cart = new FakeCommerceAdapter());
-        $this->cart->meta[5] = [WPCSTenant::WPCS_DOMAIN_NAME_META => 'apex.sites.example'];
+        $this->cart->meta[5] = [Tenant::DOMAIN_NAME_META => 'apex.sites.example'];
         Functions\stubTranslationFunctions();
         Functions\when('get_bloginfo')->justReturn('Storefront');
         Functions\when('get_site_url')->justReturn('https://storefront.example');
@@ -33,7 +33,7 @@ class NotificationsTest extends TestCase
 
     public function test_the_login_link_goes_to_the_website_page_and_the_subscription_stays_secondary(): void
     {
-        Filters\expectApplied('wpcs_website_page_url')
+        Filters\expectApplied('waas_website_page_url')
             ->once()
             ->with('https://storefront.example/account/subscriptions/5', 5)
             ->andReturn('https://storefront.example/account/website?redirect_to=x');
@@ -90,7 +90,7 @@ class NotificationsTest extends TestCase
 
     public function test_the_cancel_email_can_be_switched_off(): void
     {
-        Filters\expectApplied('wpcs_suspend_scheduled_email_allowed')->andReturn(false);
+        Filters\expectApplied('waas_suspend_scheduled_email_allowed')->andReturn(false);
 
         $this->assertSame([], $this->capture_mail());
     }

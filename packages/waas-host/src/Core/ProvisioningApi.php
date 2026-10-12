@@ -6,7 +6,7 @@ use WaaSHost\Core\Exceptions\InvalidApiKeyException;
 use WaaSHost\Core\Exceptions\InvalidDomainException;
 
 
-class WPCSService
+class ProvisioningApi
 {
     const CAN_REACH_API_OPTION_NAME = 'WPCS_CAN_REACH_API';
     const GROUP_NAMES_TRANSIENT = 'wpcs_available_group_names';
@@ -27,7 +27,7 @@ class WPCSService
         }
 
         // Don't assume that if somebody uses the API constants, they are correct.
-        if (defined('WPCS_API_KEY') && defined('WPCS_API_SECRET') && (defined('WPCS_API_REGION') || defined('WPCS_API_BASE_URL')))
+        if (ConfigService::has_constant('API_KEY') && ConfigService::has_constant('API_SECRET') && ConfigService::has_constant('API_BASE_URL'))
         {
             try {
                 $can_reach = $this->test_reachability();
@@ -146,7 +146,7 @@ class WPCSService
             $payload['phpConstants'] = $args['php_constants'];
         }
 
-        $filtered_payload = apply_filters('wpcs_tenant_create_payload', $payload);
+        $filtered_payload = apply_filters('waas_tenant_create_payload', $payload);
 
         return $this->httpService->post('/v1/tenants', $filtered_payload);
     }
@@ -163,7 +163,7 @@ class WPCSService
             $payload['wpOptions'] = $args['wp_options'];
         }
 
-        $filtered_payload = apply_filters('wpcs_tenant_update_payload', $payload, $external_id);
+        $filtered_payload = apply_filters('waas_tenant_update_payload', $payload, $external_id);
 
         return $this->httpService->put('/v1/tenants?externalId=' . $external_id, $filtered_payload);
     }

@@ -8,11 +8,11 @@ use WaaSHost\Core\ConfigService;
 use WaaSHost\Updater\Module;
 use WaaSHost\Updater\Updater;
 
-if (!defined('WPCS_WAAS_HOST_SLUG')) {
-    define('WPCS_WAAS_HOST_SLUG', 'wpcs-waas-host');
-    define('WPCS_WAAS_HOST_BASENAME', 'waas-host/index.php');
-    define('WPCS_WAAS_HOST_UPDATE_URI', 'wpcs-waas-host');
-    define('WPCS_WAAS_HOST_VERSION', '2.2.7');
+if (!defined('WAAS_HOST_SLUG')) {
+    define('WAAS_HOST_SLUG', 'wpcs-waas-host');
+    define('WAAS_HOST_BASENAME', 'waas-host/index.php');
+    define('WAAS_HOST_UPDATE_URI', 'wpcs-waas-host');
+    define('WAAS_HOST_VERSION', '2.2.7');
 }
 
 /**

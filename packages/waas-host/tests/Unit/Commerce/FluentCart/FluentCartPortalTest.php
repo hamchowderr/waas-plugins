@@ -9,7 +9,7 @@ use Tests\Unit\TestCase;
 use WaaSHost\Commerce\FluentCart\FluentCartAdapter;
 use WaaSHost\Commerce\FluentCart\FluentCartPortal;
 use WaaSHost\Commerce\FluentCart\FluentCartStore;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\Tenant;
 use WaaSHost\Features\UserAccountSubscriptionsSettings;
 
 class FluentCartPortalTest extends TestCase
@@ -33,10 +33,10 @@ class FluentCartPortalTest extends TestCase
         Functions\when('wp_create_nonce')->justReturn('nonce');
 
         $this->meta = [
-            900 => [WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META => 'ext-900', WPCSTenant::WPCS_DOMAIN_NAME_META => 'apex.sites.example', WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::READY],
-            901 => [WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META => 'ext-901', WPCSTenant::WPCS_BASE_DOMAIN_NAME_META => 'new.sites.example'],
+            900 => [Tenant::TENANT_EXTERNAL_ID_META => 'ext-900', Tenant::DOMAIN_NAME_META => 'apex.sites.example', Tenant::TENANT_STATE => Tenant::READY],
+            901 => [Tenant::TENANT_EXTERNAL_ID_META => 'ext-901', Tenant::BASE_DOMAIN_NAME_META => 'new.sites.example'],
             902 => [], // a subscription without a website
-            903 => [WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META => 'ext-903'], // someone else's
+            903 => [Tenant::TENANT_EXTERNAL_ID_META => 'ext-903'], // someone else's
         ];
         $this->store = Mockery::mock(FluentCartStore::class);
         $this->store->allows('get_subscription_meta')->andReturnUsing(fn ($id, $key) => $this->meta[$id][$key] ?? '');
@@ -76,7 +76,7 @@ class FluentCartPortalTest extends TestCase
 
         $this->assertStringContainsString('apex.sites.example', $html);
         $this->assertStringContainsString('new.sites.example', $html);
-        $this->assertStringContainsString(WPCSTenant::PROVISIONING, $html);
+        $this->assertStringContainsString(Tenant::PROVISIONING, $html);
         $this->assertSame(1, substr_count($html, 'tenant/single_login?subscription_id='), 'login only for the ready website');
         $this->assertStringContainsString('subscription_id=900', $html);
     }
@@ -95,7 +95,7 @@ class FluentCartPortalTest extends TestCase
     {
         $data = $this->portal->add_subscription_actions([], ['subscription' => (object) ['id' => 900]]);
 
-        $this->assertSame(['wpcs_login', 'wpcs_manage'], array_column($data['custom_actions'], 'key'));
+        $this->assertSame(['waas_login', 'waas_manage'], array_column($data['custom_actions'], 'key'));
         $this->assertSame('https://storefront.example/account/website', $data['custom_actions'][1]['url']);
     }
 
@@ -106,7 +106,7 @@ class FluentCartPortalTest extends TestCase
 
     public function test_a_website_being_set_up_shows_with_the_customer_wording_and_no_domain_form(): void
     {
-        $this->meta[902] = [WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::QUEUED];
+        $this->meta[902] = [Tenant::TENANT_STATE => Tenant::QUEUED];
         $this->domain_settings->allows('render_edit_domain')->with(900);
         $this->domain_settings->allows('render_edit_domain')->with(901);
         $this->domain_settings->expects('render_edit_domain')->with(902)->never();
@@ -123,7 +123,7 @@ class FluentCartPortalTest extends TestCase
 
     public function test_a_failed_setup_shows_as_delayed(): void
     {
-        $this->meta[900][WPCSTenant::WPCS_TENANT_STATE] = WPCSTenant::FAILED;
+        $this->meta[900][Tenant::TENANT_STATE] = Tenant::FAILED;
         $this->domain_settings->allows('render_edit_domain');
 
         ob_start();
@@ -136,7 +136,7 @@ class FluentCartPortalTest extends TestCase
 
     public function test_a_website_whose_name_was_taken_shows_the_new_name_form(): void
     {
-        $this->meta[902] = [WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::NEEDS_NEW_NAME];
+        $this->meta[902] = [Tenant::TENANT_STATE => Tenant::NEEDS_NEW_NAME];
         $this->domain_settings->allows('render_edit_domain')->with(900);
         $this->domain_settings->allows('render_edit_domain')->with(901);
         $this->domain_settings->expects('render_edit_domain')->with(902)->never();
@@ -152,7 +152,7 @@ class FluentCartPortalTest extends TestCase
         $this->assertSame([900, 901, 902], $this->portal->current_user_websites());
         $this->assertStringContainsString('Status: Choose a new website name', $html);
         $this->assertStringContainsString('data-action="wpcs_choose_website_name_902"', $html);
-        $this->assertSame(1, substr_count($html, 'wpcs-choose-website-name"'));
+        $this->assertSame(1, substr_count($html, 'waas-choose-website-name"'));
     }
 
     public function test_the_new_name_link_goes_to_the_website_page_also_after_logging_in(): void
@@ -192,15 +192,15 @@ class FluentCartPortalTest extends TestCase
 
     public function test_with_several_websites_the_result_shows_at_its_own_one_only(): void
     {
-        $this->meta[901][WPCSTenant::WPCS_TENANT_STATE] = WPCSTenant::NEEDS_NEW_NAME;
-        $this->meta[902] = [WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::NEEDS_NEW_NAME];
+        $this->meta[901][Tenant::TENANT_STATE] = Tenant::NEEDS_NEW_NAME;
+        $this->meta[902] = [Tenant::TENANT_STATE => Tenant::NEEDS_NEW_NAME];
 
         $html = $this->render_after_result('taken', '902');
 
         $this->assertSame(1, substr_count($html, 'already taken'));
         $sections = explode('<section', $html);
         $this->assertStringContainsString('already taken', end($sections), "902's section is the last one");
-        $this->assertSame(2, substr_count($html, 'wpcs-choose-website-name"'));
+        $this->assertSame(2, substr_count($html, 'waas-choose-website-name"'));
     }
     public function test_the_tab_is_called_my_website_and_has_an_icon(): void
     {
@@ -235,7 +235,7 @@ class FluentCartPortalTest extends TestCase
         $this->portal->render_ready_notice();
         $html = ob_get_clean();
 
-        $this->assertSame(1, substr_count($html, 'wpcs-website-ready-notice'), 'only 900 is ready');
+        $this->assertSame(1, substr_count($html, 'waas-website-ready-notice'), 'only 900 is ready');
         $this->assertStringContainsString('apex.sites.example', $html);
         $this->assertStringContainsString('tenant/single_login?subscription_id=900', $html);
         $this->assertStringContainsString('https://storefront.example/account/website', $html);
@@ -274,7 +274,7 @@ class FluentCartPortalTest extends TestCase
 
     public function test_a_cancelled_website_shows_active_until_the_end_of_the_paid_period(): void
     {
-        $this->meta[900][WPCSTenant::WPCS_TENANT_SUSPEND_AT_META] = gmmktime(16, 3, 29, 11, 7, 2026);
+        $this->meta[900][Tenant::TENANT_SUSPEND_AT_META] = gmmktime(16, 3, 29, 11, 7, 2026);
         $this->domain_settings->allows('render_edit_domain');
 
         ob_start();

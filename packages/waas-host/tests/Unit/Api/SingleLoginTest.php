@@ -9,7 +9,7 @@ use WaaSHost\Api\SingleLogin;
 use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\EncryptionService;
 use WaaSHost\Core\PrivateKeyStore;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\Tenant;
 
 class SingleLoginTest extends TestCase
 {
@@ -73,7 +73,7 @@ class SingleLoginTest extends TestCase
 
     public function test_login_link_carries_a_token_the_store_can_verify(): void
     {
-        $this->cart->meta[42][WPCSTenant::WPCS_DOMAIN_NAME_META] = 'shop.example.com';
+        $this->cart->meta[42][Tenant::DOMAIN_NAME_META] = 'shop.example.com';
         PrivateKeyStore::save(42, self::$keys['private']);
 
         $link = SingleLogin::get_login_link(42, SingleLogin::PORTAL_TOKEN_LIFETIME);
@@ -91,7 +91,7 @@ class SingleLoginTest extends TestCase
 
     public function test_login_link_falls_back_to_the_base_domain(): void
     {
-        $this->cart->meta[42][WPCSTenant::WPCS_BASE_DOMAIN_NAME_META] = 'tenant-1.platform.test';
+        $this->cart->meta[42][Tenant::BASE_DOMAIN_NAME_META] = 'tenant-1.platform.test';
         PrivateKeyStore::save(42, self::$keys['private']);
 
         $this->assertStringStartsWith('https://tenant-1.platform.test/', SingleLogin::get_login_link(42, 300));
@@ -99,7 +99,7 @@ class SingleLoginTest extends TestCase
 
     public function test_no_link_without_a_readable_private_key(): void
     {
-        $this->cart->meta[42][WPCSTenant::WPCS_DOMAIN_NAME_META] = 'shop.example.com';
+        $this->cart->meta[42][Tenant::DOMAIN_NAME_META] = 'shop.example.com';
 
         $this->assertSame('', SingleLogin::get_login_link(42, 300));
 

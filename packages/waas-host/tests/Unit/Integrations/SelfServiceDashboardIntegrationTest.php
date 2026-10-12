@@ -16,7 +16,7 @@ class SelfServiceDashboardIntegrationTest extends TestCase
         Functions\when('admin_url')->alias(fn ($path) => 'https://example.com/blog/wp-admin/' . $path);
         Functions\expect('wp_enqueue_script')->once();
         Functions\expect('wp_localize_script')->once()
-            ->with('add-on-loading-indicator', 'wpcsAddOnLoadingIndicator', ['spinner' => 'https://example.com/blog/wp-admin/images/spinner.gif']);
+            ->with('add-on-loading-indicator', 'waasAddOnLoadingIndicator', ['spinner' => 'https://example.com/blog/wp-admin/images/spinner.gif']);
 
         SelfServiceDashboardIntegration::enqueue_addon_loading_indicator();
     }
