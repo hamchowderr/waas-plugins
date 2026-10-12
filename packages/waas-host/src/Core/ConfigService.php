@@ -8,62 +8,69 @@ if ( !defined( 'ABSPATH' ) )
 
 class ConfigService
 {
+    /**
+     * wp-config constants are named WAAS_<NAME>. The WPCS_<NAME> spelling from before the rename
+     * still works; WAAS_ wins when both are defined.
+     */
+    public static function constant(string $name)
+    {
+        foreach (['WAAS_', 'WPCS_'] as $prefix) {
+            if (defined($prefix . $name)) {
+                return constant($prefix . $name);
+            }
+        }
+        return null;
+    }
+
+    public static function has_constant(string $name): bool
+    {
+        return defined('WAAS_' . $name) || defined('WPCS_' . $name);
+    }
+
     public function get_api_key()
     {
-        $value = defined('WPCS_API_KEY') ? WPCS_API_KEY : get_option('wpcs_credentials_api_key_setting');
-        return apply_filters('wpcs_settings_api_key', $value);
+        $value = self::has_constant('API_KEY') ? self::constant('API_KEY') : get_option('wpcs_credentials_api_key_setting');
+        return apply_filters('waas_settings_api_key', $value);
     }
 
     public function get_api_secret()
     {
-        $value = defined('WPCS_API_SECRET') ? WPCS_API_SECRET : get_option('wpcs_credentials_api_secret_setting');
-        return apply_filters('wpcs_settings_api_secret', $value);
-    }
-
-    public function get_api_region()
-    {
-        $value = defined('WPCS_API_REGION') ? WPCS_API_REGION : get_option('wpcs_credentials_region_setting');
-        return apply_filters('wpcs_settings_api_region', $value);
+        $value = self::has_constant('API_SECRET') ? self::constant('API_SECRET') : get_option('wpcs_credentials_api_secret_setting');
+        return apply_filters('waas_settings_api_secret', $value);
     }
 
     /**
-     * Base URL of the provisioning API, without a trailing slash.
-     * WPCS_API_BASE_URL (constant) or the base URL setting wins; otherwise the
-     * legacy WPCS host for the configured region. False when neither is set.
+     * Base URL of the provisioning API, without a trailing slash: the WAAS_API_BASE_URL constant
+     * or the base URL setting. False when neither is set.
      */
     public function get_api_base_url()
     {
-        $value = defined('WPCS_API_BASE_URL') ? WPCS_API_BASE_URL : get_option('wpcs_credentials_api_base_url_setting');
-        if (empty($value)) {
-            $region = $this->get_api_region();
-            $value = empty($region) ? false : 'https://api.' . $region . '.wpcs.io';
-        }
-
-        $value = apply_filters('wpcs_settings_api_base_url', $value);
+        $value = self::has_constant('API_BASE_URL') ? self::constant('API_BASE_URL') : get_option('wpcs_credentials_api_base_url_setting');
+        $value = apply_filters('waas_settings_api_base_url', $value);
         return empty($value) ? false : untrailingslashit($value);
     }
 
     /**
-     * IPs customers point their domain's A records at. WPCS_DNS_A_RECORDS (constant,
+     * IPs customers point their domain's A records at. WAAS_DNS_A_RECORDS (constant,
      * a comma-separated string or an array) wins over the setting. Invalid IPs are dropped.
      * @return string[]
      */
     public function get_dns_a_records(): array
     {
-        $value = defined('WPCS_DNS_A_RECORDS') ? WPCS_DNS_A_RECORDS : get_option('wpcs_dns_a_records_setting', '');
-        $value = apply_filters('wpcs_settings_dns_a_records', $value);
+        $value = self::has_constant('DNS_A_RECORDS') ? self::constant('DNS_A_RECORDS') : get_option('wpcs_dns_a_records_setting', '');
+        $value = apply_filters('waas_settings_dns_a_records', $value);
 
         return self::parse_ip_list($value);
     }
 
     /**
-     * Hostname customers point a subdomain's CNAME record at. WPCS_DNS_CNAME_TARGET
+     * Hostname customers point a subdomain's CNAME record at. WAAS_DNS_CNAME_TARGET
      * (constant) wins over the setting. Empty string when not set or not a hostname.
      */
     public function get_dns_cname_target(): string
     {
-        $value = defined('WPCS_DNS_CNAME_TARGET') ? WPCS_DNS_CNAME_TARGET : get_option('wpcs_dns_cname_target_setting', '');
-        $value = apply_filters('wpcs_settings_dns_cname_target', $value);
+        $value = self::has_constant('DNS_CNAME_TARGET') ? self::constant('DNS_CNAME_TARGET') : get_option('wpcs_dns_cname_target_setting', '');
+        $value = apply_filters('waas_settings_dns_cname_target', $value);
 
         return self::sanitize_hostname($value);
     }

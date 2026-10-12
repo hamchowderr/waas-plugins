@@ -31,19 +31,19 @@ class FluentCartSubscriptionEvents
     /** @param array $data subscription, order, customer, old_status, reason */
     public function paused($data): void
     {
-        $this->handle($data, 'wpcs_subscription_suspended', __('Website taken offline', WPCS_WAAS_HOST_TEXTDOMAIN), 'subscription_paused');
+        $this->handle($data, 'waas_subscription_suspended', __('Website taken offline', WAAS_HOST_TEXTDOMAIN), 'subscription_paused');
     }
 
     /** @param array $data subscription, order, customer, old_status, reason */
     public function resumed($data): void
     {
-        $this->handle($data, 'wpcs_subscription_reactivated', __('Website resumed', WPCS_WAAS_HOST_TEXTDOMAIN), 'subscription_resumed');
+        $this->handle($data, 'waas_subscription_reactivated', __('Website resumed', WAAS_HOST_TEXTDOMAIN), 'subscription_resumed');
     }
 
     /** @param array $data subscription, order (the renewal order), main_order, customer */
     public function renewed($data): void
     {
-        $this->handle($data, 'wpcs_subscription_renewed', __('Website resumed', WPCS_WAAS_HOST_TEXTDOMAIN), 'subscription_renewed');
+        $this->handle($data, 'waas_subscription_renewed', __('Website resumed', WAAS_HOST_TEXTDOMAIN), 'subscription_renewed');
     }
 
     private function handle($data, string $action, string $title, string $event): void

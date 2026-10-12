@@ -3,7 +3,7 @@
 namespace WaaSHost\Features;
 
 use WaaSHost\Commerce\Commerce;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\Tenant;
 
 /**
  * Runs the provisioning API calls for a store in the background, never inside a cart hook.
@@ -23,7 +23,7 @@ class StoreJobs
     public const FAILURE_META = 'WPCS_STORE_JOB_FAILURE';
     public const RUN_HOOK = 'wpcs_run_store_jobs';
     public const SWEEP_HOOK = 'wpcs_sweep_store_jobs';
-    public const RETRY_ACTION = 'wpcs_retry_store_jobs';
+    public const RETRY_ACTION = 'waas_retry_store_jobs';
     public const GROUP = 'waas-host';
     /**
      * Seconds to wait after the 1st, 2nd, ... failure; one more failure after the last marks the store Failed and
@@ -81,7 +81,7 @@ class StoreJobs
     {
         $failure = $this->failure($subscription_id);
 
-        return $failure ? (string) ($failure['state'] ?? '') : (string) (new WPCSTenant($subscription_id))->get_status();
+        return $failure ? (string) ($failure['state'] ?? '') : (string) (new Tenant($subscription_id))->get_status();
     }
 
     public function set_status($subscription_id, string $status): void
@@ -94,7 +94,7 @@ class StoreJobs
             return;
         }
 
-        (new WPCSTenant($subscription_id))->update_status($status);
+        (new Tenant($subscription_id))->update_status($status);
     }
 
     /** Runner, from Action Scheduler or WP-Cron. Takes the queue head first; stops at the first failure. */
@@ -155,7 +155,7 @@ class StoreJobs
 
         $commerce = Commerce::require_adapter();
         $commerce->update_subscription_meta($subscription_id, self::FAILURE_META, '');
-        (new WPCSTenant($subscription_id))->update_status((string) ($failure['state'] ?? ''));
+        (new Tenant($subscription_id))->update_status((string) ($failure['state'] ?? ''));
 
         $queue = $this->queue($subscription_id);
         if ($queue) {
@@ -221,7 +221,7 @@ class StoreJobs
         }
 
         echo '<div class="notice notice-error"><p><strong>' . esc_html(sprintf(
-            _n('%d website could not be updated through the provisioning API.', '%d websites could not be updated through the provisioning API.', count($failed), WPCS_WAAS_HOST_TEXTDOMAIN),
+            _n('%d website could not be updated through the provisioning API.', '%d websites could not be updated through the provisioning API.', count($failed), WAAS_HOST_TEXTDOMAIN),
             count($failed)
         )) . '</strong></p><ul>';
         foreach ($failed as $subscription_id => $failure) {
@@ -236,7 +236,7 @@ class StoreJobs
                 $failure['attempts'] ?? 0,
                 wp_date('Y-m-d H:i', (int) ($failure['at'] ?? 0)),
                 $failure['error'] ?? ''
-            )) . ' <a href="' . esc_url($retry_url) . '">' . esc_html__('Retry', WPCS_WAAS_HOST_TEXTDOMAIN) . '</a></li>';
+            )) . ' <a href="' . esc_url($retry_url) . '">' . esc_html__('Retry', WAAS_HOST_TEXTDOMAIN) . '</a></li>';
         }
         echo '</ul></div>';
     }
@@ -245,7 +245,7 @@ class StoreJobs
     {
         $subscription_id = isset($_GET['subscription_id']) ? sanitize_text_field(wp_unslash($_GET['subscription_id'])) : '';
         if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You are not allowed to do this.', WPCS_WAAS_HOST_TEXTDOMAIN), 403);
+            wp_die(esc_html__('You are not allowed to do this.', WAAS_HOST_TEXTDOMAIN), 403);
         }
         check_admin_referer(self::RETRY_ACTION . '_' . $subscription_id);
 
@@ -278,22 +278,22 @@ class StoreJobs
             'attempts' => $attempts,
             'error' => $error->getMessage(),
             'at' => time(),
-            'state' => (string) (new WPCSTenant($subscription_id))->get_status(),
+            'state' => (string) (new Tenant($subscription_id))->get_status(),
         ]);
-        (new WPCSTenant($subscription_id))->update_status(WPCSTenant::FAILED);
+        (new Tenant($subscription_id))->update_status(Tenant::FAILED);
         error_log(sprintf('WaaS Host: store job "%s" for subscription %s failed %d times: %s', $queue[0]['op'], $subscription_id, $attempts, $error->getMessage()));
 
         $this->email_admin($subscription_id, $queue[0]['op'], $attempts, $error->getMessage());
 
-        do_action('wpcs_store_job_failed', $subscription_id, $queue[0]['op'], $error->getMessage());
+        do_action('waas_store_job_failed', $subscription_id, $queue[0]['op'], $error->getMessage());
     }
 
     /** Once per failure: a failed store runs nothing more (so fails no more) until an admin retries it. */
     private function email_admin($subscription_id, string $op, int $attempts, string $error): void
     {
-        $subject = sprintf(__('[%s] A website could not be set up or updated', WPCS_WAAS_HOST_TEXTDOMAIN), wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES));
+        $subject = sprintf(__('[%s] A website could not be set up or updated', WAAS_HOST_TEXTDOMAIN), wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES));
         $message = sprintf(
-            __("The provisioning API kept failing for subscription #%1\$s.\n\nJob: %2\$s\nTries: %3\$d\nLast error: %4\$s\n\nThe customer sees \"Setup delayed\". Retry it from the notice in the WordPress admin once the API works again:\n%5\$s", WPCS_WAAS_HOST_TEXTDOMAIN),
+            __("The provisioning API kept failing for subscription #%1\$s.\n\nJob: %2\$s\nTries: %3\$d\nLast error: %4\$s\n\nThe customer sees \"Setup delayed\". Retry it from the notice in the WordPress admin once the API works again:\n%5\$s", WAAS_HOST_TEXTDOMAIN),
             $subscription_id,
             $op,
             $attempts,

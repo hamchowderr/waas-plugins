@@ -4,7 +4,7 @@ namespace Tests;
 
 use WaaSHost\Commerce\CommerceAdapter;
 use WaaSHost\Commerce\PlanPurchase;
-use WaaSHost\Core\WPCSService;
+use WaaSHost\Core\ProvisioningApi;
 
 /**
  * In-memory cart for testing the shared code without WooCommerce or FluentCart.
@@ -36,7 +36,7 @@ class FakeCommerceAdapter implements CommerceAdapter
         return $this->available;
     }
 
-    public function boot(WPCSService $wpcs_service): void
+    public function boot(ProvisioningApi $provisioning_api): void
     {
         $this->booted = true;
     }

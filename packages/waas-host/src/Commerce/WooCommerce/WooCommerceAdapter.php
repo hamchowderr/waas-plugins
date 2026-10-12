@@ -5,9 +5,9 @@ namespace WaaSHost\Commerce\WooCommerce;
 use WaaSHost\Commerce\CommerceAdapter;
 use WaaSHost\Commerce\PlanProduct;
 use WaaSHost\Commerce\PlanPurchase;
-use WaaSHost\Core\WPCSProduct;
-use WaaSHost\Core\WPCSService;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\StoreProduct;
+use WaaSHost\Core\ProvisioningApi;
+use WaaSHost\Core\Tenant;
 use WaaSHost\Features\PluginBootstrap;
 use WaaSHost\Features\UserAccountSubscriptionsSettings;
 use WaaSHost\Features\UserWcTenantsCheckout;
@@ -57,7 +57,7 @@ class WooCommerceAdapter implements CommerceAdapter
     {
         if (!$this->resolved) {
             $active = array_values(array_filter($this->subscription_plugins, fn (SubscriptionPlugin $p) => $p->is_active()));
-            $chosen = apply_filters('wpcs_woocommerce_subscription_plugin', $active[0] ?? null, $this->subscription_plugins);
+            $chosen = apply_filters('waas_woocommerce_subscription_plugin', $active[0] ?? null, $this->subscription_plugins);
             $this->subscription_plugin = $chosen instanceof SubscriptionPlugin ? $chosen : null;
             $this->resolved = true;
         }
@@ -65,11 +65,11 @@ class WooCommerceAdapter implements CommerceAdapter
         return $this->subscription_plugin;
     }
 
-    public function boot(WPCSService $wpcs_service): void
+    public function boot(ProvisioningApi $provisioning_api): void
     {
-        new UserAccountSubscriptionsSettings($wpcs_service);
-        new UserWcTenantsCheckout($wpcs_service, $this);
-        new WooCommerceProductData($wpcs_service);
+        new UserAccountSubscriptionsSettings($provisioning_api);
+        new UserWcTenantsCheckout($provisioning_api, $this);
+        new WooCommerceProductData($provisioning_api);
         new WooCommerceCartValidator();
 
         $subscription_plugin = $this->get_subscription_plugin();
@@ -89,7 +89,7 @@ class WooCommerceAdapter implements CommerceAdapter
     public function declare_woocommerce_compatibility(): void
     {
         if (class_exists(\Automattic\WooCommerce\Utilities\FeaturesUtil::class)) {
-            $plugin_file = WP_PLUGIN_DIR . '/' . WPCS_WAAS_HOST_BASENAME;
+            $plugin_file = WP_PLUGIN_DIR . '/' . WAAS_HOST_BASENAME;
             \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', $plugin_file, true);
             \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('cart_checkout_blocks', $plugin_file, true);
         }
@@ -103,15 +103,15 @@ class WooCommerceAdapter implements CommerceAdapter
     {
         $plans = [];
         foreach ($purchase_context->get_items() as $item) {
-            $product = new WPCSProduct($item->get_product_id());
-            if ($product->is_wpcs_product()) {
+            $product = new StoreProduct($item->get_product_id());
+            if ($product->is_store_product()) {
                 $plans[] = new PlanProduct($item->get_product_id(), (string) $product->get_role(), (string) $product->get_tenant_snapshot_group_name());
             }
         }
 
         return new PlanPurchase(
             $plans,
-            (string) $purchase_context->get_meta(WPCSTenant::WPCS_WEBSITE_NAME_META),
+            (string) $purchase_context->get_meta(Tenant::WEBSITE_NAME_META),
             (string) $purchase_context->get_billing_email()
         );
     }
@@ -178,11 +178,11 @@ class WooCommerceAdapter implements CommerceAdapter
 
         return !empty($this->query_subscriptions([
             'relation' => 'AND',
-            ['key' => WPCSTenant::WPCS_DOMAIN_NAME_META, 'value' => $domain_name],
+            ['key' => Tenant::DOMAIN_NAME_META, 'value' => $domain_name],
             [
                 'relation' => 'OR',
-                ['key' => WPCSTenant::WPCS_TENANT_STATE, 'compare' => 'NOT EXISTS'],
-                ['key' => WPCSTenant::WPCS_TENANT_STATE, 'value' => WPCSTenant::DELETED, 'compare' => '!='],
+                ['key' => Tenant::TENANT_STATE, 'compare' => 'NOT EXISTS'],
+                ['key' => Tenant::TENANT_STATE, 'value' => Tenant::DELETED, 'compare' => '!='],
             ],
         ], 1));
     }

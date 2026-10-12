@@ -5,8 +5,8 @@ namespace WaaSHost\Commerce\FluentCart;
 use WaaSHost\Commerce\CommerceAdapter;
 use WaaSHost\Commerce\PlanProduct;
 use WaaSHost\Commerce\PlanPurchase;
-use WaaSHost\Core\WPCSService;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\ProvisioningApi;
+use WaaSHost\Core\Tenant;
 use WaaSHost\Features\UserAccountSubscriptionsSettings;
 use WaaSHost\Migrations\FluentCartFeedTriggers;
 
@@ -43,21 +43,21 @@ class FluentCartAdapter implements CommerceAdapter
         return is_plugin_active('fluent-cart/fluent-cart.php');
     }
 
-    public function boot(WPCSService $wpcs_service): void
+    public function boot(ProvisioningApi $provisioning_api): void
     {
         $store = $this->store;
-        $domain_settings = new UserAccountSubscriptionsSettings($wpcs_service);
+        $domain_settings = new UserAccountSubscriptionsSettings($provisioning_api);
 
-        add_action('fluent_cart/init', function () use ($wpcs_service, $store) {
-            (new WaasProvisioningIntegration($wpcs_service, $store))->register();
+        add_action('fluent_cart/init', function () use ($provisioning_api, $store) {
+            (new WaasProvisioningIntegration($provisioning_api, $store))->register();
             (new FluentCartFeedTriggers($store))->maybe_run();
         });
 
         (new FluentCartSubscriptionEvents($store))->register();
-        new FluentCartCheckout($wpcs_service, $this, $store);
+        new FluentCartCheckout($provisioning_api, $this, $store);
         new FluentCartPortal($this, $store, $domain_settings);
 
-        add_filter('wpcs_getting_started_checklist', [$this, 'mark_plan_product_checklist_item'], 20);
+        add_filter('waas_getting_started_checklist', [$this, 'mark_plan_product_checklist_item'], 20);
     }
 
     public function is_plan_product($product_id): bool
@@ -80,7 +80,7 @@ class FluentCartAdapter implements CommerceAdapter
 
         return new PlanPurchase(
             $plans,
-            $this->store->get_order_meta($purchase_context, WPCSTenant::WPCS_WEBSITE_NAME_META),
+            $this->store->get_order_meta($purchase_context, Tenant::WEBSITE_NAME_META),
             $this->get_customer_email($subscription_id)
         );
     }
@@ -102,8 +102,8 @@ class FluentCartAdapter implements CommerceAdapter
 
     public function is_domain_taken(string $domain_name): bool
     {
-        foreach ($this->store->find_subscription_ids_with_meta(WPCSTenant::WPCS_DOMAIN_NAME_META, $domain_name) as $subscription_id) {
-            if ($this->store->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_STATE) !== WPCSTenant::DELETED) {
+        foreach ($this->store->find_subscription_ids_with_meta(Tenant::DOMAIN_NAME_META, $domain_name) as $subscription_id) {
+            if ($this->store->get_subscription_meta($subscription_id, Tenant::TENANT_STATE) !== Tenant::DELETED) {
                 return true;
             }
         }
@@ -158,8 +158,8 @@ class FluentCartAdapter implements CommerceAdapter
 
     public function mark_plan_product_checklist_item($checklist_items)
     {
-        if (isset($checklist_items['create_woo_wpcs_product'])) {
-            $checklist_items['create_woo_wpcs_product']['is_done'] = $this->store->has_plan_feed();
+        if (isset($checklist_items['create_woo_waas_product'])) {
+            $checklist_items['create_woo_waas_product']['is_done'] = $this->store->has_plan_feed();
         }
 
         return $checklist_items;

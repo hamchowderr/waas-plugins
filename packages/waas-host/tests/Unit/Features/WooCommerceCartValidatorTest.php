@@ -22,8 +22,8 @@ class WooCommerceCartValidatorTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        if (!defined('WPCS_WAAS_HOST_TEXTDOMAIN')) {
-            define('WPCS_WAAS_HOST_TEXTDOMAIN', 'wpcs-waas-host');
+        if (!defined('WAAS_HOST_TEXTDOMAIN')) {
+            define('WAAS_HOST_TEXTDOMAIN', 'waas-host');
         }
         Functions\stubTranslationFunctions();
         Functions\when('wp_get_post_terms')->alias(fn ($id) => $id === self::ADDON ? ['add-on'] : ['uncategorized']);

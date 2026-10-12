@@ -8,7 +8,7 @@ use Mockery;
 use Tests\Unit\TestCase;
 use WaaSHost\Commerce\FluentCart\FluentCartStore;
 use WaaSHost\Commerce\FluentCart\FluentCartSubscriptionEvents;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\Tenant;
 
 class FluentCartSubscriptionEventsTest extends TestCase
 {
@@ -41,7 +41,7 @@ class FluentCartSubscriptionEventsTest extends TestCase
     private function changes_state(string $state): \Closure
     {
         return function () use ($state) {
-            $this->state = [WPCSTenant::WPCS_TENANT_STATE => $state];
+            $this->state = [Tenant::TENANT_STATE => $state];
         };
     }
 
@@ -56,7 +56,7 @@ class FluentCartSubscriptionEventsTest extends TestCase
 
     public function test_a_paused_subscription_takes_the_store_offline_as_on_hold(): void
     {
-        Actions\expectDone('wpcs_subscription_suspended')->once()->with(900)->whenHappen($this->changes_state(WPCSTenant::SUSPENDED));
+        Actions\expectDone('waas_subscription_suspended')->once()->with(900)->whenHappen($this->changes_state(Tenant::SUSPENDED));
 
         $this->events->paused($this->data());
 
@@ -66,7 +66,7 @@ class FluentCartSubscriptionEventsTest extends TestCase
     public function test_paused_then_active_again_resumes_the_store(): void
     {
         // FluentCart fires only "resumed" for paused -> active, not "reactivated".
-        Actions\expectDone('wpcs_subscription_reactivated')->once()->with(900)->whenHappen($this->changes_state(WPCSTenant::READY));
+        Actions\expectDone('waas_subscription_reactivated')->once()->with(900)->whenHappen($this->changes_state(Tenant::READY));
 
         $this->events->resumed($this->data());
 
@@ -75,7 +75,7 @@ class FluentCartSubscriptionEventsTest extends TestCase
 
     public function test_a_renewal_asks_waas_host_to_resume_a_store_it_took_offline(): void
     {
-        Actions\expectDone('wpcs_subscription_renewed')->once()->with(900)->whenHappen($this->changes_state(WPCSTenant::READY));
+        Actions\expectDone('waas_subscription_renewed')->once()->with(900)->whenHappen($this->changes_state(Tenant::READY));
 
         $this->events->renewed($this->data());
 
@@ -85,7 +85,7 @@ class FluentCartSubscriptionEventsTest extends TestCase
     public function test_an_ordinary_renewal_leaves_no_note(): void
     {
         // The store was running: waas-host did nothing.
-        Actions\expectDone('wpcs_subscription_renewed')->once()->with(900);
+        Actions\expectDone('waas_subscription_renewed')->once()->with(900);
 
         $this->events->renewed($this->data());
 
@@ -94,7 +94,7 @@ class FluentCartSubscriptionEventsTest extends TestCase
 
     public function test_an_event_without_a_subscription_is_ignored(): void
     {
-        Actions\expectDone('wpcs_subscription_suspended')->never();
+        Actions\expectDone('waas_subscription_suspended')->never();
 
         $this->events->paused(['subscription' => null]);
         $this->events->paused('not an array');
@@ -104,7 +104,7 @@ class FluentCartSubscriptionEventsTest extends TestCase
 
     public function test_an_event_without_an_order_still_acts(): void
     {
-        Actions\expectDone('wpcs_subscription_suspended')->once()->with(900)->whenHappen($this->changes_state(WPCSTenant::SUSPENDED));
+        Actions\expectDone('waas_subscription_suspended')->once()->with(900)->whenHappen($this->changes_state(Tenant::SUSPENDED));
 
         $this->events->paused(['subscription' => (object) ['id' => 900], 'order' => null]);
 

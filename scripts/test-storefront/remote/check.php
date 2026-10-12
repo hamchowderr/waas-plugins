@@ -1,7 +1,7 @@
 <?php
 // Prints the waas-host API reachability and production version, without secrets.
 $http = new \WaaSHost\Core\HttpService(new \WaaSHost\Core\ConfigService());
-$svc = new \WaaSHost\Core\WPCSService($http);
+$svc = new \WaaSHost\Core\ProvisioningApi($http);
 try {
     $ok = $svc->test_reachability();
     $svc->update_is_reachable($ok);

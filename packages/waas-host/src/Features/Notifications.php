@@ -3,35 +3,35 @@
 namespace WaaSHost\Features;
 
 use WaaSHost\Commerce\Commerce;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\Tenant;
 
 class Notifications
 {
     public static function init()
     {
-        add_action('wpcs_tenant_ready', [__CLASS__, 'send_email_on_tenant_ready'], 10, 1);
-        add_action('wpcs_tenant_suspend_scheduled', [__CLASS__, 'send_email_on_suspend_scheduled'], 10, 2);
+        add_action('waas_tenant_ready', [__CLASS__, 'send_email_on_tenant_ready'], 10, 1);
+        add_action('waas_tenant_suspend_scheduled', [__CLASS__, 'send_email_on_suspend_scheduled'], 10, 2);
     }
 
     /** The subscription was cancelled but is paid until $suspend_at: tell the customer the website stays until then. */
     public static function send_email_on_suspend_scheduled($subscription_id, $suspend_at)
     {
-        if (!apply_filters('wpcs_suspend_scheduled_email_allowed', true, $subscription_id)) {
+        if (!apply_filters('waas_suspend_scheduled_email_allowed', true, $subscription_id)) {
             return;
         }
 
-        $recipient = apply_filters('wpcs_suspend_scheduled_email_recipient', Commerce::require_adapter()->get_customer_email($subscription_id), $subscription_id);
+        $recipient = apply_filters('waas_suspend_scheduled_email_recipient', Commerce::require_adapter()->get_customer_email($subscription_id), $subscription_id);
         $replaceables = self::get_suspend_scheduled_replaceables($subscription_id, $recipient, (int) $suspend_at);
-        $subject = self::do_replacements(apply_filters('wpcs_suspend_scheduled_email_subject', self::get_default_suspend_scheduled_subject(), $subscription_id), $replaceables);
-        $body = self::do_replacements(apply_filters('wpcs_suspend_scheduled_email_body', self::get_default_suspend_scheduled_body(), $subscription_id, $recipient), $replaceables);
-        $headers = apply_filters('wpcs_suspend_scheduled_email_headers', ['Content-Type: text/html; charset=UTF-8'], $subscription_id);
+        $subject = self::do_replacements(apply_filters('waas_suspend_scheduled_email_subject', self::get_default_suspend_scheduled_subject(), $subscription_id), $replaceables);
+        $body = self::do_replacements(apply_filters('waas_suspend_scheduled_email_body', self::get_default_suspend_scheduled_body(), $subscription_id, $recipient), $replaceables);
+        $headers = apply_filters('waas_suspend_scheduled_email_headers', ['Content-Type: text/html; charset=UTF-8'], $subscription_id);
 
         wp_mail($recipient, $subject, $body, $headers);
     }
 
     public static function get_default_suspend_scheduled_subject()
     {
-        return __('Your website stays online until {{ suspend_date }}', WPCS_WAAS_HOST_TEXTDOMAIN);
+        return __('Your website stays online until {{ suspend_date }}', WAAS_HOST_TEXTDOMAIN);
     }
 
     public static function get_default_suspend_scheduled_body()
@@ -61,7 +61,7 @@ class Notifications
 
     public static function get_suspend_scheduled_replaceables($subscription_id, $recipient, int $suspend_at): array
     {
-        return apply_filters('wpcs_suspend_scheduled_email_replaceables', self::get_replaceables($subscription_id, $recipient) + [
+        return apply_filters('waas_suspend_scheduled_email_replaceables', self::get_replaceables($subscription_id, $recipient) + [
             'suspend_date' => self::format_date($suspend_at),
             'deletion_grace_days' => (string) TenantsSubscriptionManager::get_deletion_grace_days(),
         ], $subscription_id, $recipient);
@@ -77,14 +77,14 @@ class Notifications
 
     public static function send_email_on_tenant_ready($subscription_id)
     {
-        $should_send_email = apply_filters('wpcs_tenant_ready_email_allowed', true, $subscription_id);
+        $should_send_email = apply_filters('waas_tenant_ready_email_allowed', true, $subscription_id);
         if (!$should_send_email) {
             return;
         }
 
-        $recipient = apply_filters('wpcs_tenant_ready_email_recipient', Commerce::require_adapter()->get_customer_email($subscription_id), $subscription_id);
+        $recipient = apply_filters('waas_tenant_ready_email_recipient', Commerce::require_adapter()->get_customer_email($subscription_id), $subscription_id);
         $subject = self::get_ready_email_subject($subscription_id, $recipient);
-        $headers = apply_filters('wpcs_tenant_ready_email_headers', ['Content-Type: text/html; charset=UTF-8'], $subscription_id);
+        $headers = apply_filters('waas_tenant_ready_email_headers', ['Content-Type: text/html; charset=UTF-8'], $subscription_id);
         $body = self::get_ready_email_body($subscription_id, $recipient);
 
         wp_mail($recipient, $subject, $body, $headers);
@@ -92,19 +92,19 @@ class Notifications
 
     private static function get_ready_email_subject($subscription_id, $recipient)
     {
-        $unfiltered_subject = apply_filters('wpcs_tenant_ready_email_subject', self::get_default_tenant_ready_subject(), $subscription_id);
+        $unfiltered_subject = apply_filters('waas_tenant_ready_email_subject', self::get_default_tenant_ready_subject(), $subscription_id);
         $replaceables = self::get_replaceables($subscription_id, $recipient);
         return self::do_replacements($unfiltered_subject, $replaceables);
     }
 
     public static function get_default_tenant_ready_subject()
     {
-        return __('Your website is ready', WPCS_WAAS_HOST_TEXTDOMAIN);
+        return __('Your website is ready', WAAS_HOST_TEXTDOMAIN);
     }
 
     private static function get_ready_email_body($subscription_id, $recipient)
     {
-        $unfiltered_body = apply_filters('wpcs_tenant_ready_email_body', self::get_default_tenant_ready_body(), $subscription_id, $recipient);
+        $unfiltered_body = apply_filters('waas_tenant_ready_email_body', self::get_default_tenant_ready_body(), $subscription_id, $recipient);
         $replaceables = self::get_replaceables($subscription_id, $recipient);
         return self::do_replacements($unfiltered_body, $replaceables);
     }
@@ -140,9 +140,9 @@ class Notifications
         // to the website page on the storefront, which mints a short-lived token when the customer clicks login.
         $subscription_details_url = Commerce::require_adapter()->get_subscription_url($subscription_id);
         // The customer's website page where the cart has one (FluentCart's "My website" tab); else the subscription.
-        $website_page_url = (string) apply_filters('wpcs_website_page_url', $subscription_details_url, $subscription_id) ?: $subscription_details_url;
-        return apply_filters('wpcs_tenant_email_replaceables', [
-            "tenant_domain" => "https://" . Commerce::require_adapter()->get_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META),
+        $website_page_url = (string) apply_filters('waas_website_page_url', $subscription_details_url, $subscription_id) ?: $subscription_details_url;
+        return apply_filters('waas_tenant_email_replaceables', [
+            "tenant_domain" => "https://" . Commerce::require_adapter()->get_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META),
             "tenant_one_click_login_url" => $website_page_url,
             // Kept so custom templates that still use it don't show a raw placeholder.
             "tenant_one_click_login_url_expires_after" => '',

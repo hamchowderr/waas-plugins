@@ -1,0 +1,20 @@
+.waas-container ul.ticks {
+    list-style: none;
+}
+
+.waas-container ul.ticks span {
+    position: relative;
+    left: 1em;
+}
+
+.waas-container ul.ticks li.checked:before {
+    content: '\2713';
+}
+
+.waas-container ul.ticks li.unchecked:before {
+    content: '\25a2';
+}
+
+.waas-container section {
+    margin-top: 2.5em;
+}

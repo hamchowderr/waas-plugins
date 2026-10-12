@@ -7,12 +7,12 @@ use Mockery;
 use Tests\FakeCommerceAdapter;
 use Tests\Unit\TestCase;
 use WaaSHost\Commerce\Commerce;
-use WaaSHost\Core\WPCSService;
-use WaaSHost\Core\WPCSTenant;
-use WaaSHost\Features\WPCSTenantStatusService;
+use WaaSHost\Core\ProvisioningApi;
+use WaaSHost\Core\Tenant;
+use WaaSHost\Features\TenantStatusService;
 
 /** The poller that takes a created store to Ready runs every five seconds, so it must skip stores it has nothing to do for. */
-class WPCSTenantStatusServiceTest extends TestCase
+class TenantStatusServiceTest extends TestCase
 {
     private FakeCommerceAdapter $cart;
     private string $log;
@@ -39,15 +39,15 @@ class WPCSTenantStatusServiceTest extends TestCase
     public function test_a_store_waiting_for_a_new_name_while_its_subscription_is_inactive_is_skipped_quietly(): void
     {
         $this->cart->meta[901] = [
-            WPCSTenant::WPCS_TENANT_STATE => '',
-            WPCSTenant::WPCS_NAME_CONFLICT_META => ['name' => 'Apex Research', 'paused' => true],
+            Tenant::TENANT_STATE => '',
+            Tenant::NAME_CONFLICT_META => ['name' => 'Apex Research', 'paused' => true],
         ];
-        $wpcs = Mockery::mock(WPCSService::class);
-        $wpcs->expects('get_tenant_safe')->never();
+        $api = Mockery::mock(ProvisioningApi::class);
+        $api->expects('get_tenant_safe')->never();
 
-        (new WPCSTenantStatusService($wpcs))->poll_tenant_status();
+        (new TenantStatusService($api))->poll_tenant_status();
 
         $this->assertSame('', (string) file_get_contents($this->log), 'nothing logged every five seconds');
-        $this->assertSame('', $this->cart->meta[901][WPCSTenant::WPCS_TENANT_STATE]);
+        $this->assertSame('', $this->cart->meta[901][Tenant::TENANT_STATE]);
     }
 }

@@ -7,49 +7,49 @@ class AdminTenantSettings
 
     public function __construct()
     {
-        add_action('admin_menu', [$this, 'add_wpcs_admin_page'], 11);
-        add_action('admin_init', [$this, 'add_wpcs_admin_settings']);
+        add_action('admin_menu', [$this, 'add_waas_admin_page'], 11);
+        add_action('admin_init', [$this, 'add_waas_admin_settings']);
         add_filter("pre_update_option_waas_host_website_url", fn ($val) => 'https://' . preg_replace("/^(http|https):\/\//i", "", $val));
     }
 
-    public function add_wpcs_admin_page()
+    public function add_waas_admin_page()
     {
         add_menu_page(
             'Tenant Settings',
             'Tenant Settings',
             'manage_options',
-            'wpcs-admin-tenant',
-            [$this, 'render_wpcs_admin_tenant_page'],
+            'waas-admin-tenant',
+            [$this, 'render_waas_admin_tenant_page'],
             'dashicons-networking',
             10
         );
     }
 
-    public function render_wpcs_admin_tenant_page()
+    public function render_waas_admin_tenant_page()
     {
-        echo '<h1>WPCS.io Admin</h1><form method="POST" action="options.php">';
-        settings_fields('wpcs-admin-tenant');
-        do_settings_sections('wpcs-admin-tenant');
+        echo '<h1>' . esc_html__('WaaS settings', WAAS_CLIENT_TEXTDOMAIN) . '</h1><form method="POST" action="options.php">';
+        settings_fields('waas-admin-tenant');
+        do_settings_sections('waas-admin-tenant');
         submit_button();
         echo '</form>';
     }
 
-    public function add_wpcs_admin_settings()
+    public function add_waas_admin_settings()
     {
         add_settings_section(
-            'wpcs_admin_tenant_settings',
+            'waas_admin_tenant_settings',
             'Host Website Settings',
             fn () => "<p>Intro text for our settings section</p>",
-            'wpcs-admin-tenant'
+            'waas-admin-tenant'
         );
 
-        register_setting('wpcs-admin-tenant', 'waas_host_website_url');
+        register_setting('waas-admin-tenant', 'waas_host_website_url');
         add_settings_field(
             'waas_host_website_url',
             'Host URL',
             [$this, 'render_settings_field'],
-            'wpcs-admin-tenant',
-            'wpcs_admin_tenant_settings',
+            'waas-admin-tenant',
+            'waas_admin_tenant_settings',
             [
                 "id" => "waas_host_website_url",
                 "title" => "Host URL",

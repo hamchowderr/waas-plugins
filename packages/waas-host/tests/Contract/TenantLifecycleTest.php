@@ -12,10 +12,10 @@ use WaaSHost\Commerce\PlanPurchase;
 use WaaSHost\Core\ConfigService;
 use WaaSHost\Core\HttpService;
 use WaaSHost\Core\PrivateKeyStore;
-use WaaSHost\Core\WPCSService;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\ProvisioningApi;
+use WaaSHost\Core\Tenant;
 use WaaSHost\Features\TenantsSubscriptionManager;
-use WaaSHost\Features\WPCSTenantStatusService;
+use WaaSHost\Features\TenantStatusService;
 
 /**
  * Store creation, polling and removal through a fake cart, against the provisioning API (see MockApi).
@@ -28,7 +28,7 @@ class TenantLifecycleTest extends TestCase
     use MockApi;
 
     private FakeCommerceAdapter $cart;
-    private WPCSService $service;
+    private ProvisioningApi $service;
 
     protected function setUp(): void
     {
@@ -47,7 +47,7 @@ class TenantLifecycleTest extends TestCase
 
         $this->cart = new FakeCommerceAdapter();
         Commerce::register($this->cart);
-        $this->service = new WPCSService(new HttpService(new ConfigService()));
+        $this->service = new ProvisioningApi(new HttpService(new ConfigService()));
     }
 
     protected function tearDown(): void
@@ -66,7 +66,7 @@ class TenantLifecycleTest extends TestCase
     {
         $manager = new TenantsSubscriptionManager($this->service, $jobs = $this->use_store_jobs());
         $this->mock_example('Create tenant: Scheduled (API generated the externalId)');
-        Actions\expectDone('wpcs_tenant_linked_to_subscription')->once()->with('sub-1');
+        Actions\expectDone('waas_tenant_linked_to_subscription')->once()->with('sub-1');
 
         $manager->create_tenant_when_subscription_created('sub-1', $this->purchase());
         $this->assertSame([], $this->requests, 'the cart event only queues the job');
@@ -82,19 +82,19 @@ class TenantLifecycleTest extends TestCase
         $this->assertMatchesRegularExpression('/^[0-9a-f-]{36}$/', $sent['externalId'], 'chosen up front, so a retry cannot make a second store');
 
         $meta = $this->cart->meta['sub-1'];
-        $this->assertSame('store-1042', $meta[WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META]);
-        $this->assertSame('apex-research.stores.waas.example', $meta[WPCSTenant::WPCS_DOMAIN_NAME_META]);
-        $this->assertSame('t-7c1e2a9b.stores.waas.example', $meta[WPCSTenant::WPCS_BASE_DOMAIN_NAME_META]);
-        $this->assertSame(['peptide-store'], $meta[WPCSTenant::WPCS_SUBSCRIPTION_USER_ROLES]);
+        $this->assertSame('store-1042', $meta[Tenant::TENANT_EXTERNAL_ID_META]);
+        $this->assertSame('apex-research.stores.waas.example', $meta[Tenant::DOMAIN_NAME_META]);
+        $this->assertSame('t-7c1e2a9b.stores.waas.example', $meta[Tenant::BASE_DOMAIN_NAME_META]);
+        $this->assertSame(['peptide-store'], $meta[Tenant::SUBSCRIPTION_USER_ROLES]);
         // The private key is stored encrypted, in the cart's subscription meta.
-        $this->assertStringStartsWith(PrivateKeyStore::PREFIX, $meta[WPCSTenant::WPCS_TENANT_PRIVATE_KEY_META]);
+        $this->assertStringStartsWith(PrivateKeyStore::PREFIX, $meta[Tenant::TENANT_PRIVATE_KEY_META]);
         $this->assertStringContainsString('PRIVATE KEY', PrivateKeyStore::load('sub-1'));
     }
 
     public function test_does_not_create_a_second_store_for_the_same_subscription(): void
     {
         $manager = new TenantsSubscriptionManager($this->service, $jobs = $this->use_store_jobs());
-        $this->cart->meta['sub-1'][WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META] = 'store-1042';
+        $this->cart->meta['sub-1'][Tenant::TENANT_EXTERNAL_ID_META] = 'store-1042';
 
         $manager->create_tenant_when_subscription_created('sub-1', $this->purchase());
         $this->run_store_jobs($jobs, 'sub-1');
@@ -114,26 +114,26 @@ class TenantLifecycleTest extends TestCase
 
     public function test_poller_moves_a_ready_tenant_on_to_the_ssl_check(): void
     {
-        $poller = new WPCSTenantStatusService($this->service);
+        $poller = new TenantStatusService($this->service);
         $this->cart->meta['sub-1'] = [
-            WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::PROVISIONING,
-            WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META => 'store-1042',
-            WPCSTenant::WPCS_DOMAIN_NAME_META => 'apex-research.stores.waas.example',
+            Tenant::TENANT_STATE => Tenant::PROVISIONING,
+            Tenant::TENANT_EXTERNAL_ID_META => 'store-1042',
+            Tenant::DOMAIN_NAME_META => 'apex-research.stores.waas.example',
         ];
-        $this->cart->meta['sub-2'] = [WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::READY];
+        $this->cart->meta['sub-2'] = [Tenant::TENANT_STATE => Tenant::READY];
         $this->mock_example('List tenants: Ready (statusCode 1, domain linked)');
 
         $poller->poll_tenant_status();
 
         // The example domain doesn't resolve, so the HEAD check fails and it waits there.
-        $this->assertSame(WPCSTenant::REQUESTING_SSL, $this->cart->meta['sub-1'][WPCSTenant::WPCS_TENANT_STATE]);
-        $this->assertSame(WPCSTenant::READY, $this->cart->meta['sub-2'][WPCSTenant::WPCS_TENANT_STATE]);
+        $this->assertSame(Tenant::REQUESTING_SSL, $this->cart->meta['sub-1'][Tenant::TENANT_STATE]);
+        $this->assertSame(Tenant::READY, $this->cart->meta['sub-2'][Tenant::TENANT_STATE]);
         $this->assertSame(['GET', 'GET', 'HEAD'], array_column($this->requests, 0));
     }
 
     public function test_poller_does_nothing_without_a_cart(): void
     {
-        $poller = new WPCSTenantStatusService($this->service);
+        $poller = new TenantStatusService($this->service);
         Commerce::reset();
 
         $poller->poll_tenant_status();
@@ -144,8 +144,8 @@ class TenantLifecycleTest extends TestCase
     public function test_deletion_after_the_grace_period_deletes_the_store_by_external_id(): void
     {
         $manager = new TenantsSubscriptionManager($this->service, $jobs = $this->use_store_jobs());
-        $this->cart->meta['sub-1'][WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META] = 'store-1042';
-        $this->cart->meta['sub-1'][WPCSTenant::WPCS_TENANT_STATE] = WPCSTenant::SUSPENDED;
+        $this->cart->meta['sub-1'][Tenant::TENANT_EXTERNAL_ID_META] = 'store-1042';
+        $this->cart->meta['sub-1'][Tenant::TENANT_STATE] = Tenant::SUSPENDED;
         $this->mock_example('Delete tenant: Scheduled');
 
         $manager->delete_suspended_tenant('sub-1');
@@ -153,6 +153,6 @@ class TenantLifecycleTest extends TestCase
 
         $this->assertSame('DELETE', $this->requests[0][0]);
         $this->assertStringEndsWith('/v1/tenants?externalId=store-1042', $this->requests[0][1]);
-        $this->assertSame(WPCSTenant::DELETED, $this->cart->meta['sub-1'][WPCSTenant::WPCS_TENANT_STATE]);
+        $this->assertSame(Tenant::DELETED, $this->cart->meta['sub-1'][Tenant::TENANT_STATE]);
     }
 }

@@ -7,18 +7,18 @@ use Mockery;
 use WaaSHost\Core\Exceptions\InvalidDomainException;
 use Tests\Unit\TestCase;
 use WaaSHost\Core\HttpService;
-use WaaSHost\Core\WPCSService;
+use WaaSHost\Core\ProvisioningApi;
 
-class WPCSServiceTest extends TestCase
+class ProvisioningApiTest extends TestCase
 {
     private $http;
-    private WPCSService $service;
+    private ProvisioningApi $service;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->http = Mockery::mock(HttpService::class);
-        $this->service = new WPCSService($this->http);
+        $this->service = new ProvisioningApi($this->http);
     }
 
     public function test_delete_tenant_targets_the_tenant_by_external_id(): void
@@ -245,7 +245,7 @@ class WPCSServiceTest extends TestCase
         }
         Functions\when('get_transient')->justReturn(false);
         $this->http->expects('get')->andReturn([(object) ['groupName' => 'peptide-starter']]);
-        Functions\expect('set_transient')->once()->with(WPCSService::GROUP_NAMES_TRANSIENT, ['peptide-starter'], 600);
+        Functions\expect('set_transient')->once()->with(ProvisioningApi::GROUP_NAMES_TRANSIENT, ['peptide-starter'], 600);
 
         $this->assertSame(['peptide-starter'], $this->service->get_available_groupnames_cached());
     }

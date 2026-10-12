@@ -4,8 +4,8 @@ namespace WaaSHost\Features;
 
 use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\Exceptions\InvalidDomainException;
-use WaaSHost\Core\WPCSService;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\ProvisioningApi;
+use WaaSHost\Core\Tenant;
 
 /**
  * A website name that turns out to be taken when the store is created. Checkout accepts a name it could not check
@@ -23,12 +23,12 @@ class NameConflicts
     /** Seconds after which a lock left by a request that died is ignored. */
     private const LOCK_TTL = 60;
 
-    private WPCSService $wpcs_service;
+    private ProvisioningApi $provisioning_api;
     private StoreJobs $jobs;
 
-    public function __construct(WPCSService $wpcs_service, StoreJobs $jobs)
+    public function __construct(ProvisioningApi $provisioning_api, StoreJobs $jobs)
     {
-        $this->wpcs_service = $wpcs_service;
+        $this->provisioning_api = $provisioning_api;
         $this->jobs = $jobs;
 
         add_action('admin_post_' . self::CHOOSE_ACTION, [$this, 'handle_choose_request']);
@@ -46,7 +46,7 @@ class NameConflicts
         $commerce = Commerce::require_adapter();
         $name = (string) ($store['request']['name'] ?? '');
 
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META, [
+        $commerce->update_subscription_meta($subscription_id, Tenant::NAME_CONFLICT_META, [
             'store' => $store,
             'name' => $name,
             'domain' => (string) ($store['request']['custom_domain_name'] ?? ''),
@@ -54,19 +54,19 @@ class NameConflicts
             'at' => time(),
         ]);
         // The domain isn't this store's: don't let the local duplicate check hold it.
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, '');
-        $this->jobs->set_status($subscription_id, WPCSTenant::NEEDS_NEW_NAME);
+        $commerce->update_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META, '');
+        $this->jobs->set_status($subscription_id, Tenant::NEEDS_NEW_NAME);
 
         $this->email_admin($subscription_id, $name, $error);
         $this->email_customer($subscription_id, $name);
 
-        do_action('wpcs_tenant_name_conflict', $subscription_id, $name);
+        do_action('waas_tenant_name_conflict', $subscription_id, $name);
     }
 
     /** True while the subscription's store waits for a new name, also while that wait is paused. */
     public static function is_waiting($subscription_id): bool
     {
-        return is_array(Commerce::require_adapter()->get_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META));
+        return is_array(Commerce::require_adapter()->get_subscription_meta($subscription_id, Tenant::NAME_CONFLICT_META));
     }
 
     /**
@@ -76,13 +76,13 @@ class NameConflicts
     public function pause($subscription_id): void
     {
         $commerce = Commerce::require_adapter();
-        $conflict = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META);
+        $conflict = $commerce->get_subscription_meta($subscription_id, Tenant::NAME_CONFLICT_META);
         if (!is_array($conflict) || !empty($conflict['paused'])) {
             return;
         }
 
         $conflict['paused'] = true;
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META, $conflict);
+        $commerce->update_subscription_meta($subscription_id, Tenant::NAME_CONFLICT_META, $conflict);
         $this->jobs->set_status($subscription_id, '');
     }
 
@@ -93,14 +93,14 @@ class NameConflicts
     public function resume($subscription_id): void
     {
         $commerce = Commerce::require_adapter();
-        $conflict = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META);
+        $conflict = $commerce->get_subscription_meta($subscription_id, Tenant::NAME_CONFLICT_META);
         if (!is_array($conflict) || empty($conflict['paused']) || !$commerce->is_subscription_active($subscription_id)) {
             return;
         }
 
         unset($conflict['paused']);
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META, $conflict);
-        $this->jobs->set_status($subscription_id, WPCSTenant::NEEDS_NEW_NAME);
+        $commerce->update_subscription_meta($subscription_id, Tenant::NAME_CONFLICT_META, $conflict);
+        $this->jobs->set_status($subscription_id, Tenant::NEEDS_NEW_NAME);
     }
 
     /**
@@ -111,14 +111,14 @@ class NameConflicts
     public static function set_roles($subscription_id, array $roles): void
     {
         $commerce = Commerce::require_adapter();
-        $conflict = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META);
+        $conflict = $commerce->get_subscription_meta($subscription_id, Tenant::NAME_CONFLICT_META);
         if (!is_array($conflict)) {
             return;
         }
 
         $conflict['store']['request']['php_constants']['WPCS_TENANT_ROLES'] = ['value' => implode(',', $roles), 'isPrivate' => false];
         $conflict['store']['roles'] = $roles;
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META, $conflict);
+        $commerce->update_subscription_meta($subscription_id, Tenant::NAME_CONFLICT_META, $conflict);
     }
 
     /**
@@ -139,23 +139,23 @@ class NameConflicts
     {
         switch ($code) {
             case 'ok':
-                return __('Thank you! We are setting up your website with its new name.', WPCS_WAAS_HOST_TEXTDOMAIN);
+                return __('Thank you! We are setting up your website with its new name.', WAAS_HOST_TEXTDOMAIN);
             case 'taken':
-                return __('Website name is already taken! Please use a different one.', WPCS_WAAS_HOST_TEXTDOMAIN);
+                return __('Website name is already taken! Please use a different one.', WAAS_HOST_TEXTDOMAIN);
             case 'invalid':
-                return __('Please use a website name of 1 to 63 letters, digits and dashes.', WPCS_WAAS_HOST_TEXTDOMAIN);
+                return __('Please use a website name of 1 to 63 letters, digits and dashes.', WAAS_HOST_TEXTDOMAIN);
             case 'invalid_domain':
-                return __('The resulting domain is not valid.', WPCS_WAAS_HOST_TEXTDOMAIN);
+                return __('The resulting domain is not valid.', WAAS_HOST_TEXTDOMAIN);
             case 'unavailable':
-                return __('We could not check the website name right now. Please try again in a minute.', WPCS_WAAS_HOST_TEXTDOMAIN);
+                return __('We could not check the website name right now. Please try again in a minute.', WAAS_HOST_TEXTDOMAIN);
             case 'not_active':
-                return __('This subscription is not active, so we can\'t set up its website. Once the subscription is active again, you can choose a name here.', WPCS_WAAS_HOST_TEXTDOMAIN);
+                return __('This subscription is not active, so we can\'t set up its website. Once the subscription is active again, you can choose a name here.', WAAS_HOST_TEXTDOMAIN);
             case 'not_needed':
-                return __('This website does not need a new name.', WPCS_WAAS_HOST_TEXTDOMAIN);
+                return __('This website does not need a new name.', WAAS_HOST_TEXTDOMAIN);
             case 'busy':
-                return __('A new name for this website is being saved right now. Please reload this page in a moment.', WPCS_WAAS_HOST_TEXTDOMAIN);
+                return __('A new name for this website is being saved right now. Please reload this page in a moment.', WAAS_HOST_TEXTDOMAIN);
             case 'expired':
-                return __('This page was open too long, so the name was not saved. Please enter it again.', WPCS_WAAS_HOST_TEXTDOMAIN);
+                return __('This page was open too long, so the name was not saved. Please enter it again.', WAAS_HOST_TEXTDOMAIN);
             default:
                 return '';
         }
@@ -179,11 +179,11 @@ class NameConflicts
     private function choose_locked($subscription_id, string $website_name): string
     {
         $commerce = Commerce::require_adapter();
-        $conflict = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META);
+        $conflict = $commerce->get_subscription_meta($subscription_id, Tenant::NAME_CONFLICT_META);
         if (is_array($conflict) && (!empty($conflict['paused']) || !$commerce->is_subscription_active($subscription_id))) {
             return 'not_active';
         }
-        if (!is_array($conflict) || $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_STATE) !== WPCSTenant::NEEDS_NEW_NAME) {
+        if (!is_array($conflict) || $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_STATE) !== Tenant::NEEDS_NEW_NAME) {
             return 'not_needed';
         }
 
@@ -202,7 +202,7 @@ class NameConflicts
                 return 'taken';
             }
             try {
-                if (!$this->wpcs_service->domain_available($domain_name)) {
+                if (!$this->provisioning_api->domain_available($domain_name)) {
                     return 'taken';
                 }
             } catch (InvalidDomainException $e) {
@@ -217,10 +217,10 @@ class NameConflicts
         // The earlier create never succeeded (it was refused), so a fresh externalId is safe.
         $store['external_id'] = wp_generate_uuid4();
 
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_NAME_CONFLICT_META, '');
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, $domain_name);
+        $commerce->update_subscription_meta($subscription_id, Tenant::NAME_CONFLICT_META, '');
+        $commerce->update_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META, $domain_name);
         $this->jobs->enqueue($subscription_id, 'create', $store);
-        $this->jobs->set_status($subscription_id, WPCSTenant::QUEUED);
+        $this->jobs->set_status($subscription_id, Tenant::QUEUED);
 
         return 'ok';
     }
@@ -230,7 +230,7 @@ class NameConflicts
     {
         $url = Commerce::require_adapter()->get_subscription_url($subscription_id);
 
-        return (string) apply_filters('wpcs_choose_website_name_url', $url, $subscription_id);
+        return (string) apply_filters('waas_choose_website_name_url', $url, $subscription_id);
     }
 
     /** The subscription the page's result is for, or null when the page shows no result. */
@@ -259,23 +259,23 @@ class NameConflicts
             return;
         }
 
-        $class = $code === 'ok' ? 'wpcs-choose-website-name-result' : 'wpcs-choose-website-name-result wpcs-choose-website-name-error';
-        echo '<p id="wpcs-website-name-result-' . esc_attr((string) $subscription_id) . '" class="' . esc_attr($class) . '" role="status">' . esc_html($message) . '</p>';
+        $class = $code === 'ok' ? 'waas-choose-website-name-result' : 'waas-choose-website-name-result waas-choose-website-name-error';
+        echo '<p id="waas-website-name-result-' . esc_attr((string) $subscription_id) . '" class="' . esc_attr($class) . '" role="status">' . esc_html($message) . '</p>';
     }
 
     /** The customer's form, on their subscription or website page. */
     public static function render_form($subscription_id): void
     {
         ?>
-        <form class="wpcs-choose-website-name" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-            <p><?php esc_html_e('The website name you picked was taken by someone else just before we could set up your website. Choose another name and we will set it up right away.', WPCS_WAAS_HOST_TEXTDOMAIN); ?></p>
+        <form class="waas-choose-website-name" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+            <p><?php esc_html_e('The website name you picked was taken by someone else just before we could set up your website. Choose another name and we will set it up right away.', WAAS_HOST_TEXTDOMAIN); ?></p>
             <input type="hidden" name="action" value="<?php echo esc_attr(self::CHOOSE_ACTION); ?>" />
             <input type="hidden" name="subscription_id" value="<?php echo esc_attr((string) $subscription_id); ?>" />
             <?php wp_nonce_field(self::CHOOSE_ACTION . '_' . $subscription_id); ?>
-            <label><?php esc_html_e('New website name', WPCS_WAAS_HOST_TEXTDOMAIN); ?>
+            <label><?php esc_html_e('New website name', WAAS_HOST_TEXTDOMAIN); ?>
                 <input type="text" name="website_name" required maxlength="63" />
             </label>
-            <button type="submit" class="button"><?php esc_html_e('Use this name', WPCS_WAAS_HOST_TEXTDOMAIN); ?></button>
+            <button type="submit" class="button"><?php esc_html_e('Use this name', WAAS_HOST_TEXTDOMAIN); ?></button>
         </form>
         <?php
     }
@@ -294,7 +294,7 @@ class NameConflicts
         $commerce = Commerce::require_adapter();
         $user_id = get_current_user_id();
         if ($user_id === 0 || $commerce->get_customer_id($subscription_id) !== $user_id) {
-            wp_die(esc_html__('You are not allowed to do this.', WPCS_WAAS_HOST_TEXTDOMAIN), 403);
+            wp_die(esc_html__('You are not allowed to do this.', WAAS_HOST_TEXTDOMAIN), 403);
         }
 
         $code = $this->choose($subscription_id, isset($_POST['website_name']) ? (string) wp_unslash($_POST['website_name']) : '');
@@ -325,7 +325,7 @@ class NameConflicts
     private function redirect_with_result($subscription_id, string $code): void
     {
         $url = add_query_arg([self::RESULT_ARG => $code, self::RESULT_FOR_ARG => rawurlencode((string) $subscription_id)], self::form_url($subscription_id));
-        wp_safe_redirect($url . '#wpcs-website-name-result-' . rawurlencode((string) $subscription_id));
+        wp_safe_redirect($url . '#waas-website-name-result-' . rawurlencode((string) $subscription_id));
         $this->finish();
     }
 
@@ -344,7 +344,7 @@ class NameConflicts
 
         // Only stores the customer can still name: not paused, and the subscription still exists and is active.
         $waiting = array_filter(
-            $commerce->find_subscriptions_by_meta(WPCSTenant::WPCS_NAME_CONFLICT_META, ['']),
+            $commerce->find_subscriptions_by_meta(Tenant::NAME_CONFLICT_META, ['']),
             fn ($conflict, $subscription_id) => is_array($conflict) && empty($conflict['paused']) && $commerce->is_subscription_active($subscription_id),
             ARRAY_FILTER_USE_BOTH
         );
@@ -353,7 +353,7 @@ class NameConflicts
         }
 
         echo '<div class="notice notice-warning"><p><strong>' . esc_html(sprintf(
-            _n('%d website is waiting for its customer to choose a new name.', '%d websites are waiting for their customers to choose a new name.', count($waiting), WPCS_WAAS_HOST_TEXTDOMAIN),
+            _n('%d website is waiting for its customer to choose a new name.', '%d websites are waiting for their customers to choose a new name.', count($waiting), WAAS_HOST_TEXTDOMAIN),
             count($waiting)
         )) . '</strong></p><ul>';
         foreach ($waiting as $subscription_id => $conflict) {
@@ -384,9 +384,9 @@ class NameConflicts
 
     private function email_admin($subscription_id, string $name, string $error): void
     {
-        $subject = sprintf(__('[%s] A website name was taken; the customer has to choose a new one', WPCS_WAAS_HOST_TEXTDOMAIN), wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES));
+        $subject = sprintf(__('[%s] A website name was taken; the customer has to choose a new one', WAAS_HOST_TEXTDOMAIN), wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES));
         $message = sprintf(
-            __("The website name \"%1\$s\" for subscription #%2\$s was taken when the store was created (another store got it after the name was accepted: at checkout while the provisioning API could not be reached, or when the customer chose it).\n\nAPI answer: %3\$s\n\nThe customer has been emailed a link to choose a new name. Nothing else is needed unless they contact you.\n%4\$s", WPCS_WAAS_HOST_TEXTDOMAIN),
+            __("The website name \"%1\$s\" for subscription #%2\$s was taken when the store was created (another store got it after the name was accepted: at checkout while the provisioning API could not be reached, or when the customer chose it).\n\nAPI answer: %3\$s\n\nThe customer has been emailed a link to choose a new name. Nothing else is needed unless they contact you.\n%4\$s", WAAS_HOST_TEXTDOMAIN),
             $name,
             $subscription_id,
             $error,
@@ -406,9 +406,9 @@ class NameConflicts
             return;
         }
 
-        $subject = sprintf(__('[%s] Please choose a new name for your website', WPCS_WAAS_HOST_TEXTDOMAIN), wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES));
+        $subject = sprintf(__('[%s] Please choose a new name for your website', WAAS_HOST_TEXTDOMAIN), wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES));
         $message = sprintf(
-            __("Thank you for your order. The website name \"%1\$s\" was taken by someone else just before we could set up your website.\n\nPlease choose another name here, and we will set up your website right away:\n%2\$s", WPCS_WAAS_HOST_TEXTDOMAIN),
+            __("Thank you for your order. The website name \"%1\$s\" was taken by someone else just before we could set up your website.\n\nPlease choose another name here, and we will set up your website right away:\n%2\$s", WAAS_HOST_TEXTDOMAIN),
             $name,
             self::form_url($subscription_id)
         );

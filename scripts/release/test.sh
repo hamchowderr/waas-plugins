@@ -78,9 +78,9 @@ ok "the zip has one folder, production dependencies, the updater, no tests"
 for package in waas-host waas-client; do
   "$here/build.sh" "$package" 9.9.9 "$work/other-builds" > /dev/null
 done
-unzip -p "$work/other-builds/wpcs-waas-host.zip" waas-host/index.php | grep -q "define( 'WPCS_WAAS_HOST_VERSION', '9.9.9' );" || fail "waas-host not stamped"
+unzip -p "$work/other-builds/wpcs-waas-host.zip" waas-host/index.php | grep -q "define( 'WAAS_HOST_VERSION', '9.9.9' );" || fail "waas-host not stamped"
 unzip -p "$work/other-builds/wpcs-waas-host.zip" waas-host/index.php | grep -q '^ \* @version 9.9.9$' || fail "waas-host @version not stamped"
-unzip -p "$work/other-builds/wpcs-waas-client.zip" waas-client/index.php | grep -q "define( 'WPCS_WAAS_CLIENT_VERSION', '9.9.9' );" || fail "waas-client not stamped"
+unzip -p "$work/other-builds/wpcs-waas-client.zip" waas-client/index.php | grep -q "define( 'WAAS_CLIENT_VERSION', '9.9.9' );" || fail "waas-client not stamped"
 ok "waas-host and waas-client build and stamp too"
 "$here/build.sh" waas-payments latest "$work/x" 2>/dev/null && fail "accepted a bad version"
 ok "a bad version is refused"

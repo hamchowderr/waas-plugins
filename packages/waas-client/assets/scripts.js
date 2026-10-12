@@ -1,5 +1,5 @@
 const App = () => {
-    const deleteBtns = document.getElementsByClassName('wpcs-mark-role-delete');
+    const deleteBtns = document.getElementsByClassName('waas-mark-role-delete');
 
     for (let deleteBtn of deleteBtns) {
         deleteBtn.addEventListener('click', toggleRoleToDelete);
@@ -10,7 +10,7 @@ function toggleRoleToDelete(event) {
     const role = event.target.dataset['targetRole'];
     const rolesForm = document.getElementById('manage_plugins_roles');
     const currentStatus = parseInt(rolesForm.elements[`delete_roles[${role}]`].value);
-    const roleContainer = document.getElementById(`wpcs-role-${role}`);
+    const roleContainer = document.getElementById(`waas-role-${role}`);
 
     if (!currentStatus) {
         rolesForm.elements[`delete_roles[${role}]`].value = '1';

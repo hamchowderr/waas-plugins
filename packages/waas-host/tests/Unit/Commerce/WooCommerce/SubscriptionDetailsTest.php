@@ -7,7 +7,7 @@ use Tests\FakeCommerceAdapter;
 use Tests\Unit\TestCase;
 use WaaSHost\Commerce\Commerce;
 use WaaSHost\Commerce\WooCommerce\SubscriptionDetails;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\Tenant;
 
 /** The store panel on WooCommerce's subscription page, in the customer's words. */
 class SubscriptionDetailsTest extends TestCase
@@ -17,8 +17,8 @@ class SubscriptionDetailsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        if (!defined('WPCS_WAAS_HOST_TEXTDOMAIN')) {
-            define('WPCS_WAAS_HOST_TEXTDOMAIN', 'wpcs-waas-host');
+        if (!defined('WAAS_HOST_TEXTDOMAIN')) {
+            define('WAAS_HOST_TEXTDOMAIN', 'waas-host');
         }
         Functions\stubTranslationFunctions();
         Functions\stubEscapeFunctions();
@@ -48,8 +48,8 @@ class SubscriptionDetailsTest extends TestCase
 
     public function test_a_website_being_set_up_shows_as_setting_up_without_a_login_link(): void
     {
-        $this->cart->meta[5] = [WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::QUEUED];
-        \Brain\Monkey\Actions\expectDone('wpcs_after_subscription_details_html')->never();
+        $this->cart->meta[5] = [Tenant::TENANT_STATE => Tenant::QUEUED];
+        \Brain\Monkey\Actions\expectDone('waas_after_subscription_details_html')->never();
 
         $html = $this->render(5);
 
@@ -59,14 +59,14 @@ class SubscriptionDetailsTest extends TestCase
 
     public function test_a_failed_setup_shows_as_delayed(): void
     {
-        $this->cart->meta[5] = [WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::FAILED];
+        $this->cart->meta[5] = [Tenant::TENANT_STATE => Tenant::FAILED];
 
         $this->assertStringContainsString('Website status: Setup delayed — we&#039;re on it', $this->render(5));
     }
 
     public function test_a_website_whose_name_was_taken_asks_the_customer_for_a_new_one(): void
     {
-        $this->cart->meta[5] = [WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::NEEDS_NEW_NAME];
+        $this->cart->meta[5] = [Tenant::TENANT_STATE => Tenant::NEEDS_NEW_NAME];
         Functions\when('admin_url')->alias(fn ($path = '') => 'https://storefront.example/wp-admin/' . $path);
         Functions\when('wp_nonce_field')->alias(function ($action) {
             echo '<input type="hidden" name="_wpnonce" data-action="' . $action . '" />';
@@ -83,8 +83,8 @@ class SubscriptionDetailsTest extends TestCase
 
     public function test_a_ready_website_keeps_its_state_and_login_link(): void
     {
-        $this->cart->meta[5] = [WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META => 'store-1042', WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::READY];
-        \Brain\Monkey\Actions\expectDone('wpcs_after_subscription_details_html')->once()->with(5);
+        $this->cart->meta[5] = [Tenant::TENANT_EXTERNAL_ID_META => 'store-1042', Tenant::TENANT_STATE => Tenant::READY];
+        \Brain\Monkey\Actions\expectDone('waas_after_subscription_details_html')->once()->with(5);
 
         $html = $this->render(5);
 
@@ -95,8 +95,8 @@ class SubscriptionDetailsTest extends TestCase
     public function test_a_cancelled_website_shows_active_until_the_end_of_the_paid_period(): void
     {
         $this->cart->meta[5] = [
-            WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META => 'store-1042', WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::READY,
-            WPCSTenant::WPCS_TENANT_SUSPEND_AT_META => gmmktime(16, 3, 29, 11, 7, 2026),
+            Tenant::TENANT_EXTERNAL_ID_META => 'store-1042', Tenant::TENANT_STATE => Tenant::READY,
+            Tenant::TENANT_SUSPEND_AT_META => gmmktime(16, 3, 29, 11, 7, 2026),
         ];
         Functions\when('get_option')->alias(fn ($name, $default = false) => $default);
         Functions\when('wp_date')->alias(fn ($format, $ts) => gmdate($format, $ts));
@@ -118,7 +118,7 @@ class SubscriptionDetailsTest extends TestCase
     public function test_a_refused_new_name_is_explained_although_the_panel_is_gone(): void
     {
         // The wait was paused (subscription cancelled) after the customer opened the page with the form.
-        $this->cart->meta[5] = [WPCSTenant::WPCS_NAME_CONFLICT_META => ['name' => 'Apex Research', 'paused' => true], WPCSTenant::WPCS_TENANT_STATE => ''];
+        $this->cart->meta[5] = [Tenant::NAME_CONFLICT_META => ['name' => 'Apex Research', 'paused' => true], Tenant::TENANT_STATE => ''];
         $_GET = ['wpcs_website_name' => 'not_active', 'wpcs_website_name_for' => '5'];
         Functions\when('sanitize_text_field')->returnArg();
         Functions\when('wp_unslash')->returnArg();

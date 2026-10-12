@@ -8,7 +8,7 @@ use Tests\Unit\TestCase;
 use WaaSHost\Commerce\FluentCart\FluentCartAdapter;
 use WaaSHost\Commerce\FluentCart\FluentCartStore;
 use WaaSHost\Commerce\PlanProduct;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\Tenant;
 
 class FluentCartAdapterTest extends TestCase
 {
@@ -35,7 +35,7 @@ class FluentCartAdapterTest extends TestCase
         $this->store->allows('get_plan_feed')->with(101)
             ->andReturn(['enabled' => 'yes', 'role' => 'peptide-store', 'group_name' => 'peptide-starter']);
         $this->store->allows('get_plan_feed')->with(102)->andReturnNull();
-        $this->store->allows('get_order_meta')->with($order, WPCSTenant::WPCS_WEBSITE_NAME_META)->andReturn('Apex Research');
+        $this->store->allows('get_order_meta')->with($order, Tenant::WEBSITE_NAME_META)->andReturn('Apex Research');
         $this->customer(7);
 
         $purchase = $this->adapter->get_plan_purchase(900, $order);
@@ -79,22 +79,22 @@ class FluentCartAdapterTest extends TestCase
 
     public function test_subscription_meta_goes_to_fluentcart(): void
     {
-        $this->store->expects('update_subscription_meta')->with(900, WPCSTenant::WPCS_DOMAIN_NAME_META, 'shop.example.com');
-        $this->store->allows('get_subscription_meta')->with(900, WPCSTenant::WPCS_DOMAIN_NAME_META)->andReturn('shop.example.com');
-        $this->store->allows('find_subscription_meta')->with(WPCSTenant::WPCS_TENANT_STATE, [WPCSTenant::READY])->andReturn([900 => WPCSTenant::PROVISIONING]);
+        $this->store->expects('update_subscription_meta')->with(900, Tenant::DOMAIN_NAME_META, 'shop.example.com');
+        $this->store->allows('get_subscription_meta')->with(900, Tenant::DOMAIN_NAME_META)->andReturn('shop.example.com');
+        $this->store->allows('find_subscription_meta')->with(Tenant::TENANT_STATE, [Tenant::READY])->andReturn([900 => Tenant::PROVISIONING]);
 
-        $this->adapter->update_subscription_meta(900, WPCSTenant::WPCS_DOMAIN_NAME_META, 'shop.example.com');
+        $this->adapter->update_subscription_meta(900, Tenant::DOMAIN_NAME_META, 'shop.example.com');
 
-        $this->assertSame('shop.example.com', $this->adapter->get_subscription_meta(900, WPCSTenant::WPCS_DOMAIN_NAME_META));
-        $this->assertSame([900 => WPCSTenant::PROVISIONING], $this->adapter->find_subscriptions_by_meta(WPCSTenant::WPCS_TENANT_STATE, [WPCSTenant::READY]));
+        $this->assertSame('shop.example.com', $this->adapter->get_subscription_meta(900, Tenant::DOMAIN_NAME_META));
+        $this->assertSame([900 => Tenant::PROVISIONING], $this->adapter->find_subscriptions_by_meta(Tenant::TENANT_STATE, [Tenant::READY]));
     }
 
     public function test_checklist_plan_item_is_done_once_a_product_has_the_feed(): void
     {
         $this->store->allows('has_plan_feed')->andReturn(true);
 
-        $items = $this->adapter->mark_plan_product_checklist_item(['create_woo_wpcs_product' => ['label' => 'x', 'is_done' => false]]);
+        $items = $this->adapter->mark_plan_product_checklist_item(['create_woo_waas_product' => ['label' => 'x', 'is_done' => false]]);
 
-        $this->assertTrue($items['create_woo_wpcs_product']['is_done']);
+        $this->assertTrue($items['create_woo_waas_product']['is_done']);
     }
 }

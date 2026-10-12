@@ -5,39 +5,39 @@ namespace WaaSHost\Features;
 use Exception;
 use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\ConfigService;
-use WaaSHost\Core\WPCSService;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\ProvisioningApi;
+use WaaSHost\Core\Tenant;
 
 class UserAccountSubscriptionsSettings
 {
-    public const DOMAIN_NONCE_FIELD = 'wpcs_domain_nonce';
-    public const DOMAIN_NONCE_ACTION = 'wpcs_update_domain_';
+    public const DOMAIN_NONCE_FIELD = 'waas_domain_nonce';
+    public const DOMAIN_NONCE_ACTION = 'waas_update_domain_';
 
-    private WPCSService $wpcsService;
+    private ProvisioningApi $provisioningApi;
     private ConfigService $config;
     private string $domain_error = '';
 
-    public function __construct(WPCSService $wpcsService, ?ConfigService $config = null)
+    public function __construct(ProvisioningApi $provisioningApi, ?ConfigService $config = null)
     {
-        $this->wpcsService = $wpcsService;
+        $this->provisioningApi = $provisioningApi;
         $this->config = $config ?? new ConfigService();
 
-        add_action('wpcs_after_subscription_details_html', [$this, 'render_edit_domain'], 10, 1);
+        add_action('waas_after_subscription_details_html', [$this, 'render_edit_domain'], 10, 1);
         add_action('remove_tenant_old_domain', [$this, 'remove_tenant_old_domain'], 1, 2);
         add_filter('wcs_view_subscription_actions', [$this, 'remove_subscription_actions'], 10, 1);
     }
 
     public function render_edit_domain($subscription_id)
     {
-        if(!apply_filters('wpcs_display_edit_domain_fields', true, $subscription_id))
+        if(!apply_filters('waas_display_edit_domain_fields', true, $subscription_id))
         {
             return;
         }
 
         $this->handle_update_subscription_domain($subscription_id);
         $commerce = Commerce::require_adapter();
-        $domain_name = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META);
-        $base_domain_name = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_BASE_DOMAIN_NAME_META);
+        $domain_name = $commerce->get_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META);
+        $base_domain_name = $commerce->get_subscription_meta($subscription_id, Tenant::BASE_DOMAIN_NAME_META);
 
         $domain_name = esc_attr($domain_name ?: $base_domain_name);
         $nonce_field = wp_nonce_field(self::DOMAIN_NONCE_ACTION . $subscription_id, self::DOMAIN_NONCE_FIELD, true, false);
@@ -64,13 +64,13 @@ class UserAccountSubscriptionsSettings
         $a_records = $this->config->get_dns_a_records();
         $cname_target = $this->config->get_dns_cname_target();
         if (!$a_records && $cname_target === '') {
-            echo '<div class="wpcs-ip-instructions"><p>'
+            echo '<div class="waas-ip-instructions"><p>'
                 . esc_html('Custom domains are not set up on this store yet. Please contact support to connect your domain.')
                 . '</p></div>';
             return;
         }
 
-        echo '<div class="wpcs-ip-instructions">';
+        echo '<div class="waas-ip-instructions">';
         echo '<p>Before verifying a domain, make sure that its DNS contains the following settings.</p>';
         if ($a_records) {
             echo '<p>For the domain apex add A records with <b>each of the following IPs</b> as their values:</p>';
@@ -107,20 +107,20 @@ class UserAccountSubscriptionsSettings
             return;
         }
 
-        $tenant_external_id = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META);
-        $tenant_current_domain_name = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META);
+        $tenant_external_id = $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META);
+        $tenant_current_domain_name = $commerce->get_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META);
 
         if ($domain === $tenant_current_domain_name) {
             return;
         }
 
         try {
-            $this->wpcsService->add_tenant_domain([
+            $this->provisioningApi->add_tenant_domain([
                 'external_id' => $tenant_external_id,
                 'domain_name' => $domain,
             ]);
 
-            $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, $domain);
+            $commerce->update_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META, $domain);
 
             if ($tenant_current_domain_name) {
                 wp_schedule_single_event(time() + 300, 'remove_tenant_old_domain', [$tenant_external_id, $tenant_current_domain_name]);
@@ -138,7 +138,7 @@ class UserAccountSubscriptionsSettings
 
     public function remove_tenant_old_domain($external_id, $old_domain_name)
     {
-        $this->wpcsService->delete_tenant_domain([
+        $this->provisioningApi->delete_tenant_domain([
             'external_id' => $external_id,
             'old_domain_name' => $old_domain_name,
         ]);

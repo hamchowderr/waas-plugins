@@ -65,8 +65,8 @@ abstract class StoreJobsTestCase extends TestCase
             return false;
         });
 
-        if (!defined('WPCS_WAAS_HOST_TEXTDOMAIN')) {
-            define('WPCS_WAAS_HOST_TEXTDOMAIN', 'wpcs-waas-host');
+        if (!defined('WAAS_HOST_TEXTDOMAIN')) {
+            define('WAAS_HOST_TEXTDOMAIN', 'waas-host');
         }
         Functions\stubTranslationFunctions();
         Functions\when('get_bloginfo')->justReturn('Peptide Storefront');

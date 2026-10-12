@@ -8,8 +8,8 @@ use Mockery;
 use Tests\Unit\TestCase;
 use WaaSHost\Commerce\FluentCart\FluentCartStore;
 use WaaSHost\Commerce\FluentCart\WaasProvisioningIntegration;
-use WaaSHost\Core\WPCSService;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\ProvisioningApi;
+use WaaSHost\Core\Tenant;
 
 class WaasProvisioningIntegrationTest extends TestCase
 {
@@ -37,7 +37,7 @@ class WaasProvisioningIntegrationTest extends TestCase
         $this->store->allows('get_waas_state')->andReturnUsing(function () {
             return $this->state;
         })->byDefault();
-        $this->integration = new WaasProvisioningIntegration(Mockery::mock(WPCSService::class), $this->store);
+        $this->integration = new WaasProvisioningIntegration(Mockery::mock(ProvisioningApi::class), $this->store);
     }
 
     private function run_feed(string $trigger, array $extra = []): void
@@ -52,12 +52,12 @@ class WaasProvisioningIntegrationTest extends TestCase
 
     private function has_store(bool $has): void
     {
-        $this->store->allows('get_subscription_meta')->with(900, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META)->andReturn($has ? 'ext-123' : '');
+        $this->store->allows('get_subscription_meta')->with(900, Tenant::TENANT_EXTERNAL_ID_META)->andReturn($has ? 'ext-123' : '');
     }
 
     public function test_activation_creates_the_store_with_the_order(): void
     {
-        Actions\expectDone('wpcs_subscription_created')->once()->with(900, $this->order);
+        Actions\expectDone('waas_subscription_created')->once()->with(900, $this->order);
 
         $this->run_feed('subscription_activated');
     }
@@ -65,7 +65,7 @@ class WaasProvisioningIntegrationTest extends TestCase
     public function test_background_run_finds_the_subscription_by_order(): void
     {
         $this->store->expects('find_subscription_for_order')->with($this->order)->andReturn((object) ['id' => 901]);
-        Actions\expectDone('wpcs_subscription_created')->once()->with(901, $this->order);
+        Actions\expectDone('waas_subscription_created')->once()->with(901, $this->order);
 
         $this->run_feed('subscription_activated', ['event_data' => []]);
     }
@@ -73,8 +73,8 @@ class WaasProvisioningIntegrationTest extends TestCase
     public function test_one_off_purchase_is_ignored(): void
     {
         $this->store->allows('find_subscription_for_order')->andReturnNull();
-        Actions\expectDone('wpcs_subscription_created')->never();
-        Actions\expectDone('wpcs_subscription_expired')->never();
+        Actions\expectDone('waas_subscription_created')->never();
+        Actions\expectDone('waas_subscription_expired')->never();
 
         $this->run_feed('order_paid_done', ['event_data' => []]);
     }
@@ -83,8 +83,8 @@ class WaasProvisioningIntegrationTest extends TestCase
     public function test_cancel_end_of_term_and_revoke_remove_the_store(string $trigger, string $is_revoke): void
     {
         $this->has_store(true);
-        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
-        Actions\expectDone('wpcs_subscription_created')->never();
+        Actions\expectDone('waas_subscription_expired')->once()->with(900);
+        Actions\expectDone('waas_subscription_created')->never();
 
         $this->run_feed($trigger, ['is_revoke_hook' => $is_revoke]);
     }
@@ -104,10 +104,10 @@ class WaasProvisioningIntegrationTest extends TestCase
         $this->has_store(true);
         $until = time() + 30 * 86400;
         $this->store->allows('get_paid_through')->with(900)->andReturn($until);
-        Actions\expectDone('wpcs_subscription_canceled_until')->once()->with(900, $until)->whenHappen(function () use ($until) {
-            $this->state = [WPCSTenant::WPCS_TENANT_SUSPEND_AT_META => $until];
+        Actions\expectDone('waas_subscription_canceled_until')->once()->with(900, $until)->whenHappen(function () use ($until) {
+            $this->state = [Tenant::TENANT_SUSPEND_AT_META => $until];
         });
-        Actions\expectDone('wpcs_subscription_expired')->never();
+        Actions\expectDone('waas_subscription_expired')->never();
 
         $this->run_feed('subscription_canceled');
 
@@ -121,8 +121,8 @@ class WaasProvisioningIntegrationTest extends TestCase
     {
         $this->has_store(true);
         $this->store->allows('get_paid_through')->with(900)->andReturn(time() + 30 * 86400);
-        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
-        Actions\expectDone('wpcs_subscription_canceled_until')->never();
+        Actions\expectDone('waas_subscription_expired')->once()->with(900);
+        Actions\expectDone('waas_subscription_canceled_until')->never();
 
         $this->run_feed($trigger, ['is_revoke_hook' => $is_revoke]);
     }
@@ -141,8 +141,8 @@ class WaasProvisioningIntegrationTest extends TestCase
     {
         $this->has_store(true);
         $this->store->allows('get_paid_through')->with(900)->andReturn(time() - 60);
-        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
-        Actions\expectDone('wpcs_subscription_canceled_until')->never();
+        Actions\expectDone('waas_subscription_expired')->once()->with(900);
+        Actions\expectDone('waas_subscription_canceled_until')->never();
 
         $this->run_feed('subscription_canceled');
     }
@@ -150,16 +150,16 @@ class WaasProvisioningIntegrationTest extends TestCase
     public function test_removal_without_a_store_does_nothing(): void
     {
         $this->has_store(false);
-        $this->store->allows('get_subscription_meta')->with(900, WPCSTenant::WPCS_NAME_CONFLICT_META)->andReturn('');
-        Actions\expectDone('wpcs_subscription_expired')->never();
+        $this->store->allows('get_subscription_meta')->with(900, Tenant::NAME_CONFLICT_META)->andReturn('');
+        Actions\expectDone('waas_subscription_expired')->never();
 
         $this->run_feed('subscription_canceled');
     }
 
     public function test_other_triggers_do_nothing(): void
     {
-        Actions\expectDone('wpcs_subscription_created')->never();
-        Actions\expectDone('wpcs_subscription_expired')->never();
+        Actions\expectDone('waas_subscription_created')->never();
+        Actions\expectDone('waas_subscription_expired')->never();
 
         $this->run_feed('subscription_renewed');
     }
@@ -180,9 +180,9 @@ class WaasProvisioningIntegrationTest extends TestCase
         Functions\when('esc_url')->returnArg();
         Functions\when('admin_url')->returnArg();
         Functions\when('wp_nonce_url')->returnArg();
-        $wpcs = Mockery::mock(WPCSService::class);
-        $wpcs->allows('get_available_groupnames')->andReturn(['peptide-starter']);
-        $integration = new WaasProvisioningIntegration($wpcs, $this->store);
+        $api = Mockery::mock(ProvisioningApi::class);
+        $api->allows('get_available_groupnames')->andReturn(['peptide-starter']);
+        $integration = new WaasProvisioningIntegration($api, $this->store);
 
         $fields = array_column($integration->getSettingsFields([])['fields'], null, 'key');
 
@@ -197,9 +197,9 @@ class WaasProvisioningIntegrationTest extends TestCase
         Functions\when('esc_url')->returnArg();
         Functions\when('admin_url')->returnArg();
         Functions\when('wp_nonce_url')->returnArg();
-        $wpcs = Mockery::mock(WPCSService::class);
-        $wpcs->allows('get_available_groupnames')->andThrow(new \Exception('down'));
-        $integration = new WaasProvisioningIntegration($wpcs, $this->store);
+        $api = Mockery::mock(ProvisioningApi::class);
+        $api->allows('get_available_groupnames')->andThrow(new \Exception('down'));
+        $integration = new WaasProvisioningIntegration($api, $this->store);
 
         $fields = array_column($integration->getSettingsFields([])['fields'], null, 'key');
 
@@ -209,8 +209,8 @@ class WaasProvisioningIntegrationTest extends TestCase
     public function test_cancelling_a_store_that_waits_for_a_new_name_is_reported(): void
     {
         $this->has_store(false);
-        $this->store->allows('get_subscription_meta')->with(900, WPCSTenant::WPCS_NAME_CONFLICT_META)->andReturn(['name' => 'Apex Research']);
-        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+        $this->store->allows('get_subscription_meta')->with(900, Tenant::NAME_CONFLICT_META)->andReturn(['name' => 'Apex Research']);
+        Actions\expectDone('waas_subscription_expired')->once()->with(900);
 
         $this->run_feed('subscription_canceled');
     }
@@ -220,10 +220,10 @@ class WaasProvisioningIntegrationTest extends TestCase
     {
         // Canceled, then reactivated; FluentCart runs the feeds in the background and the reactivation ran first.
         $this->has_store(!$waiting);
-        $this->store->allows('get_subscription_meta')->with(900, WPCSTenant::WPCS_NAME_CONFLICT_META)->andReturn($waiting ? ['name' => 'Apex Research'] : '');
+        $this->store->allows('get_subscription_meta')->with(900, Tenant::NAME_CONFLICT_META)->andReturn($waiting ? ['name' => 'Apex Research'] : '');
         $this->store->allows('get_subscription_status')->with(900)->andReturn('active');
         // Only the refund: it leaves the subscription active.
-        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+        Actions\expectDone('waas_subscription_expired')->once()->with(900);
 
         $this->run_feed($trigger);
         $this->run_feed('order_fully_refunded', ['is_revoke_hook' => 'yes']);
@@ -240,7 +240,7 @@ class WaasProvisioningIntegrationTest extends TestCase
 
     public function test_a_late_payment_that_reactivates_the_subscription_resumes_the_store(): void
     {
-        Actions\expectDone('wpcs_subscription_created')->once()->with(900, $this->order);
+        Actions\expectDone('waas_subscription_created')->once()->with(900, $this->order);
 
         $this->run_feed('subscription_reactivated');
     }
@@ -251,7 +251,7 @@ class WaasProvisioningIntegrationTest extends TestCase
         $this->order->type = 'renewal';
         $this->has_store(true);
         $this->store->allows('get_subscription_status')->with(900)->andReturn($status);
-        Actions\expectDone('wpcs_subscription_expired')->never();
+        Actions\expectDone('waas_subscription_expired')->never();
 
         $this->run_feed($trigger, ['is_revoke_hook' => 'yes']);
 
@@ -273,7 +273,7 @@ class WaasProvisioningIntegrationTest extends TestCase
         $this->order->type = 'renewal';
         $this->has_store(true);
         $this->store->allows('get_subscription_status')->with(900)->andReturn('canceled');
-        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+        Actions\expectDone('waas_subscription_expired')->once()->with(900);
 
         $this->run_feed('order_fully_refunded', ['is_revoke_hook' => 'yes']);
     }
@@ -282,7 +282,7 @@ class WaasProvisioningIntegrationTest extends TestCase
     {
         $this->has_store(true);
         $this->store->allows('get_subscription_status')->with(900)->andReturn('active');
-        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+        Actions\expectDone('waas_subscription_expired')->once()->with(900);
 
         $this->run_feed('order_fully_refunded', ['is_revoke_hook' => 'yes']);
     }
@@ -290,8 +290,8 @@ class WaasProvisioningIntegrationTest extends TestCase
     public function test_the_order_note_is_written_when_waas_host_acted(): void
     {
         $this->has_store(true);
-        Actions\expectDone('wpcs_subscription_expired')->once()->with(900)->whenHappen(function () {
-            $this->state = [WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::SUSPENDED];
+        Actions\expectDone('waas_subscription_expired')->once()->with(900)->whenHappen(function () {
+            $this->state = [Tenant::TENANT_STATE => Tenant::SUSPENDED];
         });
 
         $this->run_feed('subscription_eot');
@@ -303,7 +303,7 @@ class WaasProvisioningIntegrationTest extends TestCase
     {
         // E.g. a cancel reported a second time: the store is already suspended and its deletion planned.
         $this->has_store(true);
-        Actions\expectDone('wpcs_subscription_expired')->once()->with(900);
+        Actions\expectDone('waas_subscription_expired')->once()->with(900);
 
         $this->run_feed('subscription_eot');
 
@@ -312,7 +312,7 @@ class WaasProvisioningIntegrationTest extends TestCase
 
     public function test_a_create_for_a_store_that_already_runs_leaves_no_note(): void
     {
-        Actions\expectDone('wpcs_subscription_created')->once()->with(900, $this->order);
+        Actions\expectDone('waas_subscription_created')->once()->with(900, $this->order);
 
         $this->run_feed('subscription_reactivated');
 
@@ -321,8 +321,8 @@ class WaasProvisioningIntegrationTest extends TestCase
 
     public function test_a_requested_website_gets_its_note(): void
     {
-        Actions\expectDone('wpcs_subscription_created')->once()->with(900, $this->order)->whenHappen(function () {
-            $this->state = [WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::QUEUED];
+        Actions\expectDone('waas_subscription_created')->once()->with(900, $this->order)->whenHappen(function () {
+            $this->state = [Tenant::TENANT_STATE => Tenant::QUEUED];
         });
 
         $this->run_feed('subscription_activated');

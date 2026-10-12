@@ -17,12 +17,12 @@ class RolesManager
     public function activate_enabled_plugins(): void
     {
         if (getenv('WPCS_IS_TENANT') !== 'true') {
-            // This is a not a WPCS tenant. Either we're in a version or some local environment
+            // This is not a WaaS store. Either we're in a version or some local environment
             return;
         }
         if (!file_exists(AdminRolesSettings::ROLES_FILE_PATH)) {
-            // This is a WPCS tenant but the Plugin is not yet setup or the Version is not deployed
-            add_action('admin_notices', [$this, 'wpcs_no_roles_json_found_admin_notice']);
+            // This is a WaaS store but the Plugin is not yet setup or the Version is not deployed
+            add_action('admin_notices', [$this, 'waas_no_roles_json_found_admin_notice']);
             return;
         }
 
@@ -32,7 +32,7 @@ class RolesManager
         if (empty($user_roles)) {
             // Someone created a tenant without a role. Either they are testing, made a mistake or are not familiar with the plugins.
             // Probably best to just notify them and leave it for now.
-            add_action('admin_notices', $this->get_wpcs_no_role_defined_admin_notice($roles_plugins));
+            add_action('admin_notices', $this->get_waas_no_role_defined_admin_notice($roles_plugins));
             return;
         }
 
@@ -58,25 +58,25 @@ class RolesManager
         return array_map('trim', explode(',', constant(PluginBootstrap::TENANT_ROLES_CONSTANT)));
     }
 
-    public function wpcs_no_roles_json_found_admin_notice() {
+    public function waas_no_roles_json_found_admin_notice() {
 ?>
             <div class="notice notice-error is-dismissible">
-                <p><b><?php _e('It looks like we are in a WPCS Tenant with the WaaS-Client plugin enabled but it seems that there are no Roles defined.', WPCS_WAAS_CLIENT_TEXTDOMAIN); ?></b></p>
-                <p><?php _e('If there are no roles defined in the Version that should be setup first.', WPCS_WAAS_CLIENT_TEXTDOMAIN); ?></p>
-                <p><?php _e('If there are roles defined in the Version this Tenant is running on please make sure to deploy.', WPCS_WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                <p><b><?php _e('This is a WaaS store with the WaaS Client plugin active, but no roles are defined.', WAAS_CLIENT_TEXTDOMAIN); ?></b></p>
+                <p><?php _e('If there are no roles defined in the Version that should be setup first.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                <p><?php _e('If there are roles defined in the Version this Tenant is running on please make sure to deploy.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
             </div>
 <?php
     }
 
-    public function get_wpcs_no_role_defined_admin_notice($roles)
+    public function get_waas_no_role_defined_admin_notice($roles)
     {
         return function () use ($roles) {
 ?>
             <div class="notice notice-error is-dismissible">
-                <p><b><?php _e('It looks like we are in a WPCS Tenant with the WaaS-Client plugin enabled but there is no Role defined for this tenant.', WPCS_WAAS_CLIENT_TEXTDOMAIN); ?></b></p>
-                <p><?php _e('This can happen when the Tenant has been created manually through the WPCS Console.', WPCS_WAAS_CLIENT_TEXTDOMAIN); ?></p>
-                <p><?php _e('To test out the roles that are defined in the Version, a PHP Constant can be added to the Tenant.', WPCS_WAAS_CLIENT_TEXTDOMAIN); ?></p>
-                <p><?php _e('The PHP Constant should have the name ' . PluginBootstrap::TENANT_ROLES_CONSTANT . ' and one or more of the following roles separated by a \',\'', WPCS_WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                <p><b><?php _e('This is a WaaS store with the WaaS Client plugin active, but this store has no role.', WAAS_CLIENT_TEXTDOMAIN); ?></b></p>
+                <p><?php _e('This can happen when the store was created by hand instead of through a purchase.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                <p><?php _e('To test out the roles that are defined in the Version, a PHP Constant can be added to the Tenant.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                <p><?php _e('The PHP Constant should have the name ' . PluginBootstrap::TENANT_ROLES_CONSTANT . ' and one or more of the following roles separated by a \',\'', WAAS_CLIENT_TEXTDOMAIN); ?></p>
                 <ul>
                     <?php
                     foreach ($roles as $key => $value) {

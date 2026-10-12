@@ -7,8 +7,8 @@ use Brain\Monkey\Functions;
 use Mockery;
 use WaaSHost\Commerce\PlanProduct;
 use WaaSHost\Commerce\PlanPurchase;
-use WaaSHost\Core\WPCSService;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\ProvisioningApi;
+use WaaSHost\Core\Tenant;
 use WaaSHost\Features\NameConflicts;
 use WaaSHost\Features\StoreJobs;
 use WaaSHost\Features\TenantsAddOnSubscriptionManager;
@@ -24,7 +24,7 @@ class NameConflictsTest extends StoreJobsTestCase
     private const FIRST_ID = '5f0b7c3e-2d1a-4e8b-9c6f-0a1b2c3d4e5f';
     private const SECOND_ID = '8a2d4f6b-1c3e-4a5b-8d7f-9e0a1b2c3d4e';
 
-    private $wpcs;
+    private $api;
     private NameConflicts $conflicts;
     private TenantsSubscriptionManager $manager;
     private array $uuids;
@@ -34,12 +34,12 @@ class NameConflictsTest extends StoreJobsTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->wpcs = Mockery::mock(WPCSService::class);
-        $this->conflicts = new NameConflictsWithoutExit($this->wpcs, $this->jobs);
-        $this->manager = new TenantsSubscriptionManager($this->wpcs, $this->jobs, $this->conflicts);
+        $this->api = Mockery::mock(ProvisioningApi::class);
+        $this->conflicts = new NameConflictsWithoutExit($this->api, $this->jobs);
+        $this->manager = new TenantsSubscriptionManager($this->api, $this->jobs, $this->conflicts);
 
         $this->options['wpcs_host_settings_root_domain'] = 'stores.waas.example';
-        $this->options[WPCSTenant::WPCS_DEFAULT_USER_ROLE] = 'administrator';
+        $this->options[Tenant::DEFAULT_USER_ROLE] = 'administrator';
         Functions\when('sanitize_text_field')->alias('trim');
         Functions\when('wp_unslash')->returnArg();
         Functions\when('remove_accents')->returnArg();
@@ -109,7 +109,7 @@ class NameConflictsTest extends StoreJobsTestCase
 
     private function create_refused_as_taken(): void
     {
-        $this->wpcs->expects('create_tenant')->once()->andThrow(new \Exception('Failed: 400 {"message":"Domain apex-research.stores.waas.example is already in use"}'));
+        $this->api->expects('create_tenant')->once()->andThrow(new \Exception('Failed: 400 {"message":"Domain apex-research.stores.waas.example is already in use"}'));
         $this->run_due(901);
     }
 
@@ -123,25 +123,25 @@ class NameConflictsTest extends StoreJobsTestCase
     {
         $this->bought();
 
-        $this->assertSame('apex-research.stores.waas.example', $this->meta(WPCSTenant::WPCS_DOMAIN_NAME_META));
+        $this->assertSame('apex-research.stores.waas.example', $this->meta(Tenant::DOMAIN_NAME_META));
         $this->assertTrue($this->cart->is_domain_taken('apex-research.stores.waas.example'));
     }
 
     public function test_a_create_refused_because_the_name_is_in_use_waits_for_a_new_name_without_retrying(): void
     {
         $this->bought();
-        Actions\expectDone('wpcs_tenant_name_conflict')->once()->with(901, 'Apex Research');
+        Actions\expectDone('waas_tenant_name_conflict')->once()->with(901, 'Apex Research');
 
         $this->create_refused_as_taken();
 
-        $this->assertSame(WPCSTenant::NEEDS_NEW_NAME, $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+        $this->assertSame(Tenant::NEEDS_NEW_NAME, $this->meta(Tenant::TENANT_STATE));
         $this->assertSame([], $this->queue(901));
         $this->assertSame('', $this->meta(StoreJobs::FAILURE_META));
         $this->assertSame([], $this->actions, 'no retry is scheduled');
-        $this->assertSame('', $this->meta(WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META));
-        $this->assertSame('', $this->meta(WPCSTenant::WPCS_DOMAIN_NAME_META), 'the taken name is not held for this store');
+        $this->assertSame('', $this->meta(Tenant::TENANT_EXTERNAL_ID_META));
+        $this->assertSame('', $this->meta(Tenant::DOMAIN_NAME_META), 'the taken name is not held for this store');
 
-        $conflict = $this->meta(WPCSTenant::WPCS_NAME_CONFLICT_META);
+        $conflict = $this->meta(Tenant::NAME_CONFLICT_META);
         $this->assertSame('Apex Research', $conflict['name']);
         $this->assertSame('apex-research.stores.waas.example', $conflict['domain']);
         $this->assertSame(self::FIRST_ID, $conflict['store']['external_id']);
@@ -158,23 +158,23 @@ class NameConflictsTest extends StoreJobsTestCase
     public function test_a_400_is_a_name_conflict_when_the_availability_check_says_taken(): void
     {
         $this->bought();
-        $this->wpcs->expects('create_tenant')->andThrow(new \Exception('Failed: 400 {"message":"Validation failed"}'));
-        $this->wpcs->expects('domain_available')->with('apex-research.stores.waas.example')->andReturn(false);
+        $this->api->expects('create_tenant')->andThrow(new \Exception('Failed: 400 {"message":"Validation failed"}'));
+        $this->api->expects('domain_available')->with('apex-research.stores.waas.example')->andReturn(false);
 
         $this->run_due(901);
 
-        $this->assertSame(WPCSTenant::NEEDS_NEW_NAME, $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+        $this->assertSame(Tenant::NEEDS_NEW_NAME, $this->meta(Tenant::TENANT_STATE));
     }
 
     public function test_other_failures_are_retried_as_before(): void
     {
         $this->bought();
-        $this->wpcs->expects('create_tenant')->andThrow(new \Exception('Failed: 400 {"message":"Validation failed"}'));
-        $this->wpcs->expects('domain_available')->andReturn(true);
+        $this->api->expects('create_tenant')->andThrow(new \Exception('Failed: 400 {"message":"Validation failed"}'));
+        $this->api->expects('domain_available')->andReturn(true);
 
         $this->run_due(901);
 
-        $this->assertSame(WPCSTenant::QUEUED, $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+        $this->assertSame(Tenant::QUEUED, $this->meta(Tenant::TENANT_STATE));
         $this->assertSame('create', $this->queue(901)[0]['op']);
         $this->assertSame(1, $this->queue(901)[0]['attempts']);
         $this->assertSame([], $this->mails);
@@ -183,22 +183,22 @@ class NameConflictsTest extends StoreJobsTestCase
     public function test_the_customer_s_new_name_is_checked_and_the_store_created_with_it(): void
     {
         $this->parked();
-        $this->wpcs->expects('domain_available')->with('apex-labs.stores.waas.example')->andReturn(true);
+        $this->api->expects('domain_available')->with('apex-labs.stores.waas.example')->andReturn(true);
 
         $this->assertNull($this->conflicts->choose_new_name(901, 'Apex Labs'));
 
-        $this->assertSame(WPCSTenant::QUEUED, $this->meta(WPCSTenant::WPCS_TENANT_STATE));
-        $this->assertSame('', $this->meta(WPCSTenant::WPCS_NAME_CONFLICT_META));
-        $this->assertSame('apex-labs.stores.waas.example', $this->meta(WPCSTenant::WPCS_DOMAIN_NAME_META));
+        $this->assertSame(Tenant::QUEUED, $this->meta(Tenant::TENANT_STATE));
+        $this->assertSame('', $this->meta(Tenant::NAME_CONFLICT_META));
+        $this->assertSame('apex-labs.stores.waas.example', $this->meta(Tenant::DOMAIN_NAME_META));
 
-        $this->wpcs->expects('create_tenant')->once()->with(Mockery::on(fn ($args) => $args['external_id'] === self::SECOND_ID
+        $this->api->expects('create_tenant')->once()->with(Mockery::on(fn ($args) => $args['external_id'] === self::SECOND_ID
             && $args['name'] === 'Apex Labs'
             && $args['custom_domain_name'] === 'apex-labs.stores.waas.example'
             && $args['group_name'] === 'peptide-starter'))
             ->andReturn((object) ['externalId' => self::SECOND_ID, 'baseDomain' => 't-1.stores.waas.example', 'customDomain' => 'apex-labs.stores.waas.example']);
         $this->run_due(901);
 
-        $this->assertSame(self::SECOND_ID, $this->meta(WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META));
+        $this->assertSame(self::SECOND_ID, $this->meta(Tenant::TENANT_EXTERNAL_ID_META));
         $this->assertSame([], $this->queue(901));
         $this->assertCount(2, $this->mails, 'no more emails');
     }
@@ -206,18 +206,18 @@ class NameConflictsTest extends StoreJobsTestCase
     public function test_a_new_name_another_store_here_has_is_refused_without_asking_the_api(): void
     {
         $this->parked();
-        $this->cart->meta[777] = [WPCSTenant::WPCS_DOMAIN_NAME_META => 'apex-labs.stores.waas.example', WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::READY];
-        $this->wpcs->expects('domain_available')->never();
+        $this->cart->meta[777] = [Tenant::DOMAIN_NAME_META => 'apex-labs.stores.waas.example', Tenant::TENANT_STATE => Tenant::READY];
+        $this->api->expects('domain_available')->never();
 
         $this->assertStringContainsString('already taken', $this->conflicts->choose_new_name(901, 'Apex Labs'));
-        $this->assertSame(WPCSTenant::NEEDS_NEW_NAME, $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+        $this->assertSame(Tenant::NEEDS_NEW_NAME, $this->meta(Tenant::TENANT_STATE));
         $this->assertSame([], $this->queue(901));
     }
 
     public function test_a_new_name_the_api_reports_taken_is_refused(): void
     {
         $this->parked();
-        $this->wpcs->expects('domain_available')->andReturn(false);
+        $this->api->expects('domain_available')->andReturn(false);
 
         $this->assertStringContainsString('already taken', $this->conflicts->choose_new_name(901, 'Apex Labs'));
         $this->assertSame([], $this->queue(901));
@@ -226,25 +226,25 @@ class NameConflictsTest extends StoreJobsTestCase
     public function test_the_new_name_is_not_taken_while_the_api_is_down(): void
     {
         $this->parked();
-        $this->wpcs->expects('domain_available')->andThrow(new \Exception('Failed: 503'));
+        $this->api->expects('domain_available')->andThrow(new \Exception('Failed: 503'));
 
         $this->assertStringContainsString('try again', $this->conflicts->choose_new_name(901, 'Apex Labs'));
-        $this->assertSame(WPCSTenant::NEEDS_NEW_NAME, $this->meta(WPCSTenant::WPCS_TENANT_STATE));
-        $this->assertIsArray($this->meta(WPCSTenant::WPCS_NAME_CONFLICT_META));
+        $this->assertSame(Tenant::NEEDS_NEW_NAME, $this->meta(Tenant::TENANT_STATE));
+        $this->assertIsArray($this->meta(Tenant::NAME_CONFLICT_META));
         $this->assertSame([], $this->queue(901));
     }
 
     public function test_a_store_that_does_not_wait_for_a_name_cannot_be_renamed_here(): void
     {
-        $this->cart->meta[900] = [WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META => 'store-1042', WPCSTenant::WPCS_TENANT_STATE => WPCSTenant::READY];
-        $this->wpcs->expects('domain_available')->never();
+        $this->cart->meta[900] = [Tenant::TENANT_EXTERNAL_ID_META => 'store-1042', Tenant::TENANT_STATE => Tenant::READY];
+        $this->api->expects('domain_available')->never();
 
         $this->assertNotNull($this->conflicts->choose_new_name(900, 'Apex Labs'));
         $this->assertSame([], $this->queue(900));
 
         // A second submit after the first one was accepted.
         $this->parked();
-        $this->wpcs->expects('domain_available')->andReturn(true);
+        $this->api->expects('domain_available')->andReturn(true);
         $this->assertNull($this->conflicts->choose_new_name(901, 'Apex Labs'));
         $this->assertNotNull($this->conflicts->choose_new_name(901, 'Apex Labs Two'));
         $this->assertCount(1, $this->queue(901));
@@ -260,7 +260,7 @@ class NameConflictsTest extends StoreJobsTestCase
         Functions\when('wp_die')->alias(function () {
             throw new \RuntimeException('wp_die');
         });
-        $this->wpcs->expects('domain_available')->never();
+        $this->api->expects('domain_available')->never();
 
         try {
             $this->conflicts->handle_choose_request();
@@ -270,7 +270,7 @@ class NameConflictsTest extends StoreJobsTestCase
         } finally {
             $_POST = [];
         }
-        $this->assertSame(WPCSTenant::NEEDS_NEW_NAME, $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+        $this->assertSame(Tenant::NEEDS_NEW_NAME, $this->meta(Tenant::TENANT_STATE));
     }
 
     public function test_the_admin_sees_stores_waiting_for_a_name(): void
@@ -291,15 +291,15 @@ class NameConflictsTest extends StoreJobsTestCase
     public function test_cancelling_while_waiting_stops_the_wait_and_the_form_refuses(): void
     {
         $this->parked();
-        $this->wpcs->expects('domain_available')->never();
-        $this->wpcs->expects('suspend_tenant')->never();
+        $this->api->expects('domain_available')->never();
+        $this->api->expects('suspend_tenant')->never();
 
         $this->manager->suspend_tenant_when_subscription_expired(901);
 
-        $this->assertSame('', $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+        $this->assertSame('', $this->meta(Tenant::TENANT_STATE));
         $this->assertSame([], $this->queue(901));
         $this->assertSame([], $this->scheduled, 'no deletion is scheduled: there is no store');
-        $this->assertFalse(WPCSTenant::shown_to_customer('', ''));
+        $this->assertFalse(Tenant::shown_to_customer('', ''));
         $this->assertStringContainsString('not active', $this->conflicts->choose_new_name(901, 'Apex Labs'));
         $this->assertSame([], $this->queue(901));
 
@@ -315,13 +315,13 @@ class NameConflictsTest extends StoreJobsTestCase
         $this->parked();
 
         $this->manager->suspend_tenant_on_hold(901);
-        $this->assertSame('', $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+        $this->assertSame('', $this->meta(Tenant::TENANT_STATE));
         $this->manager->suspend_tenant_when_subscription_expired(901); // cancelled after the hold: still nothing to do
 
         $this->manager->resume_suspended_tenant(901);
-        $this->assertSame(WPCSTenant::NEEDS_NEW_NAME, $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+        $this->assertSame(Tenant::NEEDS_NEW_NAME, $this->meta(Tenant::TENANT_STATE));
 
-        $this->wpcs->expects('domain_available')->andReturn(true);
+        $this->api->expects('domain_available')->andReturn(true);
         $this->assertNull($this->conflicts->choose_new_name(901, 'Apex Labs'));
         $this->assertSame('create', $this->queue(901)[0]['op']);
         $this->assertSame(self::SECOND_ID, $this->queue(901)[0]['args']['external_id']);
@@ -334,26 +334,26 @@ class NameConflictsTest extends StoreJobsTestCase
 
         // A repeated activation while waiting changes nothing.
         $this->manager->create_tenant_when_subscription_created(901, $purchase);
-        $this->assertSame(WPCSTenant::NEEDS_NEW_NAME, $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+        $this->assertSame(Tenant::NEEDS_NEW_NAME, $this->meta(Tenant::TENANT_STATE));
         $this->assertSame([], $this->queue(901));
 
         // Cancelled, then reactivated (FluentCart reports that as an activation): the customer chooses again.
         $this->manager->suspend_tenant_when_subscription_expired(901);
         $this->manager->create_tenant_when_subscription_created(901, $purchase);
-        $this->assertSame(WPCSTenant::NEEDS_NEW_NAME, $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+        $this->assertSame(Tenant::NEEDS_NEW_NAME, $this->meta(Tenant::TENANT_STATE));
         $this->assertSame([], $this->queue(901));
-        $this->assertSame('', $this->meta(WPCSTenant::WPCS_DOMAIN_NAME_META));
+        $this->assertSame('', $this->meta(Tenant::DOMAIN_NAME_META));
     }
 
     public function test_a_submit_from_a_page_opened_before_the_cancel_is_refused_and_the_page_says_why(): void
     {
         $this->parked();
         $this->manager->suspend_tenant_when_subscription_expired(901);
-        $this->wpcs->expects('domain_available')->never();
+        $this->api->expects('domain_available')->never();
 
         $this->submit('Apex Labs');
 
-        $this->assertSame(['https://storefront.example/account/subscriptions/901?wpcs_website_name=not_active&wpcs_website_name_for=901#wpcs-website-name-result-901'], $this->redirects);
+        $this->assertSame(['https://storefront.example/account/subscriptions/901?wpcs_website_name=not_active&wpcs_website_name_for=901#waas-website-name-result-901'], $this->redirects);
         $this->assertStringContainsString('This subscription is not active', $this->result_shown_after_redirect());
         $this->assertSame([], $this->queue(901));
     }
@@ -361,7 +361,7 @@ class NameConflictsTest extends StoreJobsTestCase
     public function test_each_result_is_shown_by_its_code_and_only_at_its_own_website(): void
     {
         $this->parked();
-        $this->wpcs->expects('domain_available')->twice()->andReturn(false, true);
+        $this->api->expects('domain_available')->twice()->andReturn(false, true);
 
         $this->submit('Apex Labs');
         $this->assertStringContainsString('already taken', $this->result_shown_after_redirect());
@@ -385,7 +385,7 @@ class NameConflictsTest extends StoreJobsTestCase
         $second = null;
         $calls = 0;
         // The second submit (another tab, a double click) arrives while the first waits for the API.
-        $this->wpcs->allows('domain_available')->andReturnUsing(function () use (&$second, &$calls) {
+        $this->api->allows('domain_available')->andReturnUsing(function () use (&$second, &$calls) {
             if (++$calls === 1) {
                 $second = $this->conflicts->choose_new_name(901, 'Apex Labs Two') ?? 'queued';
             }
@@ -403,12 +403,12 @@ class NameConflictsTest extends StoreJobsTestCase
     public function test_a_page_left_open_too_long_asks_for_the_name_again_instead_of_failing(): void
     {
         $this->parked();
-        $this->wpcs->expects('domain_available')->never();
+        $this->api->expects('domain_available')->never();
 
         $this->submit('Apex Labs', false);
 
         $this->assertStringContainsString('open too long', $this->result_shown_after_redirect());
-        $this->assertSame(WPCSTenant::NEEDS_NEW_NAME, $this->meta(WPCSTenant::WPCS_TENANT_STATE));
+        $this->assertSame(Tenant::NEEDS_NEW_NAME, $this->meta(Tenant::TENANT_STATE));
         $this->assertSame([], $this->queue(901));
     }
 
@@ -416,7 +416,7 @@ class NameConflictsTest extends StoreJobsTestCase
     {
         $this->parked();
         $_POST = ['subscription_id' => '901', 'website_name' => 'Apex Labs'];
-        $this->wpcs->expects('domain_available')->never();
+        $this->api->expects('domain_available')->never();
 
         $this->conflicts->handle_logged_out_request();
 
@@ -435,11 +435,11 @@ class NameConflictsTest extends StoreJobsTestCase
         $this->manager->resume_suspended_tenant(901);
         $this->assertStringContainsString('1 website is waiting', $this->admin_notice(), 'reactivated');
 
-        $this->wpcs->expects('domain_available')->andReturn(true);
+        $this->api->expects('domain_available')->andReturn(true);
         $this->assertNull($this->conflicts->choose_new_name(901, 'Apex Labs'));
         $this->assertSame('', $this->admin_notice(), 'renamed');
 
-        $this->wpcs->expects('create_tenant')->andThrow(new \Exception('Failed: 400 {"message":"Domain apex-labs.stores.waas.example is already in use"}'));
+        $this->api->expects('create_tenant')->andThrow(new \Exception('Failed: 400 {"message":"Domain apex-labs.stores.waas.example is already in use"}'));
         $this->run_due(901);
         $this->assertStringContainsString('Subscription #901: "Apex Labs" was taken', $this->admin_notice(), 'taken again before the create');
 
@@ -457,15 +457,15 @@ class NameConflictsTest extends StoreJobsTestCase
         $this->manager->create_tenant_when_subscription_created(901, null);
         $this->manager->resume_suspended_tenant(901);
 
-        $this->assertSame('', $this->meta(WPCSTenant::WPCS_TENANT_STATE));
-        $this->assertTrue($this->meta(WPCSTenant::WPCS_NAME_CONFLICT_META)['paused']);
+        $this->assertSame('', $this->meta(Tenant::TENANT_STATE));
+        $this->assertTrue($this->meta(Tenant::NAME_CONFLICT_META)['paused']);
     }
 
     public function test_the_new_name_is_refused_when_the_cart_says_the_subscription_is_not_active(): void
     {
         $this->parked();
         $this->cart->inactive[901] = true; // no event paused the wait
-        $this->wpcs->expects('domain_available')->never();
+        $this->api->expects('domain_available')->never();
 
         $this->assertStringContainsString('not active', $this->conflicts->choose_new_name(901, 'Apex Labs'));
         $this->assertSame([], $this->queue(901));
@@ -473,19 +473,19 @@ class NameConflictsTest extends StoreJobsTestCase
 
     public function test_a_plan_change_while_waiting_reaches_the_store_when_it_is_created(): void
     {
-        $add_ons = new TenantsAddOnSubscriptionManager($this->wpcs, $this->jobs);
+        $add_ons = new TenantsAddOnSubscriptionManager($this->api, $this->jobs);
         $this->bought();
         $add_ons->update_tenant_roles(901, ['peptide-store', 'peptide-pro']); // queued behind the create
-        $this->wpcs->expects('update_tenant')->never();
+        $this->api->expects('update_tenant')->never();
         $this->create_refused_as_taken();
 
-        $this->wpcs->expects('domain_available')->andReturn(true);
+        $this->api->expects('domain_available')->andReturn(true);
         $this->assertNull($this->conflicts->choose_new_name(901, 'Apex Labs'));
-        $this->wpcs->expects('create_tenant')->once()->with(Mockery::on(fn ($args) => $args['php_constants']['WPCS_TENANT_ROLES']['value'] === 'peptide-store,peptide-pro'))
+        $this->api->expects('create_tenant')->once()->with(Mockery::on(fn ($args) => $args['php_constants']['WPCS_TENANT_ROLES']['value'] === 'peptide-store,peptide-pro'))
             ->andReturn((object) ['externalId' => self::SECOND_ID, 'baseDomain' => 't-1.stores.waas.example', 'customDomain' => 'apex-labs.stores.waas.example']);
         $this->run_due(901);
 
-        $this->assertSame(['peptide-store', 'peptide-pro'], $this->meta(WPCSTenant::WPCS_SUBSCRIPTION_USER_ROLES));
+        $this->assertSame(['peptide-store', 'peptide-pro'], $this->meta(Tenant::SUBSCRIPTION_USER_ROLES));
     }
 }
 

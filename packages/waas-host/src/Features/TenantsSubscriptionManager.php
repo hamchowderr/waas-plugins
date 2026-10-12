@@ -5,8 +5,8 @@ namespace WaaSHost\Features;
 use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\EncryptionService;
 use WaaSHost\Core\PrivateKeyStore;
-use WaaSHost\Core\WPCSService;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\ProvisioningApi;
+use WaaSHost\Core\Tenant;
 
 /**
  * The store's lifecycle, driven by the cart's subscription events.
@@ -28,22 +28,22 @@ class TenantsSubscriptionManager
     /** Jobs that bring a store into existence; until they have run the subscription has no externalId yet. */
     private const CREATING_JOBS = ['create', 'restore_or_create'];
 
-    private WPCSService $wpcsService;
+    private ProvisioningApi $provisioningApi;
     private StoreJobs $jobs;
     private NameConflicts $name_conflicts;
 
-    public function __construct(WPCSService $wpcsService, StoreJobs $jobs, ?NameConflicts $name_conflicts = null)
+    public function __construct(ProvisioningApi $provisioningApi, StoreJobs $jobs, ?NameConflicts $name_conflicts = null)
     {
-        $this->wpcsService = $wpcsService;
+        $this->provisioningApi = $provisioningApi;
         $this->jobs = $jobs;
-        $this->name_conflicts = $name_conflicts ?? new NameConflicts($wpcsService, $jobs);
+        $this->name_conflicts = $name_conflicts ?? new NameConflicts($provisioningApi, $jobs);
 
-        add_action('wpcs_subscription_created', [$this, 'create_tenant_when_subscription_created'], 10, 2);
-        add_action('wpcs_subscription_suspended', [$this, 'suspend_tenant_on_hold']);
-        add_action('wpcs_subscription_reactivated', [$this, 'resume_suspended_tenant']);
-        add_action('wpcs_subscription_renewed', [$this, 'resume_after_renewal']);
-        add_action('wpcs_subscription_expired', [$this, 'suspend_tenant_when_subscription_expired']);
-        add_action('wpcs_subscription_canceled_until', [$this, 'suspend_at_end_of_paid_period'], 10, 2);
+        add_action('waas_subscription_created', [$this, 'create_tenant_when_subscription_created'], 10, 2);
+        add_action('waas_subscription_suspended', [$this, 'suspend_tenant_on_hold']);
+        add_action('waas_subscription_reactivated', [$this, 'resume_suspended_tenant']);
+        add_action('waas_subscription_renewed', [$this, 'resume_after_renewal']);
+        add_action('waas_subscription_expired', [$this, 'suspend_tenant_when_subscription_expired']);
+        add_action('waas_subscription_canceled_until', [$this, 'suspend_at_end_of_paid_period'], 10, 2);
         add_action(self::SUSPEND_AT_PERIOD_END_HOOK, [$this, 'paid_period_ended']);
         add_action(self::DELETE_SUSPENDED_TENANT_HOOK, [$this, 'delete_suspended_tenant']);
         // Safety net for a lost WP-cron event: the store jobs' recurring sweep also runs suspensions that are due.
@@ -78,11 +78,11 @@ class TenantsSubscriptionManager
             // Active again before the paid period of a cancellation ended: the store simply stays.
             $this->cancel_scheduled_suspend($subscription_id);
             $status = $this->jobs->status($subscription_id);
-            if ($status === WPCSTenant::SUSPENDED) {
+            if ($status === Tenant::SUSPENDED) {
                 $this->resume_suspended_tenant($subscription_id);
-            } elseif ($status === WPCSTenant::DELETED && !$this->jobs->has_pending($subscription_id, self::CREATING_JOBS)) {
+            } elseif ($status === Tenant::DELETED && !$this->jobs->has_pending($subscription_id, self::CREATING_JOBS)) {
                 $this->jobs->enqueue($subscription_id, 'restore_or_create', ['store' => $this->new_store_args($subscription_id, $purchase_context)]);
-                $this->jobs->set_status($subscription_id, WPCSTenant::QUEUED);
+                $this->jobs->set_status($subscription_id, Tenant::QUEUED);
             }
             return;
         }
@@ -93,9 +93,9 @@ class TenantsSubscriptionManager
         }
 
         $this->jobs->enqueue($subscription_id, 'create', $store);
-        $this->jobs->set_status($subscription_id, WPCSTenant::QUEUED);
+        $this->jobs->set_status($subscription_id, Tenant::QUEUED);
         // Recorded now, so checkout refuses the same name for someone else even before the store exists.
-        Commerce::require_adapter()->update_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, (string) ($store['request']['custom_domain_name'] ?? ''));
+        Commerce::require_adapter()->update_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META, (string) ($store['request']['custom_domain_name'] ?? ''));
     }
 
     /**
@@ -113,17 +113,17 @@ class TenantsSubscriptionManager
 
         // Carts can report one cancellation several times (cancelled, then end of term).
         if (!$this->has_store($subscription_id)
-            || $status === WPCSTenant::DELETED
-            || !empty($commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_DELETE_AT_META))) {
+            || $status === Tenant::DELETED
+            || !empty($commerce->get_subscription_meta($subscription_id, Tenant::TENANT_DELETE_AT_META))) {
             return;
         }
 
         $delete_at = time() + self::get_deletion_grace_days() * DAY_IN_SECONDS;
         // Already offline since it went on hold, without a backup: the job only takes the backup.
-        $this->jobs->enqueue($subscription_id, 'suspend', ['backup' => true, 'already_suspended' => $status === WPCSTenant::SUSPENDED]);
-        $this->jobs->set_status($subscription_id, WPCSTenant::SUSPENDED);
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_REASON_META, WPCSTenant::SUSPENDED_ENDED);
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_DELETE_AT_META, $delete_at);
+        $this->jobs->enqueue($subscription_id, 'suspend', ['backup' => true, 'already_suspended' => $status === Tenant::SUSPENDED]);
+        $this->jobs->set_status($subscription_id, Tenant::SUSPENDED);
+        $commerce->update_subscription_meta($subscription_id, Tenant::TENANT_SUSPEND_REASON_META, Tenant::SUSPENDED_ENDED);
+        $commerce->update_subscription_meta($subscription_id, Tenant::TENANT_DELETE_AT_META, $delete_at);
         wp_schedule_single_event($delete_at, self::DELETE_SUSPENDED_TENANT_HOOK, [$subscription_id]);
     }
 
@@ -140,31 +140,31 @@ class TenantsSubscriptionManager
         if ($paid_through <= time()
             || NameConflicts::is_waiting($subscription_id)
             || !$this->has_store($subscription_id)
-            || in_array($this->jobs->status($subscription_id), [WPCSTenant::SUSPENDED, WPCSTenant::DELETED], true)
-            || !empty($commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_DELETE_AT_META))) {
+            || in_array($this->jobs->status($subscription_id), [Tenant::SUSPENDED, Tenant::DELETED], true)
+            || !empty($commerce->get_subscription_meta($subscription_id, Tenant::TENANT_DELETE_AT_META))) {
             $this->suspend_tenant_when_subscription_expired($subscription_id);
             return;
         }
 
         // Carts can report one cancellation more than once: the first date stands.
-        if (!empty($commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_AT_META))) {
+        if (!empty($commerce->get_subscription_meta($subscription_id, Tenant::TENANT_SUSPEND_AT_META))) {
             return;
         }
 
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_AT_META, $paid_through);
+        $commerce->update_subscription_meta($subscription_id, Tenant::TENANT_SUSPEND_AT_META, $paid_through);
         wp_schedule_single_event($paid_through, self::SUSPEND_AT_PERIOD_END_HOOK, [$subscription_id]);
-        do_action('wpcs_tenant_suspend_scheduled', $subscription_id, $paid_through);
+        do_action('waas_tenant_suspend_scheduled', $subscription_id, $paid_through);
     }
 
     /** The paid period of a cancelled subscription is over: suspend now, unless the subscription came back. */
     public function paid_period_ended($subscription_id)
     {
         $commerce = Commerce::require_adapter();
-        if (empty($commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_AT_META))) {
+        if (empty($commerce->get_subscription_meta($subscription_id, Tenant::TENANT_SUSPEND_AT_META))) {
             return; // reactivated meanwhile, or already handled
         }
 
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_AT_META, '');
+        $commerce->update_subscription_meta($subscription_id, Tenant::TENANT_SUSPEND_AT_META, '');
         if ($commerce->is_subscription_active($subscription_id)) {
             return;
         }
@@ -180,7 +180,7 @@ class TenantsSubscriptionManager
             return;
         }
 
-        foreach ($commerce->find_subscriptions_by_meta(WPCSTenant::WPCS_TENANT_SUSPEND_AT_META, ['']) as $subscription_id => $suspend_at) {
+        foreach ($commerce->find_subscriptions_by_meta(Tenant::TENANT_SUSPEND_AT_META, ['']) as $subscription_id => $suspend_at) {
             if ((int) $suspend_at > 0 && (int) $suspend_at <= time()) {
                 $this->paid_period_ended($subscription_id);
             }
@@ -191,13 +191,13 @@ class TenantsSubscriptionManager
     private function cancel_scheduled_suspend($subscription_id): bool
     {
         $commerce = Commerce::require_adapter();
-        if (empty($commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_AT_META))) {
+        if (empty($commerce->get_subscription_meta($subscription_id, Tenant::TENANT_SUSPEND_AT_META))) {
             return false;
         }
 
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_AT_META, '');
+        $commerce->update_subscription_meta($subscription_id, Tenant::TENANT_SUSPEND_AT_META, '');
         wp_clear_scheduled_hook(self::SUSPEND_AT_PERIOD_END_HOOK, [$subscription_id]);
-        do_action('wpcs_tenant_suspend_canceled', $subscription_id);
+        do_action('waas_tenant_suspend_canceled', $subscription_id);
 
         return true;
     }
@@ -213,13 +213,13 @@ class TenantsSubscriptionManager
             return;
         }
         if (!$this->has_store($subscription_id)
-            || in_array($this->jobs->status($subscription_id), [WPCSTenant::SUSPENDED, WPCSTenant::DELETED], true)) {
+            || in_array($this->jobs->status($subscription_id), [Tenant::SUSPENDED, Tenant::DELETED], true)) {
             return;
         }
 
         $this->jobs->enqueue($subscription_id, 'suspend', ['backup' => false, 'already_suspended' => false]);
-        $this->jobs->set_status($subscription_id, WPCSTenant::SUSPENDED);
-        Commerce::require_adapter()->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_REASON_META, WPCSTenant::SUSPENDED_ON_HOLD);
+        $this->jobs->set_status($subscription_id, Tenant::SUSPENDED);
+        Commerce::require_adapter()->update_subscription_meta($subscription_id, Tenant::TENANT_SUSPEND_REASON_META, Tenant::SUSPENDED_ON_HOLD);
     }
 
     public function resume_suspended_tenant($subscription_id)
@@ -229,15 +229,15 @@ class TenantsSubscriptionManager
             return;
         }
         $this->cancel_scheduled_suspend($subscription_id);
-        if ($this->jobs->status($subscription_id) !== WPCSTenant::SUSPENDED) {
+        if ($this->jobs->status($subscription_id) !== Tenant::SUSPENDED) {
             return;
         }
 
         $this->jobs->enqueue($subscription_id, 'resume');
         wp_clear_scheduled_hook(self::DELETE_SUSPENDED_TENANT_HOOK, [$subscription_id]);
-        Commerce::require_adapter()->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_DELETE_AT_META, '');
-        Commerce::require_adapter()->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_REASON_META, '');
-        $this->jobs->set_status($subscription_id, WPCSTenant::READY);
+        Commerce::require_adapter()->update_subscription_meta($subscription_id, Tenant::TENANT_DELETE_AT_META, '');
+        Commerce::require_adapter()->update_subscription_meta($subscription_id, Tenant::TENANT_SUSPEND_REASON_META, '');
+        $this->jobs->set_status($subscription_id, Tenant::READY);
     }
 
     /**
@@ -249,8 +249,8 @@ class TenantsSubscriptionManager
     public function resume_after_renewal($subscription_id)
     {
         $commerce = Commerce::require_adapter();
-        if ($this->jobs->status($subscription_id) !== WPCSTenant::SUSPENDED
-            || !in_array($commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_SUSPEND_REASON_META), [WPCSTenant::SUSPENDED_ON_HOLD, WPCSTenant::SUSPENDED_ENDED], true)
+        if ($this->jobs->status($subscription_id) !== Tenant::SUSPENDED
+            || !in_array($commerce->get_subscription_meta($subscription_id, Tenant::TENANT_SUSPEND_REASON_META), [Tenant::SUSPENDED_ON_HOLD, Tenant::SUSPENDED_ENDED], true)
             || !$commerce->is_subscription_active($subscription_id)) {
             return;
         }
@@ -261,13 +261,13 @@ class TenantsSubscriptionManager
     /** End of the grace period. Does nothing if the store was resumed in the meantime. */
     public function delete_suspended_tenant($subscription_id)
     {
-        if ($this->jobs->status($subscription_id) !== WPCSTenant::SUSPENDED) {
+        if ($this->jobs->status($subscription_id) !== Tenant::SUSPENDED) {
             return;
         }
 
         $this->jobs->enqueue($subscription_id, 'delete');
-        Commerce::require_adapter()->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_DELETE_AT_META, '');
-        $this->jobs->set_status($subscription_id, WPCSTenant::DELETED);
+        Commerce::require_adapter()->update_subscription_meta($subscription_id, Tenant::TENANT_DELETE_AT_META, '');
+        $this->jobs->set_status($subscription_id, Tenant::DELETED);
     }
 
     /**
@@ -279,22 +279,22 @@ class TenantsSubscriptionManager
         $external_id = $store['external_id'];
         $public_key = $this->key_pair($subscription_id);
 
-        $tenant = $attempt > 0 ? $this->wpcsService->get_tenant_safe($external_id) : null;
+        $tenant = $attempt > 0 ? $this->provisioningApi->get_tenant_safe($external_id) : null;
         if ($tenant !== null) {
             $domain_name = $tenant->domainName;
             $base_domain = $tenant->baseDomain ?? $tenant->domainName;
         } else {
             $args = $store['request'];
             $args['external_id'] = $external_id;
-            $args['wordpress_user_role'] = get_option(WPCSTenant::WPCS_DEFAULT_USER_ROLE);
+            $args['wordpress_user_role'] = get_option(Tenant::DEFAULT_USER_ROLE);
             $args['php_constants']['WPCS_PUBLIC_KEY'] = ['value' => base64_encode($public_key), 'isPrivate' => false];
             $args['php_constants']['WPCS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS'] = [
-                'value' => apply_filters('wpcs_remove_tenant_administrator_plugin_capabilities', true) ? "true" : "false",
+                'value' => apply_filters('waas_remove_tenant_administrator_plugin_capabilities', true) ? "true" : "false",
                 'isPrivate' => false,
             ];
 
             try {
-                $new_tenant = $this->wpcsService->create_tenant($args);
+                $new_tenant = $this->provisioningApi->create_tenant($args);
             } catch (\Exception $error) {
                 if ($this->name_taken($args, $error)) {
                     // Retrying can't help: park the store until the customer picks another name.
@@ -309,11 +309,11 @@ class TenantsSubscriptionManager
         }
 
         $commerce = Commerce::require_adapter();
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META, $external_id);
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_DOMAIN_NAME_META, $domain_name);
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_BASE_DOMAIN_NAME_META, $base_domain);
+        $commerce->update_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META, $external_id);
+        $commerce->update_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META, $domain_name);
+        $commerce->update_subscription_meta($subscription_id, Tenant::BASE_DOMAIN_NAME_META, $base_domain);
         // 'roles' is set when the plan changed while the store waited for a new name.
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_SUBSCRIPTION_USER_ROLES, $store['roles'] ?? [$store['product_role']]);
+        $commerce->update_subscription_meta($subscription_id, Tenant::SUBSCRIPTION_USER_ROLES, $store['roles'] ?? [$store['product_role']]);
 
         $this->store_linked($subscription_id);
 
@@ -327,23 +327,23 @@ class TenantsSubscriptionManager
     public function job_restore_or_create($subscription_id, array $args, int $attempt): ?array
     {
         $commerce = Commerce::require_adapter();
-        $external_id = $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META);
+        $external_id = $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META);
 
         if ($attempt > 0) {
             // An earlier try may have scheduled the restore before failing.
-            $tenant = $this->wpcsService->get_tenant_safe($external_id);
+            $tenant = $this->provisioningApi->get_tenant_safe($external_id);
             if ($tenant !== null && ($tenant->statusCode ?? null) !== 3) {
                 $this->store_linked($subscription_id);
                 return null;
             }
         }
 
-        foreach ($this->wpcsService->get_tenant_backups($external_id) as $backup) {
+        foreach ($this->provisioningApi->get_tenant_backups($external_id) as $backup) {
             if (isset($backup->id, $backup->statusCode) && $backup->statusCode === 1) {
-                $this->wpcsService->restore_tenant($external_id, $backup->id);
+                $this->provisioningApi->restore_tenant($external_id, $backup->id);
                 // Same externalId and domains: the status poller takes it from Provisioning to Ready.
                 $this->store_linked($subscription_id);
-                do_action('wpcs_tenant_restored', $subscription_id, $backup->id);
+                do_action('waas_tenant_restored', $subscription_id, $backup->id);
                 return null;
             }
         }
@@ -354,11 +354,12 @@ class TenantsSubscriptionManager
 
         // No backup left: unlink the deleted store; the subscription gets a new one.
         foreach ([
-            WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META,
-            WPCSTenant::WPCS_DOMAIN_NAME_META,
-            WPCSTenant::WPCS_BASE_DOMAIN_NAME_META,
-            WPCSTenant::WPCS_TENANT_PUBLIC_KEY_META,
-            WPCSTenant::WPCS_TENANT_PRIVATE_KEY_META,
+            Tenant::TENANT_EXTERNAL_ID_META,
+            Tenant::DOMAIN_NAME_META,
+            Tenant::BASE_DOMAIN_NAME_META,
+            Tenant::TENANT_PUBLIC_KEY_META,
+            Tenant::TENANT_PRIVATE_KEY_META,
+            Tenant::LEGACY_TENANT_PRIVATE_KEY_META,
         ] as $key) {
             $commerce->update_subscription_meta($subscription_id, $key, '');
         }
@@ -373,12 +374,12 @@ class TenantsSubscriptionManager
             return null; // never created (its create was parked for a new name)
         }
         if (!empty($args['already_suspended'])) {
-            $this->wpcsService->create_tenant_backup($external_id);
+            $this->provisioningApi->create_tenant_backup($external_id);
         } else {
-            $this->wpcsService->suspend_tenant($external_id, (bool) $args['backup']);
+            $this->provisioningApi->suspend_tenant($external_id, (bool) $args['backup']);
         }
 
-        do_action('wpcs_tenant_suspended', $subscription_id, (int) Commerce::require_adapter()->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_DELETE_AT_META));
+        do_action('waas_tenant_suspended', $subscription_id, (int) Commerce::require_adapter()->get_subscription_meta($subscription_id, Tenant::TENANT_DELETE_AT_META));
 
         return null;
     }
@@ -389,8 +390,8 @@ class TenantsSubscriptionManager
         if ($external_id === '') {
             return null; // never created (its create was parked for a new name)
         }
-        $this->wpcsService->resume_tenant($external_id);
-        do_action('wpcs_tenant_resumed', $subscription_id);
+        $this->provisioningApi->resume_tenant($external_id);
+        do_action('waas_tenant_resumed', $subscription_id);
 
         return null;
     }
@@ -403,12 +404,12 @@ class TenantsSubscriptionManager
         }
 
         // An earlier try may have scheduled the deletion before failing.
-        $tenant = $attempt > 0 ? $this->wpcsService->get_tenant_safe($external_id) : false;
+        $tenant = $attempt > 0 ? $this->provisioningApi->get_tenant_safe($external_id) : false;
         if ($tenant === false || ($tenant !== null && ($tenant->statusCode ?? null) !== 3)) {
-            $this->wpcsService->delete_tenant(['external_id' => $external_id]);
+            $this->provisioningApi->delete_tenant(['external_id' => $external_id]);
         }
 
-        do_action('wpcs_tenant_deleted', $subscription_id);
+        do_action('waas_tenant_deleted', $subscription_id);
 
         return null;
     }
@@ -429,7 +430,7 @@ class TenantsSubscriptionManager
         }
 
         try {
-            return !$this->wpcsService->domain_available($domain);
+            return !$this->provisioningApi->domain_available($domain);
         } catch (\Throwable $e) {
             return false; // can't tell: retry as usual
         }
@@ -438,13 +439,13 @@ class TenantsSubscriptionManager
     /** True when the subscription has a store, or one is queued to be created. */
     private function has_store($subscription_id): bool
     {
-        return !empty(Commerce::require_adapter()->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META))
+        return !empty(Commerce::require_adapter()->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META))
             || $this->jobs->has_pending($subscription_id, self::CREATING_JOBS);
     }
 
     private function external_id($subscription_id): string
     {
-        return (string) Commerce::require_adapter()->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_EXTERNAL_ID_META);
+        return (string) Commerce::require_adapter()->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META);
     }
 
     /**
@@ -496,14 +497,14 @@ class TenantsSubscriptionManager
     private function key_pair($subscription_id): string
     {
         $commerce = Commerce::require_adapter();
-        $public_key = (string) $commerce->get_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_PUBLIC_KEY_META);
+        $public_key = (string) $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_PUBLIC_KEY_META);
         if ($public_key !== '' && PrivateKeyStore::load($subscription_id) !== '') {
             return $public_key;
         }
 
         $keys = EncryptionService::generate_key_pair();
         PrivateKeyStore::save($subscription_id, $keys['private_key']);
-        $commerce->update_subscription_meta($subscription_id, WPCSTenant::WPCS_TENANT_PUBLIC_KEY_META, $keys['public_key']);
+        $commerce->update_subscription_meta($subscription_id, Tenant::TENANT_PUBLIC_KEY_META, $keys['public_key']);
 
         return $keys['public_key'];
     }
@@ -511,8 +512,8 @@ class TenantsSubscriptionManager
     /** The store exists in the API: the status poller takes it to Ready, unless it was suspended in the meantime. */
     private function store_linked($subscription_id): void
     {
-        if ($this->jobs->status($subscription_id) === WPCSTenant::QUEUED) {
-            do_action('wpcs_tenant_linked_to_subscription', $subscription_id);
+        if ($this->jobs->status($subscription_id) === Tenant::QUEUED) {
+            do_action('waas_tenant_linked_to_subscription', $subscription_id);
         }
     }
 }

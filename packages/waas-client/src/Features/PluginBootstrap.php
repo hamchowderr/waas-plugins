@@ -9,8 +9,8 @@ class PluginBootstrap
     const API_V1_NAMESPACE = 'waas-client/v1';
     const PLUGIN_NAME = 'waas-client/index.php';
     const PLUGIN_VERSION = '2.0.0';
-    const WPCS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS = 'WPCS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS';
-    const WPCS_REMOVED_ADMINISTRATOR_PLUGIN_CAPS = 'WPCS_REMOVED_ADMINISTRATOR_PLUGIN_CAPS';
+    const TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS = 'WPCS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS';
+    const REMOVED_ADMINISTRATOR_PLUGIN_CAPS = 'WPCS_REMOVED_ADMINISTRATOR_PLUGIN_CAPS';
 
     public static function init()
     {
@@ -20,16 +20,16 @@ class PluginBootstrap
 
     public static function set_or_remove_admin_plugin_caps() {
         $plugins_capabilities = ['activate_plugins', 'delete_plugins', 'install_plugins', 'update_plugins', 'edit_plugins', 'upload_plugins'];
-        $caps_removed = get_option(self::WPCS_REMOVED_ADMINISTRATOR_PLUGIN_CAPS, false);
+        $caps_removed = get_option(self::REMOVED_ADMINISTRATOR_PLUGIN_CAPS, false);
         
-        if (defined(self::WPCS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS) && constant(self::WPCS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS) == 'true' && getenv('WPCS_IS_TENANT') == 'true') {
+        if (defined(self::TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS) && constant(self::TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS) == 'true' && getenv('WPCS_IS_TENANT') == 'true') {
             if (!$caps_removed) {
                 $role = get_role('administrator');
                 foreach ($plugins_capabilities as $capability) {
                     $role->remove_cap($capability);
                 }
                 
-                update_option(self::WPCS_REMOVED_ADMINISTRATOR_PLUGIN_CAPS, true);
+                update_option(self::REMOVED_ADMINISTRATOR_PLUGIN_CAPS, true);
             }
 
             return;
@@ -41,7 +41,7 @@ class PluginBootstrap
                 $role->add_cap($capability);
             }
 
-            delete_option(self::WPCS_REMOVED_ADMINISTRATOR_PLUGIN_CAPS);
+            delete_option(self::REMOVED_ADMINISTRATOR_PLUGIN_CAPS);
         }
     }
 
@@ -57,7 +57,7 @@ class PluginBootstrap
         }
 
         // The WaaS Client itself should always have the deactivate button available.
-        if($plugin_file === WPCS_WAAS_CLIENT_BASENAME) {
+        if($plugin_file === WAAS_CLIENT_BASENAME) {
             return $actions;
         }
 
@@ -65,7 +65,7 @@ class PluginBootstrap
         unset($actions['deactivate']);
 
         return array_merge($actions, [
-            'wpcs_active' => is_plugin_active( $plugin_file ) ? __('Activated by the WaaS Client', WPCS_WAAS_CLIENT_TEXTDOMAIN) : __('Deactivated by the WaaS Client', WPCS_WAAS_CLIENT_TEXTDOMAIN),
+            'waas_active' => is_plugin_active( $plugin_file ) ? __('Activated by the WaaS Client', WAAS_CLIENT_TEXTDOMAIN) : __('Deactivated by the WaaS Client', WAAS_CLIENT_TEXTDOMAIN),
         ]);
     }
 }

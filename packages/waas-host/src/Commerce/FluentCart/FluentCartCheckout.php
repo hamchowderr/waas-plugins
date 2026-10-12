@@ -3,8 +3,8 @@
 namespace WaaSHost\Commerce\FluentCart;
 
 use WaaSHost\Core\Exceptions\InvalidDomainException;
-use WaaSHost\Core\WPCSService;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\ProvisioningApi;
+use WaaSHost\Core\Tenant;
 
 /**
  * The "Website name" field on FluentCart's checkout, shown when the cart holds a website plan.
@@ -13,17 +13,17 @@ use WaaSHost\Core\WPCSTenant;
  */
 class FluentCartCheckout
 {
-    public const FIELD = WPCSTenant::WPCS_WEBSITE_NAME_META;
+    public const FIELD = Tenant::WEBSITE_NAME_META;
 
-    private WPCSService $wpcs_service;
+    private ProvisioningApi $provisioning_api;
     private FluentCartAdapter $adapter;
     private FluentCartStore $store;
     /** @var array<string, true> names accepted in this request without the API's answer */
     private array $unverified = [];
 
-    public function __construct(WPCSService $wpcs_service, FluentCartAdapter $adapter, ?FluentCartStore $store = null)
+    public function __construct(ProvisioningApi $provisioning_api, FluentCartAdapter $adapter, ?FluentCartStore $store = null)
     {
-        $this->wpcs_service = $wpcs_service;
+        $this->provisioning_api = $provisioning_api;
         $this->adapter = $adapter;
         $this->store = $store ?? new FluentCartStore();
 
@@ -53,7 +53,7 @@ class FluentCartCheckout
             return $fields;
         }
 
-        $label = __('Website name', WPCS_WAAS_HOST_TEXTDOMAIN);
+        $label = __('Website name', WAAS_HOST_TEXTDOMAIN);
         $fields[self::FIELD] = [
             'id' => self::FIELD,
             'name' => self::FIELD,
@@ -77,7 +77,7 @@ class FluentCartCheckout
 
         $website_name = trim(sanitize_text_field((string) ($args['data'][self::FIELD] ?? '')));
         if ($website_name === '') {
-            $errors[self::FIELD]['required'] = __('Please enter a name for your website.', WPCS_WAAS_HOST_TEXTDOMAIN);
+            $errors[self::FIELD]['required'] = __('Please enter a name for your website.', WAAS_HOST_TEXTDOMAIN);
             return $errors;
         }
 
@@ -88,22 +88,22 @@ class FluentCartCheckout
 
         $slug = sanitize_title_with_dashes(remove_accents($website_name));
         if ($slug === '') {
-            $errors[self::FIELD]['invalid'] = __('Please use letters or numbers in the website name.', WPCS_WAAS_HOST_TEXTDOMAIN);
+            $errors[self::FIELD]['invalid'] = __('Please use letters or numbers in the website name.', WAAS_HOST_TEXTDOMAIN);
             return $errors;
         }
 
         $domain_name = $slug . '.' . $root_domain;
         if ($this->adapter->is_domain_taken($domain_name)) {
-            $errors[self::FIELD]['taken'] = __('Website name is already taken! Please use a different one.', WPCS_WAAS_HOST_TEXTDOMAIN);
+            $errors[self::FIELD]['taken'] = __('Website name is already taken! Please use a different one.', WAAS_HOST_TEXTDOMAIN);
             return $errors;
         }
 
         try {
-            if (!$this->wpcs_service->domain_available($domain_name)) {
-                $errors[self::FIELD]['taken'] = __('Website name is already taken! Please use a different one.', WPCS_WAAS_HOST_TEXTDOMAIN);
+            if (!$this->provisioning_api->domain_available($domain_name)) {
+                $errors[self::FIELD]['taken'] = __('Website name is already taken! Please use a different one.', WAAS_HOST_TEXTDOMAIN);
             }
         } catch (InvalidDomainException $e) {
-            $errors[self::FIELD]['invalid'] = __('The resulting domain is not valid.', WPCS_WAAS_HOST_TEXTDOMAIN);
+            $errors[self::FIELD]['invalid'] = __('The resulting domain is not valid.', WAAS_HOST_TEXTDOMAIN);
         } catch (\Exception $e) {
             // Fail open: take the order (no store here has the name). If the API later finds it taken, the customer
             // is asked for a new one (NameConflicts).
@@ -125,7 +125,7 @@ class FluentCartCheckout
 
         $order->updateMeta(self::FIELD, $website_name);
         if (isset($this->unverified[$website_name])) {
-            $order->updateMeta(WPCSTenant::WPCS_WEBSITE_NAME_UNVERIFIED_META, 'yes');
+            $order->updateMeta(Tenant::WEBSITE_NAME_UNVERIFIED_META, 'yes');
         }
     }
 }

@@ -5,7 +5,7 @@ jQuery(function ($) {
 
     dangerousCancelButtons.each(function () {
         const dangerousCancelButton = $(this);
-        const cancelConfirmButton = $('<a class="button wpcs-cancel-confirm-button" href="#"></a>').text('Cancel subscription');
+        const cancelConfirmButton = $('<a class="button waas-cancel-confirm-button" href="#"></a>').text('Cancel subscription');
 
         dangerousCancelButton.hide().after(cancelConfirmButton);
 
@@ -13,7 +13,7 @@ jQuery(function ($) {
             event.preventDefault();
             cancelConfirmButton.hide();
             dangerousCancelButton
-                .before($('<div class="wpcs-cancel-explanation-button"></div>').text('Are you sure you want to cancel? Your website will be taken offline, and deleted if the subscription is not reactivated in time.'))
+                .before($('<div class="waas-cancel-explanation-button"></div>').text('Are you sure you want to cancel? Your website will be taken offline, and deleted if the subscription is not reactivated in time.'))
                 .text('Yes, cancel my subscription')
                 .show();
         });

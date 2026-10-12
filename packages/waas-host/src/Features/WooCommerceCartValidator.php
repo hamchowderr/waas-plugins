@@ -2,7 +2,7 @@
 
 namespace WaaSHost\Features;
 
-use WaaSHost\Core\WPCSProduct;
+use WaaSHost\Core\StoreProduct;
 
 /**
  * An add-on can only be bought together with a website plan. Checked for the classic cart and checkout, and for
@@ -10,7 +10,7 @@ use WaaSHost\Core\WPCSProduct;
  */
 class WooCommerceCartValidator
 {
-    public const ERROR_CODE = 'wpcs_addon_without_base_product';
+    public const ERROR_CODE = 'waas_addon_without_base_product';
 
     public function __construct()
     {
@@ -48,7 +48,7 @@ class WooCommerceCartValidator
             $product_id = (int) ($item['product_id'] ?? 0);
             if (AddonProductCategory::is_product_addon($product_id)) {
                 $has_addon = true;
-            } elseif ((new WPCSProduct($product_id))->is_wpcs_product()) {
+            } elseif ((new StoreProduct($product_id))->is_store_product()) {
                 $has_base_product = true;
             }
         }
@@ -58,6 +58,6 @@ class WooCommerceCartValidator
 
     private static function message(): string
     {
-        return __('Cannot proceed to checkout with an Add-on but no base product. Please add a base product to your cart.', WPCS_WAAS_HOST_TEXTDOMAIN);
+        return __('Cannot proceed to checkout with an Add-on but no base product. Please add a base product to your cart.', WAAS_HOST_TEXTDOMAIN);
     }
 }

@@ -1,6 +1,6 @@
 {
-  "name": "wpcs.io/waas-host",
-  "description": "This plugin is used to create tenants on WPCS.io with support of WordPress, WooCommerce, WooCommerce Subscriptions and Self-service Dashboard for WooCommerce Subscriptions",
+  "name": "otakusolutions/waas-host",
+  "description": "Sells WaaS stores from a storefront through the WaaS provisioning API, with FluentCart or WooCommerce for billing.",
   "type": "project",
   "autoload": {
     "psr-4": {
@@ -14,8 +14,8 @@
   },
   "authors": [
     {
-      "name": "WPCS",
-      "email": "support@wpcs.io"
+      "name": "Otaku Solutions",
+      "homepage": "https://otakusolutions.io"
     }
   ],
   "require-dev": {

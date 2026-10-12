@@ -9,8 +9,8 @@ use Tests\Unit\TestCase;
 use WaaSHost\Commerce\PlanProduct;
 use WaaSHost\Commerce\WooCommerce\SubscriptionPlugin;
 use WaaSHost\Commerce\WooCommerce\WooCommerceAdapter;
-use WaaSHost\Core\WPCSProduct;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\StoreProduct;
+use WaaSHost\Core\Tenant;
 
 class WooCommerceAdapterTest extends TestCase
 {
@@ -18,17 +18,17 @@ class WooCommerceAdapterTest extends TestCase
     {
         $post_meta = [
             101 => [
-                '_' . WPCSProduct::IS_WPCS_PRODUCT_META => 'yes',
-                WPCSProduct::WPCS_PRODUCT_ROLE_META => 'peptide-store',
-                WPCSProduct::WPCS_PRODUCT_GROUPNAME_META => 'peptide-starter',
+                '_' . StoreProduct::IS_STORE_PRODUCT_META => 'yes',
+                StoreProduct::PRODUCT_ROLE_META => 'peptide-store',
+                StoreProduct::PRODUCT_GROUPNAME_META => 'peptide-starter',
             ],
-            102 => ['_' . WPCSProduct::IS_WPCS_PRODUCT_META => 'no'],
-            103 => ['_' . WPCSProduct::IS_WPCS_PRODUCT_META => 'yes'],
+            102 => ['_' . StoreProduct::IS_STORE_PRODUCT_META => 'no'],
+            103 => ['_' . StoreProduct::IS_STORE_PRODUCT_META => 'yes'],
         ];
         Functions\when('get_post_meta')->alias(fn ($id, $key) => $post_meta[$id][$key] ?? '');
 
         $order = Mockery::mock('WC_Order');
-        $order->allows('get_meta')->with(WPCSTenant::WPCS_WEBSITE_NAME_META)->andReturn('Apex Research');
+        $order->allows('get_meta')->with(Tenant::WEBSITE_NAME_META)->andReturn('Apex Research');
         $order->allows('get_billing_email')->andReturn('owner@apexresearch.example');
         $order->allows('get_items')->andReturn(array_map([$this, 'item'], [101, 102, 103]));
 
@@ -65,8 +65,8 @@ class WooCommerceAdapterTest extends TestCase
     {
         $subscription = Mockery::mock('WC_Order');
         $subscription->allows('get_type')->andReturn('wps_subscriptions');
-        $subscription->allows('get_meta')->with(WPCSTenant::WPCS_TENANT_STATE, true)->andReturn(WPCSTenant::READY);
-        $subscription->expects('update_meta_data')->with(WPCSTenant::WPCS_TENANT_STATE, WPCSTenant::DELETED);
+        $subscription->allows('get_meta')->with(Tenant::TENANT_STATE, true)->andReturn(Tenant::READY);
+        $subscription->expects('update_meta_data')->with(Tenant::TENANT_STATE, Tenant::DELETED);
         $subscription->expects('save');
 
         $plain_order = Mockery::mock('WC_Order');
@@ -79,24 +79,24 @@ class WooCommerceAdapterTest extends TestCase
 
         $adapter = new WooCommerceAdapter([$this->plugin('wp-swings', 'wps_subscriptions', true)]);
 
-        $this->assertSame(WPCSTenant::READY, $adapter->get_subscription_meta(900, WPCSTenant::WPCS_TENANT_STATE));
-        $adapter->update_subscription_meta(900, WPCSTenant::WPCS_TENANT_STATE, WPCSTenant::DELETED);
+        $this->assertSame(Tenant::READY, $adapter->get_subscription_meta(900, Tenant::TENANT_STATE));
+        $adapter->update_subscription_meta(900, Tenant::TENANT_STATE, Tenant::DELETED);
 
-        $this->assertSame('', $adapter->get_subscription_meta(901, WPCSTenant::WPCS_TENANT_STATE));
-        $adapter->update_subscription_meta(901, WPCSTenant::WPCS_TENANT_STATE, WPCSTenant::DELETED);
-        $this->assertSame('', $adapter->get_subscription_meta(902, WPCSTenant::WPCS_TENANT_STATE));
+        $this->assertSame('', $adapter->get_subscription_meta(901, Tenant::TENANT_STATE));
+        $adapter->update_subscription_meta(901, Tenant::TENANT_STATE, Tenant::DELETED);
+        $this->assertSame('', $adapter->get_subscription_meta(902, Tenant::TENANT_STATE));
     }
 
     public function test_find_subscriptions_queries_the_plugins_order_type(): void
     {
         $subscription = Mockery::mock('WC_Order');
         $subscription->allows('get_id')->andReturn(900);
-        $subscription->allows('get_meta')->with(WPCSTenant::WPCS_TENANT_STATE, true)->andReturn(WPCSTenant::PROVISIONING);
+        $subscription->allows('get_meta')->with(Tenant::TENANT_STATE, true)->andReturn(Tenant::PROVISIONING);
 
         Functions\expect('wc_get_orders')->once()->with(Mockery::on(function ($args) {
             return $args['type'] === 'shop_subscription'
                 && $args['limit'] === -1
-                && $args['meta_query'][1] === ['key' => WPCSTenant::WPCS_TENANT_STATE, 'value' => [WPCSTenant::READY, WPCSTenant::DELETED], 'compare' => 'NOT IN'];
+                && $args['meta_query'][1] === ['key' => Tenant::TENANT_STATE, 'value' => [Tenant::READY, Tenant::DELETED], 'compare' => 'NOT IN'];
         }))->andReturn([$subscription]);
 
         // Posts storage ignores meta_query unless it is passed through to WP_Query.
@@ -109,8 +109,8 @@ class WooCommerceAdapterTest extends TestCase
         $adapter = new WooCommerceAdapter([$this->plugin('woocommerce-subscriptions', 'shop_subscription', true)]);
 
         $this->assertSame(
-            [900 => WPCSTenant::PROVISIONING],
-            $adapter->find_subscriptions_by_meta(WPCSTenant::WPCS_TENANT_STATE, [WPCSTenant::READY, WPCSTenant::DELETED])
+            [900 => Tenant::PROVISIONING],
+            $adapter->find_subscriptions_by_meta(Tenant::TENANT_STATE, [Tenant::READY, Tenant::DELETED])
         );
     }
 

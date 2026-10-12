@@ -7,7 +7,7 @@ use FluentCart\App\Models\ProductMeta;
 use FluentCart\App\Models\Subscription;
 use FluentCart\App\Models\SubscriptionMeta;
 use FluentCart\App\Services\URL;
-use WaaSHost\Core\WPCSTenant;
+use WaaSHost\Core\Tenant;
 use WaaSHost\Features\StoreJobs;
 use WaaSHost\Migrations\FluentCartFeedTriggers;
 
@@ -72,11 +72,11 @@ class FluentCartStore
 
     /** The subscription meta that records what waas-host has done or plans for the store. */
     public const WAAS_STATE_META = [
-        WPCSTenant::WPCS_TENANT_STATE,
-        WPCSTenant::WPCS_TENANT_DELETE_AT_META,
-        WPCSTenant::WPCS_TENANT_SUSPEND_AT_META,
-        WPCSTenant::WPCS_TENANT_SUSPEND_REASON_META,
-        WPCSTenant::WPCS_NAME_CONFLICT_META,
+        Tenant::TENANT_STATE,
+        Tenant::TENANT_DELETE_AT_META,
+        Tenant::TENANT_SUSPEND_AT_META,
+        Tenant::TENANT_SUSPEND_REASON_META,
+        Tenant::NAME_CONFLICT_META,
         StoreJobs::QUEUE_META,
         StoreJobs::FAILURE_META,
     ];

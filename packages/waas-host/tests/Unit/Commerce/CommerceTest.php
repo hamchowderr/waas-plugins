@@ -7,7 +7,7 @@ use Mockery;
 use Tests\FakeCommerceAdapter;
 use Tests\Unit\TestCase;
 use WaaSHost\Commerce\Commerce;
-use WaaSHost\Core\WPCSService;
+use WaaSHost\Core\ProvisioningApi;
 
 class CommerceTest extends TestCase
 {
@@ -43,7 +43,7 @@ class CommerceTest extends TestCase
     {
         Commerce::register(new FakeCommerceAdapter('woocommerce', true));
         Commerce::register($fluentcart = new FakeCommerceAdapter('fluentcart', true));
-        Filters\expectApplied('wpcs_commerce_adapter')->once()->andReturnUsing(fn ($default, $all) => $all['fluentcart']);
+        Filters\expectApplied('waas_commerce_adapter')->once()->andReturnUsing(fn ($default, $all) => $all['fluentcart']);
 
         $this->assertSame($fluentcart, Commerce::adapter());
     }
@@ -59,7 +59,7 @@ class CommerceTest extends TestCase
         Commerce::register($inactive = new FakeCommerceAdapter('woocommerce', false));
         Commerce::register($active = new FakeCommerceAdapter('fluentcart', true));
 
-        Commerce::boot(Mockery::mock(WPCSService::class));
+        Commerce::boot(Mockery::mock(ProvisioningApi::class));
 
         $this->assertTrue($active->booted);
         $this->assertFalse($inactive->booted);

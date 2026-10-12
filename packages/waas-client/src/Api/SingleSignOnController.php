@@ -10,7 +10,7 @@ use WP_REST_Request;
 class SingleSignOnController
 {
     public const TENANT_PUBLIC_KEY = 'TENANT_PUBLIC_KEY';
-    public const WPCS_PUBLIC_KEY_CONST_NAME = 'WPCS_PUBLIC_KEY';
+    public const PUBLIC_KEY_CONST_NAME = 'WPCS_PUBLIC_KEY';
     private DecryptionService $decryptionService;
 
     public function __construct(DecryptionService $decryptionService)
@@ -50,14 +50,14 @@ class SingleSignOnController
         }
 
         $public_key = '';
-        if (!defined(static::WPCS_PUBLIC_KEY_CONST_NAME)) {
+        if (!defined(static::PUBLIC_KEY_CONST_NAME)) {
             $public_key = get_option(static::TENANT_PUBLIC_KEY);
 
             if ($public_key === false || empty($public_key)) {
                 return $this->reject();
             }
         } else {
-            $public_key = base64_decode(constant(static::WPCS_PUBLIC_KEY_CONST_NAME));
+            $public_key = base64_decode(constant(static::PUBLIC_KEY_CONST_NAME));
         }
 
         $data = $this->decryptionService->decrypt($public_key, $token_decoded);
@@ -90,7 +90,7 @@ class SingleSignOnController
         wp_set_current_user($user->ID);
         wp_set_auth_cookie($user->ID);
         do_action('wp_login', $user->user_login, $user);
-        $redirect_to = apply_filters('wildcloud_sso_admin_url', admin_url(), $user, $data);
+        $redirect_to = apply_filters('waas_sso_admin_url', admin_url(), $user, $data);
         wp_safe_redirect($redirect_to);
         exit();
     }
