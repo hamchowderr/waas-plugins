@@ -32,7 +32,11 @@ interface RecurringGatewayDriver extends GatewayDriver
 
     public function deleteSavedPaymentMethod(string $customerRef, string $methodRef): DriverResult;
 
-    /** Where a charge stands now. data: state (STATE_*), card_last4, card_brand, auth_code. */
+    /**
+     * Where a charge (or refund) stands now. data: state (STATE_*), transaction_status,
+     * transaction_type, amount, auth_amount, card_last4, card_brand, auth_code, avs_result, cvv_result,
+     * ref_trans_id, invoice_number, customer_id, customer_email, customer_ref, network_trans_id.
+     */
     public function chargeStatus(string $transactionId): DriverResult;
 
     /**

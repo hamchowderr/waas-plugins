@@ -16,7 +16,7 @@ Talks to the Coolify API at COOLIFY_URL (default https://coolify.otakusolutions.
 COOLIFY_TOKEN, or with none where a proxy injects credentials. `create` reads the provisioning
 API key and secret from WAAS_TEST_KEY and WAAS_TEST_SECRET, and the Card gateway's
 Authorize.Net sandbox credentials, when present, from AUTHNET_SANDBOX_LOGIN_ID and
-AUTHNET_SANDBOX_TRANSACTION_KEY. For --cart woo it reads Stripe test keys, when present, from
+AUTHNET_SANDBOX_TRANSACTION_KEY (and AUTHNET_SANDBOX_SIGNATURE_KEY for its webhook). For --cart woo it reads Stripe test keys, when present, from
 STRIPE_TEST_PUBLISHABLE_KEY and STRIPE_TEST_SECRET_KEY.
 """
 import base64
@@ -42,7 +42,8 @@ CARTS = {
     'fluentcart': {
         'service': 'storefront-test', 'domain': 'storefront-test.191.101.15.236.sslip.io',
         'compose': 'compose.yml', 'remote': ['remote'], 'packages': ['waas-host', 'waas-payments'],
-        'secrets': {'AUTHNET_SANDBOX_LOGIN_ID': 'AUTHNET_LOGIN_ID', 'AUTHNET_SANDBOX_TRANSACTION_KEY': 'AUTHNET_TRANSACTION_KEY'},
+        'secrets': {'AUTHNET_SANDBOX_LOGIN_ID': 'AUTHNET_LOGIN_ID', 'AUTHNET_SANDBOX_TRANSACTION_KEY': 'AUTHNET_TRANSACTION_KEY',
+                    'AUTHNET_SANDBOX_SIGNATURE_KEY': 'AUTHNET_SIGNATURE_KEY'},
         'description': 'WaaS test storefront. Runbook docs/test-storefront.md in waas-plugins',
     },
     'woo': {

@@ -64,6 +64,7 @@ class AuthorizeNetGateway extends AbstractPaymentGateway
     {
         (new PaymentConfirmation($this))->register();
         (new CardUpdate($this))->register();
+        (new Webhook($this))->register();
     }
 
     public function meta(): array
@@ -186,7 +187,10 @@ class AuthorizeNetGateway extends AbstractPaymentGateway
         return $url;
     }
 
-    /** Authorize.Net webhooks aren't used: charges are confirmed synchronously (beads waas-hju.10). */
+    /**
+     * Not used: charges are confirmed synchronously, and Authorize.Net's webhooks come to
+     * Webhook's REST route, since Authorize.Net won't send them to a URL with a query string.
+     */
     public function handleIPN()
     {
     }
@@ -263,7 +267,29 @@ class AuthorizeNetGateway extends AbstractPaymentGateway
                 ],
                 'description' => __('Sandbox credentials only work with sandbox mode on, and live credentials only with it off.', 'waas-payments'),
             ],
+            'signature_key'   => [
+                'value'       => '',
+                'label'       => __('Signature Key (optional)', 'waas-payments'),
+                'type'        => 'password',
+                'placeholder' => __('Signature Key', 'waas-payments'),
+                'tooltip'     => __('Authorize.Net Merchant Interface: Account > Settings > Security Settings > API Credentials and Keys > New Signature Key.', 'waas-payments'),
+            ],
+            'webhook_info'    => [
+                'value' => $this->webhookInfo(),
+                'label' => __('Webhook', 'waas-payments'),
+                'type'  => 'html_attr',
+            ],
         ];
+    }
+
+    /** What the settings page says about the webhook. */
+    private function webhookInfo(): string
+    {
+        $status = (string) $this->settings->get('webhook_status');
+
+        return '<p>' . esc_html__('With a Signature Key, saving these settings registers a webhook with Authorize.Net, so refunds and voids made in Authorize.Net, and payments it confirms late, show up in FluentCart. Payments work without it.', 'waas-payments') . '</p>'
+            . '<p>' . esc_html__('Webhook URL:', 'waas-payments') . ' <code>' . esc_html(Webhook::url()) . '</code></p>'
+            . ($status !== '' ? '<p>' . esc_html($status) . '</p>' : '');
     }
 
     /**
@@ -298,15 +324,44 @@ class AuthorizeNetGateway extends AbstractPaymentGateway
         $key = (string) Helper::decryptKey($data['transaction_key'] ?? '');
         $data['transaction_key'] = Helper::encryptKey($key);
         $data['public_client_key'] = '';
+        $signatureKey = trim((string) Helper::decryptKey($data['signature_key'] ?? ''));
+        $data['signature_key'] = Helper::encryptKey($signatureKey);
+        // Shown from webhook_status, never stored.
+        unset($data['webhook_info']);
 
         if ($data['api_login_id'] !== '' && $key !== '') {
-            $result = self::makeDriver($data['api_login_id'], $key, ($data['sandbox'] ?? 'yes') !== 'no')->verifyCredentials();
+            $driver = self::makeDriver($data['api_login_id'], $key, ($data['sandbox'] ?? 'yes') !== 'no');
+            $result = $driver->verifyCredentials();
             if ($result->success) {
                 $data['public_client_key'] = $result->data['public_client_key'];
+            }
+
+            if ($result->success && $signatureKey !== '') {
+                $data['webhook_status'] = self::registerWebhook($driver);
             }
         }
 
         return $data;
+    }
+
+    /** Registers (or updates) this site's webhook with Authorize.Net; returns what to show. */
+    private static function registerWebhook(GatewayDriver $driver): string
+    {
+        $url = Webhook::url();
+        if (strpos($url, '?') !== false) {
+            return __('Webhook not registered: Authorize.Net needs a webhook URL without "?". Turn on pretty permalinks (Settings > Permalinks), then save again.', 'waas-payments');
+        }
+
+        if (!$driver instanceof AuthorizeNetDriver) {
+            return '';
+        }
+
+        $result = $driver->registerWebhook($url, Webhook::EVENT_TYPES);
+
+        return $result->success
+            /* translators: %s: date and time */
+            ? sprintf(__('Webhook registered with Authorize.Net on %s.', 'waas-payments'), gmdate('Y-m-d H:i') . ' UTC')
+            : sprintf(__('Webhook not registered: %s', 'waas-payments'), $result->message);
     }
 
     public function getEnqueueScriptSrc($hasSubscription = 'no'): array
