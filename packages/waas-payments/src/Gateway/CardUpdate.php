@@ -222,8 +222,8 @@ class CardUpdate
             'action'            => self::ACTION,
             'nonce'             => wp_create_nonce(self::nonceAction((string) $subscription->uuid)),
             'subscription'      => (string) $subscription->uuid,
-            'api_login_id'      => (string) $this->gateway->settings->get('api_login_id'),
-            'public_client_key' => (string) $this->gateway->settings->get('public_client_key'),
+            'api_login_id'      => $this->gateway->settings->getApiLoginId(),
+            'public_client_key' => $this->gateway->settings->getPublicClientKey(),
             'sandbox'           => $this->gateway->settings->isSandbox(),
             'translations'      => [
                 'Card details'             => __('Card details', 'waas-payments'),

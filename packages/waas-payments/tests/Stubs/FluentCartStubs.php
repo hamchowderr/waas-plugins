@@ -191,8 +191,14 @@ namespace FluentCart\Api {
     if (!class_exists(StoreSettings::class)) {
         class StoreSettings
         {
+            /** Store settings tests set, e.g. ['order_mode' => 'live']. */
+            public static array $values = [];
+
             public function get($key = '')
             {
+                if (array_key_exists($key, self::$values)) {
+                    return self::$values[$key];
+                }
                 return $key === 'store_name' ? 'Peptide Test Store' : null;
             }
         }

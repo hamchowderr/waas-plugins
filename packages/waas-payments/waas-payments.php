@@ -1,8 +1,11 @@
 <?php
 /**
  * Plugin Name: WaaS Payments
+ * Plugin URI: https://github.com/hamchowderr/waas-plugins
  * Description: Card payments for FluentCart through the store's payment gateway, including subscriptions charged automatically on renewal (FluentCart store-managed subscriptions). First gateway: Authorize.Net.
  * Version: 0.1.0
+ * Author: Otaku Solutions
+ * Author URI: https://otakusolutions.io
  * Update URI: waas-payments
  * Requires at least: 6.0
  * Requires PHP: 7.4
@@ -27,6 +30,14 @@ require_once __DIR__ . '/vendor/autoload.php';
     'version' => WAAS_PAYMENTS_VERSION,
     'update_uri' => 'waas-payments',
 ]))->register();
+
+// Settings link on the Plugins screen: the gateway's settings live in FluentCart's payment settings.
+add_filter('plugin_action_links_' . WAAS_PAYMENTS_BASENAME, function ($links) {
+    $url = admin_url('admin.php?page=fluent-cart#/settings/payments/' . \WaaSPayments\Gateway\AuthorizeNetGateway::ROUTE);
+    array_unshift($links, '<a href="' . esc_url($url) . '">' . esc_html__('Settings', 'waas-payments') . '</a>');
+
+    return $links;
+});
 
 // FluentCart fires this on init after registering its own gateways
 // (app/Hooks/Handlers/GlobalPaymentHandler.php:36). GatewayManager::register calls boot().

@@ -94,8 +94,8 @@ class AuthorizeNetWebhookRegistrationTest extends TestCase
             []
         );
 
-        $this->assertSame('enc:' . base64_encode('SIGKEY'), $saved['signature_key']);
-        $this->assertStringStartsWith('Webhook registered with Authorize.Net', $saved['webhook_status']);
+        $this->assertSame('enc:' . base64_encode('SIGKEY'), $saved['test_signature_key']);
+        $this->assertStringStartsWith('Webhook registered with Authorize.Net', $saved['test_webhook_status']);
         $this->assertArrayNotHasKey('webhook_info', $saved);
     }
 
@@ -106,7 +106,7 @@ class AuthorizeNetWebhookRegistrationTest extends TestCase
 
         $saved = AuthorizeNetGateway::beforeSettingsUpdate(['api_login_id' => 'login-id', 'transaction_key' => 'secret-key'], []);
 
-        $this->assertSame('', $saved['signature_key']);
+        $this->assertSame('', $saved['test_signature_key']);
     }
 
     public function test_plain_permalinks_are_reported_instead_of_registering(): void
@@ -117,7 +117,7 @@ class AuthorizeNetWebhookRegistrationTest extends TestCase
 
         $saved = AuthorizeNetGateway::beforeSettingsUpdate(['api_login_id' => 'login-id', 'transaction_key' => 'secret-key', 'signature_key' => 'SIGKEY'], []);
 
-        $this->assertStringContainsString('pretty permalinks', $saved['webhook_status']);
+        $this->assertStringContainsString('pretty permalinks', $saved['test_webhook_status']);
     }
 
     public function test_the_signature_key_is_read_back_decrypted(): void

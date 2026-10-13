@@ -1,20 +1,120 @@
-.waas-container ul.ticks {
+.waas-home .waas-lead {
+    font-size: 14px;
+    max-width: 720px;
+}
+
+.waas-home .waas-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+    gap: 20px;
+    align-items: start;
+    margin-top: 16px;
+    max-width: 1100px;
+}
+
+@media (max-width: 960px) {
+    .waas-home .waas-columns {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.waas-home .waas-card {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+}
+
+.waas-home .waas-card h2 {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 0 0 12px;
+    font-size: 15px;
+}
+
+.waas-home .waas-count {
+    font-weight: 400;
+    font-size: 13px;
+    color: #646970;
+}
+
+.waas-home .waas-checklist ol {
     list-style: none;
+    margin: 0;
 }
 
-.waas-container ul.ticks span {
-    position: relative;
-    left: 1em;
+.waas-home .waas-checklist li {
+    display: flex;
+    gap: 12px;
+    margin: 0;
+    padding: 14px 0;
+    border-top: 1px solid #f0f0f1;
 }
 
-.waas-container ul.ticks li.checked:before {
-    content: '\2713';
+.waas-home .waas-checklist li p {
+    margin: 4px 0 8px;
+    color: #50575e;
 }
 
-.waas-container ul.ticks li.unchecked:before {
-    content: '\25a2';
+.waas-home .waas-checklist .dashicons {
+    flex: none;
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+    color: #a7aaad;
 }
 
-.waas-container section {
-    margin-top: 2.5em;
+.waas-home .waas-checklist li.is-done .dashicons {
+    color: #00a32a;
+}
+
+.waas-home .waas-checklist li.is-done strong {
+    color: #50575e;
+}
+
+.waas-home .waas-facts {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.waas-home .waas-facts th,
+.waas-home .waas-facts td {
+    text-align: left;
+    padding: 6px 0;
+    vertical-align: top;
+}
+
+.waas-home .waas-facts th {
+    font-weight: 400;
+    color: #50575e;
+    padding-right: 12px;
+}
+
+.waas-home .waas-badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    background: #f0f0f1;
+}
+
+.waas-home .waas-badge.is-ok {
+    background: #edfaef;
+    color: #00661c;
+}
+
+.waas-home .waas-badge.is-warning {
+    background: #fcf9e8;
+    color: #7a5c00;
+}
+
+.waas-home .waas-badge.is-error {
+    background: #fcf0f1;
+    color: #b32d2e;
+}
+
+.waas-home .waas-links {
+    margin: 0;
 }

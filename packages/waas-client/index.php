@@ -29,6 +29,7 @@ use WaaSClient\Features\AdminRolesSettings;
 use WaaSClient\Features\PluginBootstrap;
 use WaaSClient\Features\RolesManager;
 use WaaSClient\Features\AdminTenantSettings;
+use WaaSClient\Features\CustomerPlanPage;
 
 if (!wp_doing_ajax()) {
     define("WAAS_PLUGIN_DIR_URI", plugin_dir_url(__FILE__));
@@ -54,5 +55,7 @@ if (!wp_doing_ajax()) {
     if (getenv("WPCS_IS_TENANT") !== 'true') {
         new AdminTenantSettings();
         new AdminRolesSettings($host_http_service);
+    } else {
+        new CustomerPlanPage();
     }
 }

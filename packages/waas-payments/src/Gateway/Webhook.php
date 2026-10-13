@@ -72,14 +72,26 @@ class Webhook
      */
     public function handle(string $body, string $signature): array
     {
-        $key = $this->gateway->settings->getSignatureKey();
-        if ($key === '') {
+        $settings = $this->gateway->settings;
+        $current = $settings->getMode();
+        $key = $settings->getSignatureKey($current);
+        $otherMode = $current === 'test' ? 'live' : 'test';
+        $otherKey = $settings->getSignatureKey($otherMode);
+
+        if ($key === '' && $otherKey === '') {
             return self::result(401, 'No Signature Key is set up for Authorize.Net webhooks.');
         }
 
-        if (!self::verifySignature($body, $signature, $key)) {
+        if ($key === '' || !self::verifySignature($body, $signature, $key)) {
+            if ($otherKey !== '' && self::verifySignature($body, $signature, $otherKey)) {
+                // A genuine notification from the account the store isn't using now: nothing to sync.
+                AuthorizeNetSettings::recordWebhook($otherMode);
+                return self::result(200, 'Ignored: the store is not in ' . $otherMode . ' mode.');
+            }
             return self::result(401, 'Invalid signature.');
         }
+
+        AuthorizeNetSettings::recordWebhook($current);
 
         $notification = json_decode($body, true);
         $eventType = (string) ($notification['eventType'] ?? '');

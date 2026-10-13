@@ -6,7 +6,7 @@ It covers one-time payments, refunds, and FluentCart subscriptions billed by the
 
 ## Setup
 
-1. **FluentCart > Settings > Payments > Authorize.Net**: enter the API Login ID and Transaction Key (Merchant Interface: Account > Settings > Security Settings > API Credentials and Keys) and choose sandbox or live. Saving checks the credentials and fetches the account's Public Client Key, which the hosted form needs.
+1. **FluentCart > Settings > Payments > Authorize.Net**: enter the API Login ID and Transaction Key (Merchant Interface: Account > Settings > Security Settings > API Credentials and Keys) under **Test credentials** (sandbox account) and **Live credentials** (production account). Like FluentCart's Stripe and PayPal, the store's **Order Mode** (Settings > Store Settings) picks which set is used. Saving checks each set, shows which Authorize.Net account it is connected to, and fetches the account's Public Client Key, which the hosted form needs. Keys saved before 0.2.0 (one set plus a Sandbox switch) move to the matching tab.
 2. **For subscriptions**, go to **FluentCart > Settings > Subscriptions** and set:
    - **Subscription management: Store managed.** FluentCart runs the billing schedule.
    - **Automatic charge: on.** FluentCart charges each renewal to the card saved at checkout. With it off, renewals are invoices the customer pays at checkout.

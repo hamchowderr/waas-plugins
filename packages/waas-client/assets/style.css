@@ -1,14 +1,95 @@
-.waas.roles-container {
-    display: flex;
-    flex-wrap: wrap;
-    margin: 20px -20px;
-    max-width: 1000px;
+.waas-client-admin .waas-lead {
+    max-width: 760px;
+    font-size: 14px;
 }
 
-.waas.single-role-container {
-    margin: 0 20px;
+.waas-client-admin .waas-add-role {
+    margin: 16px 0 20px;
 }
 
-.waas .mark-delete {
-    text-decoration: line-through;
+.waas-client-admin .waas-roles-scroll {
+    overflow-x: auto;
+    max-width: 1100px;
+}
+
+.waas-client-admin .waas-roles-table th[scope="row"] {
+    font-weight: 400;
+}
+
+.waas-client-admin .waas-roles-table .waas-role-col {
+    text-align: center;
+    width: 140px;
+}
+
+.waas-client-admin .waas-roles-table thead .waas-role-col strong,
+.waas-client-admin .waas-roles-table thead .waas-role-col code {
+    display: block;
+}
+
+.waas-client-admin .waas-roles-table thead .waas-role-col code {
+    margin-top: 4px;
+    font-size: 11px;
+}
+
+.waas-client-admin .waas-roles-table tfoot td,
+.waas-client-admin .waas-roles-table tfoot th {
+    color: #b32d2e;
+}
+
+.waas-client-admin .waas-status .dashicons {
+    vertical-align: text-bottom;
+}
+
+.waas-client-admin .waas-status-success .dashicons {
+    color: #00a32a;
+}
+
+.waas-client-admin .waas-status-warning .dashicons {
+    color: #dba617;
+}
+
+.waas-client-admin .waas-status-error .dashicons {
+    color: #d63638;
+}
+
+.waas-client-admin .waas-status-table td p:first-child {
+    margin-top: 0;
+}
+
+.waas-client-admin .waas-inline-form {
+    margin: 8px 0 4px;
+}
+
+.waas-client-admin .waas-roles-summary + .description {
+    margin-top: 8px;
+}
+
+.waas-client-admin .waas-roles-summary,
+.waas-client-admin .waas-plan-table {
+    max-width: 760px;
+}
+
+.waas-client-admin .waas-roles-summary td:last-child,
+.waas-client-admin .waas-roles-summary th:last-child {
+    width: 160px;
+}
+
+.waas-client-admin .notice.inline {
+    max-width: 1080px;
+}
+
+.waas-client-admin .waas-list {
+    list-style: disc;
+    margin-left: 20px;
+}
+
+.waas-client-admin .waas-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 0 6px;
+    border-radius: 3px;
+    background: #f0f0f1;
+    color: #50575e;
+    font-size: 11px;
+    line-height: 18px;
 }

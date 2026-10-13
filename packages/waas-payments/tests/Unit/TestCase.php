@@ -27,7 +27,17 @@ abstract class TestCase extends PHPUnitTestCase
         Functions\when('wp_remote_retrieve_response_code')->alias(fn ($response) => $response['response']['code']);
         Functions\when('add_filter')->justReturn(true);
         Functions\when('add_action')->justReturn(true);
+        $this->options = [];
+        Functions\when('get_option')->alias(fn ($name, $default = false) => $this->options[$name] ?? $default);
+        Functions\when('update_option')->alias(function ($name, $value) {
+            $this->options[$name] = $value;
+            return true;
+        });
+        Functions\when('sanitize_text_field')->alias(fn ($value) => trim((string) $value));
     }
+
+    /** wp_options, for the code under test. */
+    protected array $options = [];
 
     protected function tearDown(): void
     {

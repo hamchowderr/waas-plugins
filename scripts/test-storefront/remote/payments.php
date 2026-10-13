@@ -1,6 +1,6 @@
 <?php
-// FluentCart in test mode; FluentCart's offline gateway on; the waas-payments Card gateway in Authorize.Net
-// sandbox mode. The Card credentials come from AUTHNET_LOGIN_ID / AUTHNET_TRANSACTION_KEY, plus the optional
+// FluentCart in test mode; FluentCart's offline gateway on; the waas-payments Card gateway with Authorize.Net
+// sandbox credentials as its test credentials (the store's test mode picks them). The Card credentials come from AUTHNET_LOGIN_ID / AUTHNET_TRANSACTION_KEY, plus the optional
 // AUTHNET_SIGNATURE_KEY that registers its webhook, in the container's environment (locked Coolify variables);
 // without them the gateway stays off for the owner to fill in. Prints no secrets.
 //
@@ -51,16 +51,16 @@ $offline = array_merge(waas_storefront_gateway('fluent_cart_payment_settings_off
 waas_storefront_save_gateway('fluent_cart_payment_settings_offline_payment', $offline);
 
 $cardKey = 'fluent_cart_payment_settings_waas_authorizenet';
-$card = array_merge(['is_active' => 'no', 'api_login_id' => '', 'transaction_key' => '', 'public_client_key' => ''], waas_storefront_gateway($cardKey), ['sandbox' => 'yes']);
+$card = \WaaSPayments\Gateway\AuthorizeNetSettings::migrateLegacy(array_merge(['is_active' => 'no'], waas_storefront_gateway($cardKey)));
 $loginId = (string) getenv('AUTHNET_LOGIN_ID');
 $transactionKey = (string) getenv('AUTHNET_TRANSACTION_KEY');
 $cardStatus = 'no credentials in the environment; left for the owner';
 if ($loginId !== '' && $transactionKey !== '') {
     // The same path as saving the form: check with Authorize.Net, encrypt the key, fetch the Public Client Key.
-    $data = array_merge($card, ['api_login_id' => $loginId, 'transaction_key' => Helper::encryptKey($transactionKey), 'is_active' => 'yes']);
+    $data = array_merge($card, ['test_api_login_id' => $loginId, 'test_transaction_key' => Helper::encryptKey($transactionKey), 'is_active' => 'yes']);
     // Optional: with a Signature Key, saving also registers the store's Authorize.Net webhook.
     if ((string) getenv('AUTHNET_SIGNATURE_KEY') !== '') {
-        $data['signature_key'] = Helper::encryptKey((string) getenv('AUTHNET_SIGNATURE_KEY'));
+        $data['test_signature_key'] = Helper::encryptKey((string) getenv('AUTHNET_SIGNATURE_KEY'));
     }
     $check = AuthorizeNetGateway::validateSettings($data);
     if (($check['status'] ?? '') === 'success') {
@@ -77,6 +77,6 @@ $settings = new \FluentCart\Api\StoreSettings();
 echo 'order_mode: ' . $settings->get('order_mode') . "\n";
 echo 'subscriptions: ' . $settings->get('subscription_management_mode') . ', automatic charge ' . $settings->get('subscription_system_charge') . "\n";
 echo 'offline gateway: active=' . $offline['is_active'] . "\n";
-echo 'card gateway: ' . $cardStatus . '; active=' . $card['is_active'] . ' sandbox=' . $card['sandbox']
-    . ' public_client_key=' . (($card['public_client_key'] ?? '') !== '' ? 'set' : 'missing') . "\n";
-echo 'card webhook: ' . (($card['webhook_status'] ?? '') ?: 'no Signature Key') . "\n";
+echo 'card gateway: ' . $cardStatus . '; active=' . $card['is_active'] . ' (test credentials)'
+    . ' public_client_key=' . (($card['test_public_client_key'] ?? '') !== '' ? 'set' : 'missing') . "\n";
+echo 'card webhook: ' . (($card['test_webhook_status'] ?? '') ?: 'no Signature Key') . "\n";

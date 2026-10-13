@@ -224,9 +224,9 @@ class AuthorizeNetGatewayTest extends TestCase
             []
         );
 
-        $this->assertSame('login-id', $saved['api_login_id']);
-        $this->assertSame('enc:' . base64_encode('secret-key'), $saved['transaction_key']);
-        $this->assertSame('9aptUW2DxG7rfEZ8VBpR4Hu2B8n7Bq6Q8cUbT4CJ6jXmbzWvZ5d6WrP8a3Vgkm4U', $saved['public_client_key']);
+        $this->assertSame('login-id', $saved['test_api_login_id']);
+        $this->assertSame('enc:' . base64_encode('secret-key'), $saved['test_transaction_key']);
+        $this->assertSame('9aptUW2DxG7rfEZ8VBpR4Hu2B8n7Bq6Q8cUbT4CJ6jXmbzWvZ5d6WrP8a3Vgkm4U', $saved['test_public_client_key']);
     }
 
     public function test_saving_an_already_encrypted_key_does_not_encrypt_it_twice(): void
@@ -236,7 +236,7 @@ class AuthorizeNetGatewayTest extends TestCase
 
         $saved = AuthorizeNetGateway::beforeSettingsUpdate(['api_login_id' => 'login-id', 'transaction_key' => $stored], []);
 
-        $this->assertSame($stored, $saved['transaction_key']);
+        $this->assertSame($stored, $saved['test_transaction_key']);
     }
 
     public function test_transaction_links_open_the_matching_merchant_interface(): void

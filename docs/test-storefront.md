@@ -30,7 +30,7 @@ FluentCart runs in **test** order mode. waas-host uses its FluentCart adapter, t
 The `payments` step also sets up subscriptions and gateways:
 
 - **Subscriptions:** FluentCart → Settings → Subscriptions is **Store managed** with **Automatic charge** on. That's what waas-payments needs to take subscriptions: FluentCart runs the schedule and charges each renewal to the card saved at checkout (see `packages/waas-payments/README.md`).
-- **Gateways:** both are offered at checkout. The Card gateway runs in sandbox mode; its credentials are checked with Authorize.Net, and its Public Client Key is fetched. FluentCart's offline gateway ("Cash") doesn't charge anything, so a test subscription can be activated by hand: mark the order paid in FluentCart → Orders.
+- **Gateways:** both are offered at checkout. The store is in test mode, so the Card gateway uses its test (sandbox) credentials; they are checked with Authorize.Net, and its Public Client Key is fetched. FluentCart's offline gateway ("Cash") doesn't charge anything, so a test subscription can be activated by hand: mark the order paid in FluentCart → Orders.
 - **Feed:** the product's WaaS Provisioning feed uses waas-host's default triggers, which include `subscription_reactivated`.
 
 [`scripts/test-storefront/storefront.py`](../scripts/test-storefront/storefront.py) does everything through the Coolify API, following the patterns in waas-provisioning-api's ADR 0001:
@@ -94,7 +94,7 @@ Only needed for a different sandbox account, or if the keys are rotated.
 3. **Public Client Key.** Open **Account** → **Settings** → **Security Settings** → **General Security Settings** → **Manage Public Client Key**. If no key is shown, click **Submit** to create one. You never paste it anywhere; the plugin fetches it.
 4. **Test Mode off.** **Account** → **Settings** → **Security Settings** → **General Security Settings** → **Test Mode** should say **Live**. That is still the sandbox; in Test Mode the sandbox returns transaction ID 0.
 5. **Enter the new keys.** Either:
-   - in WordPress: **FluentCart** → **Settings** → **Payments** → **Authorize.Net** ("Card"). Paste both values, keep **Sandbox mode** On, keep the method on, and click **Save**. The plugin verifies them and fetches the Public Client Key; or
+   - in WordPress: **FluentCart** → **Settings** → **Payments** → **Authorize.Net** ("Card"). Open the **Test credentials** tab, paste both values, keep the method on, and click **Save**. The plugin verifies them and fetches the Public Client Key; or
    - in Coolify: update `AUTHNET_LOGIN_ID` / `AUTHNET_TRANSACTION_KEY` (and `AUTHNET_SIGNATURE_KEY`), restart the service, then run `storefront.py setup payments`.
 
 ## Stripe (test) and PayPal (sandbox)
