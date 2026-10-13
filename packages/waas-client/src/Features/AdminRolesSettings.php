@@ -60,6 +60,9 @@ class AdminRolesSettings
             delete_transient('add_role_validation_error' . $user_info->ID);
         }
         $saved = isset($_GET['waas-saved']);
+        $added = isset($_GET['waas-added']);
+        $last_ping = StorefrontStatus::last(StorefrontStatus::PING_OPTION);
+        $health = self::check_roles($roles, $wp_plugins, fn ($plugin_file) => is_plugin_active($plugin_file));
 ?>
         <div class="wrap waas-client-admin">
             <h1 class="wp-heading-inline"><?php esc_html_e('Plan roles', WAAS_CLIENT_TEXTDOMAIN); ?></h1>
@@ -67,8 +70,11 @@ class AdminRolesSettings
 
             <?php if ($validation_errors !== false) : ?>
                 <div class="notice notice-error"><p><?php echo esc_html(implode(' ', (array) $validation_errors)); ?></p></div>
-            <?php elseif ($saved) : ?>
-                <div class="notice notice-success is-dismissible"><p><?php esc_html_e('Roles saved.', WAAS_CLIENT_TEXTDOMAIN); ?></p></div>
+            <?php elseif ($saved || $added) : ?>
+                <div class="notice notice-success is-dismissible"><p><?php echo $saved ? esc_html__('Roles saved on this website.', WAAS_CLIENT_TEXTDOMAIN) : esc_html__('Role added on this website.', WAAS_CLIENT_TEXTDOMAIN); ?></p></div>
+                <?php if ($last_ping !== null) {
+                    StorefrontStatus::render_notice($last_ping);
+                } ?>
             <?php endif; ?>
 
             <p class="waas-lead">
@@ -82,6 +88,59 @@ class AdminRolesSettings
                 <input id="waas-new-role" name="role" type="text" class="regular-text" placeholder="<?php esc_attr_e('New role name, for example Pro', WAAS_CLIENT_TEXTDOMAIN); ?>" />
                 <button type="submit" class="button"><?php esc_html_e('Add role', WAAS_CLIENT_TEXTDOMAIN); ?></button>
             </form>
+
+            <?php if ($roles) : ?>
+                <h2><?php esc_html_e('Summary', WAAS_CLIENT_TEXTDOMAIN); ?></h2>
+                <table class="widefat striped waas-roles-summary">
+                    <thead>
+                        <tr>
+                            <th scope="col"><?php esc_html_e('Role', WAAS_CLIENT_TEXTDOMAIN); ?></th>
+                            <th scope="col"><?php esc_html_e('Plugins turned on', WAAS_CLIENT_TEXTDOMAIN); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($roles as $role_name => $role_data) : ?>
+                            <tr>
+                                <td><strong><?php echo esc_html($role_data['title'] ?? $role_name); ?></strong> <code><?php echo esc_html($role_name); ?></code></td>
+                                <td><?php echo esc_html(number_format_i18n($health['counts'][$role_name] ?? 0)); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <?php if ($health['unassigned']) : ?>
+                    <p class="description"><?php echo esc_html(sprintf(
+                        /* translators: %s: number of plugins */
+                        _n('%s plugin is in no role, so it is turned off on every customer website.', '%s plugins are in no role, so they are turned off on every customer website.', count($health['unassigned']), WAAS_CLIENT_TEXTDOMAIN),
+                        number_format_i18n(count($health['unassigned']))
+                    )); ?></p>
+                <?php endif; ?>
+
+                <?php if ($health['inactive']) : ?>
+                    <div class="notice notice-warning inline">
+                        <p><strong><?php esc_html_e('Ticked in a role but not active on this template website', WAAS_CLIENT_TEXTDOMAIN); ?></strong></p>
+                        <p><?php esc_html_e('Customer websites on these roles will turn these plugins on without them having been set up or tested here. Activate them here first, or untick them.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                        <ul class="waas-list">
+                            <?php foreach ($health['inactive'] as $plugin_file => $role_names) : ?>
+                                <li><?php echo esc_html($wp_plugins[$plugin_file]['Name'] ?? $plugin_file); ?> <span class="description">(<?php echo esc_html(implode(', ', array_map(fn ($r) => $roles[$r]['title'] ?? $r, $role_names))); ?>)</span></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($health['missing']) : ?>
+                    <div class="notice notice-warning inline">
+                        <p><strong><?php esc_html_e('Listed in a role but no longer installed', WAAS_CLIENT_TEXTDOMAIN); ?></strong></p>
+                        <p><?php esc_html_e('These plugins are still in a role but are not installed on this website, so they do not show in the table below. They are taken out of the roles the next time you save.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                        <ul class="waas-list">
+                            <?php foreach ($health['missing'] as $plugin_file => $role_names) : ?>
+                                <li><code><?php echo esc_html($plugin_file); ?></code> <span class="description">(<?php echo esc_html(implode(', ', array_map(fn ($r) => $roles[$r]['title'] ?? $r, $role_names))); ?>)</span></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
+
+                <h2><?php esc_html_e('Plugins by role', WAAS_CLIENT_TEXTDOMAIN); ?></h2>
+            <?php endif; ?>
 
             <?php if (!$roles) : ?>
                 <p><?php esc_html_e('No roles yet. Add one above, then pick its plugins.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
@@ -106,7 +165,12 @@ class AdminRolesSettings
                             <tbody>
                                 <?php foreach ($wp_plugins as $plugin_name => $plugin) : ?>
                                     <tr>
-                                        <th scope="row"><?php echo esc_html($plugin['Name']); ?></th>
+                                        <th scope="row">
+                                            <?php echo esc_html($plugin['Name']); ?>
+                                            <?php if (!is_plugin_active($plugin_name)) : ?>
+                                                <span class="waas-badge"><?php esc_html_e('Not active here', WAAS_CLIENT_TEXTDOMAIN); ?></span>
+                                            <?php endif; ?>
+                                        </th>
                                         <?php foreach ($roles as $role_name => $role_data) : ?>
                                             <td class="waas-role-col">
                                                 <input type="checkbox"
@@ -189,15 +253,54 @@ class AdminRolesSettings
 
         $this->update_host_roles();
 
-        wp_redirect(remove_query_arg('waas-saved', wp_get_referer()));
+        wp_redirect(add_query_arg('waas-added', '1', remove_query_arg('waas-saved', wp_get_referer())));
     }
 
-    private function update_host_roles()
+    /** Tells the storefront to reload the roles; the outcome is stored and shown after the redirect. */
+    private function update_host_roles(): array
     {
-        try {
-            $this->host_http_service->get('/user-role-plan/update');
-        } catch (\Exception $exception) {
+        return StorefrontStatus::notify_storefront($this->host_http_service, (string) get_option('waas_host_website_url', ''));
+    }
+
+    /**
+     * Role summary and warnings for the roles page.
+     *
+     * @param array    $roles      roles.json contents: slug => ['title' => ..., 'plugins' => [file, ...]]
+     * @param array    $wp_plugins installed plugins (get_plugins(), without WaaS Client), keyed by file
+     * @param callable $is_active  fn (string $plugin_file): bool
+     * @return array{counts: array<string,int>, inactive: array<string,string[]>, missing: array<string,string[]>, unassigned: string[]}
+     *               inactive/missing map a plugin file to the role slugs that list it.
+     */
+    public static function check_roles(array $roles, array $wp_plugins, callable $is_active): array
+    {
+        $counts = [];
+        $inactive = [];
+        $missing = [];
+        $in_a_role = [];
+
+        foreach ($roles as $role_slug => $role_data) {
+            $plugins = array_values(array_unique(array_filter((array) ($role_data['plugins'] ?? []), fn ($file) => $file !== PluginBootstrap::PLUGIN_NAME)));
+            $counts[$role_slug] = 0;
+
+            foreach ($plugins as $plugin_file) {
+                if (!isset($wp_plugins[$plugin_file])) {
+                    $missing[$plugin_file][] = $role_slug;
+                    continue;
+                }
+                $counts[$role_slug]++;
+                $in_a_role[$plugin_file] = true;
+                if (!$is_active($plugin_file)) {
+                    $inactive[$plugin_file][] = $role_slug;
+                }
+            }
         }
+
+        return [
+            'counts' => $counts,
+            'inactive' => $inactive,
+            'missing' => $missing,
+            'unassigned' => array_values(array_diff(array_keys($wp_plugins), array_keys($in_a_role))),
+        ];
     }
 
     public function save_roles()
