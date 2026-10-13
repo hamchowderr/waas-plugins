@@ -1,6 +1,6 @@
-# WaaS Host & Client Plugins
+# WaaS Host, Client & Payments Plugins
 
-Two plugins used to create a communication between a host and multiple tenants in a multi-tenant WordPress setup.
+WordPress plugins for selling websites as a service: **WaaS Host** runs on the storefront and creates, suspends and restores each customer's website through the WaaS provisioning API; **WaaS Client** runs on the template and on every customer website (one-click login, plan roles); **WaaS Payments** adds card payments to FluentCart.
 
 ## Features
 

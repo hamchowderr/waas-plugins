@@ -102,11 +102,9 @@ class ConfigService
         return $valid ? $host : '';
     }
 
+    /** True when the API base URL, key and secret are all filled in (saved empty fields don't count). */
     public function check_credentials()
     {
-        $base_url_exists = $this->get_api_base_url() !== false;
-        $key_exists = $this->get_api_key() !== false;
-        $secret_exists = $this->get_api_secret() !== false;
-        return $base_url_exists && $key_exists && $secret_exists;
+        return !empty($this->get_api_base_url()) && !empty($this->get_api_key()) && !empty($this->get_api_secret());
     }
 }

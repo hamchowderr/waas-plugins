@@ -80,6 +80,15 @@ class ConfigServiceTest extends TestCase
         $this->assertTrue((new ConfigService())->check_credentials());
     }
 
+    public function test_credentials_incomplete_when_saved_empty(): void
+    {
+        $this->options['wpcs_credentials_api_base_url_setting'] = 'https://api.example.com';
+        $this->options['wpcs_credentials_api_key_setting'] = '';
+        $this->options['wpcs_credentials_api_secret_setting'] = '';
+
+        $this->assertFalse((new ConfigService())->check_credentials());
+    }
+
     /**
      * @runInSeparateProcess
      * @preserveGlobalState disabled

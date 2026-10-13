@@ -60,7 +60,7 @@ class WooCommerceProductData
         }
 
         $available_groupnames = [
-            '' => _x('None', 'Option name when no tenant snapshot chosen', WAAS_HOST_TEXTDOMAIN),
+            '' => _x('Default', 'Option name when no snapshot group is chosen', WAAS_HOST_TEXTDOMAIN),
         ];
         // Cached, and empty when the API is down: the product editor must still open.
         foreach ($this->provisioningApi->get_available_groupnames_cached() as $groupname) {
@@ -81,14 +81,14 @@ class WooCommerceProductData
             <div>
                 <p>
                     <a href="<?php echo esc_url(\WaaSHost\Api\RolesController::get_refresh_url()) ?>">
-                        <?php _e('Refresh Roles', WAAS_HOST_TEXTDOMAIN); ?>
+                        <?php _e('Refresh roles', WAAS_HOST_TEXTDOMAIN); ?>
                     </a>
                 </p>
             </div>
             <div>
                 <?php \woocommerce_wp_select([
                     'id'            => StoreProduct::PRODUCT_GROUPNAME_META,
-                    'label'         => __('Tenant Snapshot Groupname', WAAS_HOST_TEXTDOMAIN),
+                    'label'         => __('Snapshot group', WAAS_HOST_TEXTDOMAIN),
                     'description'   => __('The template group the store is created from after purchase.', WAAS_HOST_TEXTDOMAIN),
                     'options'          => $available_groupnames,
                     'desc_tip'        => false,

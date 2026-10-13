@@ -1,6 +1,15 @@
-.waas-setting-hint {
-    margin-left: 1em;
-    color: gray;
-    font-size: 0.85em;
-    font-style: italic;
+.waas-admin .nav-tab-wrapper {
+    margin-bottom: 8px;
+}
+
+.waas-admin .form-table .wp-editor-wrap {
+    max-width: 800px;
+}
+
+.waas-admin .form-table td .description code {
+    font-size: 12px;
+}
+
+.waas-admin .form-table td .description code {
+    white-space: nowrap;
 }

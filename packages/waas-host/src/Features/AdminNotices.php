@@ -38,10 +38,10 @@ class AdminNotices
             return;
         }
 
-        $settings_url = admin_url('admin.php?page=waas-admin-settings');
+        $settings_url = AdminSettings::url('stores');
         echo '<div class="notice notice-warning"><p>'
             . esc_html('Custom domain DNS settings missing: ' . implode(', ', $missing) . '. Customers get no DNS instructions for these on their domain page; with neither set, they are told to contact support. ')
-            . '<a href="' . esc_url($settings_url) . '">' . esc_html('Set them in Settings') . '</a>.</p></div>';
+            . '<a href="' . esc_url($settings_url) . '">' . esc_html('Set them in Settings > Websites') . '</a>.</p></div>';
     }
 
     public static function show_refresh_roles_failed_notice()

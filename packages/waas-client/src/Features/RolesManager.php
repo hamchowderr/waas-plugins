@@ -59,11 +59,13 @@ class RolesManager
     }
 
     public function waas_no_roles_json_found_admin_notice() {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
 ?>
-            <div class="notice notice-error is-dismissible">
-                <p><b><?php _e('This is a WaaS store with the WaaS Client plugin active, but no roles are defined.', WAAS_CLIENT_TEXTDOMAIN); ?></b></p>
-                <p><?php _e('If there are no roles defined in the Version that should be setup first.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
-                <p><?php _e('If there are roles defined in the Version this Tenant is running on please make sure to deploy.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+            <div class="notice notice-error">
+                <p><strong><?php esc_html_e('WaaS Client: this website has no plan roles.', WAAS_CLIENT_TEXTDOMAIN); ?></strong></p>
+                <p><?php esc_html_e('Its template version has no roles set up, so no plugins are turned on or off for its plan. Set up roles on the template website under WaaS Client > Plan roles, then deploy that version.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
             </div>
 <?php
     }
@@ -71,18 +73,21 @@ class RolesManager
     public function get_waas_no_role_defined_admin_notice($roles)
     {
         return function () use ($roles) {
+            if (!current_user_can('manage_options')) {
+                return;
+            }
 ?>
-            <div class="notice notice-error is-dismissible">
-                <p><b><?php _e('This is a WaaS store with the WaaS Client plugin active, but this store has no role.', WAAS_CLIENT_TEXTDOMAIN); ?></b></p>
-                <p><?php _e('This can happen when the store was created by hand instead of through a purchase.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
-                <p><?php _e('To test out the roles that are defined in the Version, a PHP Constant can be added to the Tenant.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
-                <p><?php _e('The PHP Constant should have the name ' . PluginBootstrap::TENANT_ROLES_CONSTANT . ' and one or more of the following roles separated by a \',\'', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+            <div class="notice notice-error">
+                <p><strong><?php esc_html_e('WaaS Client: this website has no plan role.', WAAS_CLIENT_TEXTDOMAIN); ?></strong></p>
+                <p><?php esc_html_e('This happens when a website is created by hand instead of through a purchase, so no plugins are turned on or off for it.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                <p><?php
+                    /* translators: %s: a PHP constant name */
+                    echo esc_html(sprintf(__('To try a role, define the PHP constant %s on this website with one or more of these roles, separated by commas:', WAAS_CLIENT_TEXTDOMAIN), PluginBootstrap::TENANT_ROLES_CONSTANT));
+                ?></p>
                 <ul>
-                    <?php
-                    foreach ($roles as $key => $value) {
-                        echo "<li><i>$key</i></li>\n";
-                    }
-                    ?>
+                    <?php foreach (array_keys((array) $roles) as $key) : ?>
+                        <li><code><?php echo esc_html($key); ?></code></li>
+                    <?php endforeach; ?>
                 </ul>
             </div>
 <?php
