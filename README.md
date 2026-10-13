@@ -91,6 +91,8 @@ define('WAAS_HOST_KEY_ENCRYPTION_KEY', '...');
 
 Without the constant, WordPress's auth salt is used instead. Either way, keep it stable: changing it makes the stored keys unreadable and one-click login stops working for existing stores. Keys saved by older versions in plain text are encrypted the first time they're used. The key's meta name, `_waas_tenant_private_key`, starts with an underscore so WooCommerce doesn't show it in the Custom Fields box or the REST API; keys under the old `WPCS_TENANT_PRIVATE_KEY_META` name move there when waas-host updates (or on first use), and WooCommerce Subscriptions renewal orders don't get a copy.
 
+WooCommerce products keep their WaaS settings through WooCommerce's product object, under `_waas_product_role` and `_waas_product_group_name`. Settings under the old `WPCS_PRODUCT_ROLE_META` and `WPCS_PRODUCT_GROUPNAME_META` names are still read, and move to the new names when waas-host updates.
+
 ## Names kept from WPCS
 
 The plugins came from WPCS's waas-wpcs. Their code, admin screens and hooks are named WaaS now (`waas_*` actions and filters). Names stored on sites or used between our systems keep their WPCS spelling, because changing them would cut existing stores off:

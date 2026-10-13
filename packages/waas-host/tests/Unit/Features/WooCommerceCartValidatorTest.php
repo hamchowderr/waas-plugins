@@ -27,7 +27,7 @@ class WooCommerceCartValidatorTest extends TestCase
         }
         Functions\stubTranslationFunctions();
         Functions\when('wp_get_post_terms')->alias(fn ($id) => $id === self::ADDON ? ['add-on'] : ['uncategorized']);
-        Functions\when('get_post_meta')->alias(fn ($id, $key) => $key === '_is_wpcs_product' && in_array($id, [self::PLAN, self::ADDON], true) ? 'yes' : '');
+        Functions\when('wc_get_product')->alias(fn ($id) => new \WC_Product($id, in_array($id, [self::PLAN, self::ADDON], true) ? ['_is_wpcs_product' => 'yes'] : []));
         $this->validator = new WooCommerceCartValidator();
     }
 
