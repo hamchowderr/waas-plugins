@@ -152,6 +152,7 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
         $this->cart->meta[self::SUBSCRIPTION_ID][Tenant::DOMAIN_NAME_META] = "x' onfocus='alert(1)";
         $this->stubDnsOptions([]);
         $this->api->allows('get_mail_domain')->andThrow(new \Exception('Failed: 404 - {}'));
+        $this->api->allows('domain_connect')->andThrow(new \Exception('Failed: 404 - {}'));
         Functions\when('esc_attr')->alias(fn ($v) => htmlspecialchars($v, ENT_QUOTES));
         Functions\expect('wp_nonce_field')
             ->once()
@@ -270,10 +271,14 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
                 ['type' => 'MX', 'name' => 'send', 'host' => 'send.mail.example.com', 'value' => 'feedback-smtp.us-east-1.amazonses.com', 'priority' => '10'],
             ],
         ])));
+        $this->api->allows('domain_connect')->with('ext-123', 'mail.example.com', 'email')
+            ->andReturn((object) ['dnsProvider' => 'Example DNS', 'supported' => true, 'url' => 'https://connect.dns.example/apply?domain=example.com']);
         $this->stubMailRender();
 
         $html = $this->renderMailSender();
 
+        $this->assertStringContainsString('href="https://connect.dns.example/apply?domain=example.com"', $html);
+        $this->assertStringContainsString('Connect automatically at Example DNS', $html);
         $this->assertStringContainsString('no-reply@mail.example.com', $html);
         $this->assertStringContainsString('Waiting for DNS records', $html);
         $this->assertStringContainsString('<code>p=&lt;abc&gt;</code>', $html);
@@ -289,8 +294,29 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
         $this->assertSame('', $this->renderMailSender());
     }
 
+    public function test_connect_button_only_when_the_dns_host_has_the_template(): void
+    {
+        $this->stubMailRender();
+        $this->api->allows('domain_connect')->with('ext-123', 'shop.example.com', 'website')
+            ->andReturn((object) ['dnsProvider' => 'Example DNS', 'supported' => false, 'url' => null]);
+        ob_start();
+        $this->settings->render_connect_button(self::SUBSCRIPTION_ID, 'shop.example.com', 'website');
+        $this->assertSame('', ob_get_clean());
+    }
+
+    public function test_connect_button_ignores_a_link_that_is_not_https(): void
+    {
+        $this->stubMailRender();
+        $this->api->allows('domain_connect')
+            ->andReturn((object) ['dnsProvider' => 'x', 'supported' => true, 'url' => 'javascript:alert(1)']);
+        ob_start();
+        $this->settings->render_connect_button(self::SUBSCRIPTION_ID, 'shop.example.com', 'website');
+        $this->assertSame('', ob_get_clean());
+    }
+
     private function stubMailRender(): void
     {
+        Functions\when('esc_url')->alias(fn ($v) => htmlspecialchars($v, ENT_QUOTES));
         Functions\when('esc_html')->alias(fn ($v) => htmlspecialchars($v, ENT_QUOTES));
         Functions\when('wp_nonce_field')->justReturn('<input type="hidden" name="waas_mail_nonce" value="n">');
     }

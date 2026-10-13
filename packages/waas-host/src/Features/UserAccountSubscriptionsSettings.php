@@ -59,6 +59,10 @@ class UserAccountSubscriptionsSettings
 	           </form><br /><br />";
 
         $this->render_dns_instructions();
+        $custom_domain = (string) $commerce->get_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META);
+        if ($custom_domain !== '') {
+            $this->render_connect_button($subscription_id, $custom_domain, 'website');
+        }
         $this->render_mail_sender($subscription_id);
     }
 
@@ -113,6 +117,7 @@ class UserAccountSubscriptionsSettings
         if ($status === 'pending') {
             echo '<p>Add these records at your domain\'s DNS host. They are checked every 10 minutes and your store '
                 . 'switches over on its own once they are found. Until then it sends from our address.</p>';
+            $this->render_connect_button($subscription_id, (string) $mail_domain->domainName, 'email');
         }
         $records = $mail_domain->records ?? null;
         if (is_array($records) && $records) {
@@ -132,6 +137,32 @@ class UserAccountSubscriptionsSettings
                 <input type='hidden' name='mail_domain_remove' value='1'>
                 <button class='button' type='submit'>Stop using this domain</button>
                </form><br /><br />";
+    }
+
+    /**
+     * "Connect automatically" when the domain's DNS host supports Domain Connect and has the platform's
+     * template: it opens the host's page, which adds the records once the customer approves. Otherwise
+     * nothing is shown and the records above are added by hand.
+     */
+    public function render_connect_button($subscription_id, string $domain_name, string $service)
+    {
+        $commerce = Commerce::adapter();
+        $external_id = $commerce === null ? '' : (string) $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META);
+        if ($external_id === '') {
+            return;
+        }
+        try {
+            $link = $this->provisioningApi->domain_connect($external_id, $domain_name, $service);
+        } catch (Exception $e) {
+            return;
+        }
+        if (empty($link->supported) || empty($link->url) || !is_string($link->url) || strpos($link->url, 'https://') !== 0) {
+            return;
+        }
+        $provider = is_string($link->dnsProvider ?? null) && $link->dnsProvider !== '' ? $link->dnsProvider : 'your DNS host';
+        echo '<p><a class="button" href="' . esc_url($link->url) . '" target="_blank" rel="noopener">'
+            . esc_html('Connect automatically at ' . $provider) . '</a> '
+            . esc_html('or add the records by hand.') . '</p>';
     }
 
     /** Adds or removes the store's sending domain from the form above; only its owner may. */
