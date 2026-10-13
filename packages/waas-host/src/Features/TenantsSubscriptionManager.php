@@ -280,10 +280,7 @@ class TenantsSubscriptionManager
         $public_key = $this->key_pair($subscription_id);
 
         $tenant = $attempt > 0 ? $this->provisioningApi->get_tenant_safe($external_id) : null;
-        if ($tenant !== null) {
-            $domain_name = $tenant->domainName;
-            $base_domain = $tenant->baseDomain ?? $tenant->domainName;
-        } else {
+        if ($tenant === null) {
             $args = $store['request'];
             $args['external_id'] = $external_id;
             $args['wordpress_user_role'] = get_option(Tenant::DEFAULT_USER_ROLE);
@@ -296,13 +293,24 @@ class TenantsSubscriptionManager
             try {
                 $new_tenant = $this->provisioningApi->create_tenant($args);
             } catch (\Exception $error) {
-                if ($this->name_taken($args, $error)) {
+                // The externalId is this subscription's own, so a store already holding it is ours: an earlier try
+                // got through (an admin's retry starts again at attempt 0, skipping the lookup above). Adopt it.
+                $tenant = $this->external_id_taken($error) ? $this->provisioningApi->get_tenant_safe($external_id) : null;
+                if ($tenant === null && $this->name_taken($args, $error)) {
                     // Retrying can't help: park the store until the customer picks another name.
                     $this->name_conflicts->park($subscription_id, $store, $error->getMessage());
                     return ['replace' => []];
                 }
-                throw $error;
+                if ($tenant === null) {
+                    throw $error;
+                }
             }
+        }
+
+        if ($tenant !== null) {
+            $domain_name = $tenant->domainName;
+            $base_domain = $tenant->baseDomain ?? $tenant->domainName;
+        } else {
             $external_id = $new_tenant->externalId ?? $external_id;
             $domain_name = $new_tenant->customDomain ?? $new_tenant->baseDomain;
             $base_domain = $new_tenant->baseDomain;
@@ -418,11 +426,19 @@ class TenantsSubscriptionManager
      * The create was refused because the custom domain belongs to another store: the API's 400 "Domain ... is
      * already in use", or any 400 when the availability check then says the domain is taken.
      */
+    /** The API refused the create because a store already has this externalId (409; older APIs answer 400). */
+    private function external_id_taken(\Exception $error): bool
+    {
+        $message = $error->getMessage();
+        return (strpos($message, 'Failed: 409') === 0 || strpos($message, 'Failed: 400') === 0)
+            && preg_match('/externalId \S+ (is already in use|belongs to)/', $message) === 1;
+    }
+
     private function name_taken(array $args, \Exception $error): bool
     {
         $domain = (string) ($args['custom_domain_name'] ?? '');
         $message = $error->getMessage();
-        if ($domain === '' || strpos($message, 'Failed: 400') !== 0) {
+        if ($domain === '' || strpos($message, 'Failed: 400') !== 0 || $this->external_id_taken($error)) {
             return false;
         }
         if (stripos($message, 'already in use') !== false) {
