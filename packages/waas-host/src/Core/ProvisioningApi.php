@@ -221,6 +221,40 @@ class ProvisioningApi
         $this->httpService->delete($url);
     }
 
+    /**
+     * The store's own sending domain (status, DNS records), or null when it sends from the platform's address.
+     *
+     * @throws \Exception
+     */
+    public function get_mail_domain($external_id)
+    {
+        $response = $this->httpService->get('/v1/tenants/mail-domain?externalId=' . rawurlencode($external_id));
+        return $response->mailDomain ?? null;
+    }
+
+    /**
+     * Gives the store its own sending domain; it sends from it once the DNS records are verified.
+     *
+     * @throws \Exception
+     */
+    public function set_mail_domain($external_id, $domain_name)
+    {
+        $response = $this->httpService->put('/v1/tenants/mail-domain?externalId=' . rawurlencode($external_id), [
+            'domainName' => $domain_name,
+        ]);
+        return $response->mailDomain ?? null;
+    }
+
+    /**
+     * Moves the store back to the platform's address.
+     *
+     * @throws \Exception
+     */
+    public function remove_mail_domain($external_id)
+    {
+        $this->httpService->delete('/v1/tenants/mail-domain?externalId=' . rawurlencode($external_id));
+    }
+
     public function domain_available($domain)
     {
         $url = '/v1/tenants/domains/available?domain=' . $domain;

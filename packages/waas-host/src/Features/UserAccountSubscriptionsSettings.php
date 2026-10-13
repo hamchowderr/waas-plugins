@@ -12,10 +12,13 @@ class UserAccountSubscriptionsSettings
 {
     public const DOMAIN_NONCE_FIELD = 'waas_domain_nonce';
     public const DOMAIN_NONCE_ACTION = 'waas_update_domain_';
+    public const MAIL_NONCE_FIELD = 'waas_mail_nonce';
+    public const MAIL_NONCE_ACTION = 'waas_mail_domain_';
 
     private ProvisioningApi $provisioningApi;
     private ConfigService $config;
     private string $domain_error = '';
+    private string $mail_error = '';
 
     public function __construct(ProvisioningApi $provisioningApi, ?ConfigService $config = null)
     {
@@ -56,6 +59,130 @@ class UserAccountSubscriptionsSettings
 	           </form><br /><br />";
 
         $this->render_dns_instructions();
+        $this->render_mail_sender($subscription_id);
+    }
+
+    /**
+     * Which address the store's email (receipts, password resets) comes from, and a form to send it
+     * from the customer's own domain: the DNS records to add, and its status until the platform has
+     * verified them. Hidden when the API can't be reached or doesn't offer sending domains.
+     */
+    public function render_mail_sender($subscription_id)
+    {
+        $this->handle_mail_domain($subscription_id);
+        $commerce = Commerce::adapter();
+        $external_id = $commerce === null ? '' : (string) $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META);
+        if ($external_id === '') {
+            return;
+        }
+        try {
+            $mail_domain = $this->provisioningApi->get_mail_domain($external_id);
+        } catch (Exception $e) {
+            return;
+        }
+
+        $nonce_field = wp_nonce_field(self::MAIL_NONCE_ACTION . $subscription_id, self::MAIL_NONCE_FIELD, true, false);
+        echo '<h4>Email Sender</h4>';
+        if ($this->mail_error !== '') {
+            echo '<p class="woocommerce-error">' . esc_html($this->mail_error) . '</p>';
+        }
+
+        if (!$mail_domain) {
+            echo '<p>Your store sends its email (receipts, password resets) from our address. '
+                . 'Add your own domain to send it from no-reply at that domain instead.</p>';
+            echo "<form method='post' action=''>
+                $nonce_field
+                <p class='woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide'>
+                    <label for='mail_domain_name'>Sending Domain</label>
+                    <input type='text' placeholder='example.com' class='woocommerce-Input input-text' name='mail_domain_name' id='mail_domain_name' value=''>
+                </p>
+                <button class='button' type='submit'>Use this domain</button>
+               </form><br /><br />";
+            return;
+        }
+
+        $status = (string) ($mail_domain->status ?? 'pending');
+        $labels = ['pending' => 'Waiting for DNS records', 'verified' => 'Sending', 'removing' => 'Being removed'];
+        echo '<p>Sends from <b>' . esc_html('no-reply@' . $mail_domain->domainName) . '</b> ('
+            . esc_html($labels[$status] ?? $labels['pending']) . ')</p>';
+
+        if ($status === 'removing') {
+            echo '<p>' . esc_html('Your store goes back to sending from our address within 10 minutes.') . '</p>';
+            return;
+        }
+        if ($status === 'pending') {
+            echo '<p>Add these records at your domain\'s DNS host. They are checked every 10 minutes and your store '
+                . 'switches over on its own once they are found. Until then it sends from our address.</p>';
+        }
+        $records = $mail_domain->records ?? null;
+        if (is_array($records) && $records) {
+            echo '<table class="waas-mail-records"><thead><tr><th>Type</th><th>Name</th><th>Value</th><th>Priority</th></tr></thead><tbody>';
+            foreach ($records as $record) {
+                echo '<tr><td>' . esc_html((string) ($record->type ?? '')) . '</td>'
+                    . '<td><code>' . esc_html((string) ($record->name ?? '')) . '</code></td>'
+                    . '<td><code>' . esc_html((string) ($record->value ?? '')) . '</code></td>'
+                    . '<td>' . esc_html(isset($record->priority) ? (string) $record->priority : '') . '</td></tr>';
+            }
+            echo '</tbody></table>';
+        } else {
+            echo '<p>' . esc_html('The DNS records could not be loaded right now. Reload the page to try again.') . '</p>';
+        }
+        echo "<form method='post' action=''>
+                $nonce_field
+                <input type='hidden' name='mail_domain_remove' value='1'>
+                <button class='button' type='submit'>Stop using this domain</button>
+               </form><br /><br />";
+    }
+
+    /** Adds or removes the store's sending domain from the form above; only its owner may. */
+    public function handle_mail_domain($subscription_id)
+    {
+        $remove = isset($_POST['mail_domain_remove']);
+        if (!$remove && !isset($_POST['mail_domain_name'])) {
+            return;
+        }
+
+        $nonce = isset($_POST[self::MAIL_NONCE_FIELD]) ? sanitize_text_field(wp_unslash($_POST[self::MAIL_NONCE_FIELD])) : '';
+        if (!wp_verify_nonce($nonce, self::MAIL_NONCE_ACTION . $subscription_id)) {
+            return;
+        }
+
+        $commerce = Commerce::adapter();
+        $owner_id = $commerce === null ? 0 : $commerce->get_customer_id($subscription_id);
+        if ($owner_id === 0 || $owner_id !== get_current_user_id()) {
+            return;
+        }
+        $external_id = (string) $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META);
+        if ($external_id === '') {
+            return;
+        }
+
+        try {
+            if ($remove) {
+                $this->provisioningApi->remove_mail_domain($external_id);
+                return;
+            }
+            $domain = strtolower(trim(sanitize_text_field(wp_unslash($_POST['mail_domain_name']))));
+            if (!self::is_valid_hostname($domain)) {
+                $this->mail_error = 'Please enter a valid domain name, like example.com.';
+                return;
+            }
+            $this->provisioningApi->set_mail_domain($external_id, $domain);
+        } catch (Exception $e) {
+            $this->mail_error = self::api_error_message($e);
+        }
+    }
+
+    /** The API's own explanation for a refused request (400), else a generic message. */
+    private static function api_error_message(Exception $e): string
+    {
+        if (preg_match('/^Failed: 400 - (.*)$/s', $e->getMessage(), $m)) {
+            $body = json_decode($m[1]);
+            if (isset($body->message) && is_string($body->message)) {
+                return $body->message;
+            }
+        }
+        return 'That did not work. Please try again later or contact support.';
     }
 
     /** DNS records for a custom domain, from the storefront's DNS settings. With neither set, the customer is told to contact support. */

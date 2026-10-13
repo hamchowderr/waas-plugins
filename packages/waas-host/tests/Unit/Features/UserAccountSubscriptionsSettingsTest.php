@@ -30,7 +30,8 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
         Functions\when('wp_unslash')->returnArg();
         Functions\when('get_current_user_id')->justReturn(self::OWNER_ID);
         Functions\when('wp_verify_nonce')->alias(
-            fn ($nonce, $action) => $nonce === 'good' && $action === 'waas_update_domain_' . self::SUBSCRIPTION_ID ? 1 : false
+            fn ($nonce, $action) => $nonce === 'good' && $action === 'waas_update_domain_' . self::SUBSCRIPTION_ID
+                || $nonce === 'mail' && $action === 'waas_mail_domain_' . self::SUBSCRIPTION_ID ? 1 : false
         );
         Commerce::reset();
         $this->cart = new FakeCommerceAdapter();
@@ -150,6 +151,7 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
     {
         $this->cart->meta[self::SUBSCRIPTION_ID][Tenant::DOMAIN_NAME_META] = "x' onfocus='alert(1)";
         $this->stubDnsOptions([]);
+        $this->api->allows('get_mail_domain')->andThrow(new \Exception('Failed: 404 - {}'));
         Functions\when('esc_attr')->alias(fn ($v) => htmlspecialchars($v, ENT_QUOTES));
         Functions\expect('wp_nonce_field')
             ->once()
@@ -199,6 +201,105 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
 
         $this->assertStringContainsString('<pre>sites.example.net</pre>', $html);
         $this->assertStringNotContainsString('A records', $html);
+    }
+
+    public function test_owner_sets_a_sending_domain(): void
+    {
+        $_POST = ['mail_domain_name' => ' Mail.Example.com ', 'waas_mail_nonce' => 'mail'];
+        $this->api->expects('set_mail_domain')->with('ext-123', 'mail.example.com');
+
+        $this->settings->handle_mail_domain(self::SUBSCRIPTION_ID);
+    }
+
+    public function test_owner_removes_the_sending_domain(): void
+    {
+        $_POST = ['mail_domain_remove' => '1', 'waas_mail_nonce' => 'mail'];
+        $this->api->expects('remove_mail_domain')->with('ext-123');
+
+        $this->settings->handle_mail_domain(self::SUBSCRIPTION_ID);
+    }
+
+    public function test_sending_domain_needs_the_mail_nonce_and_the_owner(): void
+    {
+        $this->api->shouldNotReceive('set_mail_domain');
+        $this->api->shouldNotReceive('remove_mail_domain');
+
+        $_POST = ['mail_domain_name' => 'evil.example.com'];
+        $this->settings->handle_mail_domain(self::SUBSCRIPTION_ID);
+        // The website domain form's nonce doesn't work for this form.
+        $_POST = ['mail_domain_remove' => '1', 'waas_mail_nonce' => 'good'];
+        $this->settings->handle_mail_domain(self::SUBSCRIPTION_ID);
+
+        $this->cart->customer_id = 99;
+        $_POST = ['mail_domain_name' => 'evil.example.com', 'waas_mail_nonce' => 'mail'];
+        $this->settings->handle_mail_domain(self::SUBSCRIPTION_ID);
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_sending_domain_shows_the_api_reason_when_refused(): void
+    {
+        $_POST = ['mail_domain_name' => 'shop.anypress.io', 'waas_mail_nonce' => 'mail'];
+        $this->api->expects('set_mail_domain')
+            ->andThrow(new \Exception('Failed: 400 - {"statusCode":400,"message":"shop.anypress.io belongs to the platform; use a domain the store owns"}'));
+        $this->api->allows('get_mail_domain')->andReturn(null);
+        $this->stubMailRender();
+
+        $html = $this->renderMailSender();
+
+        $this->assertStringContainsString('<p class="woocommerce-error">shop.anypress.io belongs to the platform; use a domain the store owns</p>', $html);
+        $this->assertStringContainsString("name='mail_domain_name'", $html);
+    }
+
+    public function test_sending_domain_rejects_an_invalid_name(): void
+    {
+        $_POST = ['mail_domain_name' => "x' onfocus='y", 'waas_mail_nonce' => 'mail'];
+        $this->api->shouldNotReceive('set_mail_domain');
+        $this->api->allows('get_mail_domain')->andReturn(null);
+        $this->stubMailRender();
+
+        $this->assertStringContainsString('Please enter a valid domain name', $this->renderMailSender());
+    }
+
+    public function test_pending_sending_domain_shows_its_records_escaped(): void
+    {
+        $this->api->allows('get_mail_domain')->with('ext-123')->andReturn(json_decode(json_encode([
+            'domainName' => 'mail.example.com',
+            'status' => 'pending',
+            'records' => [
+                ['type' => 'TXT', 'name' => 'tosend._domainkey', 'host' => 'tosend._domainkey.mail.example.com', 'value' => 'p=<abc>', 'priority' => null],
+                ['type' => 'MX', 'name' => 'send', 'host' => 'send.mail.example.com', 'value' => 'feedback-smtp.us-east-1.amazonses.com', 'priority' => '10'],
+            ],
+        ])));
+        $this->stubMailRender();
+
+        $html = $this->renderMailSender();
+
+        $this->assertStringContainsString('no-reply@mail.example.com', $html);
+        $this->assertStringContainsString('Waiting for DNS records', $html);
+        $this->assertStringContainsString('<code>p=&lt;abc&gt;</code>', $html);
+        $this->assertStringContainsString('<td>10</td>', $html);
+        $this->assertStringContainsString("name='mail_domain_remove'", $html);
+    }
+
+    public function test_sending_domain_section_is_hidden_when_the_api_has_none_to_offer(): void
+    {
+        $this->api->allows('get_mail_domain')->andThrow(new \Exception('Failed: 404 - Not Found'));
+        $this->stubMailRender();
+
+        $this->assertSame('', $this->renderMailSender());
+    }
+
+    private function stubMailRender(): void
+    {
+        Functions\when('esc_html')->alias(fn ($v) => htmlspecialchars($v, ENT_QUOTES));
+        Functions\when('wp_nonce_field')->justReturn('<input type="hidden" name="waas_mail_nonce" value="n">');
+    }
+
+    private function renderMailSender(): string
+    {
+        ob_start();
+        $this->settings->render_mail_sender(self::SUBSCRIPTION_ID);
+        return ob_get_clean();
     }
 
     private function stubDnsOptions(array $options): void
