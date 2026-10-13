@@ -166,6 +166,37 @@ class NameConflictsTest extends StoreJobsTestCase
         $this->assertSame(Tenant::NEEDS_NEW_NAME, $this->meta(Tenant::TENANT_STATE));
     }
 
+    /** @dataProvider external_id_refusals */
+    public function test_a_create_refused_for_its_own_external_id_adopts_that_store_instead_of_waiting_for_a_name(string $refusal): void
+    {
+        // An admin's retry starts at attempt 0, so the create is sent again although the first one got through.
+        $this->bought();
+        $this->api->expects('create_tenant')->andThrow(new \Exception($refusal));
+        $this->api->expects('get_tenant_safe')->with(self::FIRST_ID)->andReturn((object) [
+            'externalId' => self::FIRST_ID,
+            'domainName' => 'apex-research.stores.waas.example',
+            'baseDomain' => 't-1.stores.waas.example',
+            'statusCode' => 0,
+        ]);
+        $this->api->shouldNotReceive('domain_available');
+
+        $this->run_due(901);
+
+        $this->assertNotSame(Tenant::NEEDS_NEW_NAME, $this->meta(Tenant::TENANT_STATE));
+        $this->assertSame(self::FIRST_ID, $this->meta(Tenant::TENANT_EXTERNAL_ID_META));
+        $this->assertSame('apex-research.stores.waas.example', $this->meta(Tenant::DOMAIN_NAME_META));
+        $this->assertSame('t-1.stores.waas.example', $this->meta(Tenant::BASE_DOMAIN_NAME_META));
+        $this->assertSame([], $this->queue(901));
+    }
+
+    public static function external_id_refusals(): array
+    {
+        return [
+            'API before the duplicate check' => ['Failed: 400 - {"statusCode":400,"message":"externalId ' . self::FIRST_ID . ' is already in use"}'],
+            'API with the duplicate check' => ['Failed: 409 - {"statusCode":409,"message":"externalId ' . self::FIRST_ID . ' is already in use by another store"}'],
+        ];
+    }
+
     public function test_other_failures_are_retried_as_before(): void
     {
         $this->bought();
