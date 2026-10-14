@@ -25,7 +25,7 @@ class WooCommerceAdapterTest extends TestCase
             102 => ['_' . StoreProduct::IS_STORE_PRODUCT_META => 'no'],
             103 => ['_' . StoreProduct::IS_STORE_PRODUCT_META => 'yes'],
         ];
-        Functions\when('get_post_meta')->alias(fn ($id, $key) => $post_meta[$id][$key] ?? '');
+        Functions\when('wc_get_product')->alias(fn ($id) => new \WC_Product($id, $post_meta[$id]));
 
         $order = Mockery::mock('WC_Order');
         $order->allows('get_meta')->with(Tenant::WEBSITE_NAME_META)->andReturn('Apex Research');

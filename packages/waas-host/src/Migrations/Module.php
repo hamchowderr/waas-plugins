@@ -20,9 +20,9 @@ class Module
         $this->provisioningApi = $provisioningApi;
 
         if ($this->get_db_version() !== WAAS_HOST_VERSION) {
-            $this->migrate_non_waas_products();
             $this->update_api_reachability();
-            // Once the cart's subscription plugin has loaded.
+            // Once WooCommerce and the cart's subscription plugin have loaded.
+            add_action('init', [StoreProduct::class, 'migrate_legacy_meta'], 20);
             add_action('init', [PrivateKeyStore::class, 'migrate_legacy_keys'], 20);
             $this->update_version();
         }
@@ -36,30 +36,6 @@ class Module
     public function update_version()
     {
         update_option(self::PLUGIN_VERSION_OPTION, WAAS_HOST_VERSION);
-    }
-
-    public function migrate_non_waas_products()
-    {
-        // Only WooCommerce products carry these settings as post meta.
-        if (!function_exists('wc_get_product')) {
-            return;
-        }
-
-        $products = get_posts([
-            'numberposts' => -1,
-            'post_type' => 'product',
-            'meta_query' => [
-                [
-                    'key' => StoreProduct::PRODUCT_ROLE_META,
-                    'compare' => 'EXISTS',
-                ]
-            ],
-        ]);
-
-        foreach ($products as $product) {
-            $store_product = new StoreProduct($product->ID);
-            $store_product->store_is_waas_product(true);
-        }
     }
 
     public function update_api_reachability()
