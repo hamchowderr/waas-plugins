@@ -23,10 +23,14 @@ case "${1:-}" in
   plugins)
     # wordpress.org plugins: install once, then just activate. Re-installing one that a newer release exists for
     # fails ("Destination folder already exists"); updating them is a separate step, done on purpose.
-    for p in fluent-cart fluent-smtp; do
+    # SHOP_PLUGINS (the shop's compose) adds the AnyPress store template's plugins, so the shop runs what it sells.
+    for p in fluent-cart fluent-smtp ${SHOP_PLUGINS:-}; do
       $WP plugin is-installed $p || $WP plugin install $p
       $WP plugin activate $p
     done
+    # FluentAuth's first run, as in the store template: its defaults, XML-RPC off.
+    ! $WP plugin is-active fluent-security || $WP option get __fls_auth_settings >/dev/null 2>&1 ||
+      $WP eval 'update_option("__fls_auth_settings", array_merge(\FluentAuth\App\Helpers\Helper::getAuthSettings(), ["disable_xmlrpc" => "yes"]));'
     $WP plugin install $X/waas-host.zip --activate --force
     [ ! -f $X/waas-payments.zip ] || $WP plugin install $X/waas-payments.zip --activate --force
     $WP plugin list ;;
