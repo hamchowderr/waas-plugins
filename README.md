@@ -8,7 +8,7 @@ They are the WordPress side of [AnyPress](https://anypress.io) and are open sour
 
 **WaaS Host** (storefront):
 
-- Sells websites as subscription products on FluentCart (recommended) or WooCommerce with WP Swings' Subscriptions for WooCommerce.
+- Sells websites as subscription products on FluentCart (recommended) or WooCommerce with a subscriptions plugin (WP Swings' free Subscriptions for WooCommerce, or WooCommerce Subscriptions).
 - Asks for a **website name** at checkout, checks it's free, and names the store `<website name>.<website domain>` (e.g. `shop.example.com`).
 - Creates the website when the subscription starts; suspends, backs up and deletes it when the subscription ends (after the paid period, then a grace period); resumes or restores it if the customer comes back.
 - **My website** in FluentCart's customer portal (the subscription page on WooCommerce): status, one-click login, the customer's own domain, and sending the store's email from their own domain.
@@ -23,8 +23,8 @@ They are the WordPress side of [AnyPress](https://anypress.io) and are open sour
 
 You need a WordPress site to sell from (the **storefront**: WordPress 6.4 or newer, PHP 8.1 or newer) and a running provisioning API (to run one, see the [self-hosting guide](https://github.com/hamchowderr/waas-provisioning-api/blob/main/docs/self-hosting.md)). The API's operator gives you an **API key** and **API secret** for your storefront.
 
-1. **Install a cart.** FluentCart 1.7 or newer (recommended), or WooCommerce with WP Swings' free Subscriptions for WooCommerce.
-2. **Install WaaS Host** on the storefront (and **WaaS Payments** if you want Authorize.Net card payments on FluentCart). Build the zips with `scripts/release/build.sh waas-host <version> dist` (needs Composer), or download them from a **Release plugin** workflow run in this repo's Actions tab.
+1. **Install a cart.** FluentCart 1.7 or newer (recommended), or WooCommerce with WP Swings' free Subscriptions for WooCommerce or the paid WooCommerce Subscriptions.
+2. **Install WaaS Host** on the storefront (and **WaaS Payments** if you want Authorize.Net card payments on FluentCart). Build the zips with Composer installed: `scripts/release/build.sh waas-host <version> dist`, and `scripts/release/build.sh waas-payments <version> dist` for WaaS Payments. Upload them under **Plugins → Add New → Upload Plugin**.
 3. **Add a secret to `wp-config.php`:** `define('WAAS_HOST_KEY_ENCRYPTION_KEY', '…');` with a long random string (`openssl rand -base64 48`). Keep it stable ([Storefront secrets](#storefront-secrets)).
 4. **Connect to the API.** In **WaaS → Settings**, on the **Connection** tab, enter the **API URL**, **API key** and **API secret**. On the **Websites** tab, set **Website domain** (the domain customers' websites are named under, e.g. `example.com`).
 5. **Make a product.** Create a subscription product and turn on WaaS for it, choosing the plan role and snapshot group ([Storefront cart](#storefront-cart) has the steps for each cart).
