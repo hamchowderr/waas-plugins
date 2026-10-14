@@ -2,83 +2,81 @@
 
 WordPress plugins for selling websites as a service: **WaaS Host** runs on the storefront and creates, suspends and restores each customer's website through the WaaS provisioning API; **WaaS Client** runs on the template and on every customer website (one-click login, plan roles); **WaaS Payments** adds card payments to FluentCart.
 
+They are the WordPress side of [AnyPress](https://anypress.io) and are open source (GPL-3.0): the [provisioning API](https://github.com/hamchowderr/waas-provisioning-api) builds and runs the stores, and the [dashboard](https://github.com/hamchowderr/waas-dashboard) manages them. To run the whole platform yourself, see the API's [self-hosting guide](https://github.com/hamchowderr/waas-provisioning-api/blob/main/docs/self-hosting.md).
+
 ## Features
 
-- Tenant Creation
-- Subscription Management
-- Role-based Plugins Activation
-- Adding new Add-ons
-- Changing Domains
-- Root-Domain for created tenants
-- Tenants domains
-- Single-Sign On
+**WaaS Host** (storefront):
 
-## Work tracking (beads)
+- Sells websites as subscription products on FluentCart (recommended) or WooCommerce with a subscriptions plugin (WP Swings' free Subscriptions for WooCommerce, or WooCommerce Subscriptions).
+- Asks for a **website name** at checkout, checks it's free, and names the store `<website name>.<website domain>` (e.g. `shop.example.com`).
+- Creates the website when the subscription starts; suspends, backs up and deletes it when the subscription ends (after the paid period, then a grace period); resumes or restores it if the customer comes back.
+- **My website** in FluentCart's customer portal (the subscription page on WooCommerce): status, one-click login, the customer's own domain, and sending the store's email from their own domain. Where the customer's DNS host supports Domain Connect, a **Connect automatically** button adds the DNS records for them.
+- Plan roles and snapshot groups per product.
+- Updates itself through the provisioning API, which serves signed releases.
 
-Work is tracked in [beads](https://github.com/steveyegge/beads) (prefix `waas`). The issue database syncs through a private DoltHub database, [`chowderr/waas`](https://www.dolthub.com/repositories/chowderr/waas): `bd dolt push` after changes, `bd dolt pull` to get others'. `.beads/issues.jsonl` is a local export (kept fresh by `export.auto`) and is not committed.
+**WaaS Client** (in every store): one-click login from the storefront, and plugin access by plan role (`roles.json`).
 
-On a fresh clone, with DoltHub credentials in `~/.dolt/creds` (`dolt creds import`, or the JWK the cloud environment writes):
+**WaaS Payments**: Authorize.Net card payments for FluentCart, including subscriptions charged on renewal.
 
-```shell
-npm install -g @beads/bd
-bd init --prefix waas --skip-agents --skip-hooks --remote chowderr/waas
-bd dolt pull
-bd ready
-```
+## Getting started
 
-## Local Development
+You need a WordPress site to sell from (the **storefront**: WordPress 6.4 or newer, PHP 8.1 or newer) and a running provisioning API (to run one, see the [self-hosting guide](https://github.com/hamchowderr/waas-provisioning-api/blob/main/docs/self-hosting.md)). The API's operator gives you an **API key** and **API secret** for your storefront.
 
-### Required tools
+1. **Install a cart.** FluentCart 1.7 or newer (recommended), or WooCommerce with WP Swings' free Subscriptions for WooCommerce or the paid WooCommerce Subscriptions.
+2. **Install WaaS Host** on the storefront (and **WaaS Payments** if you want Authorize.Net card payments on FluentCart). Build the zips with Composer installed: `scripts/release/build.sh waas-host <version> dist`, and `scripts/release/build.sh waas-payments <version> dist` for WaaS Payments. Upload them under **Plugins → Add New → Upload Plugin**.
+3. **Add a secret to `wp-config.php`:** `define('WAAS_HOST_KEY_ENCRYPTION_KEY', '…');` with a long random string (`openssl rand -base64 48`). Keep it stable ([Storefront secrets](#storefront-secrets)).
+4. **Connect to the API.** In **WaaS → Settings**, on the **Connection** tab, enter the **API URL**, **API key** and **API secret**. On the **Websites** tab, set **Website domain** (the domain customers' websites are named under, e.g. `example.com`).
+5. **Make a product.** Create a subscription product and turn on WaaS for it, choosing the plan role and snapshot group ([Storefront cart](#storefront-cart) shows where this is on each cart).
+6. **Run cron every minute.** Websites are created in the background; on a quiet site WordPress's own cron waits for the next visitor. Define `DISABLE_WP_CRON` and run `wp action-scheduler run` and `wp cron event run --due-now` every minute from a real cron job.
+7. **Test it.** Buy the product: checkout asks for a website name, and a few minutes after payment the customer finds the website, with a one-click login, under **My website**.
 
-- Docker and Docker-Compose
-- Composer
-- `fswarch` & `rsync`
-
-### Steps
-
-- `git clone` the project
-- Run `composer install` inside `src` directory
-- Run to create dist directories  `mkdir dist && mkdir dist/host && mkdir dist/client`
-- Run `docker-compose up`
-- Run the following command to sync files between src and dist
-
-## Test environment
-
-`scripts/test-env.sh up` starts a throwaway WordPress (MariaDB + WordPress in Docker) at http://127.0.0.1 with this checkout's Host plugin, FluentCart, WooCommerce and Subscriptions for WooCommerce active. Log in as admin / admin. `scripts/test-env.sh wp ...` runs WP-CLI; `scripts/test-env.sh down` removes it. It works in Claude Code cloud sessions (it starts Docker and routes WordPress's outbound calls through the session proxy).
+**WaaS Client** is not installed on the storefront. It goes into the template the customers' websites are made from, and comes with every website. The provisioning API's [`templates/starter-fluentcart`](https://github.com/hamchowderr/waas-provisioning-api/tree/main/templates/starter-fluentcart) builds a starter template with it.
 
 ## Storefront cart
 
-The Host plugin runs on **FluentCart** (1.7 or newer, subscriptions built in) or on **WooCommerce** with WooCommerce Subscriptions or Subscriptions for WooCommerce. When both are active, FluentCart is used; the `waas_commerce_adapter` filter can pick another.
+The Host plugin works with **FluentCart** 1.7 or newer (recommended) or with **WooCommerce** plus a subscriptions plugin. If both carts are active it uses FluentCart; the `waas_commerce_adapter` filter can pick the other.
 
-On FluentCart:
+| | FluentCart | WooCommerce |
+|---|---|---|
+| Subscriptions | Built in | WP Swings' free **Subscriptions for WooCommerce** or the paid **WooCommerce Subscriptions**. If both are active, the free one is used (`waas_woocommerce_subscription_plugin` filter to change) |
+| Turn WaaS on for a product | Make a subscription product, open **Integrations**, add **WaaS Provisioning**, choose the role and snapshot group | Make a subscription product, tick the WaaS product option, choose the role and snapshot group |
+| Where the customer finds the website | **My website** in the customer portal: status, one-click login and their own domain. The website-ready email links there | The subscription's page in **My Account**: status, one-click login and domain form |
 
-1. Make a subscription product.
-2. On the product, open **Integrations**, add **WaaS Provisioning**, and choose the role and snapshot group.
-   - The default triggers create the website when the subscription is activated, and resume it when a subscription that expired is paid late (reactivated).
-   - They take it offline (backed up, then deleted after the grace period in the settings) when the subscription is cancelled: at the end of the period the customer paid for, with an e-mail telling them the date and the portal showing "Active until" meanwhile; reactivating before then keeps it. Refunding the order that bought the subscription, expired access or the end of term takes it offline at once. Refunding a renewal order leaves the website up while the subscription stays active.
-   - Feeds made before reactivation was a default get it added on the first load after the update, unless their triggers were changed by hand.
-3. Checkout asks for a **Website name** whenever the cart holds such a product, and checks that the name is free.
-4. Customers find their websites under **My website** in the customer portal, right after Dashboard: status, one-click login and their own domain. While a website is ready, the other portal pages show a notice with its login link, and each subscription links to it. The website-ready email links to this page; a customer who is logged out logs in first and lands there.
+On both carts, checkout asks for a **Website name** whenever the cart holds a WaaS product (on WooCommerce in block and classic checkout alike) and checks that the name is free. The website is created in the background a few minutes after payment.
 
-On WooCommerce:
+### When the subscription changes
 
-1. Use WP Swings' free **Subscriptions for WooCommerce** (the default) or the paid **WooCommerce Subscriptions**. When both are active, Subscriptions for WooCommerce is used; the `waas_woocommerce_subscription_plugin` filter can pick the other.
-2. Make a subscription product and tick the WaaS product option on it, with its role and snapshot group.
-3. Checkout asks for a **Website name** when the cart holds such a product, in block checkout and classic checkout alike, and checks that the name is free.
-4. The website is created when the subscription becomes active. Going on hold fires `waas_subscription_suspended`, becoming active again fires `waas_subscription_reactivated`, and cancellation or expiry fires `waas_subscription_expired`. On Subscriptions for WooCommerce, which cancels at once, a customer's or admin's cancel keeps the website until the next payment date (`waas_subscription_canceled_until`): the subscription page shows "Active until" and the cancellation e-mail goes out, as on FluentCart. Refunding or cancelling the order that bought the subscription takes the website offline at once. WooCommerce Subscriptions keeps the website through its own pending-cancel status too, without the "Active until" line or the e-mail.
-5. Customers see the website's status, one-click login and domain form on the subscription's page in My Account.
+"Offline" means the website is backed up, then deleted after the grace period set in the plugin's settings. Paying again before the deletion brings it back.
 
-Store data is kept with WooCommerce's order API, so it works with High-Performance Order Storage on (with or without sync) and off.
+| What happens | The website |
+|---|---|
+| The subscription becomes active | Is created |
+| The customer or an admin cancels | Stays up until the end of the period already paid for, then goes offline. The customer sees "Active until" and gets an email with the date. Reactivating before then keeps it |
+| The order that bought the subscription is refunded | Goes offline at once |
+| The subscription expires or reaches the end of its term | Goes offline at once |
+| A renewal order is refunded | Stays up while the subscription is active |
+| An expired subscription is paid late | Is resumed |
+| The subscription is paused (FluentCart) or put on hold (WooCommerce) | Is suspended, not deleted, until the subscription is active again |
 
-FluentCart creates the website in the background, through Action Scheduler, so it appears a few minutes after payment.
+Notes:
+
+- On paid WooCommerce Subscriptions, a cancel goes through its own pending-cancel status, which also keeps the website up, but without the "Active until" line or the email.
+- On FluentCart, the WaaS integration's triggers decide the above. Integrations made with an older version get the "paid late" trigger added the first time they load, unless their triggers were changed by hand.
+- On WooCommerce, website data is stored through WooCommerce's order API, so it works with High-Performance Order Storage on or off.
+- Both carts fire the same actions, which developers can hook into: `waas_subscription_created`, `waas_subscription_suspended`, `waas_subscription_reactivated`, `waas_subscription_renewed`, `waas_subscription_expired` and `waas_subscription_canceled_until`.
 
 ## API base URL
 
-The Host plugin talks to the provisioning API at the URL in **Settings → API Base URL**, or the `WAAS_API_BASE_URL` constant in `wp-config.php` (the constant wins). Without either, the plugin has no API and sells nothing. (`WPCS_API_BASE_URL`, `WPCS_API_KEY` and the other `WPCS_` constants from before the rename still work.) The `waas_settings_api_base_url` filter can change it.
+The Host plugin talks to the provisioning API at the **API URL** on the **Connection** tab of **WaaS → Settings**, or the `WAAS_API_BASE_URL` constant in `wp-config.php` (the constant wins). Without either, the plugin has no API and sells nothing. (`WPCS_API_BASE_URL`, `WPCS_API_KEY` and the other `WPCS_` constants from before the rename still work.) The `waas_settings_api_base_url` filter can change it.
 
 ```php
-define('WAAS_API_BASE_URL', 'https://2b5454f2-760b-4b86-8589-344ffae396d4.mock.pstmn.io'); // Postman mock
+define('WAAS_API_BASE_URL', 'https://api.example.com');
+// For testing without an API, the contract's public Postman mock:
+// define('WAAS_API_BASE_URL', 'https://2b5454f2-760b-4b86-8589-344ffae396d4.mock.pstmn.io');
 ```
+
+The **API key** and **API secret** go on the same tab. **Website domain**, on the **Websites** tab, is the domain customers' websites are named under.
 
 ## Storefront secrets
 
@@ -93,35 +91,53 @@ Without the constant, WordPress's auth salt is used instead. Either way, keep it
 
 WooCommerce products keep their WaaS settings through WooCommerce's product object, under `_waas_product_role` and `_waas_product_group_name`. Settings under the old `WPCS_PRODUCT_ROLE_META` and `WPCS_PRODUCT_GROUPNAME_META` names are still read, and move to the new names when waas-host updates.
 
-## Names kept from WPCS
+## WaaS Payments
 
-The plugins came from WPCS's waas-wpcs. Their code, admin screens and hooks are named WaaS now (`waas_*` actions and filters). Names stored on sites or used between our systems keep their WPCS spelling, because changing them would cut existing stores off:
+`packages/waas-payments` adds Authorize.Net card payments to FluentCart, including subscriptions charged automatically on renewal. Subscriptions need **FluentCart > Settings > Subscriptions: Store managed** with **Automatic charge** on. Setup: [packages/waas-payments/README.md](packages/waas-payments/README.md).
 
-- option names (`wpcs_credentials_*`, `wpcs_host_settings_*`, `wpcs_notification_settings_*`), order and subscription meta (`WPCS_TENANT_STATE` and friends), and scheduled-event hooks (`wpcs_run_store_jobs`, `wpcs_suspend_at_period_end`, …);
-- the update slugs and `Update URI` (`wpcs-waas-host`, `wpcs-waas-client`), which the provisioning API and the release bucket use;
-- the constants and environment variables the provisioning API sets on each store (`WPCS_IS_TENANT`, `WPCS_PUBLIC_KEY`, `WPCS_TENANT_ROLES`, `WPCS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS`);
-- the `wpcs_choose_website_name` link parameters, which are in emails customers already have.
+## Updates
 
-## Tests
+WaaS Host and WaaS Payments update from the provisioning API they're connected to, never from wordpress.org. Every release is signed, and a plugin only installs a release signed with a key built into it (`Updater::PUBLIC_KEYS` in `packages/waas-updater`). The key built in today is AnyPress's release key. **If you run your own API**, either build the plugins with your own public key in that list and sign your releases with its private half, or set `WAAS_UPDATE_CHANNEL` to `off` and install new zips by hand. In `wp-config.php`, `WAAS_UPDATE_CHANNEL` picks `stable` (default), `beta` or `off`, and `WAAS_AUTO_UPDATE` set to `patch` installs bug-fix releases automatically.
+
+WaaS Client never updates by itself on customer websites: it comes with the template version, and a website gets a newer one by moving to a newer version.
+
+To build a zip locally: `scripts/release/build.sh waas-host <version> dist`. How this repo publishes signed releases (tags, signing, the release bucket): [docs/releases.md](docs/releases.md).
+
+## Development
+
+The rest of this page is for working on the plugins themselves.
+
+### Local development
+
+Each plugin is a Composer package under `packages/` (`waas-host`, `waas-client`, `waas-payments`, and the shared `waas-updater`). Run `composer install` in the one you work on. The quickest way to see the Host plugin running is the test environment below.
+
+### Test environment
+
+On Linux with Docker, `scripts/test-env.sh up` starts a throwaway WordPress (MariaDB + WordPress in Docker) at http://127.0.0.1 with this checkout's Host and Payments plugins, FluentCart, WooCommerce and Subscriptions for WooCommerce active. Log in as admin / admin. `scripts/test-env.sh wp ...` runs WP-CLI; `scripts/test-env.sh down` removes it.
+
+### Tests
 
 The plugins (and `packages/waas-updater`) have PHPUnit unit tests that run without WordPress: [Brain Monkey](https://github.com/Brain-WP/BrainMonkey) stubs the WordPress functions and outside calls are mocked. They need PHP 8.1 or newer.
 
 ```shell
-cd packages/waas-host   # or packages/waas-client
+cd packages/waas-host   # or any other package
 composer install
 composer test
 ```
 
 `waas-host` also has contract tests (`tests/Contract`, group `mock`) that run the plugin's real API client against the provisioning API: by default the public Postman mock, or the server in `WAAS_TEST_API_BASE_URL`, such as the local API. They need network access; run `vendor/bin/phpunit --exclude-group mock` to skip them.
 
-Unit tests live in each package's `tests/Unit`. The `Tests` GitHub Actions workflow runs both packages' unit tests on every pull request and on pushes to `main`; the contract tests run there too, in a separate job that reports but doesn't block, since they depend on the public mock. Release builds strip `tests/` and `phpunit.xml.dist`.
+Unit tests live in each package's `tests/Unit`. The `Tests` GitHub Actions workflow runs the unit tests of all four packages (host, client, payments, updater) on every pull request and on pushes to `main`; the contract tests run there too, in a separate job that reports but doesn't block, since they depend on the public mock. Release builds strip `tests/` and `phpunit.xml.dist`.
 
-## Releases and updates
+### Names kept from WPCS
 
-Plugins update from our own channel only: the provisioning API and the `waas-releases` R2 bucket. Tag `waas-host-v2.3.0` (or `waas-payments-v…`, `waas-client-v…`; `-beta.N` for the beta channel) on `main` and the **Release plugin** workflow builds, signs and publishes it. Stores don't update waas-client themselves; it comes with their template version. See [docs/releases.md](docs/releases.md).
+The plugins came from WPCS's waas-wpcs. Their code, admin screens and hooks are named WaaS now (`waas_*` actions and filters). Names stored on sites or used between the plugins and the API keep their WPCS spelling, because changing them would cut existing stores off:
 
-To build a zip locally: `scripts/release/build.sh waas-host 2.3.0 dist`.
+- option names (`wpcs_credentials_*`, `wpcs_host_settings_*`, `wpcs_notification_settings_*`), order and subscription meta (`WPCS_TENANT_STATE` and friends), and scheduled-event hooks (`wpcs_run_store_jobs`, `wpcs_suspend_at_period_end`, …);
+- the update slugs and `Update URI` (`wpcs-waas-host`, `wpcs-waas-client`), which the provisioning API and the release bucket use;
+- the constants and environment variables the provisioning API sets on each store (`WPCS_IS_TENANT`, `WPCS_PUBLIC_KEY`, `WPCS_TENANT_ROLES`, `WPCS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS`);
+- the `wpcs_choose_website_name` link parameters, which are in emails customers already have.
 
-### Card payments
+## License
 
-`packages/waas-payments` adds Authorize.Net card payments to FluentCart, including subscriptions charged automatically on renewal. Subscriptions need **FluentCart > Settings > Subscriptions: Store managed** with **Automatic charge** on. See [packages/waas-payments/README.md](packages/waas-payments/README.md).
+GPL-3.0-or-later ([LICENCE](LICENCE)). WaaS Payments is GPL-2.0-or-later, as its own header says; that licence lets it be used under GPL-3.0 too, so the whole repository can be distributed under GPL-3.0.

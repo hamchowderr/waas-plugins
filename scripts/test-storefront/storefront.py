@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Builds and drives the WaaS test storefronts on Coolify. See docs/test-storefront.md and
-docs/test-storefront-woo.md.
+"""Builds and drives the WaaS test storefronts on Coolify. Maintainers' runbooks for these (FluentCart and
+WooCommerce) are kept outside this repository.
 
     storefront.py [--cart woo] create            # project, service, variables (password generated, never printed)
     storefront.py [--cart woo] push              # build the plugins and copy them into the service
@@ -44,14 +44,14 @@ CARTS = {
         'compose': 'compose.yml', 'remote': ['remote'], 'packages': ['waas-host', 'waas-payments'],
         'secrets': {'AUTHNET_SANDBOX_LOGIN_ID': 'AUTHNET_LOGIN_ID', 'AUTHNET_SANDBOX_TRANSACTION_KEY': 'AUTHNET_TRANSACTION_KEY',
                     'AUTHNET_SANDBOX_SIGNATURE_KEY': 'AUTHNET_SIGNATURE_KEY'},
-        'description': 'WaaS test storefront. Runbook docs/test-storefront.md in waas-plugins',
+        'description': 'WaaS test storefront',
     },
     'woo': {
         'service': 'storefront-woo-test', 'domain': 'storefront-woo-test.191.101.15.236.sslip.io',
         # The wp wrapper and check.php are shared; remote-woo/ adds the WooCommerce steps.
         'compose': 'compose-woo.yml', 'remote': ['remote/wp', 'remote/check.php', 'remote-woo'], 'packages': ['waas-host'],
         'secrets': {'STRIPE_TEST_PUBLISHABLE_KEY': 'STRIPE_TEST_PUBLISHABLE_KEY', 'STRIPE_TEST_SECRET_KEY': 'STRIPE_TEST_SECRET_KEY'},
-        'description': 'WaaS WooCommerce test storefront. Runbook docs/test-storefront-woo.md in waas-plugins',
+        'description': 'WaaS WooCommerce test storefront',
     },
 }
 CART = CARTS['fluentcart']
