@@ -1,6 +1,6 @@
 # Releases and updates
 
-Our plugins update from our own channel only (waas-hw4): the provisioning API, which serves releases from the `waas-releases` R2 bucket. Nothing comes from GitHub, wordpress.org or the upstream Daxez/waas-wpcs.
+The plugins update from one channel only: the provisioning API they are connected to, which serves releases from its release bucket (`RELEASES_S3_BUCKET`). Nothing comes from GitHub, wordpress.org or the upstream Daxez/waas-wpcs.
 
 | Plugin | Slug | Updates |
 |---|---|---|
@@ -23,7 +23,7 @@ Settings in `wp-config.php`:
 - `WAAS_UPDATE_CHANNEL`: `stable` (default), `beta`, or `off`.
 - `WAAS_AUTO_UPDATE`: `patch` installs x.y.Z updates of the same x.y automatically. Otherwise an admin installs every update.
 
-`Updater::PUBLIC_KEYS` holds release key 1 (added 2026-10-10; its private half is the `WAAS_RELEASE_SIGNING_KEY` secret). With an empty list the updater registers nothing, since there would be nothing it could verify. Until the API has `RELEASES_S3_BUCKET`, every check gets 503 "not configured": the plugin caches that for an hour, offers nothing and shows no error.
+`Updater::PUBLIC_KEYS` holds AnyPress's release key (its private half is this repository's `WAAS_RELEASE_SIGNING_KEY` secret). With an empty list the updater registers nothing, since there would be nothing it could verify. Until the API has `RELEASES_S3_BUCKET`, every check gets 503 "not configured": the plugin caches that for an hour, offers nothing and shows no error.
 
 ## Releasing
 
@@ -36,9 +36,9 @@ Run **Release plugin** by hand with a tag name for a dry run: it builds the sele
 
 To hold one storefront at a release: `PUT /admin/products/<productId>/plugins/<slug>/pin` on the API (see its README). A pin never downgrades a site.
 
-## One-time setup (owner)
+## One-time setup (your own release key)
 
-The private signing key is made and kept by the owner; nobody else sees it.
+To publish releases to your own API (for example from a fork), make your own key. Only the person who makes it keeps the private half.
 
 1. Make the key pair on your own machine, with OpenSSL 3 (Linux, WSL, Git Bash; on macOS use Homebrew's `openssl@3`, not the system LibreSSL). This writes the private key to `waas-release-signing.pem` and prints the public key:
 
@@ -46,9 +46,9 @@ The private signing key is made and kept by the owner; nobody else sees it.
    openssl genpkey -algorithm ed25519 -out waas-release-signing.pem && openssl pkey -in waas-release-signing.pem -pubout -outform DER | tail -c 32 | openssl base64 -A; echo
    ```
 
-2. Add the **whole PEM file** (including the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines) as the repository's GitHub Actions secret `WAAS_RELEASE_SIGNING_KEY`, for example `gh secret set WAAS_RELEASE_SIGNING_KEY -R hamchowderr/waas-plugins < waas-release-signing.pem`. Keep the file offline, or delete it once the secret is set and accept that losing the secret means rotating the key.
-3. Send the printed public key (44 characters ending in `=`). It goes into `Updater::PUBLIC_KEYS`, then `scripts/sync-updater.sh`, in a pull request; releases built after that verify.
-4. Create an R2 API token with **Object Read & Write** on the `waas-releases` bucket only, and add it as the secrets `R2_RELEASES_ACCESS_KEY_ID` and `R2_RELEASES_SECRET_ACCESS_KEY`. Add the repository variable `R2_ENDPOINT` = `https://<account id>.r2.cloudflarestorage.com`.
-5. The API needs read access to the bucket: `RELEASES_S3_BUCKET=waas-releases` and a read token (`RELEASES_S3_ACCESS_KEY_ID`, `RELEASES_S3_SECRET_ACCESS_KEY`) in its Coolify environment.
+2. Add the **whole PEM file** (including the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines) as the repository's GitHub Actions secret `WAAS_RELEASE_SIGNING_KEY`, for example `gh secret set WAAS_RELEASE_SIGNING_KEY -R <owner>/<repo> < waas-release-signing.pem`. Keep the file offline, or delete it once the secret is set and accept that losing the secret means rotating the key.
+3. Put the printed public key (44 characters ending in `=`) into `Updater::PUBLIC_KEYS` and run `scripts/sync-updater.sh`; releases built after that verify.
+4. Create an R2 API token with **Object Read & Write** on your releases bucket only, and add it as the secrets `R2_RELEASES_ACCESS_KEY_ID` and `R2_RELEASES_SECRET_ACCESS_KEY`. Add the repository variables `R2_ENDPOINT` = `https://<account id>.r2.cloudflarestorage.com` and `R2_RELEASES_BUCKET` = your bucket name.
+5. The API needs read access to the bucket: `RELEASES_S3_BUCKET` and a read token (`RELEASES_S3_ACCESS_KEY_ID`, `RELEASES_S3_SECRET_ACCESS_KEY`) in its environment.
 
 Rotating the key: add the new public key next to the old one in `PUBLIC_KEYS` and release that, switch the secret to the new private key, and remove the old public key a release later.
