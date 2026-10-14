@@ -129,9 +129,9 @@ composer test
 
 Unit tests live in each package's `tests/Unit`. The `Tests` GitHub Actions workflow runs the unit tests of all four packages (host, client, payments, updater) on every pull request and on pushes to `main`; the contract tests run there too, in a separate job that reports but doesn't block, since they depend on the public mock. Release builds strip `tests/` and `phpunit.xml.dist`.
 
-### Names kept from WPCS
+### Old `wpcs` names
 
-The plugins came from WPCS's waas-wpcs. Their code, admin screens and hooks are named WaaS now (`waas_*` actions and filters). Names stored on sites or used between the plugins and the API keep their WPCS spelling, because changing them would cut existing stores off:
+The plugins' code, admin screens and hooks are named WaaS (`waas_*` actions and filters). Some names stored on sites or used between the plugins and the API still start with `wpcs`, from where the plugins started, because changing them would cut existing stores off:
 
 - option names (`wpcs_credentials_*`, `wpcs_host_settings_*`, `wpcs_notification_settings_*`), order and subscription meta (`WPCS_TENANT_STATE` and friends), and scheduled-event hooks (`wpcs_run_store_jobs`, `wpcs_suspend_at_period_end`, …);
 - the update slugs and `Update URI` (`wpcs-waas-host`, `wpcs-waas-client`), which the provisioning API and the release bucket use;
