@@ -146,6 +146,10 @@ class ProvisioningApi
             $payload['phpConstants'] = $args['php_constants'];
         }
 
+        if (!empty($args['wp_options'])) {
+            $payload['wpOptions'] = $args['wp_options'];
+        }
+
         $filtered_payload = apply_filters('waas_tenant_create_payload', $payload);
 
         return $this->httpService->post('/v1/tenants', $filtered_payload);

@@ -289,6 +289,7 @@ class TenantsSubscriptionManager
                 'value' => apply_filters('waas_remove_tenant_administrator_plugin_capabilities', true) ? "true" : "false",
                 'isPrivate' => false,
             ];
+            $args['wp_options'] = $this->store_options($args);
 
             try {
                 $new_tenant = $this->provisioningApi->create_tenant($args);
@@ -495,6 +496,8 @@ class TenantsSubscriptionManager
             'php_constants' => [
                 'WPCS_TENANT_ROLES' => ['value' => implode(",", $subscription_roles), 'isPrivate' => false],
             ],
+            // Not sent as is: job_create turns it into the store's settings.
+            'owner' => ['country' => strtoupper((string) preg_replace('/[^A-Za-z]/', '', $purchase->country))],
         ];
 
         $tenant_root_domain = get_option('wpcs_host_settings_root_domain', '');
@@ -507,6 +510,26 @@ class TenantsSubscriptionManager
             'request' => $request,
             'product_role' => $product_role,
         ];
+    }
+
+    /**
+     * WordPress settings the new store starts with: its title is the website name, and its admin email (where
+     * WordPress and the store's plugins send owner notices) is the buyer's, not the template's placeholder.
+     * `waas_store_owner` carries the rest for templates that set up their plugins from it. Read at job time, so
+     * a name changed after a conflict is the one used.
+     */
+    private function store_options(array $args): array
+    {
+        $options = ['blogname' => (string) $args['name']];
+        if (filter_var($args['wordpress_email'] ?? '', FILTER_VALIDATE_EMAIL)) {
+            $options['admin_email'] = (string) $args['wordpress_email'];
+        }
+        $owner = array_filter((array) ($args['owner'] ?? []), 'strlen');
+        if ($owner) {
+            $options['waas_store_owner'] = (string) json_encode($owner);
+        }
+
+        return (array) apply_filters('waas_tenant_wp_options', $options, $args);
     }
 
     /** The one-click-login key pair: made once per store and kept, so a retried create sends the same public key. */

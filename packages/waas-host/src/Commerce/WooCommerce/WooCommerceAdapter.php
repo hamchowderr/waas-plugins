@@ -112,7 +112,8 @@ class WooCommerceAdapter implements CommerceAdapter
         return new PlanPurchase(
             $plans,
             (string) $purchase_context->get_meta(Tenant::WEBSITE_NAME_META),
-            (string) $purchase_context->get_billing_email()
+            (string) $purchase_context->get_billing_email(),
+            (string) $purchase_context->get_billing_country()
         );
     }
 

@@ -47,7 +47,7 @@ class TenantsSubscriptionManagerTest extends StoreJobsTestCase
 
     private function purchase(): PlanPurchase
     {
-        return new PlanPurchase([new PlanProduct(101, 'peptide-store', 'peptide-starter')], 'Apex Research', 'owner@apexresearch.example');
+        return new PlanPurchase([new PlanProduct(101, 'peptide-store', 'peptide-starter')], 'Apex Research', 'owner@apexresearch.example', 'us');
     }
 
     private function stub_new_store_functions(): void
@@ -86,6 +86,11 @@ class TenantsSubscriptionManagerTest extends StoreJobsTestCase
                 && $args['group_name'] === 'peptide-starter'
                 && $args['wordpress_user_role'] === 'administrator'
                 && $args['php_constants']['WPCS_TENANT_ROLES']['value'] === 'peptide-store'
+                && $args['wp_options'] === [
+                    'blogname' => 'Apex Research',
+                    'admin_email' => 'owner@apexresearch.example',
+                    'waas_store_owner' => '{"country":"US"}',
+                ]
                 && strpos(base64_decode($args['php_constants']['WPCS_PUBLIC_KEY']['value']), 'PUBLIC KEY') !== false;
         }))->andReturn((object) [
             'externalId' => '5f0b7c3e-2d1a-4e8b-9c6f-0a1b2c3d4e5f',
