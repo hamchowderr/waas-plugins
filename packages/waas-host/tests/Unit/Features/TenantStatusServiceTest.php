@@ -50,4 +50,38 @@ class TenantStatusServiceTest extends TestCase
         $this->assertSame('', (string) file_get_contents($this->log), 'nothing logged every five seconds');
         $this->assertSame('', $this->cart->meta[901][Tenant::TENANT_STATE]);
     }
+
+    public function test_a_live_store_takes_the_address_the_api_has_for_it(): void
+    {
+        $this->cart->meta[1] = [Tenant::TENANT_STATE => Tenant::READY, Tenant::TENANT_EXTERNAL_ID_META => 'a', Tenant::DOMAIN_NAME_META => 'old.example.com'];
+        $this->cart->meta[2] = [Tenant::TENANT_STATE => Tenant::SUSPENDED, Tenant::TENANT_EXTERNAL_ID_META => 'b', Tenant::DOMAIN_NAME_META => 'b.example.com'];
+        // Still being created: its address is the one being linked, not the API's yet.
+        $this->cart->meta[3] = [Tenant::TENANT_STATE => Tenant::LINKING_DOMAIN, Tenant::TENANT_EXTERNAL_ID_META => 'c', Tenant::DOMAIN_NAME_META => 'c.example.com'];
+        $api = Mockery::mock(ProvisioningApi::class);
+        $api->expects('get_tenants')->andReturn([
+            (object) ['externalId' => 'a', 'domainName' => 'New.Example.com'],
+            (object) ['externalId' => 'b', 'domainName' => 'b.example.com'],
+            (object) ['externalId' => 'c', 'domainName' => 'base-c.example.com'],
+        ]);
+
+        (new TenantStatusService($api))->sync_tenant_domains();
+
+        $this->assertSame('new.example.com', $this->cart->meta[1][Tenant::DOMAIN_NAME_META]);
+        $this->assertSame('b.example.com', $this->cart->meta[2][Tenant::DOMAIN_NAME_META]);
+        $this->assertSame('c.example.com', $this->cart->meta[3][Tenant::DOMAIN_NAME_META]);
+    }
+
+    public function test_no_live_store_means_no_request_and_an_unreachable_api_changes_nothing(): void
+    {
+        $api = Mockery::mock(ProvisioningApi::class);
+        $api->expects('get_tenants')->never();
+        (new TenantStatusService($api))->sync_tenant_domains();
+
+        $this->cart->meta[1] = [Tenant::TENANT_STATE => Tenant::READY, Tenant::TENANT_EXTERNAL_ID_META => 'a', Tenant::DOMAIN_NAME_META => 'a.example.com'];
+        $down = Mockery::mock(ProvisioningApi::class);
+        $down->expects('get_tenants')->andThrow(new \Exception('API down'));
+        (new TenantStatusService($down))->sync_tenant_domains();
+
+        $this->assertSame('a.example.com', $this->cart->meta[1][Tenant::DOMAIN_NAME_META]);
+    }
 }

@@ -292,6 +292,17 @@ class ProvisioningApi
     }
 
     /**
+     * Every store of this storefront, as the API has them.
+     *
+     * @throws \Exception
+     */
+    public function get_tenants(): array
+    {
+        $tenants = $this->httpService->get('/v1/tenants');
+        return is_array($tenants) ? $tenants : [];
+    }
+
+    /**
      * @throws \Exception
      * 
      */
