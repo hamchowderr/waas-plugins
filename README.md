@@ -111,14 +111,14 @@ Each plugin is a Composer package under `packages/` (`waas-host`, `waas-client`,
 
 ### Test environment
 
-On Linux with Docker, `scripts/test-env.sh up` starts a throwaway WordPress (MariaDB + WordPress in Docker) at http://127.0.0.1 with this checkout's Host plugin, FluentCart, WooCommerce and Subscriptions for WooCommerce active. Log in as admin / admin. `scripts/test-env.sh wp ...` runs WP-CLI; `scripts/test-env.sh down` removes it.
+On Linux with Docker, `scripts/test-env.sh up` starts a throwaway WordPress (MariaDB + WordPress in Docker) at http://127.0.0.1 with this checkout's Host and Payments plugins, FluentCart, WooCommerce and Subscriptions for WooCommerce active. Log in as admin / admin. `scripts/test-env.sh wp ...` runs WP-CLI; `scripts/test-env.sh down` removes it.
 
 ### Tests
 
 The plugins (and `packages/waas-updater`) have PHPUnit unit tests that run without WordPress: [Brain Monkey](https://github.com/Brain-WP/BrainMonkey) stubs the WordPress functions and outside calls are mocked. They need PHP 8.1 or newer.
 
 ```shell
-cd packages/waas-host   # or packages/waas-client
+cd packages/waas-host   # or any other package
 composer install
 composer test
 ```
@@ -138,4 +138,4 @@ The plugins came from WPCS's waas-wpcs. Their code, admin screens and hooks are 
 
 ## License
 
-GPL-3.0-or-later ([LICENCE](LICENCE)). WaaS Payments is GPL-2.0-or-later.
+GPL-3.0-or-later ([LICENCE](LICENCE)). WaaS Payments is GPL-2.0-or-later, as its own header says; that licence lets it be used under GPL-3.0 too, so the whole repository can be distributed under GPL-3.0.
