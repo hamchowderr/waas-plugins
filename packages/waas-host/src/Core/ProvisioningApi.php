@@ -255,6 +255,19 @@ class ProvisioningApi
         $this->httpService->delete('/v1/tenants/mail-domain?externalId=' . rawurlencode($external_id));
     }
 
+    /**
+     * A Domain Connect link that adds the records for one of the store's domains at its DNS host
+     * ({dnsProvider, supported, url}); url is null when the host can't.
+     *
+     * @param string $service website (the store's domain) or email (its sending domain)
+     * @throws \Exception
+     */
+    public function domain_connect($external_id, $domain_name, $service)
+    {
+        return $this->httpService->get('/v1/tenants/domain-connect?externalId=' . rawurlencode($external_id)
+            . '&domainName=' . rawurlencode($domain_name) . '&service=' . rawurlencode($service));
+    }
+
     public function domain_available($domain)
     {
         $url = '/v1/tenants/domains/available?domain=' . $domain;
