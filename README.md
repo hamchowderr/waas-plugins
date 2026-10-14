@@ -27,7 +27,7 @@ You need a WordPress site to sell from (the **storefront**: WordPress 6.4 or new
 2. **Install WaaS Host** on the storefront (and **WaaS Payments** if you want Authorize.Net card payments on FluentCart). Build the zips with Composer installed: `scripts/release/build.sh waas-host <version> dist`, and `scripts/release/build.sh waas-payments <version> dist` for WaaS Payments. Upload them under **Plugins → Add New → Upload Plugin**.
 3. **Add a secret to `wp-config.php`:** `define('WAAS_HOST_KEY_ENCRYPTION_KEY', '…');` with a long random string (`openssl rand -base64 48`). Keep it stable ([Storefront secrets](#storefront-secrets)).
 4. **Connect to the API.** In **WaaS → Settings**, on the **Connection** tab, enter the **API URL**, **API key** and **API secret**. On the **Websites** tab, set **Website domain** (the domain customers' websites are named under, e.g. `example.com`).
-5. **Make a product.** Create a subscription product and turn on WaaS for it, choosing the plan role and snapshot group ([Storefront cart](#storefront-cart) has the steps for each cart).
+5. **Make a product.** Create a subscription product and turn on WaaS for it, choosing the plan role and snapshot group ([Storefront cart](#storefront-cart) shows where this is on each cart).
 6. **Run cron every minute.** Websites are created in the background; on a quiet site WordPress's own cron waits for the next visitor. Define `DISABLE_WP_CRON` and run `wp action-scheduler run` and `wp cron event run --due-now` every minute from a real cron job.
 7. **Test it.** Buy the product: checkout asks for a website name, and a few minutes after payment the customer finds the website, with a one-click login, under **My website**.
 
@@ -35,29 +35,36 @@ You need a WordPress site to sell from (the **storefront**: WordPress 6.4 or new
 
 ## Storefront cart
 
-The Host plugin runs on **FluentCart** (1.7 or newer, subscriptions built in) or on **WooCommerce** with WooCommerce Subscriptions or Subscriptions for WooCommerce. When both are active, FluentCart is used; the `waas_commerce_adapter` filter can pick another.
+The Host plugin works with **FluentCart** 1.7 or newer (recommended) or with **WooCommerce** plus a subscriptions plugin. If both carts are active it uses FluentCart; the `waas_commerce_adapter` filter can pick the other.
 
-On FluentCart:
+| | FluentCart | WooCommerce |
+|---|---|---|
+| Subscriptions | Built in | WP Swings' free **Subscriptions for WooCommerce** or the paid **WooCommerce Subscriptions**. If both are active, the free one is used (`waas_woocommerce_subscription_plugin` filter to change) |
+| Turn WaaS on for a product | Make a subscription product, open **Integrations**, add **WaaS Provisioning**, choose the role and snapshot group | Make a subscription product, tick the WaaS product option, choose the role and snapshot group |
+| Where the customer finds the website | **My website** in the customer portal: status, one-click login and their own domain. The website-ready email links there | The subscription's page in **My Account**: status, one-click login and domain form |
 
-1. Make a subscription product.
-2. On the product, open **Integrations**, add **WaaS Provisioning**, and choose the role and snapshot group.
-   - The default triggers create the website when the subscription is activated, and resume it when a subscription that expired is paid late (reactivated).
-   - They take it offline (backed up, then deleted after the grace period in the settings) when the subscription is cancelled: at the end of the period the customer paid for, with an e-mail telling them the date and the portal showing "Active until" meanwhile; reactivating before then keeps it. Refunding the order that bought the subscription, expired access or the end of term takes it offline at once. Refunding a renewal order leaves the website up while the subscription stays active.
-   - Feeds made before reactivation was a default get it added on the first load after the update, unless their triggers were changed by hand.
-3. Checkout asks for a **Website name** whenever the cart holds such a product, and checks that the name is free.
-4. Customers find their websites under **My website** in the customer portal, right after Dashboard: status, one-click login and their own domain. While a website is ready, the other portal pages show a notice with its login link, and each subscription links to it. The website-ready email links to this page; a customer who is logged out logs in first and lands there.
+On both carts, checkout asks for a **Website name** whenever the cart holds a WaaS product (on WooCommerce in block and classic checkout alike) and checks that the name is free. The website is created in the background a few minutes after payment.
 
-On WooCommerce:
+### When the subscription changes
 
-1. Use WP Swings' free **Subscriptions for WooCommerce** (the default) or the paid **WooCommerce Subscriptions**. When both are active, Subscriptions for WooCommerce is used; the `waas_woocommerce_subscription_plugin` filter can pick the other.
-2. Make a subscription product and tick the WaaS product option on it, with its role and snapshot group.
-3. Checkout asks for a **Website name** when the cart holds such a product, in block checkout and classic checkout alike, and checks that the name is free.
-4. The website is created when the subscription becomes active. Going on hold fires `waas_subscription_suspended`, becoming active again fires `waas_subscription_reactivated`, and cancellation or expiry fires `waas_subscription_expired`. On Subscriptions for WooCommerce, which cancels at once, a customer's or admin's cancel keeps the website until the next payment date (`waas_subscription_canceled_until`): the subscription page shows "Active until" and the cancellation e-mail goes out, as on FluentCart. Refunding or cancelling the order that bought the subscription takes the website offline at once. WooCommerce Subscriptions keeps the website through its own pending-cancel status too, without the "Active until" line or the e-mail.
-5. Customers see the website's status, one-click login and domain form on the subscription's page in My Account.
+"Offline" means the website is backed up, then deleted after the grace period set in the plugin's settings. Paying again before the deletion brings it back.
 
-Store data is kept with WooCommerce's order API, so it works with High-Performance Order Storage on (with or without sync) and off.
+| What happens | The website |
+|---|---|
+| The subscription becomes active | Is created |
+| The customer or an admin cancels | Stays up until the end of the period already paid for, then goes offline. The customer sees "Active until" and gets an email with the date. Reactivating before then keeps it |
+| The order that bought the subscription is refunded | Goes offline at once |
+| The subscription expires or reaches the end of its term | Goes offline at once |
+| A renewal order is refunded | Stays up while the subscription is active |
+| An expired subscription is paid late | Is resumed |
+| The subscription is paused (FluentCart) or put on hold (WooCommerce) | Is suspended, not deleted, until the subscription is active again |
 
-FluentCart creates the website in the background, through Action Scheduler, so it appears a few minutes after payment.
+Notes:
+
+- On paid WooCommerce Subscriptions, a cancel goes through its own pending-cancel status, which also keeps the website up, but without the "Active until" line or the email.
+- On FluentCart, the WaaS integration's triggers decide the above. Integrations made with an older version get the "paid late" trigger added the first time they load, unless their triggers were changed by hand.
+- On WooCommerce, website data is stored through WooCommerce's order API, so it works with High-Performance Order Storage on or off.
+- Both carts fire the same actions, which developers can hook into: `waas_subscription_created`, `waas_subscription_suspended`, `waas_subscription_reactivated`, `waas_subscription_renewed`, `waas_subscription_expired` and `waas_subscription_canceled_until`.
 
 ## API base URL
 
