@@ -1,10 +1,14 @@
 <?php
-// Creates "Website plan (test)": a monthly FluentCart subscription with the WaaS Provisioning feed. Idempotent.
+// Creates the storefront's plan: a monthly FluentCart subscription with the WaaS Provisioning feed. Idempotent.
+// The test storefront gets "Website plan (test)" at $1; the shop's compose sets PLAN_TITLE, PLAN_PRICE (cents) and
+// PLAN_CONTENT for its placeholder plan.
 use FluentCart\App\Models\ProductMeta;
 use FluentCart\App\Modules\Integrations\IntegrationHelper;
 use FluentCart\App\Services\BulkProductInsertService;
 
-$title = 'Website plan (test)';
+$title = getenv('PLAN_TITLE') ?: 'Website plan (test)';
+$price = (int) (getenv('PLAN_PRICE') ?: 100);
+$content = getenv('PLAN_CONTENT') ?: 'Test plan for the WaaS end-to-end check. A website on the Starter store (FluentCart) template. Not a real offer.';
 $existing = get_posts(['post_type' => 'fluent-products', 'title' => $title, 'post_status' => 'any', 'numberposts' => 1]);
 if ($existing) {
     $id = $existing[0]->ID;
@@ -12,10 +16,10 @@ if ($existing) {
 } else {
     $res = (new BulkProductInsertService())->insertChunk([[
         '_cid' => 'p1', 'post_title' => $title, 'post_status' => 'published',
-        'post_content' => 'Test plan for the WaaS end-to-end check. A website on the Starter store (FluentCart) template. Not a real offer.',
+        'post_content' => $content,
         'detail' => ['fulfillment_type' => 'digital', 'variation_type' => 'simple'],
         'variants' => [[
-            'variation_title' => 'Monthly', 'item_price' => 100,
+            'variation_title' => 'Monthly', 'item_price' => $price,
             'other_info' => ['payment_type' => 'subscription', 'repeat_interval' => 'monthly', 'times' => '', 'trial_days' => 0, 'manage_setup_fee' => 'no'],
         ]],
     ]]);

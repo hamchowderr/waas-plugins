@@ -219,7 +219,7 @@ class FluentCartStore
     }
 
     /**
-     * @return array{user_id: int, email: string, name: string}|null
+     * @return array{user_id: int, email: string, name: string, country: string}|null
      */
     public function get_subscription_customer($subscription_id): ?array
     {
@@ -233,6 +233,7 @@ class FluentCartStore
             'user_id' => (int) $customer->user_id,
             'email' => (string) $customer->email,
             'name' => (string) $customer->full_name,
+            'country' => (string) $customer->country,
         ];
     }
 

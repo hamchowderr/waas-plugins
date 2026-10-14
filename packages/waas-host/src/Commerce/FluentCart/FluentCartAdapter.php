@@ -78,10 +78,13 @@ class FluentCartAdapter implements CommerceAdapter
             }
         }
 
+        $customer = $this->store->get_subscription_customer($subscription_id);
+
         return new PlanPurchase(
             $plans,
             $this->store->get_order_meta($purchase_context, Tenant::WEBSITE_NAME_META),
-            $this->get_customer_email($subscription_id)
+            $customer['email'] ?? '',
+            $customer['country'] ?? ''
         );
     }
 

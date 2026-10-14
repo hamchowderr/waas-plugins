@@ -1,11 +1,13 @@
 #!/bin/sh
-# Test storefront setup steps, run by Coolify scheduled tasks as root in the wordpress container.
+# Storefront setup steps, run by Coolify scheduled tasks as root in the wordpress container.
 #   sh /opt/wpcli/x/setup.sh <step> [payments mode: store|gateway]
 # Steps, in order: bootstrap install plugins configure pages product payments cron (check any time).
 set -eu
 X=/opt/wpcli/x
 WP="sh $X/wp"
-URL=https://storefront-test.otakusolutions.io
+# The shop's compose sets these; the test storefront uses the defaults.
+URL=${SITE_URL:-https://storefront-test.otakusolutions.io}
+TITLE=${SITE_TITLE:-WaaS Storefront (test)}
 case "${1:-}" in
   bootstrap)
     mkdir -p /opt/wpcli
@@ -14,7 +16,7 @@ case "${1:-}" in
   install)
     $WP core is-installed && { echo already installed; exit 0; }
     [ -n "${WP_ADMIN_PASSWORD:-}" ] || { echo WP_ADMIN_PASSWORD missing; exit 1; }
-    $WP core install --url="$URL" --title="WaaS Storefront (test)" --admin_user=admin \
+    $WP core install --url="$URL" --title="$TITLE" --admin_user=admin \
       --admin_password="$WP_ADMIN_PASSWORD" --admin_email=admin@otakusolutions.io --skip-email
     $WP option update blog_public 0
     $WP rewrite structure '/%postname%/' --hard ;;
@@ -26,11 +28,11 @@ case "${1:-}" in
       $WP plugin activate $p
     done
     $WP plugin install $X/waas-host.zip --activate --force
-    $WP plugin install $X/waas-payments.zip --activate --force
+    [ ! -f $X/waas-payments.zip ] || $WP plugin install $X/waas-payments.zip --activate --force
     $WP plugin list ;;
   configure)
     [ -n "${WAAS_API_KEY:-}" ] && [ -n "${WAAS_API_SECRET:-}" ] || { echo WAAS_API_KEY/SECRET missing; exit 1; }
-    $WP option update wpcs_credentials_api_base_url_setting https://waas-api.otakusolutions.io
+    $WP option update wpcs_credentials_api_base_url_setting "${WAAS_API_URL:-https://waas-api.otakusolutions.io}"
     $WP option update wpcs_credentials_api_key_setting "$WAAS_API_KEY" >/dev/null
     $WP option update wpcs_credentials_api_secret_setting "$WAAS_API_SECRET" >/dev/null
     echo api key and secret set

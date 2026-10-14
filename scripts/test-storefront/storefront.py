@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Builds and drives the WaaS test storefronts on Coolify. Maintainers' runbooks for these (FluentCart and
-WooCommerce) are kept outside this repository.
+"""Builds and drives the WaaS storefronts on Coolify: the two test storefronts and AnyPress's own storefront
+(--cart shop). Maintainers' runbooks for these are kept outside this repository.
 
     storefront.py [--cart woo] create            # project, service, variables (password generated, never printed)
     storefront.py [--cart woo] push              # build the plugins and copy them into the service
@@ -9,8 +9,10 @@ WooCommerce) are kept outside this repository.
     storefront.py [--cart woo] run '<command>'   # one shell command in the wordpress container, as root
     storefront.py [--cart woo] remove            # delete the service with its volumes, then the project if empty
 
---cart picks the storefront: fluentcart (the default; service storefront-test) or woo (WooCommerce with WP Swings'
-Subscriptions for WooCommerce; service storefront-woo-test). Both live in the same Coolify project.
+--cart picks the storefront: fluentcart (the default; service storefront-test), woo (WooCommerce with WP Swings'
+Subscriptions for WooCommerce; service storefront-woo-test), both in the project "WaaS Storefront (test)", or shop
+(AnyPress's storefront at shop.anypress.io, FluentCart with Stripe, in the project "AnyPress Storefront"). The shop's
+API key isn't read from the session: the provisioning API writes it into the service (see `create`).
 
 Talks to the Coolify API at COOLIFY_URL (default https://coolify.otakusolutions.io) with
 COOLIFY_TOKEN, or with none where a proxy injects credentials. `create` reads the provisioning
@@ -35,7 +37,7 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 API = os.environ.get('COOLIFY_URL', 'https://coolify.otakusolutions.io').rstrip('/') + '/api/v1'
-PROJECT = 'WaaS Storefront (test)'
+TEST_PROJECT = 'WaaS Storefront (test)'
 # Per storefront: service name, domain, compose file, its remote/ scripts, the plugins built from packages/, and the
 # optional variables `create` copies from the session (session name -> Coolify name), all locked.
 CARTS = {
@@ -46,6 +48,13 @@ CARTS = {
                     'AUTHNET_SANDBOX_SIGNATURE_KEY': 'AUTHNET_SIGNATURE_KEY'},
         'description': 'WaaS test storefront',
     },
+    'shop': {
+        'service': 'anypress-shop', 'domain': 'shop.anypress.io', 'project': 'AnyPress Storefront',
+        # No waas-payments: Stripe is FluentCart's own gateway, connected by the owner in wp-admin. No payments step.
+        'compose': 'compose-shop.yml', 'remote': ['remote'], 'packages': ['waas-host'],
+        'secrets': {}, 'description': 'AnyPress storefront (shop.anypress.io)', 'session_key': False,
+        'steps': ['bootstrap', 'install', 'plugins', 'configure', 'pages', 'product', 'cron'],
+    },
     'woo': {
         'service': 'storefront-woo-test', 'domain': 'storefront-woo-test.191.101.15.236.sslip.io',
         # The wp wrapper and check.php are shared; remote-woo/ adds the WooCommerce steps.
@@ -55,6 +64,7 @@ CARTS = {
     },
 }
 CART = CARTS['fluentcart']
+PROJECT = CART.get('project', TEST_PROJECT)
 SERVICE = CART['service']
 DOMAIN = CART['domain']
 SERVER = 'sq3c52uczu81384adrlo7w77'  # localhost, the Coolify host
@@ -159,10 +169,12 @@ def compose(with_package):
 
 
 def create():
-    for var in ('WAAS_TEST_KEY', 'WAAS_TEST_SECRET'):
+    session_key = CART.get('session_key', True)
+    for var in ('WAAS_TEST_KEY', 'WAAS_TEST_SECRET') if session_key else ():
         if not os.environ.get(var):
             sys.exit(f'{var} is not set')
-    project = project_uuid() or api('POST', '/projects', {'name': PROJECT, 'description': 'Throwaway test storefront for the WaaS chain'})['uuid']
+    about = 'Throwaway test storefront for the WaaS chain' if PROJECT == TEST_PROJECT else CART['description']
+    project = project_uuid() or api('POST', '/projects', {'name': PROJECT, 'description': about})['uuid']
     if any(s['name'] == SERVICE for s in api('GET', '/services')):
         sys.exit(f'{SERVICE} already exists; remove it first')
     uuid = api('POST', '/services', {
@@ -174,8 +186,14 @@ def create():
     alphabet = string.ascii_letters + string.digits
     # Readable in Coolify (masked until clicked) so the owner can log in; the API keys are locked.
     set_env(uuid, 'WP_ADMIN_PASSWORD', ''.join(secrets.choice(alphabet) for _ in range(32)))
-    set_env(uuid, 'WAAS_API_KEY', os.environ['WAAS_TEST_KEY'], locked=True)
-    set_env(uuid, 'WAAS_API_SECRET', os.environ['WAAS_TEST_SECRET'], locked=True)
+    if session_key:
+        set_env(uuid, 'WAAS_API_KEY', os.environ['WAAS_TEST_KEY'], locked=True)
+        set_env(uuid, 'WAAS_API_SECRET', os.environ['WAAS_TEST_SECRET'], locked=True)
+    else:
+        # The key is made by the API and written straight into this service, never shown:
+        #   npm run create-key -- --product-name "AnyPress shop" --coolify-service <this service's uuid>
+        # (a scheduled task on waas-api). Until then the configure step stops with "missing".
+        print('API key: run create-key with --coolify-service ' + uuid + ' on waas-api, then restart this service')
     # Optional gateway credentials (the payments step uses them): Authorize.Net sandbox, or Stripe test keys.
     if all(os.environ.get(var) for var in CART['secrets']):
         for var, key in CART['secrets'].items():
@@ -266,7 +284,7 @@ def setup(args):
             sys.exit('--mode is for the FluentCart storefront')
         mode = args[i + 1]
         args = args[:i] + args[i + 2:]
-    steps = args or STEPS
+    steps = args or CART.get('steps', STEPS)
     if mode and 'payments' not in steps:
         sys.exit('--mode applies to the payments step')
     uuid = service_uuid()
@@ -297,7 +315,7 @@ if __name__ == '__main__':
         if len(argv) < 2 or argv[1] not in CARTS:
             sys.exit('--cart takes one of: ' + ', '.join(CARTS))
         CART = CARTS[argv[1]]
-        SERVICE, DOMAIN = CART['service'], CART['domain']
+        SERVICE, DOMAIN, PROJECT = CART['service'], CART['domain'], CART.get('project', TEST_PROJECT)
         argv = argv[2:]
     cmd, args = (argv[0] if argv else ''), argv[1:]
     if cmd == 'create':

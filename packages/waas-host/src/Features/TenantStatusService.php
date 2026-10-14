@@ -8,6 +8,9 @@ use WaaSHost\Core\Tenant;
 
 class TenantStatusService
 {
+    /** Keeps each live store's address in step with the API's, for addresses changed outside this storefront. */
+    public const SYNC_DOMAINS_HOOK = 'waas_cron_sync_tenant_domains';
+
     private ProvisioningApi $provisioningApi;
 
     public function __construct(ProvisioningApi $provisioningApi)
@@ -23,6 +26,11 @@ class TenantStatusService
         add_action('waas_tenant_linked_to_subscription', [$this, 'start_poll_tenant_status']);
         add_action('waas_subscription_removed', [$this, 'set_tenant_deleted']);
         add_action('wpcs_cron_poll_tenant_status', [$this, 'poll_tenant_status']);
+
+        if (!wp_next_scheduled(self::SYNC_DOMAINS_HOOK)) {
+            wp_schedule_event(time(), 'every_minute', self::SYNC_DOMAINS_HOOK);
+        }
+        add_action(self::SYNC_DOMAINS_HOOK, [$this, 'sync_tenant_domains']);
     }
 
     public function add_cron_schedules($schedules)
@@ -105,6 +113,52 @@ class TenantStatusService
                         break;
                 }
             } catch (\Exception $e) {
+            }
+        }
+    }
+
+    /**
+     * Copies each live store's main address from the API to its subscription. An admin can change a
+     * store's address outside this storefront (the dashboard's Change address); without this the account
+     * page would keep showing, and signing in to, the old address. The API is the source of truth, so a
+     * write racing a customer's own change here is put right on the next run. One request per run.
+     */
+    public function sync_tenant_domains()
+    {
+        $commerce = Commerce::adapter();
+        if ($commerce === null) {
+            return;
+        }
+
+        $live = [];
+        foreach ($commerce->find_subscriptions_by_meta(Tenant::TENANT_STATE, []) as $subscription_id => $state) {
+            if ($state === Tenant::READY || $state === Tenant::SUSPENDED) {
+                $live[] = $subscription_id;
+            }
+        }
+        if (!$live) {
+            return;
+        }
+
+        try {
+            $tenants = $this->provisioningApi->get_tenants();
+        } catch (\Exception $e) {
+            return;
+        }
+
+        $domains = [];
+        foreach ($tenants as $tenant) {
+            $tenant = (object) $tenant;
+            if (!empty($tenant->externalId) && !empty($tenant->domainName)) {
+                $domains[(string) $tenant->externalId] = strtolower((string) $tenant->domainName);
+            }
+        }
+
+        foreach ($live as $subscription_id) {
+            $external_id = (string) $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META);
+            $domain = $domains[$external_id] ?? '';
+            if ($domain !== '' && $domain !== (string) $commerce->get_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META)) {
+                $commerce->update_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META, $domain);
             }
         }
     }
