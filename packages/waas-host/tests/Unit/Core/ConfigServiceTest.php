@@ -28,7 +28,7 @@ class ConfigServiceTest extends TestCase
         $this->assertSame('https://api.example.com', (new ConfigService())->get_api_base_url());
     }
 
-    /** The WPCS-era region setting no longer sends anything to WPCS's hosts. */
+    /** A leftover region setting from older installs is ignored: the API URL setting decides where calls go. */
     public function test_a_leftover_region_setting_is_ignored(): void
     {
         $this->options['wpcs_credentials_api_base_url_setting'] = '';
