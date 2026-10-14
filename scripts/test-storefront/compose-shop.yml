@@ -15,9 +15,11 @@ services:
       SITE_URL: https://shop.anypress.io
       SITE_TITLE: AnyPress
       WAAS_API_URL: https://waas-api.otakusolutions.io
+      # The AnyPress store template's plugins (waas-provisioning-api templates/anypress-store), plus FluentAuth.
+      SHOP_PLUGINS: fluent-crm fluentform fluent-booking fluent-support fluent-affiliate easy-code-manager seo-by-rank-math wp-fusion-lite automatorwp fluent-security
       PLAN_TITLE: Website plan
       PLAN_PRICE: '2900'
-      PLAN_CONTENT: 'Placeholder plan: a website on the Starter store (FluentCart) template. Final plans and prices to come.'
+      PLAN_CONTENT: 'Placeholder plan: a website on the AnyPress store template. Final plans and prices to come.'
     volumes:
     - wp:/var/www/html
     - wpcli:/opt/wpcli
