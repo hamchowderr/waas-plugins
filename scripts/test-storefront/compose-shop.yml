@@ -1,0 +1,60 @@
+# AnyPress's own storefront (storefront.py --cart shop). Same stack as compose.yml, without the Authorize.Net
+# gateway; the site address, title and placeholder plan come from here.
+services:
+  wordpress:
+    image: wordpress:6.8-php8.3-apache
+    restart: unless-stopped
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: ${SERVICE_PASSWORD_DB}
+      WP_ADMIN_PASSWORD: ${WP_ADMIN_PASSWORD}
+      WAAS_API_KEY: ${WAAS_API_KEY}
+      WAAS_API_SECRET: ${WAAS_API_SECRET}
+      SITE_URL: https://shop.anypress.io
+      SITE_TITLE: AnyPress
+      WAAS_API_URL: https://waas-api.otakusolutions.io
+      PLAN_TITLE: Website plan
+      PLAN_PRICE: '2900'
+      PLAN_CONTENT: 'Placeholder plan: a website on the Starter store (FluentCart) template. Final plans and prices to come.'
+    volumes:
+    - wp:/var/www/html
+    - wpcli:/opt/wpcli
+    depends_on:
+      db:
+        condition: service_healthy
+    mem_limit: 768m
+    healthcheck:
+      test:
+      - CMD
+      - php
+      - -r
+      - 'exit(@fsockopen(''127.0.0.1'', 80) ? 0 : 1);'
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wordpress
+      MARIADB_PASSWORD: ${SERVICE_PASSWORD_DB}
+      MARIADB_ROOT_PASSWORD: ${SERVICE_PASSWORD_ROOT}
+    volumes:
+    - db:/var/lib/mysql
+    mem_limit: 512m
+    healthcheck:
+      test:
+      - CMD
+      - healthcheck.sh
+      - --connect
+      - --innodb_initialized
+      interval: 10s
+      timeout: 5s
+      retries: 10
+volumes:
+  wp: {}
+  wpcli: {}
+  db: {}
