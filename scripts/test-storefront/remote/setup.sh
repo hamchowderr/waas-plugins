@@ -30,6 +30,13 @@ case "${1:-}" in
       $WP plugin is-installed $p || $WP plugin install $p
       $WP plugin activate $p
     done
+    # FluentToolkit (FluentHub) isn't on wordpress.org: the copy the AnyPress store template keeps, checked by SHA-256.
+    if [ -n "${SHOP_PLUGINS:-}" ] && ! $WP plugin is-installed fluent-toolkit; then
+      curl -fsSL -o /tmp/ftk.zip https://raw.githubusercontent.com/hamchowderr/waas-provisioning-api/main/templates/anypress-store/plugins/fluent-toolkit-2.1.3.zip
+      echo "e501b6f0abf9bf5db30c4f60b31702b3ffda217de0c85db408ff4ce210f51123  /tmp/ftk.zip" | sha256sum -c --quiet
+      $WP plugin install /tmp/ftk.zip && rm -f /tmp/ftk.zip
+    fi
+    [ -z "${SHOP_PLUGINS:-}" ] || $WP plugin activate fluent-toolkit
     # FluentAuth's first run, as in the store template: its defaults, XML-RPC off.
     ! $WP plugin is-active fluent-security || $WP option get __fls_auth_settings >/dev/null 2>&1 ||
       $WP eval 'update_option("__fls_auth_settings", array_merge(\FluentAuth\App\Helpers\Helper::getAuthSettings(), ["disable_xmlrpc" => "yes"]));'
