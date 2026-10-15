@@ -14,6 +14,9 @@ class AdminSettings
     const SHOULD_SEND_SUSPEND_SCHEDULED_EMAIL_OPTION = 'wpcs_notification_settings_send_suspend_scheduled_email';
     const SUSPEND_SCHEDULED_EMAIL_SUBJECT_OPTION = 'wpcs_notification_settings_suspend_scheduled_email_subject';
     const SUSPEND_SCHEDULED_EMAIL_BODY_OPTION = 'wpcs_notification_settings_suspend_scheduled_email_body';
+    const SHOULD_SEND_SUSPENDED_EMAIL_OPTION = 'waas_notification_settings_send_suspended_email';
+    const SUSPENDED_EMAIL_SUBJECT_OPTION = 'waas_notification_settings_suspended_email_subject';
+    const SUSPENDED_EMAIL_BODY_OPTION = 'waas_notification_settings_suspended_email_body';
     const SHOULD_REMOVE_ADMINISTRATOR_PLUGIN_CAPABILITIES_OPTION = 'wpcs_host_setting_remove_admininistrator_plugin_capabilities_on_tenant';
 
     private ProvisioningApi $provisioningApi;
@@ -33,6 +36,9 @@ class AdminSettings
         add_filter('waas_suspend_scheduled_email_allowed', [$this, 'allow_suspend_scheduled_email']);
         add_filter('waas_suspend_scheduled_email_subject', [$this, 'suspend_scheduled_email_subject'], 10, 1);
         add_filter('waas_suspend_scheduled_email_body', [$this, 'suspend_scheduled_email_body'], 10, 1);
+        add_filter('waas_suspended_email_allowed', [$this, 'allow_suspended_email']);
+        add_filter('waas_suspended_email_subject', [$this, 'suspended_email_subject'], 10, 1);
+        add_filter('waas_suspended_email_body', [$this, 'suspended_email_body'], 10, 1);
         add_filter('waas_remove_tenant_administrator_plugin_capabilities', [$this, 'remove_tenant_administrator_plugin_capabilities']);
         if (defined('WAAS_HOST_BASENAME')) {
             add_filter('plugin_action_links_' . WAAS_HOST_BASENAME, [$this, 'add_settings_link']);
@@ -177,6 +183,15 @@ class AdminSettings
             'default' => Notifications::get_default_suspend_scheduled_body()
         ]);
         register_setting('waas-admin-emails', self::SHOULD_SEND_SUSPEND_SCHEDULED_EMAIL_OPTION, [
+            'default' => 'on'
+        ]);
+        register_setting('waas-admin-emails', self::SUSPENDED_EMAIL_SUBJECT_OPTION, [
+            'default' => Notifications::get_default_suspended_subject()
+        ]);
+        register_setting('waas-admin-emails', self::SUSPENDED_EMAIL_BODY_OPTION, [
+            'default' => Notifications::get_default_suspended_body()
+        ]);
+        register_setting('waas-admin-emails', self::SHOULD_SEND_SUSPENDED_EMAIL_OPTION, [
             'default' => 'on'
         ]);
     }
@@ -341,6 +356,28 @@ class AdminSettings
                 . ', <code>{{ suspend_date }}</code> ' . esc_html__('(the last day online),', WAAS_HOST_TEXTDOMAIN)
                 . ' <code>{{ deletion_grace_days }}</code>',
         ]);
+
+        add_settings_section(
+            'waas_suspended_email_settings',
+            __('Website taken offline', WAAS_HOST_TEXTDOMAIN),
+            fn () => print('<p>' . esc_html__('Sent when a subscription ends (a refund, the end of a cancelled plan\'s paid period, or expiry) and the website goes offline.', WAAS_HOST_TEXTDOMAIN) . '</p>'),
+            'waas-admin-emails'
+        );
+
+        $this->add_field(self::SHOULD_SEND_SUSPENDED_EMAIL_OPTION, __('Send', WAAS_HOST_TEXTDOMAIN), 'waas-admin-emails', 'waas_suspended_email_settings', [
+            'type' => 'checkbox',
+            'label' => __('Email the customer when their website is taken offline', WAAS_HOST_TEXTDOMAIN),
+        ]);
+        $this->add_field(self::SUSPENDED_EMAIL_SUBJECT_OPTION, __('Subject', WAAS_HOST_TEXTDOMAIN), 'waas-admin-emails', 'waas_suspended_email_settings', [
+            'type' => 'text',
+            'class_name' => 'large-text',
+        ]);
+        $this->add_field(self::SUSPENDED_EMAIL_BODY_OPTION, __('Message', WAAS_HOST_TEXTDOMAIN), 'waas-admin-emails', 'waas_suspended_email_settings', [
+            'type' => 'html-editor',
+            'hint_html' => esc_html__('Placeholders:', WAAS_HOST_TEXTDOMAIN) . ' ' . $placeholders
+                . ', <code>{{ delete_date }}</code> ' . esc_html__('(when the website is deleted),', WAAS_HOST_TEXTDOMAIN)
+                . ' <code>{{ deletion_grace_days }}</code>',
+        ]);
     }
 
     public function render_settings_field($args)
@@ -438,7 +475,30 @@ class AdminSettings
         return !empty($option_val) ? $option_val : $text;
     }
 
-    function remove_tenant_administrator_plugin_capabilities($allowed)
+    function allow_suspended_email($allowed)
+    {
+        if (!$allowed) {
+            return $allowed;
+        }
+
+        return get_option(self::SHOULD_SEND_SUSPENDED_EMAIL_OPTION, 'on') === 'on';
+    }
+
+    function suspended_email_subject($text)
+    {
+        $option_val = get_option(self::SUSPENDED_EMAIL_SUBJECT_OPTION);
+
+        return !empty($option_val) ? $option_val : $text;
+    }
+
+    function suspended_email_body($text)
+    {
+        $option_val = get_option(self::SUSPENDED_EMAIL_BODY_OPTION);
+
+        return !empty($option_val) ? $option_val : $text;
+    }
+
+        function remove_tenant_administrator_plugin_capabilities($allowed)
     {
         // If somebody else disallowed, respect their decision.
         if (!$allowed) {
