@@ -114,6 +114,19 @@ class FluentCartAdapter implements CommerceAdapter
         return false;
     }
 
+    public function get_customer_subscription_ids(int $user_id): array
+    {
+        $user = $user_id > 0 ? get_userdata($user_id) : false;
+        if (!$user) {
+            return [];
+        }
+
+        // Also customers FluentCart left unlinked under the user's email; get_customer_id() decides who owns each.
+        $ids = $this->store->find_user_subscription_ids($user_id, (string) $user->user_email);
+
+        return array_values(array_filter($ids, fn ($subscription_id) => $this->get_customer_id($subscription_id) === $user_id));
+    }
+
     public function get_customer_id($subscription_id): int
     {
         $customer = $this->store->get_subscription_customer($subscription_id);

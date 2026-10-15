@@ -95,6 +95,10 @@ WooCommerce products keep their WaaS settings through WooCommerce's product obje
 
 `packages/waas-payments` adds Authorize.Net card payments to FluentCart, including subscriptions charged automatically on renewal. Subscriptions need **FluentCart > Settings > Subscriptions: Store managed** with **Automatic charge** on. Setup: [packages/waas-payments/README.md](packages/waas-payments/README.md).
 
+## Account API
+
+WaaS Host has a REST API for the signed-in customer's websites (`waas-host/v1/account`): list them, sign in to one, change its address, set up its email sender, and choose a new name. For building your own account pages on the storefront: [docs/account-api.md](docs/account-api.md).
+
 ## Updates
 
 WaaS Host and WaaS Payments update from the provisioning API they're connected to, never from wordpress.org. Every release is signed, and a plugin only installs a release signed with a key built into it (`Updater::PUBLIC_KEYS` in `packages/waas-updater`). The key built in today is AnyPress's release key. **If you run your own API**, either build the plugins with your own public key in that list and sign your releases with its private half, or set `WAAS_UPDATE_CHANNEL` to `off` and install new zips by hand. In `wp-config.php`, `WAAS_UPDATE_CHANNEL` picks `stable` (default), `beta` or `off`, and `WAAS_AUTO_UPDATE` set to `patch` installs bug-fix releases automatically.
