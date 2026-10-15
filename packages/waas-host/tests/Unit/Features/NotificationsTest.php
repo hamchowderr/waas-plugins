@@ -94,4 +94,45 @@ class NotificationsTest extends TestCase
 
         $this->assertSame([], $this->capture_mail());
     }
+
+    private function capture_suspended_mail(int $delete_at): array
+    {
+        $sent = [];
+        Functions\when('get_option')->alias(fn ($name, $default = false) => $name === 'date_format' ? 'F j, Y' : $default);
+        Functions\when('wp_date')->alias(fn ($format, $ts) => gmdate($format, $ts));
+        Functions\when('absint')->alias(fn ($v) => abs((int) $v));
+        Functions\when('wp_mail')->alias(function ($to, $subject, $body) use (&$sent) {
+            $sent[] = compact('to', 'subject', 'body');
+            return true;
+        });
+
+        Notifications::send_email_on_suspended(5, $delete_at);
+
+        return $sent;
+    }
+
+    public function test_an_ended_subscription_tells_the_customer_the_website_is_offline_and_until_when_it_is_kept(): void
+    {
+        $sent = $this->capture_suspended_mail(gmmktime(12, 0, 0, 11, 14, 2026));
+
+        $this->assertCount(1, $sent);
+        $this->assertSame('owner@apexresearch.example', $sent[0]['to']);
+        $this->assertSame('Your website is offline', $sent[0]['subject']);
+        $this->assertStringContainsString('https://apex.sites.example has been taken offline', $sent[0]['body']);
+        $this->assertStringContainsString('<strong>November 14, 2026</strong>', $sent[0]['body']);
+        $this->assertStringContainsString('href="https://storefront.example/account/subscriptions/5"', $sent[0]['body']);
+        $this->assertStringNotContainsString('{{', $sent[0]['body']);
+    }
+
+    public function test_a_store_on_hold_has_no_deletion_date_and_gets_no_offline_email(): void
+    {
+        $this->assertSame([], $this->capture_suspended_mail(0));
+    }
+
+    public function test_the_offline_email_can_be_switched_off(): void
+    {
+        Filters\expectApplied('waas_suspended_email_allowed')->andReturn(false);
+
+        $this->assertSame([], $this->capture_suspended_mail(gmmktime(12, 0, 0, 11, 14, 2026)));
+    }
 }
