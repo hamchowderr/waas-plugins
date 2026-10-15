@@ -41,6 +41,10 @@ case "${1:-}" in
     $WP option update wpcs_credentials_api_secret_setting "$WAAS_API_SECRET" >/dev/null
     echo api key and secret set
     $WP option update wpcs_notification_settings_send_tenant_ready_email on
+    # Email (password resets, orders, store-ready notices) through the platform's relay, like a store's.
+    if [ -n "${WAAS_MAIL_B64:-}" ]; then
+      mkdir -p /var/www/html/wp-content/mu-plugins && cp $X/waas-mail.php /var/www/html/wp-content/mu-plugins/ && echo mail relay on
+    fi
     $WP eval-file $X/check.php ;;
   pages)
     $WP eval 'if (!(new FluentCart\Api\StoreSettings())->get("checkout_page_id")) (new FluentCart\App\CPT\Pages())->createPages();' --user=admin

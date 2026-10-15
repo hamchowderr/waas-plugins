@@ -12,6 +12,8 @@ services:
       WP_ADMIN_PASSWORD: ${WP_ADMIN_PASSWORD}
       WAAS_API_KEY: ${WAAS_API_KEY}
       WAAS_API_SECRET: ${WAAS_API_SECRET}
+      # The mail relay settings stores get (base64 JSON: host, port, user, pass, from); see remote/waas-mail.php.
+      WAAS_MAIL_B64: ${WAAS_MAIL_B64:-}
       SITE_URL: https://shop.anypress.io
       SITE_TITLE: AnyPress
       WAAS_API_URL: https://waas-api.otakusolutions.io
