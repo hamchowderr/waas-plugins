@@ -35,6 +35,8 @@ case "${1:-}" in
       $WP eval 'update_option("__fls_auth_settings", array_merge(\FluentAuth\App\Helpers\Helper::getAuthSettings(), ["disable_xmlrpc" => "yes"]));'
     # WP Fusion connected to FluentCRM on the same site, as each store does on its first visit.
     ! $WP plugin is-active wp-fusion-lite || $WP eval-file $X/wpfusion.php
+    # The rest of the store template's presets that fit a shop (remote/defaults.php).
+    [ -z "${SHOP_PLUGINS:-}" ] || $WP eval-file $X/defaults.php --user=admin
     $WP plugin install $X/waas-host.zip --activate --force
     [ ! -f $X/waas-payments.zip ] || $WP plugin install $X/waas-payments.zip --activate --force
     $WP plugin list ;;
