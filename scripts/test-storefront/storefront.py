@@ -194,6 +194,9 @@ def create():
         #   npm run create-key -- --product-name "AnyPress shop" --coolify-service <this service's uuid>
         # (a scheduled task on waas-api). Until then the configure step stops with "missing".
         print('API key: run create-key with --coolify-service ' + uuid + ' on waas-api, then restart this service')
+    # Optional mail relay settings, the same WAAS_MAIL_B64 a store gets (the configure step installs the mailer).
+    if os.environ.get('WAAS_MAIL_B64'):
+        set_env(uuid, 'WAAS_MAIL_B64', os.environ['WAAS_MAIL_B64'], locked=True)
     # Optional gateway credentials (the payments step uses them): Authorize.Net sandbox, or Stripe test keys.
     if all(os.environ.get(var) for var in CART['secrets']):
         for var, key in CART['secrets'].items():
