@@ -12,3 +12,4 @@ if (!defined('WAAS_HOST_TEXTDOMAIN')) {
 require_once dirname(__DIR__) . '/vendor/autoload.php';
 require_once __DIR__ . '/Stubs/FluentCartStubs.php';
 require_once __DIR__ . '/Stubs/WooCommerceStubs.php';
+require_once __DIR__ . '/Stubs/WordPressRestStubs.php';

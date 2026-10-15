@@ -126,15 +126,7 @@ class FluentCartPortal
     /** Subscriptions of the current user. @return int[] */
     private function current_user_subscription_ids(): array
     {
-        $user_id = get_current_user_id();
-        if ($user_id === 0) {
-            return [];
-        }
-
-        $user = wp_get_current_user();
-        $ids = $this->store->find_user_subscription_ids($user_id, (string) $user->user_email);
-
-        return array_values(array_filter($ids, fn ($subscription_id) => $this->adapter->get_customer_id($subscription_id) === $user_id));
+        return $this->adapter->get_customer_subscription_ids(get_current_user_id());
     }
 
     /** Subscriptions of the current user that have a website. @return int[] */

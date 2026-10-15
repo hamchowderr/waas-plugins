@@ -132,6 +132,51 @@ class WooCommerceAdapterTest extends TestCase
         $this->assertSame(0, $adapter->get_customer_id('900 OR 1=1'));
     }
 
+    public function test_customer_subscriptions_are_the_users_own_newest_first(): void
+    {
+        $mine = $this->order(900);
+        $theirs = $this->order(901);
+        $plugin = $this->plugin('woocommerce-subscriptions', 'shop_subscription', true);
+        $newer = $this->order(905);
+        $plugin->allows('get_customer_id')->andReturnUsing(fn ($subscription) => $subscription === $theirs ? 99 : 7);
+        Functions\expect('wc_get_orders')->once()->with(Mockery::on(fn ($args) => $args['type'] === 'shop_subscription'
+            && $args['customer_id'] === 7 && $args['status'] === 'any' && $args['limit'] === -1))
+            ->andReturn([$mine, $theirs, $newer]);
+
+        $this->assertSame([905, 900], (new WooCommerceAdapter([$plugin]))->get_customer_subscription_ids(7));
+    }
+
+    public function test_customer_subscriptions_on_wp_swings_include_its_own_customer_meta(): void
+    {
+        $by_customer_id = $this->order(900);
+        $by_meta = $this->order(901);
+        $plugin = Mockery::mock(\WaaSHost\Commerce\WooCommerce\WpSwingsSubscriptions::class);
+        $plugin->allows('is_active')->andReturn(true);
+        $plugin->allows('get_order_type')->andReturn('wps_subscriptions');
+        $plugin->allows('get_customer_id')->andReturn(7);
+        Functions\expect('wc_get_orders')->twice()->andReturnUsing(fn ($args) => isset($args['customer_id'])
+            ? [$by_customer_id]
+            : ($args['meta_query'] === [['key' => 'wps_customer_id', 'value' => '7']] ? [$by_meta, $by_customer_id] : []));
+
+        $this->assertSame([901, 900], (new WooCommerceAdapter([$plugin]))->get_customer_subscription_ids(7));
+    }
+
+    public function test_no_customer_subscriptions_without_a_subscription_plugin_or_user(): void
+    {
+        Functions\expect('wc_get_orders')->never();
+
+        $this->assertSame([], (new WooCommerceAdapter([$this->plugin('wp-swings', 'wps_subscriptions', false)]))->get_customer_subscription_ids(7));
+        $this->assertSame([], (new WooCommerceAdapter([$this->plugin('wp-swings', 'wps_subscriptions', true)]))->get_customer_subscription_ids(0));
+    }
+
+    private function order(int $id)
+    {
+        $order = Mockery::mock('WC_Order');
+        $order->allows('get_id')->andReturn($id);
+
+        return $order;
+    }
+
     private function plugin(string $id, string $order_type, bool $active)
     {
         $plugin = Mockery::mock(SubscriptionPlugin::class);

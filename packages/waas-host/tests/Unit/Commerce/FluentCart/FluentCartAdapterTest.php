@@ -45,6 +45,18 @@ class FluentCartAdapterTest extends TestCase
         $this->assertSame('owner@apexresearch.example', $purchase->customer_email);
     }
 
+    public function test_customer_subscriptions_are_the_users_own_newest_first(): void
+    {
+        Functions\when('get_userdata')->alias(fn ($id) => $id === 7 ? (object) ['ID' => 7, 'user_email' => 'owner@apexresearch.example'] : false);
+        $this->store->allows('find_user_subscription_ids')->with(7, 'owner@apexresearch.example')->andReturn([902, 901, 900]);
+        // 901 is an unlinked customer with the same email whose account is someone else's.
+        $this->store->allows('get_subscription_customer')->andReturnUsing(fn ($id) => ['user_id' => $id === 901 ? 99 : 7, 'email' => 'owner@apexresearch.example', 'name' => 'X']);
+
+        $this->assertSame([902, 900], $this->adapter->get_customer_subscription_ids(7));
+        $this->assertSame([], $this->adapter->get_customer_subscription_ids(8), 'no such user');
+        $this->assertSame([], $this->adapter->get_customer_subscription_ids(0));
+    }
+
     public function test_linked_customer_is_the_owner(): void
     {
         $this->customer(7);

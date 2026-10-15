@@ -188,6 +188,37 @@ class WooCommerceAdapter implements CommerceAdapter
         ], 1));
     }
 
+    public function get_customer_subscription_ids(int $user_id): array
+    {
+        $plugin = $this->get_subscription_plugin();
+        if ($plugin === null || $user_id <= 0) {
+            return [];
+        }
+
+        $subscriptions = wc_get_orders([
+            'type' => $plugin->get_order_type(),
+            'customer_id' => $user_id,
+            'status' => 'any',
+            'limit' => -1,
+        ]);
+        $subscriptions = is_array($subscriptions) ? $subscriptions : [];
+        if ($plugin instanceof WpSwingsSubscriptions) {
+            // WP Swings may keep the customer only in its own meta (see WpSwingsSubscriptions::get_customer_id).
+            $subscriptions = array_merge($subscriptions, $this->query_subscriptions([['key' => 'wps_customer_id', 'value' => (string) $user_id]]));
+        }
+
+        $ids = [];
+        foreach ($subscriptions as $subscription) {
+            if ($plugin->get_customer_id($subscription) === $user_id) {
+                $ids[(int) $subscription->get_id()] = true;
+            }
+        }
+        $ids = array_keys($ids);
+        rsort($ids);
+
+        return $ids;
+    }
+
     public function get_customer_id($subscription_id): int
     {
         $subscription = $this->get_subscription($subscription_id);

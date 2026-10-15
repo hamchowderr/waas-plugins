@@ -161,8 +161,12 @@ class NameConflicts
         }
     }
 
-    /** @return string a result code, 'ok' when the store was queued with the new name */
-    private function choose($subscription_id, string $website_name): string
+    /**
+     * Like choose_new_name, for callers that need the result code (see result_message for the codes).
+     *
+     * @return string a result code, 'ok' when the store was queued with the new name
+     */
+    public function choose($subscription_id, string $website_name): string
     {
         // Two submits at once (a double click, two tabs) would otherwise both pass the checks and queue two creates.
         if (!$this->lock($subscription_id)) {

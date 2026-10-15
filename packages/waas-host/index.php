@@ -1,5 +1,6 @@
 <?php
 
+use WaaSHost\Api\AccountController;
 use WaaSHost\Api\RolesController;
 use WaaSHost\Api\SingleLogin;
 use WaaSHost\Commerce\Commerce;
@@ -8,6 +9,7 @@ use WaaSHost\Commerce\WooCommerce\WooCommerceAdapter;
 use WaaSHost\Core\ConfigService;
 use WaaSHost\Core\HttpService;
 use WaaSHost\Core\ProvisioningApi;
+use WaaSHost\Features\NameConflicts;
 use WaaSHost\Features\StoreJobs;
 use WaaSHost\Features\TenantsAddOnSubscriptionManager;
 use WaaSHost\Features\TenantsSubscriptionManager;
@@ -16,6 +18,7 @@ use WaaSHost\Features\AdminHome;
 use WaaSHost\Features\AdminNotices;
 use WaaSHost\Features\Notifications;
 use WaaSHost\Features\TenantStatusService;
+use WaaSHost\Features\WebsiteSettings;
 
 require_once __DIR__ . '/vendor/autoload.php';
 
@@ -56,7 +59,8 @@ new RolesController($provisioningApi);
 SingleLogin::init();
 // Store API calls run as background jobs, never inside the cart's hooks
 $storeJobs = new StoreJobs();
-new TenantsSubscriptionManager($provisioningApi, $storeJobs);
+$nameConflicts = new NameConflicts($provisioningApi, $storeJobs);
+new TenantsSubscriptionManager($provisioningApi, $storeJobs, $nameConflicts);
 new TenantsAddOnSubscriptionManager($provisioningApi, $storeJobs);
 
 // Cart: the first active one registered here wins; the wpcs_commerce_adapter filter can override
@@ -65,6 +69,8 @@ Commerce::register(new WooCommerceAdapter());
 Commerce::boot($provisioningApi);
 
 new TenantStatusService($provisioningApi);
+// The customer's websites as a REST API (waas-host/v1/account)
+new AccountController(new WebsiteSettings($provisioningApi), $nameConflicts);
 AdminNotices::init($configService);
 new AdminHome($configService);
 new AdminSettings($provisioningApi, $configService);

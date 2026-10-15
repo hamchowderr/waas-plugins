@@ -17,6 +17,7 @@ class UserAccountSubscriptionsSettings
 
     private ProvisioningApi $provisioningApi;
     private ConfigService $config;
+    private WebsiteSettings $website_settings;
     private string $domain_error = '';
     private string $mail_error = '';
 
@@ -24,6 +25,7 @@ class UserAccountSubscriptionsSettings
     {
         $this->provisioningApi = $provisioningApi;
         $this->config = $config ?? new ConfigService();
+        $this->website_settings = new WebsiteSettings($provisioningApi);
 
         add_action('waas_after_subscription_details_html', [$this, 'render_edit_domain'], 10, 1);
         add_action('remove_tenant_old_domain', [$this, 'remove_tenant_old_domain'], 1, 2);
@@ -152,15 +154,15 @@ class UserAccountSubscriptionsSettings
             return;
         }
         try {
-            $link = $this->provisioningApi->domain_connect($external_id, $domain_name, $service);
-        } catch (Exception $e) {
+            $link = $this->website_settings->domain_connect_link($subscription_id, $domain_name, $service);
+        } catch (WebsiteSettingsError $e) {
             return;
         }
-        if (empty($link->supported) || empty($link->url) || !is_string($link->url) || strpos($link->url, 'https://') !== 0) {
+        if ($link === null) {
             return;
         }
-        $provider = is_string($link->dnsProvider ?? null) && $link->dnsProvider !== '' ? $link->dnsProvider : 'your DNS host';
-        echo '<p><a class="button" href="' . esc_url($link->url) . '" target="_blank" rel="noopener">'
+        $provider = $link['dns_provider'] !== '' ? $link['dns_provider'] : 'your DNS host';
+        echo '<p><a class="button" href="' . esc_url($link['url']) . '" target="_blank" rel="noopener">'
             . esc_html('Connect automatically at ' . $provider) . '</a> '
             . esc_html('or add the records by hand.') . '</p>';
     }
@@ -190,30 +192,13 @@ class UserAccountSubscriptionsSettings
 
         try {
             if ($remove) {
-                $this->provisioningApi->remove_mail_domain($external_id);
+                $this->website_settings->remove_email_sender($subscription_id);
                 return;
             }
-            $domain = strtolower(trim(sanitize_text_field(wp_unslash($_POST['mail_domain_name']))));
-            if (!self::is_valid_hostname($domain)) {
-                $this->mail_error = 'Please enter a valid domain name, like example.com.';
-                return;
-            }
-            $this->provisioningApi->set_mail_domain($external_id, $domain);
-        } catch (Exception $e) {
-            $this->mail_error = self::api_error_message($e);
+            $this->website_settings->set_email_sender($subscription_id, wp_unslash($_POST['mail_domain_name']));
+        } catch (WebsiteSettingsError $e) {
+            $this->mail_error = $e->getMessage();
         }
-    }
-
-    /** The API's own explanation for a refused request (400), else a generic message. */
-    private static function api_error_message(Exception $e): string
-    {
-        if (preg_match('/^Failed: 400 - (.*)$/s', $e->getMessage(), $m)) {
-            $body = json_decode($m[1]);
-            if (isset($body->message) && is_string($body->message)) {
-                return $body->message;
-            }
-        }
-        return 'That did not work. Please try again later or contact support.';
     }
 
     /** DNS records for a custom domain, from the storefront's DNS settings. With neither set, the customer is told to contact support. */
@@ -259,31 +244,13 @@ class UserAccountSubscriptionsSettings
             return;
         }
 
-        $domain = strtolower(trim(sanitize_text_field(wp_unslash($_POST['domain_name']))));
-        if (!self::is_valid_hostname($domain)) {
-            $this->domain_error = 'Please enter a valid domain name, like example.com.';
-            return;
-        }
-
-        $tenant_external_id = $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META);
-        $tenant_current_domain_name = $commerce->get_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META);
-
-        if ($domain === $tenant_current_domain_name) {
-            return;
-        }
-
         try {
-            $this->provisioningApi->add_tenant_domain([
-                'external_id' => $tenant_external_id,
-                'domain_name' => $domain,
-            ]);
-
-            $commerce->update_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META, $domain);
-
-            if ($tenant_current_domain_name) {
-                wp_schedule_single_event(time() + 300, 'remove_tenant_old_domain', [$tenant_external_id, $tenant_current_domain_name]);
+            $this->website_settings->change_address($subscription_id, wp_unslash($_POST['domain_name']));
+        } catch (WebsiteSettingsError $e) {
+            // The form has only ever shown input errors; a failed API call leaves the address as it was.
+            if ($e->is_invalid_input()) {
+                $this->domain_error = $e->getMessage();
             }
-        } catch (Exception $e) {
         }
     }
 

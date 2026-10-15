@@ -54,6 +54,13 @@ interface CommerceAdapter
      */
     public function is_domain_taken(string $domain_name): bool;
 
+    /**
+     * Subscriptions owned by the WordPress user (get_customer_id() is $user_id for each), newest first.
+     *
+     * @return array<int|string>
+     */
+    public function get_customer_subscription_ids(int $user_id): array;
+
     /** WordPress user id of the customer who owns the subscription, 0 if unknown. */
     public function get_customer_id($subscription_id): int;
 

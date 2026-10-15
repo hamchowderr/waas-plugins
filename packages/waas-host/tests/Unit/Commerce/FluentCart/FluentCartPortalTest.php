@@ -28,7 +28,7 @@ class FluentCartPortalTest extends TestCase
         Functions\stubTranslationFunctions();
         Functions\stubEscapeFunctions();
         Functions\when('get_current_user_id')->justReturn(self::OWNER_ID);
-        Functions\when('wp_get_current_user')->justReturn((object) ['user_email' => 'owner@apexresearch.example']);
+        Functions\when('get_userdata')->alias(fn ($id) => $id === self::OWNER_ID ? (object) ['ID' => $id, 'user_email' => 'owner@apexresearch.example'] : false);
         Functions\when('get_rest_url')->justReturn('https://storefront.example/wp-json/waas-host/v1');
         Functions\when('wp_create_nonce')->justReturn('nonce');
 

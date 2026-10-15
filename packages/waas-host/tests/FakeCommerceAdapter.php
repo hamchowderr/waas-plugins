@@ -17,6 +17,8 @@ class FakeCommerceAdapter implements CommerceAdapter
     public array $meta = [];
     public bool $booted = false;
     public int $customer_id = 7;
+    /** @var array<int|string, int> owners of single subscriptions; the rest belong to $customer_id */
+    public array $owners = [];
     /** @var array<int|string, true> subscriptions the cart reports as not active */
     public array $inactive = [];
 
@@ -79,9 +81,17 @@ class FakeCommerceAdapter implements CommerceAdapter
         return false;
     }
 
+    public function get_customer_subscription_ids(int $user_id): array
+    {
+        $ids = array_keys(array_filter($this->meta, fn ($meta, $id) => $this->get_customer_id($id) === $user_id, ARRAY_FILTER_USE_BOTH));
+        rsort($ids);
+
+        return $ids;
+    }
+
     public function get_customer_id($subscription_id): int
     {
-        return $this->customer_id;
+        return $this->owners[$subscription_id] ?? $this->customer_id;
     }
 
     public function get_customer_email($subscription_id): string
