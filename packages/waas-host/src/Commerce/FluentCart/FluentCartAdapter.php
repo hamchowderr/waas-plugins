@@ -55,6 +55,7 @@ class FluentCartAdapter implements CommerceAdapter
 
         (new FluentCartSubscriptionEvents($store))->register();
         new FluentCartCheckout($provisioning_api, $this, $store);
+        (new FluentCartVolumeDiscount($this, $store))->register();
         new FluentCartPortal($this, $store, $domain_settings);
 
         add_filter('waas_getting_started_checklist', [$this, 'mark_plan_product_checklist_item'], 20);
