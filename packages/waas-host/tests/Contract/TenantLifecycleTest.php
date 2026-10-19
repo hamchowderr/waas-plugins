@@ -4,6 +4,7 @@ namespace Tests\Contract;
 
 use Brain\Monkey\Actions;
 use Brain\Monkey\Functions;
+use Mockery;
 use Tests\FakeCommerceAdapter;
 use Tests\Unit\TestCase;
 use WaaSHost\Commerce\Commerce;
@@ -18,7 +19,7 @@ use WaaSHost\Features\TenantsSubscriptionManager;
 use WaaSHost\Features\TenantStatusService;
 
 /**
- * Store creation, polling and removal through a fake cart, against the provisioning API (see MockApi).
+ * Store creation, polling, suspension, resumption and removal through a fake cart, against the provisioning API (see MockApi).
  * Proves the shared code needs no WooCommerce.
  *
  * @group mock
@@ -33,6 +34,9 @@ class TenantLifecycleTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        if (!defined('DAY_IN_SECONDS')) {
+            define('DAY_IN_SECONDS', 86400);
+        }
         Commerce::reset();
         $this->use_mock_api([
             'wpcs_host_settings_root_domain' => 'stores.waas.example',
@@ -139,6 +143,62 @@ class TenantLifecycleTest extends TestCase
         $poller->poll_tenant_status();
 
         $this->assertSame([], $this->requests);
+    }
+
+    public function test_cancelling_backs_up_and_suspends_the_store_by_external_id(): void
+    {
+        $manager = new TenantsSubscriptionManager($this->service, $jobs = $this->use_store_jobs());
+        $this->cart->meta['sub-1'][Tenant::TENANT_EXTERNAL_ID_META] = 'store-1042';
+        $this->cart->meta['sub-1'][Tenant::TENANT_STATE] = Tenant::READY;
+        Functions\expect('wp_schedule_single_event')->once()
+            ->with(Mockery::type('int'), TenantsSubscriptionManager::DELETE_SUSPENDED_TENANT_HOOK, ['sub-1'])->andReturn(true);
+        $this->mock_example('Suspend tenant: Scheduled with backup');
+
+        $manager->suspend_tenant_when_subscription_expired('sub-1');
+        $this->assertSame([], $this->requests, 'the cart event only queues the job');
+        // The deletion is planned when the cart event comes in; the job passes that date on to the notification.
+        $delete_at = $this->cart->meta['sub-1'][Tenant::TENANT_DELETE_AT_META];
+        Actions\expectDone('waas_tenant_suspended')->once()->with('sub-1', $delete_at);
+        $this->run_store_jobs($jobs, 'sub-1');
+
+        $this->assertCount(1, $this->requests);
+        $this->assertSame('POST', $this->requests[0][0]);
+        $this->assertStringEndsWith('/v1/tenants/suspend?externalId=store-1042', $this->requests[0][1]);
+        $this->assertSame(['takeBackup' => true], json_decode($this->requests[0][3], true), 'a cancel keeps a backup to restore from');
+
+        $meta = $this->cart->meta['sub-1'];
+        $this->assertSame(Tenant::SUSPENDED, $meta[Tenant::TENANT_STATE]);
+        $this->assertSame(Tenant::SUSPENDED_ENDED, $meta[Tenant::TENANT_SUSPEND_REASON_META]);
+        $this->assertEqualsWithDelta(time() + 30 * DAY_IN_SECONDS, $delete_at, 60, 'deleted after the default 30-day grace period');
+    }
+
+    public function test_reactivating_in_the_grace_period_resumes_the_store_and_cancels_its_deletion(): void
+    {
+        $manager = new TenantsSubscriptionManager($this->service, $jobs = $this->use_store_jobs());
+        $this->cart->meta['sub-1'] = [
+            Tenant::TENANT_EXTERNAL_ID_META => 'store-1042',
+            Tenant::TENANT_STATE => Tenant::SUSPENDED,
+            Tenant::TENANT_SUSPEND_REASON_META => Tenant::SUSPENDED_ENDED,
+            Tenant::TENANT_DELETE_AT_META => time() + 20 * DAY_IN_SECONDS,
+        ];
+        Functions\expect('wp_clear_scheduled_hook')->once()->with(TenantsSubscriptionManager::DELETE_SUSPENDED_TENANT_HOOK, ['sub-1']);
+        $this->mock_example('Resume tenant: Scheduled');
+        Actions\expectDone('waas_tenant_resumed')->once()->with('sub-1');
+
+        $manager->resume_suspended_tenant('sub-1');
+        $this->assertSame([], $this->requests, 'the cart event only queues the job');
+        $this->run_store_jobs($jobs, 'sub-1');
+
+        $this->assertCount(1, $this->requests);
+        $this->assertSame('POST', $this->requests[0][0]);
+        $this->assertStringEndsWith('/v1/tenants/resume?externalId=store-1042', $this->requests[0][1]);
+        $this->assertSame([], json_decode($this->requests[0][3], true), 'a resume takes no options');
+
+        // Back online at once: the API brings the store back from the suspension, not from a backup.
+        $meta = $this->cart->meta['sub-1'];
+        $this->assertSame(Tenant::READY, $meta[Tenant::TENANT_STATE]);
+        $this->assertSame('', $meta[Tenant::TENANT_DELETE_AT_META]);
+        $this->assertSame('', $meta[Tenant::TENANT_SUSPEND_REASON_META]);
     }
 
     public function test_deletion_after_the_grace_period_deletes_the_store_by_external_id(): void
