@@ -15,7 +15,7 @@ They are the WordPress side of [AnyPress](https://anypress.io) and are open sour
 - Plan roles and snapshot groups per product.
 - Updates itself through the provisioning API, which serves signed releases.
 
-**WaaS Client** (in every store): one-click login from the storefront, and plugin access by plan role (`roles.json`).
+**WaaS Client** (in every store): one-click login from the storefront, plugin access by plan role (`roles.json`), and a site-editing API that lets the AnyPress connector change the store's pages, design, header, footer and menus for an AI agent.
 
 **WaaS Payments**: Authorize.Net card payments for FluentCart, including subscriptions charged on renewal.
 
@@ -98,6 +98,10 @@ WooCommerce products keep their WaaS settings through WooCommerce's product obje
 ## Account API
 
 WaaS Host has a REST API for the signed-in customer's websites (`waas-host/v1/account`): list them, sign in to one, change its address, set up its email sender, and choose a new name. Pages on the storefront call it with the login cookie; a front end on another domain signs the customer in with token sign-in (OAuth 2.0 with PKCE). How: [docs/account-api.md](docs/account-api.md).
+
+## Site editing API
+
+WaaS Client lets the AnyPress connector edit a store's design and content (`waas-client/v1/site`): pages and their sections, the theme's patterns, colours and fonts, the header and footer, menus, revisions and images. Only the AnyPress API can call it, with requests signed by the store's own site key. How: [docs/site-editing-api.md](docs/site-editing-api.md).
 
 ## Updates
 
