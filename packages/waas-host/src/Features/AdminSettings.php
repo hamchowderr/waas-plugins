@@ -166,6 +166,10 @@ class AdminSettings
         register_setting('waas-admin-stores', self::SHOULD_REMOVE_ADMINISTRATOR_PLUGIN_CAPABILITIES_OPTION, [
             'default' => 'on'
         ]);
+        // Off by default: turning it on changes prices on the live shop.
+        register_setting('waas-admin-stores', VolumeDiscount::ENABLED_OPTION, [
+            'default' => ''
+        ]);
 
         register_setting('waas-admin-emails', self::TENANT_READY_EMAIL_SUBJECT_OPTION, [
             'default' => Notifications::get_default_tenant_ready_subject()
@@ -312,6 +316,20 @@ class AdminSettings
             'min' => 1,
             'suffix' => __('days', WAAS_HOST_TEXTDOMAIN),
             'hint' => __('When a subscription is cancelled or expires, its website is backed up and taken offline, then deleted after this many days. If the subscription becomes active again before then, the website comes back as it was.', WAAS_HOST_TEXTDOMAIN),
+        ]);
+
+        add_settings_section(
+            'waas_volume_discount',
+            __('Volume discount', WAAS_HOST_TEXTDOMAIN),
+            fn () => print('<p>' . esc_html__('A discount on new websites for customers who already have several. Their live websites (active website plan subscriptions) are counted together with the one they are buying.', WAAS_HOST_TEXTDOMAIN) . '</p>'),
+            'waas-admin-stores'
+        );
+
+        $this->add_field(VolumeDiscount::ENABLED_OPTION, __('Volume discount', WAAS_HOST_TEXTDOMAIN), 'waas-admin-stores', 'waas_volume_discount', [
+            'type' => 'checkbox',
+            'label' => __('Discount website plans at checkout by how many live websites the customer has', WAAS_HOST_TEXTDOMAIN),
+            /* translators: %s: the discount tiers, e.g. "10% off at 3 to 9 websites, 20% off at 10 to 24 websites" */
+            'hint' => sprintf(__('%s. Applied automatically to signed-in customers and to customers checking out with the email of an existing customer, on the first payment and every renewal. Subscriptions that already exist keep their price. Needs FluentCart.', WAAS_HOST_TEXTDOMAIN), VolumeDiscount::describe_tiers()),
         ]);
 
         // Emails

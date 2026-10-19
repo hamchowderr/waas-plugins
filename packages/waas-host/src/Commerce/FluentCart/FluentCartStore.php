@@ -2,6 +2,7 @@
 
 namespace WaaSHost\Commerce\FluentCart;
 
+use FluentCart\App\Models\Coupon;
 use FluentCart\App\Models\Customer;
 use FluentCart\App\Models\ProductMeta;
 use FluentCart\App\Models\Subscription;
@@ -271,6 +272,71 @@ class FluentCartStore
             ->orderBy('id', 'DESC')
             ->pluck('id')
             ->toArray());
+    }
+
+    /** @return int[] subscription ids of one FluentCart customer */
+    public function find_customer_subscription_ids(int $customer_id): array
+    {
+        if ($customer_id <= 0) {
+            return [];
+        }
+
+        return array_map('intval', Subscription::query()->where('customer_id', $customer_id)->pluck('id')->toArray());
+    }
+
+    /** @return int[] the product of each subscription in $subscription_ids that is in an active status */
+    public function get_active_subscription_product_ids(array $subscription_ids): array
+    {
+        if (!$subscription_ids) {
+            return [];
+        }
+
+        return array_map('intval', Subscription::query()
+            ->whereIn('id', array_map('intval', $subscription_ids))
+            ->whereIn('status', self::ACTIVE_STATUSES)
+            ->pluck('product_id')
+            ->toArray());
+    }
+
+    /**
+     * The customer FluentCart matches to a cart: its customer, its user's, or the one with the checkout email.
+     *
+     * @return array{id: int, user_id: int, email: string}|null
+     */
+    public function guess_cart_customer($cart): ?array
+    {
+        $customer = method_exists($cart, 'guessCustomer') ? $cart->guessCustomer() : null;
+        if (!$customer) {
+            return null;
+        }
+
+        return [
+            'id' => (int) $customer->id,
+            'user_id' => (int) $customer->user_id,
+            'email' => (string) $customer->email,
+        ];
+    }
+
+    /** @return int[] the product of each line in a checkout cart, repeats kept */
+    public function get_cart_line_product_ids($cart): array
+    {
+        $ids = [];
+        foreach ((array) ($cart->cart_data ?? []) as $item) {
+            $ids[] = (int) ($item['post_id'] ?? 0);
+        }
+
+        return $ids;
+    }
+
+    /**
+     * An in-memory coupon: FluentCart applies it like a saved one but it is never written to fct_coupons, so it can't
+     * be found, typed or edited without waas-host resolving it.
+     *
+     * @return Coupon
+     */
+    public function make_coupon(array $attributes)
+    {
+        return (new Coupon())->forceFill($attributes);
     }
 
     public function get_portal_url(string $path): string
