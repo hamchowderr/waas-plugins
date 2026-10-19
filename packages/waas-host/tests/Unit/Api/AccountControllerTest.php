@@ -7,8 +7,10 @@ use Mockery;
 use Tests\FakeCommerceAdapter;
 use Tests\Unit\TestCase;
 use WaaSHost\Api\AccountController;
+use WaaSHost\Api\AccountTokens;
 use WaaSHost\Api\SingleLogin;
 use WaaSHost\Commerce\Commerce;
+use WaaSHost\Core\ConfigService;
 use WaaSHost\Core\PrivateKeyStore;
 use WaaSHost\Core\ProvisioningApi;
 use WaaSHost\Core\Tenant;
@@ -35,6 +37,9 @@ class AccountControllerTest extends TestCase
 
     private $api;
     private $name_conflicts;
+    private $config;
+    private $tokens;
+    private int $current_user = self::OWNER_ID;
     private FakeCommerceAdapter $cart;
     /** @var array<string, array> "METHOD path" => route options */
     private array $routes = [];
@@ -55,7 +60,11 @@ class AccountControllerTest extends TestCase
         Functions\when('wp_salt')->justReturn('auth-salt');
         Functions\when('sanitize_title_with_dashes')->alias(fn ($value) => trim(preg_replace('/[^a-z0-9]+/', '-', strtolower((string) $value)), '-'));
         Functions\when('remove_accents')->returnArg();
-        Functions\when('get_current_user_id')->justReturn(self::OWNER_ID);
+        $this->current_user = self::OWNER_ID;
+        Functions\when('get_current_user_id')->alias(fn () => $this->current_user);
+        Functions\when('wp_set_current_user')->alias(function ($id) {
+            $this->current_user = (int) $id;
+        });
         Functions\when('get_transient')->alias(fn ($key) => $this->transients[$key] ?? false);
         Functions\when('set_transient')->alias(function ($key, $value) {
             $this->transients[$key] = $value;
@@ -89,7 +98,11 @@ class AccountControllerTest extends TestCase
 
         $this->api = Mockery::mock(ProvisioningApi::class);
         $this->name_conflicts = Mockery::mock(NameConflicts::class);
-        $controller = new AccountController(new WebsiteSettings($this->api), $this->name_conflicts);
+        $this->config = Mockery::mock(ConfigService::class);
+        $this->config->allows('get_dns_a_records')->andReturn(['191.101.15.236'])->byDefault();
+        $this->config->allows('get_dns_cname_target')->andReturn('stores.example.net')->byDefault();
+        $this->tokens = Mockery::mock(AccountTokens::class);
+        $controller = new AccountController(new WebsiteSettings($this->api), $this->name_conflicts, $this->config, $this->tokens);
         $controller->register_routes();
     }
 
@@ -103,6 +116,7 @@ class AccountControllerTest extends TestCase
     public function routes(): array
     {
         return [
+            'who is signed in' => ['GET', '/me', []],
             'list websites' => ['GET', '/websites', []],
             'login' => ['POST', self::ID . '/login', []],
             'change address' => ['PUT', self::ID . '/address', ['domain' => 'new.example.com']],
@@ -151,9 +165,84 @@ class AccountControllerTest extends TestCase
     /** @dataProvider routes */
     public function test_signed_out_visitors_are_refused(string $method, string $path, array $params): void
     {
-        Functions\when('get_current_user_id')->justReturn(0);
+        $this->current_user = 0;
 
         $this->assertError(401, $this->call($method, $path, self::WEBSITE, $params));
+    }
+
+    /** @dataProvider routes */
+    public function test_an_access_token_signs_in_on_every_route(string $method, string $path, array $params): void
+    {
+        $this->current_user = 0;
+        $this->tokens->expects('user_for_access_token')->with('at.7.token')->andReturn(self::OWNER_ID);
+
+        $allowed = $this->routes["$method $path"]['permission_callback']($this->request(self::WEBSITE, $params, 'Bearer at.7.token'));
+
+        $this->assertTrue($allowed);
+        $this->assertSame(self::OWNER_ID, $this->current_user);
+    }
+
+    public function test_an_access_token_only_reaches_its_own_users_websites(): void
+    {
+        $this->current_user = 0;
+        $this->tokens->expects('user_for_access_token')->andReturn(self::OWNER_ID);
+
+        $refused = $this->routes['PUT ' . self::ID . '/address']['permission_callback']($this->request(self::OTHERS_WEBSITE, ['domain' => 'x.example.com'], 'Bearer at.7.token'));
+
+        $this->assertError(403, $refused);
+    }
+
+    public function test_an_expired_or_unknown_access_token_is_refused(): void
+    {
+        $this->current_user = 0;
+        $this->tokens->expects('user_for_access_token')->with('at.7.old')->andReturn(0);
+
+        $refused = $this->routes['GET /websites']['permission_callback']($this->request(null, [], 'Bearer at.7.old'));
+
+        $this->assertError(401, $refused);
+        $this->assertSame('waas_invalid_token', $refused->get_error_code());
+        $this->assertSame(0, $this->current_user);
+    }
+
+    public function test_the_login_cookie_wins_over_a_token(): void
+    {
+        $this->tokens->shouldNotReceive('user_for_access_token');
+
+        $this->assertTrue($this->routes['GET /websites']['permission_callback']($this->request(null, [], 'Bearer at.99.someone-else')));
+    }
+
+    public function test_me_is_the_signed_in_customer(): void
+    {
+        Functions\when('wp_get_current_user')->justReturn((object) ['ID' => self::OWNER_ID, 'user_email' => 'pat@example.com', 'display_name' => 'Pat']);
+
+        $this->assertSame(['id' => self::OWNER_ID, 'email' => 'pat@example.com', 'name' => 'Pat'], $this->call('GET', '/me')->get_data());
+    }
+
+    public function test_lists_the_dns_records_for_a_custom_address(): void
+    {
+        $this->assertSame([
+            'apex' => [['type' => 'A', 'value' => '191.101.15.236']],
+            'subdomain' => [['type' => 'CNAME', 'value' => 'stores.example.net']],
+        ], $this->call('GET', '/websites')->get_data()['custom_address_records']);
+    }
+
+    public function test_no_dns_records_when_the_storefront_has_none_set(): void
+    {
+        $this->config->allows('get_dns_a_records')->andReturn([]);
+        $this->config->allows('get_dns_cname_target')->andReturn('');
+
+        $this->assertNull($this->call('GET', '/websites')->get_data()['custom_address_records']);
+    }
+
+    public function test_ipv6_addresses_are_aaaa_records_and_the_cname_is_optional(): void
+    {
+        $this->config->allows('get_dns_a_records')->andReturn(['191.101.15.236', '2001:db8::1']);
+        $this->config->allows('get_dns_cname_target')->andReturn('');
+
+        $this->assertSame([
+            'apex' => [['type' => 'A', 'value' => '191.101.15.236'], ['type' => 'AAAA', 'value' => '2001:db8::1']],
+            'subdomain' => [],
+        ], $this->call('GET', '/websites')->get_data()['custom_address_records']);
     }
 
     public function test_website_routes_need_a_store_except_choosing_a_name(): void
@@ -421,10 +510,15 @@ class AccountControllerTest extends TestCase
         return $route['callback']($request);
     }
 
-    private function request($subscription_id, array $params): WP_REST_Request
+    private function request($subscription_id, array $params, string $authorization = ''): WP_REST_Request
     {
         // Path parameters arrive as strings, like in WordPress.
-        return new WP_REST_Request('', '', $subscription_id === null ? $params : ['id' => (string) $subscription_id] + $params);
+        $request = new WP_REST_Request('', '', $subscription_id === null ? $params : ['id' => (string) $subscription_id] + $params);
+        if ($authorization !== '') {
+            $request->set_header('Authorization', $authorization);
+        }
+
+        return $request;
     }
 
     private function assertError(int $status, $result): void

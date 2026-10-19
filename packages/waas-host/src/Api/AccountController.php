@@ -3,6 +3,7 @@
 namespace WaaSHost\Api;
 
 use WaaSHost\Commerce\Commerce;
+use WaaSHost\Core\ConfigService;
 use WaaSHost\Core\Tenant;
 use WaaSHost\Features\NameConflicts;
 use WaaSHost\Features\UserAccountSubscriptionsSettings;
@@ -17,8 +18,9 @@ use WP_REST_Response;
  * things the account page shows and does. {id} is the subscription id.
  *
  * Every route's permission goes through authorize(): the user is signed in and, for a website route, owns the
- * subscription (and, except for choosing a new name, it has a store). Signing in is WordPress's own REST
- * authentication: the login cookie plus a wp_rest nonce in the X-WP-Nonce header.
+ * subscription (and, except for choosing a new name, it has a store). Signing in is either WordPress's own REST
+ * authentication (the login cookie plus a wp_rest nonce in the X-WP-Nonce header), for pages on the storefront, or an
+ * access token from the token sign-in (AccountSignIn) in "Authorization: Bearer", for a front end on another domain.
  */
 class AccountController
 {
@@ -36,11 +38,15 @@ class AccountController
 
     private WebsiteSettings $settings;
     private NameConflicts $name_conflicts;
+    private ConfigService $config;
+    private AccountTokens $tokens;
 
-    public function __construct(WebsiteSettings $settings, NameConflicts $name_conflicts)
+    public function __construct(WebsiteSettings $settings, NameConflicts $name_conflicts, ConfigService $config, AccountTokens $tokens)
     {
         $this->settings = $settings;
         $this->name_conflicts = $name_conflicts;
+        $this->config = $config;
+        $this->tokens = $tokens;
 
         add_action('rest_api_init', [$this, 'register_routes']);
     }
@@ -50,6 +56,7 @@ class AccountController
         $website = '/websites/(?P<id>\d+)';
         $domain_arg = ['type' => 'string', 'required' => true];
 
+        $this->route('/me', 'GET', 'me', self::ACCESS_ACCOUNT);
         $this->route('/websites', 'GET', 'list_websites', self::ACCESS_ACCOUNT);
         $this->route("$website/login", 'POST', 'login', self::ACCESS_WEBSITE);
         $this->route("$website/address", 'PUT', 'change_address', self::ACCESS_WEBSITE, ['domain' => $domain_arg]);
@@ -83,6 +90,14 @@ class AccountController
     public function authorize(WP_REST_Request $request, string $access)
     {
         $user_id = get_current_user_id();
+        if ($user_id === 0 && ($bearer = self::bearer_token($request)) !== '') {
+            // Only these routes take tokens, so a token can't be used on the rest of the site's API.
+            $user_id = $this->tokens->user_for_access_token($bearer);
+            if ($user_id === 0) {
+                return new WP_Error('waas_invalid_token', 'Your sign-in has expired. Please sign in again.', ['status' => 401]);
+            }
+            wp_set_current_user($user_id);
+        }
         if ($user_id === 0) {
             return new WP_Error('waas_not_signed_in', 'Please sign in.', ['status' => 401]);
         }
@@ -104,6 +119,18 @@ class AccountController
         }
 
         return true;
+    }
+
+    /** GET /me: who is signed in. */
+    public function me(WP_REST_Request $request): WP_REST_Response
+    {
+        $user = wp_get_current_user();
+
+        return self::response([
+            'id' => (int) $user->ID,
+            'email' => (string) $user->user_email,
+            'name' => (string) $user->display_name,
+        ]);
     }
 
     /** GET /websites */
@@ -130,7 +157,7 @@ class AccountController
             ];
         }
 
-        return self::response(['websites' => $websites]);
+        return self::response(['websites' => $websites, 'custom_address_records' => $this->custom_address_records()]);
     }
 
     /** POST /websites/{id}/login: a fresh one-time sign-in link, made on request. */
@@ -247,6 +274,24 @@ class AccountController
     }
 
     /**
+     * The DNS records a customer adds before using their own domain as a website's address (the same for every
+     * website), from the storefront's DNS settings. Null when neither is set: custom domains go through support.
+     */
+    private function custom_address_records(): ?array
+    {
+        $a_records = $this->config->get_dns_a_records();
+        $cname_target = $this->config->get_dns_cname_target();
+        if (!$a_records && $cname_target === '') {
+            return null;
+        }
+
+        return [
+            'apex' => array_map(fn ($ip) => ['type' => filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) ? 'AAAA' : 'A', 'value' => $ip], $a_records),
+            'subdomain' => $cname_target === '' ? [] : [['type' => 'CNAME', 'value' => $cname_target]],
+        ];
+    }
+
+    /**
      * Counts a sign-in link against the user's limit.
      *
      * @return int 0 when the link may be made, else seconds until the next one may
@@ -293,6 +338,14 @@ class AccountController
             'status' => (string) ($mail_domain->status ?? 'pending'),
             'records' => $records,
         ];
+    }
+
+    /** The token in "Authorization: Bearer <token>", or ''. */
+    private static function bearer_token(WP_REST_Request $request): string
+    {
+        $authorization = (string) $request->get_header('authorization');
+
+        return stripos($authorization, 'bearer ') === 0 ? trim(substr($authorization, 7)) : '';
     }
 
     /** {id} from the path (digits only, see register_routes); 0 when missing. */

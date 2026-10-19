@@ -74,12 +74,23 @@ if (!class_exists('WP_REST_Request')) {
         private $method;
         private $route;
         private $params;
+        private $headers = [];
 
         public function __construct($method = '', $route = '', array $params = [])
         {
             $this->method = $method;
             $this->route = $route;
             $this->params = $params;
+        }
+
+        public function get_header($key)
+        {
+            return $this->headers[strtolower($key)] ?? null;
+        }
+
+        public function set_header($key, $value)
+        {
+            $this->headers[strtolower($key)] = $value;
         }
 
         public function get_method()

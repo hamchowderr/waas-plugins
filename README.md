@@ -97,7 +97,7 @@ WooCommerce products keep their WaaS settings through WooCommerce's product obje
 
 ## Account API
 
-WaaS Host has a REST API for the signed-in customer's websites (`waas-host/v1/account`): list them, sign in to one, change its address, set up its email sender, and choose a new name. For building your own account pages on the storefront: [docs/account-api.md](docs/account-api.md).
+WaaS Host has a REST API for the signed-in customer's websites (`waas-host/v1/account`): list them, sign in to one, change its address, set up its email sender, and choose a new name. Pages on the storefront call it with the login cookie; a front end on another domain signs the customer in with token sign-in (OAuth 2.0 with PKCE). How: [docs/account-api.md](docs/account-api.md).
 
 ## Updates
 

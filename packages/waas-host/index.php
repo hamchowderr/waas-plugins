@@ -1,6 +1,9 @@
 <?php
 
+use WaaSHost\Api\AccountClientsCommand;
 use WaaSHost\Api\AccountController;
+use WaaSHost\Api\AccountSignIn;
+use WaaSHost\Api\AccountTokens;
 use WaaSHost\Api\RolesController;
 use WaaSHost\Api\SingleLogin;
 use WaaSHost\Commerce\Commerce;
@@ -69,8 +72,13 @@ Commerce::register(new WooCommerceAdapter());
 Commerce::boot($provisioningApi);
 
 new TenantStatusService($provisioningApi);
-// The customer's websites as a REST API (waas-host/v1/account)
-new AccountController(new WebsiteSettings($provisioningApi), $nameConflicts);
+// The customer's websites as a REST API (waas-host/v1/account), with token sign-in for front ends on other domains
+$accountTokens = new AccountTokens();
+new AccountController(new WebsiteSettings($provisioningApi), $nameConflicts, $configService, $accountTokens);
+new AccountSignIn($accountTokens);
+if (defined('WP_CLI') && WP_CLI) {
+    WP_CLI::add_command('waas-host account-client', AccountClientsCommand::class);
+}
 AdminNotices::init($configService);
 new AdminHome($configService);
 new AdminSettings($provisioningApi, $configService);
