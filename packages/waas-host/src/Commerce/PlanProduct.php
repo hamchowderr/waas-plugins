@@ -14,14 +14,17 @@ final class PlanProduct
     public string $role;
     /** Snapshot group the store starts from; '' for the default. */
     public string $group_name;
+    /** Size the store runs at (small, medium or large: CPU, memory, storage and email); '' for the platform's default. */
+    public string $size;
 
     /**
      * @param int|string $product_id
      */
-    public function __construct($product_id, string $role, string $group_name)
+    public function __construct($product_id, string $role, string $group_name, string $size = '')
     {
         $this->product_id = $product_id;
         $this->role = $role;
         $this->group_name = $group_name;
+        $this->size = $size;
     }
 }
