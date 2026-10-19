@@ -122,10 +122,10 @@ Moves the website's email back to the platform's address (within 10 minutes).
 A "Connect automatically" link, for DNS hosts that support Domain Connect: it opens the DNS host's page, which adds the records once the customer approves. `service` is `website` (for the address, the default) or `email` (for the email sender).
 
 ```json
-{ "supported": true, "url": "https://dns-host.example/…", "dns_provider": "Example DNS" }
+{ "supported": true, "url": "https://dns-host.example/…", "dns_provider": "Example DNS", "conflict": null }
 ```
 
-When the DNS host can't, `supported` is `false` and `url` is `null`: show the records to add by hand.
+When the DNS host can't, `supported` is `false` and `url` is `null`: show the records to add by hand. When the DNS host could but one-click setup would go wrong (the domain already has a different DKIM key, say), `conflict` says why and what to do, written for the customer: show it with the records.
 
 ### `POST /websites/{id}/name`
 

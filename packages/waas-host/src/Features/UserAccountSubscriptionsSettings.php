@@ -143,8 +143,9 @@ class UserAccountSubscriptionsSettings
 
     /**
      * "Connect automatically" when the domain's DNS host supports Domain Connect and has the platform's
-     * template: it opens the host's page, which adds the records once the customer approves. Otherwise
-     * nothing is shown and the records above are added by hand.
+     * template: it opens the host's page, which adds the records once the customer approves. When the API
+     * says why it can't (an older DKIM key on the domain, say), that reason instead. Otherwise nothing is
+     * shown and the records above are added by hand.
      */
     public function render_connect_button($subscription_id, string $domain_name, string $service)
     {
@@ -159,6 +160,11 @@ class UserAccountSubscriptionsSettings
             return;
         }
         if ($link === null) {
+            return;
+        }
+        if ($link['conflict'] !== null) {
+            echo '<p class="waas-dns-conflict"><strong>' . esc_html('One-click setup is off for this domain.') . '</strong> '
+                . esc_html($link['conflict']) . '</p>';
             return;
         }
         $provider = $link['dns_provider'] !== '' ? $link['dns_provider'] : 'your DNS host';

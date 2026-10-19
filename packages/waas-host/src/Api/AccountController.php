@@ -224,9 +224,11 @@ class AccountController
         }
 
         return self::response([
-            'supported' => $link !== null,
+            'supported' => !empty($link['url']),
             'url' => $link['url'] ?? null,
-            'dns_provider' => $link['dns_provider'] ?? null,
+            'dns_provider' => !empty($link['url']) ? $link['dns_provider'] : null,
+            // Why one-click setup is off for this domain, for the customer to read; null when there is no such reason.
+            'conflict' => $link['conflict'] ?? null,
         ]);
     }
 
