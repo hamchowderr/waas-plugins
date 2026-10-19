@@ -477,6 +477,7 @@ class TenantsSubscriptionManager
         }
 
         $group_name = '';
+        $size = '';
         $subscription_roles = [];
         $product_role = '';
         foreach ($purchase->plans as $plan) {
@@ -485,6 +486,7 @@ class TenantsSubscriptionManager
                 $subscription_roles[] = $product_role;
             }
             $group_name = empty($group_name) ? $plan->group_name : $group_name;
+            $size = $size === '' ? $plan->size : $size;
         }
 
         $website_name = sanitize_text_field($purchase->website_name);
@@ -493,6 +495,7 @@ class TenantsSubscriptionManager
             'wordpress_username' => SingleLoginService::get_formatted_username($subscription_id),
             'wordpress_email' => $purchase->customer_email,
             'group_name' => empty($group_name) ? null : $group_name,
+            'size' => $size === '' ? null : $size,
             'php_constants' => [
                 'WPCS_TENANT_ROLES' => ['value' => implode(",", $subscription_roles), 'isPrivate' => false],
             ],

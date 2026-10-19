@@ -109,6 +109,21 @@ class ProvisioningApiTest extends TestCase
         $this->assertSame('ext-1', $tenant->externalId);
     }
 
+    public function test_create_tenant_sends_the_plan_size(): void
+    {
+        $this->http->expects('post')
+            ->with('/v1/tenants', Mockery::on(fn ($payload) => $payload['size'] === 'large'))
+            ->andReturn((object) ['externalId' => 'ext-1']);
+
+        $this->service->create_tenant([
+            'name' => 'Shop',
+            'wordpress_username' => 'owner',
+            'wordpress_email' => 'owner@example.com',
+            'wordpress_user_role' => 'administrator',
+            'size' => 'large',
+        ]);
+    }
+
     public function test_create_tenant_sends_the_store_settings_as_wp_options(): void
     {
         $this->http->expects('post')

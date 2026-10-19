@@ -142,6 +142,10 @@ class ProvisioningApi
             $payload['groupName'] = $args['group_name'];
         }
 
+        if (isset($args['size'])) {
+            $payload['size'] = $args['size'];
+        }
+
         if (isset($args['php_constants'])) {
             $payload['phpConstants'] = $args['php_constants'];
         }

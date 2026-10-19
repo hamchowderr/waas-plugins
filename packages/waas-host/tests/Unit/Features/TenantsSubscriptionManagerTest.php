@@ -75,6 +75,16 @@ class TenantsSubscriptionManagerTest extends StoreJobsTestCase
         $this->assertCount(1, $this->actions);
     }
 
+    public function test_the_plan_size_goes_into_the_create_request(): void
+    {
+        $this->stub_new_store_functions();
+        $purchase = new PlanPurchase([new PlanProduct(101, 'online-store', '', 'medium')], 'Apex Research', 'owner@apexresearch.example', 'us');
+
+        $this->manager->create_tenant_when_subscription_created(901, $purchase);
+
+        $this->assertSame('medium', $this->queue(901)[0]['args']['request']['size']);
+    }
+
     public function test_the_create_job_sends_the_chosen_external_id_and_links_the_store(): void
     {
         $this->stub_new_store_functions();
@@ -84,6 +94,7 @@ class TenantsSubscriptionManagerTest extends StoreJobsTestCase
                 && $args['name'] === 'Apex Research'
                 && $args['custom_domain_name'] === 'apex-research.stores.waas.example'
                 && $args['group_name'] === 'peptide-starter'
+                && $args['size'] === null
                 && $args['wordpress_user_role'] === 'administrator'
                 && $args['php_constants']['WPCS_TENANT_ROLES']['value'] === 'peptide-store'
                 && $args['wp_options'] === [

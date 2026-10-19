@@ -33,14 +33,14 @@ class FluentCartAdapterTest extends TestCase
         $order = (object) ['id' => 500];
         $this->store->allows('get_order_product_ids')->with($order)->andReturn([101, 102]);
         $this->store->allows('get_plan_feed')->with(101)
-            ->andReturn(['enabled' => 'yes', 'role' => 'peptide-store', 'group_name' => 'peptide-starter']);
+            ->andReturn(['enabled' => 'yes', 'role' => 'peptide-store', 'group_name' => 'peptide-starter', 'size' => 'medium']);
         $this->store->allows('get_plan_feed')->with(102)->andReturnNull();
         $this->store->allows('get_order_meta')->with($order, Tenant::WEBSITE_NAME_META)->andReturn('Apex Research');
         $this->customer(7);
 
         $purchase = $this->adapter->get_plan_purchase(900, $order);
 
-        $this->assertEquals([new PlanProduct(101, 'peptide-store', 'peptide-starter')], $purchase->plans);
+        $this->assertEquals([new PlanProduct(101, 'peptide-store', 'peptide-starter', 'medium')], $purchase->plans);
         $this->assertSame('Apex Research', $purchase->website_name);
         $this->assertSame('owner@apexresearch.example', $purchase->customer_email);
     }

@@ -74,7 +74,7 @@ class FluentCartAdapter implements CommerceAdapter
         foreach ($this->store->get_order_product_ids($purchase_context) as $product_id) {
             $feed = $this->store->get_plan_feed($product_id);
             if ($feed !== null) {
-                $plans[] = new PlanProduct($product_id, (string) ($feed['role'] ?? ''), (string) ($feed['group_name'] ?? ''));
+                $plans[] = new PlanProduct($product_id, (string) ($feed['role'] ?? ''), (string) ($feed['group_name'] ?? ''), (string) ($feed['size'] ?? ''));
             }
         }
 

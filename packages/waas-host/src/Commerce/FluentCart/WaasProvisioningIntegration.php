@@ -10,7 +10,7 @@ use WaaSHost\Features\PluginBootstrap;
 
 /**
  * Product integration that makes a FluentCart product a website plan. Its feed stores
- * the role and snapshot group; its triggers create the store (subscription activated)
+ * the role, snapshot group and size; its triggers create the store (subscription activated)
  * and suspend it (canceled, end of term, or access revoked; deleted after the grace period). FluentCart runs product
  * feeds in the background through Action Scheduler, outside the payment request.
  */
@@ -63,6 +63,7 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
             'name' => __('Website plan', WAAS_HOST_TEXTDOMAIN),
             'role' => '',
             'group_name' => '',
+            'size' => '',
             'event_trigger' => self::DEFAULT_TRIGGERS,
             'watch_on_access_revoke' => 'yes',
         ];
@@ -113,6 +114,19 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
                 'required' => false,
                 'options' => $groups,
                 'inline_tip' => __('The website starts as a copy of this snapshot group. Leave empty for the default.', WAAS_HOST_TEXTDOMAIN),
+            ],
+            [
+                'key' => 'size',
+                'label' => __('Size', WAAS_HOST_TEXTDOMAIN),
+                'component' => 'select',
+                'is_multiple' => false,
+                'required' => false,
+                'options' => [
+                    'small' => __('Small: 1 CPU, 512 MB memory, 5 GB storage, 5,000 emails a month', WAAS_HOST_TEXTDOMAIN),
+                    'medium' => __('Medium: 2 CPUs, 512 MB memory, 10 GB storage, 20,000 emails a month', WAAS_HOST_TEXTDOMAIN),
+                    'large' => __('Large: 4 CPUs, 768 MB memory, 25 GB storage, 50,000 emails a month', WAAS_HOST_TEXTDOMAIN),
+                ],
+                'inline_tip' => __('How much computing power, storage and email the website gets. Leave empty for Small.', WAAS_HOST_TEXTDOMAIN),
             ],
             [
                 'key' => 'watch_on_access_revoke',
