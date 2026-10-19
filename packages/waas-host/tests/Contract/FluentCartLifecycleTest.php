@@ -19,7 +19,7 @@ use WaaSHost\Features\StoreJobs;
 use WaaSHost\Features\TenantsSubscriptionManager;
 
 /**
- * A FluentCart subscription from feed run to store creation and removal, against the
+ * A FluentCart subscription from feed run to store creation, suspension, resumption and removal, against the
  * provisioning API (see MockApi). FluentCart's tables are an in-memory store mock.
  *
  * @group mock
@@ -90,12 +90,11 @@ class FluentCartLifecycleTest extends TestCase
         $this->manager = new TenantsSubscriptionManager($service, $this->jobs);
         $this->integration = new WaasProvisioningIntegration($service, $store);
 
-        // Wire the two actions the integration fires to the shared code. Cancellation is wired straight to the
-        // grace-period deletion: the mock has no suspend example yet (waas-api-2hl.5); the unit tests cover suspend.
+        // Wire the actions the integration fires to the shared code, as the manager's own add_action calls do.
         Actions\expectDone('waas_subscription_created')->zeroOrMoreTimes()
             ->whenHappen(fn ($id, $order) => $this->manager->create_tenant_when_subscription_created($id, $order));
         Actions\expectDone('waas_subscription_expired')->zeroOrMoreTimes()
-            ->whenHappen(fn ($id) => $this->manager->delete_suspended_tenant($id));
+            ->whenHappen(fn ($id) => $this->manager->suspend_tenant_when_subscription_expired($id));
         Actions\expectDone('waas_subscription_canceled_until')->zeroOrMoreTimes()
             ->whenHappen(fn ($id, $until) => $this->manager->suspend_at_end_of_paid_period($id, $until));
     }
@@ -147,16 +146,53 @@ class FluentCartLifecycleTest extends TestCase
         $this->assertSame([], $this->requests);
     }
 
-    public function test_cancel_ends_with_deleting_the_suspended_store_by_external_id(): void
+    public function test_cancel_backs_up_and_suspends_the_store_then_deletes_it_after_the_grace_period(): void
     {
         $this->meta[self::SUBSCRIPTION_ID][Tenant::TENANT_EXTERNAL_ID_META] = 'store-1042';
-        $this->meta[self::SUBSCRIPTION_ID][Tenant::TENANT_STATE] = Tenant::SUSPENDED;
-        $this->mock_example('Delete tenant: Scheduled');
+        $this->meta[self::SUBSCRIPTION_ID][Tenant::TENANT_STATE] = Tenant::READY;
+        $this->mock_example('Suspend tenant: Scheduled with backup');
 
         $this->run_feed('subscription_canceled');
 
-        $this->assertSame('DELETE', $this->requests[0][0]);
-        $this->assertStringEndsWith('/v1/tenants?externalId=store-1042', $this->requests[0][1]);
+        $this->assertCount(1, $this->requests);
+        $this->assertSame('POST', $this->requests[0][0]);
+        $this->assertStringEndsWith('/v1/tenants/suspend?externalId=store-1042', $this->requests[0][1]);
+        $this->assertSame(['takeBackup' => true], json_decode($this->requests[0][3], true));
+        $meta = $this->meta[self::SUBSCRIPTION_ID];
+        $this->assertSame(Tenant::SUSPENDED, $meta[Tenant::TENANT_STATE]);
+        $this->assertSame(Tenant::SUSPENDED_ENDED, $meta[Tenant::TENANT_SUSPEND_REASON_META]);
+        $this->assertSame([[$meta[Tenant::TENANT_DELETE_AT_META], TenantsSubscriptionManager::DELETE_SUSPENDED_TENANT_HOOK, [self::SUBSCRIPTION_ID]]], $this->scheduled);
+
+        // The grace period is over: WP-cron fires the deletion it scheduled.
+        $this->mock_example('Delete tenant: Scheduled');
+        $this->manager->delete_suspended_tenant(self::SUBSCRIPTION_ID);
+        $this->run_store_jobs($this->jobs, self::SUBSCRIPTION_ID);
+
+        $this->assertSame('DELETE', $this->requests[1][0]);
+        $this->assertStringEndsWith('/v1/tenants?externalId=store-1042', $this->requests[1][1]);
+        $this->assertSame(Tenant::DELETED, $this->meta[self::SUBSCRIPTION_ID][Tenant::TENANT_STATE]);
+    }
+
+    public function test_reactivation_in_the_grace_period_resumes_the_suspended_store(): void
+    {
+        $this->meta[self::SUBSCRIPTION_ID] = [
+            Tenant::TENANT_EXTERNAL_ID_META => 'store-1042',
+            Tenant::TENANT_STATE => Tenant::SUSPENDED,
+            Tenant::TENANT_SUSPEND_REASON_META => Tenant::SUSPENDED_ENDED,
+            Tenant::TENANT_DELETE_AT_META => time() + 20 * DAY_IN_SECONDS,
+        ];
+        $this->mock_example('Resume tenant: Scheduled');
+
+        // A late payment: FluentCart's subscription_reactivated is a create trigger, which resumes a suspended store.
+        $this->run_feed('subscription_reactivated');
+
+        $this->assertCount(1, $this->requests, 'the store is resumed, not created again');
+        $this->assertSame('POST', $this->requests[0][0]);
+        $this->assertStringEndsWith('/v1/tenants/resume?externalId=store-1042', $this->requests[0][1]);
+        $meta = $this->meta[self::SUBSCRIPTION_ID];
+        $this->assertSame(Tenant::READY, $meta[Tenant::TENANT_STATE]);
+        $this->assertSame('', $meta[Tenant::TENANT_DELETE_AT_META]);
+        $this->assertSame('', $meta[Tenant::TENANT_SUSPEND_REASON_META]);
     }
 
     public function test_a_cancel_with_paid_time_left_waits_for_the_end_of_the_period(): void
@@ -172,8 +208,7 @@ class FluentCartLifecycleTest extends TestCase
         $this->assertSame($this->paid_through, $this->meta[self::SUBSCRIPTION_ID][Tenant::TENANT_SUSPEND_AT_META]);
         $this->assertSame([[$this->paid_through, TenantsSubscriptionManager::SUSPEND_AT_PERIOD_END_HOOK, [self::SUBSCRIPTION_ID]]], $this->scheduled);
 
-        // The end of the paid period, with the subscription still cancelled: the usual cancel path. Its suspend job is
-        // not run here: the mock has no suspend example yet (waas-api-2hl.5); the unit tests run it.
+        // The end of the paid period, with the subscription still cancelled: the usual cancel path.
         $this->manager->paid_period_ended(self::SUBSCRIPTION_ID);
 
         $this->assertSame(Tenant::SUSPENDED, $this->meta[self::SUBSCRIPTION_ID][Tenant::TENANT_STATE]);
@@ -182,5 +217,12 @@ class FluentCartLifecycleTest extends TestCase
         $this->assertTrue($queue[0]['args']['backup']);
         $this->assertSame(TenantsSubscriptionManager::DELETE_SUSPENDED_TENANT_HOOK, end($this->scheduled)[1]);
         $this->assertSame([], $this->requests);
+
+        $this->mock_example('Suspend tenant: Scheduled with backup');
+        $this->run_store_jobs($this->jobs, self::SUBSCRIPTION_ID);
+
+        $this->assertSame('POST', $this->requests[0][0]);
+        $this->assertStringEndsWith('/v1/tenants/suspend?externalId=store-1042', $this->requests[0][1]);
+        $this->assertSame(['takeBackup' => true], json_decode($this->requests[0][3], true));
     }
 }
