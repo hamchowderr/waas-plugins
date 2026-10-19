@@ -314,6 +314,23 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
         $this->assertSame('', ob_get_clean());
     }
 
+    public function test_says_why_there_is_no_connect_button_when_the_api_gives_a_reason(): void
+    {
+        $this->stubMailRender();
+        $this->api->allows('domain_connect')->andReturn((object) [
+            'dnsProvider' => 'Cloudflare',
+            'supported' => false,
+            'url' => null,
+            'conflict' => 'tosend._domainkey.mail.example.com already has a different email signing (DKIM) key. Replace it <by hand>.',
+        ]);
+        ob_start();
+        $this->settings->render_connect_button(self::SUBSCRIPTION_ID, 'mail.example.com', 'email');
+        $html = ob_get_clean();
+        $this->assertStringContainsString('One-click setup is off for this domain.', $html);
+        $this->assertStringContainsString('already has a different email signing (DKIM) key. Replace it &lt;by hand&gt;.', $html);
+        $this->assertStringNotContainsString('<a ', $html);
+    }
+
     private function stubMailRender(): void
     {
         Functions\when('esc_url')->alias(fn ($v) => htmlspecialchars($v, ENT_QUOTES));

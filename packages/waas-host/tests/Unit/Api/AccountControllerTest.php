@@ -340,7 +340,7 @@ class AccountControllerTest extends TestCase
             ->andReturn((object) ['supported' => true, 'url' => 'https://dns.example.net/connect', 'dnsProvider' => 'Example DNS']);
 
         $this->assertSame(
-            ['supported' => true, 'url' => 'https://dns.example.net/connect', 'dns_provider' => 'Example DNS'],
+            ['supported' => true, 'url' => 'https://dns.example.net/connect', 'dns_provider' => 'Example DNS', 'conflict' => null],
             $this->call('GET', self::ID . '/domain-connect', self::WEBSITE, ['domain' => 'mail.example.com', 'service' => 'email'])->get_data()
         );
     }
@@ -351,10 +351,25 @@ class AccountControllerTest extends TestCase
             (object) ['supported' => false, 'url' => null, 'dnsProvider' => 'Other DNS'],
             (object) ['supported' => true, 'url' => 'javascript:alert(1)', 'dnsProvider' => 'Other DNS']
         );
-        $unsupported = ['supported' => false, 'url' => null, 'dns_provider' => null];
+        $unsupported = ['supported' => false, 'url' => null, 'dns_provider' => null, 'conflict' => null];
 
         $this->assertSame($unsupported, $this->call('GET', self::ID . '/domain-connect', self::WEBSITE, ['domain' => 'apex.example.com'])->get_data());
         $this->assertSame($unsupported, $this->call('GET', self::ID . '/domain-connect', self::WEBSITE, ['domain' => 'apex.example.com'])->get_data());
+    }
+
+    public function test_domain_connect_passes_on_why_there_is_no_link(): void
+    {
+        $this->api->expects('domain_connect')->andReturn((object) [
+            'supported' => false,
+            'url' => null,
+            'dnsProvider' => 'Cloudflare',
+            'conflict' => 'tosend._domainkey.mail.example.com already has a different email signing (DKIM) key.',
+        ]);
+
+        $this->assertSame(
+            ['supported' => false, 'url' => null, 'dns_provider' => null, 'conflict' => 'tosend._domainkey.mail.example.com already has a different email signing (DKIM) key.'],
+            $this->call('GET', self::ID . '/domain-connect', self::WEBSITE, ['domain' => 'mail.example.com', 'service' => 'email'])->get_data()
+        );
     }
 
     public function test_domain_connect_refuses_an_invalid_domain(): void

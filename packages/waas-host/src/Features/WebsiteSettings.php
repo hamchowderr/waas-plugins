@@ -136,11 +136,13 @@ class WebsiteSettings
     }
 
     /**
-     * The Domain Connect link that adds the DNS records for $domain at its DNS host, or null when the host can't
-     * (no Domain Connect, or not the platform's template) or the answer is not a safe https link.
+     * The Domain Connect link that adds the DNS records for $domain at its DNS host, or why there is none when the
+     * host could make one (`conflict`, from the API and written for the customer: say, an older DKIM key already on
+     * the domain). Null when the host can't (no Domain Connect, or not the platform's template) or the answer is not
+     * a safe https link.
      *
      * @param string $service website (the website's address) or email (its sending domain)
-     * @return array{url: string, dns_provider: string}|null
+     * @return array{url: string|null, dns_provider: string, conflict: string|null}|null
      * @throws WebsiteSettingsError when the API can't be reached
      */
     public function domain_connect_link($subscription_id, string $domain, string $service): ?array
@@ -150,14 +152,16 @@ class WebsiteSettings
         } catch (Exception $e) {
             throw WebsiteSettingsError::from_api($e);
         }
+        $provider = is_string($link->dnsProvider ?? null) ? $link->dnsProvider : '';
+        $conflict = is_string($link->conflict ?? null) ? trim($link->conflict) : '';
+        if ($conflict !== '') {
+            return ['url' => null, 'dns_provider' => $provider, 'conflict' => $conflict];
+        }
         if (empty($link->supported) || empty($link->url) || !is_string($link->url) || strpos($link->url, 'https://') !== 0) {
             return null;
         }
 
-        return [
-            'url' => $link->url,
-            'dns_provider' => is_string($link->dnsProvider ?? null) ? $link->dnsProvider : '',
-        ];
+        return ['url' => $link->url, 'dns_provider' => $provider, 'conflict' => null];
     }
 
     /** The API's own explanation for a refused request (400), else a generic message. */
