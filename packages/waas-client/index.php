@@ -6,9 +6,9 @@ require_once(ABSPATH . '/wp-admin/includes/plugin.php');
 /*
 Plugin Name: WaaS Client
 Plugin URI: https://github.com/hamchowderr/waas-plugins
-Description: Runs on each WaaS store: one-click login from the storefront, and turns plugins on or off to match the store's plan (roles).
+Description: Runs on each WaaS store: one-click login from the storefront, turns plugins on or off to match the store's plan (roles), and lets the AnyPress connector edit the site's design and content.
 Author: Otaku Solutions
-Version: 2.2.7
+Version: 2.3.0
 Author URI: https://otakusolutions.io
 Update URI: wpcs-waas-client
 License: GPL-3.0-or-later
@@ -19,10 +19,11 @@ Text Domain: waas-client
 define( 'WAAS_CLIENT_SLUG', 'wpcs-waas-client' );
 define( 'WAAS_CLIENT_BASENAME', plugin_basename( __FILE__ ) );
 define( 'WAAS_CLIENT_UPDATE_URI', 'wpcs-waas-client' );
-define( 'WAAS_CLIENT_VERSION', '2.2.7' );
+define( 'WAAS_CLIENT_VERSION', '2.3.0' );
 define( 'WAAS_CLIENT_TEXTDOMAIN', 'waas-client' );
 
 use WaaSClient\Api\SingleSignOnController;
+use WaaSClient\Api\SiteController;
 use WaaSClient\Core\DecryptionService;
 use WaaSClient\Core\HttpService;
 use WaaSClient\Features\AdminRolesSettings;
@@ -30,6 +31,7 @@ use WaaSClient\Features\PluginBootstrap;
 use WaaSClient\Features\RolesManager;
 use WaaSClient\Features\AdminTenantSettings;
 use WaaSClient\Features\CustomerPlanPage;
+use WaaSClient\Features\ConnectPage;
 
 if (!wp_doing_ajax()) {
     define("WAAS_PLUGIN_DIR_URI", plugin_dir_url(__FILE__));
@@ -48,6 +50,11 @@ if (!wp_doing_ajax()) {
     PluginBootstrap::init();
 
     new SingleSignOnController($decryptionService);
+
+    // Design and content for the AnyPress connector; answers only requests signed with the store's site key.
+    new SiteController();
+    // "Sign in with your website": the page where a store owner allows an AI app to edit this website.
+    new ConnectPage();
 
     // No self-update: a store's waas-client comes with its template version, and the store gets a
     // newer one by moving to a newer version (waas-hw4). Update URI keeps wordpress.org out.
