@@ -8,7 +8,7 @@ Plugin Name: WaaS Client
 Plugin URI: https://github.com/hamchowderr/waas-plugins
 Description: Runs on each WaaS store: one-click login from the storefront, turns plugins on or off to match the store's plan (roles), and lets the AnyPress connector edit the site's design and content.
 Author: Otaku Solutions
-Version: 2.3.1
+Version: 2.4.0
 Author URI: https://otakusolutions.io
 Update URI: wpcs-waas-client
 License: GPL-3.0-or-later
@@ -19,7 +19,7 @@ Text Domain: waas-client
 define( 'WAAS_CLIENT_SLUG', 'wpcs-waas-client' );
 define( 'WAAS_CLIENT_BASENAME', plugin_basename( __FILE__ ) );
 define( 'WAAS_CLIENT_UPDATE_URI', 'wpcs-waas-client' );
-define( 'WAAS_CLIENT_VERSION', '2.3.1' );
+define( 'WAAS_CLIENT_VERSION', '2.4.0' );
 define( 'WAAS_CLIENT_TEXTDOMAIN', 'waas-client' );
 
 use WaaSClient\Api\SingleSignOnController;
