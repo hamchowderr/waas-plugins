@@ -1,0 +1,34 @@
+name: PR Preview - Publish
+# Adds a "Preview in WordPress Playground" button to the pull request: a throwaway storefront with WaaS Host,
+# FluentCart and Ollie, signed in as admin on WaaS Host's Getting started page. GitHub runs this file from main
+# only, so changes to it take effect after they merge.
+on:
+  workflow_run:
+    workflows: ["PR Preview - Build"]
+    types: [completed]
+
+jobs:
+  publish:
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: WordPress/action-wp-playground-pr-preview/.github/workflows/preview-publish.yml@v4
+    with:
+      blueprint: |
+        {
+          "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+          "landingPage": "/wp-admin/admin.php?page=waas-admin",
+          "preferredVersions": { "php": "8.3", "wp": "latest" },
+          "steps": [
+            { "step": "login", "username": "admin" },
+            { "step": "installTheme",
+              "themeData": { "resource": "wordpress.org/themes", "slug": "ollie" },
+              "options": { "activate": true } },
+            { "step": "installPlugin",
+              "pluginData": { "resource": "wordpress.org/plugins", "slug": "fluent-cart" },
+              "options": { "activate": true } },
+            { "step": "installPlugin",
+              "pluginData": { "resource": "url", "url": "{{ARTIFACT_URL:waas-host}}" },
+              "options": { "activate": true } }
+          ]
+        }

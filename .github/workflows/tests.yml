@@ -87,3 +87,33 @@ jobs:
         run: composer install --no-interaction --no-progress
       - name: Run contract tests
         run: composer test -- --group mock
+
+  playground:
+    # WaaS Client on real WordPress (WordPress Playground: WordPress and PHP in Node, no Docker) with the Ollie
+    # theme and the store template's starter pages, calling the AnyPress connector's site-editing routes.
+    name: waas-client on WordPress Playground
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/waas-client
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: Smoke test
+        working-directory: scripts/playground
+        run: npm run smoke

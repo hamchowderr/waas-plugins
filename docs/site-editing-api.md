@@ -49,7 +49,7 @@ A section is a top-level block of a page (the whitespace between blocks doesn't 
 
 - Content goes through WordPress's post HTML filter (`wp_kses_post`), so scripts and event attributes are removed, as for an author without `unfiltered_html`. Style changes go through `WP_Theme_JSON::remove_insecure_properties`.
 - No route runs code, installs plugins or themes, or changes settings outside design and content.
-- WordPress keeps a revision of every page, header, footer, menu and style change.
+- WordPress keeps a revision of every page, header, footer, menu and style change. Before the first change to one that has no revision yet (a page from the template or a new draft), its current state is saved as a revision too, so that first change can be undone.
 
 ## Sign in with your website
 
