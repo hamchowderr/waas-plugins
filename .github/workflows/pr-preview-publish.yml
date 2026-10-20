@@ -1,7 +1,9 @@
 name: PR Preview - Publish
 # Adds a "Preview in WordPress Playground" button to the pull request: a throwaway storefront with WaaS Host,
-# FluentCart and Ollie, signed in as admin on WaaS Host's Getting started page. GitHub runs this file from main
-# only, so changes to it take effect after they merge.
+# FluentCart and Ollie, signed in as admin on WaaS Host's Getting started page. Playground in the browser only
+# has SQLite, so FluentCart shows a "requires MySQL/MariaDB" notice there; it still installs its tables and its
+# pages open, but check real orders and payments on a store (MariaDB) or scripts/test-env.sh. GitHub runs this
+# file from main only, so changes to it take effect after they merge.
 on:
   workflow_run:
     workflows: ["PR Preview - Build"]

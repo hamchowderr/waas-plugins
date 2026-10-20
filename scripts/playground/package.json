@@ -2,13 +2,14 @@
   "name": "waas-plugins-playground",
   "private": true,
   "type": "module",
-  "description": "Runs the WaaS plugins on WordPress Playground (WordPress in Node, no Docker) for smoke tests.",
+  "description": "Runs the WaaS plugins and AnyPress Export on WordPress Playground (WordPress in Node, no Docker) for end-to-end tests.",
   "engines": {
     "node": ">=24.18"
   },
   "scripts": {
     "smoke": "node smoke.mjs",
-    "serve": "node smoke.mjs --serve"
+    "serve": "node smoke.mjs --serve",
+    "export": "node export.mjs"
   },
   "dependencies": {
     "@wp-playground/cli": "3.1.59"
