@@ -82,6 +82,10 @@ unzip -p "$work/other-builds/wpcs-waas-host.zip" waas-host/index.php | grep -q "
 unzip -p "$work/other-builds/wpcs-waas-host.zip" waas-host/index.php | grep -q '^ \* @version 9.9.9$' || fail "waas-host @version not stamped"
 unzip -p "$work/other-builds/wpcs-waas-client.zip" waas-client/index.php | grep -q "define( 'WAAS_CLIENT_VERSION', '9.9.9' );" || fail "waas-client not stamped"
 ok "waas-host and waas-client build and stamp too"
+"$here/build.sh" anypress-export 9.9.9 "$work/other-builds" > /dev/null
+unzip -p "$work/other-builds/anypress-export.zip" anypress-export/anypress-export.php | grep -q "define('ANYPRESS_EXPORT_VERSION', '9.9.9');" || fail "anypress-export not stamped"
+unzip -p "$work/other-builds/anypress-export.zip" anypress-export/anypress-export.php | grep -q '^Version: 9.9.9$' || fail "anypress-export header not stamped"
+ok "anypress-export builds and stamps too"
 "$here/build.sh" waas-payments latest "$work/x" 2>/dev/null && fail "accepted a bad version"
 ok "a bad version is refused"
 

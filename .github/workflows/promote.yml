@@ -8,7 +8,7 @@ on:
       package:
         description: Plugin
         type: choice
-        options: [waas-host, waas-client, waas-payments]
+        options: [waas-host, waas-client, waas-payments, anypress-export]
       version:
         description: 'Released version, like 2.3.0-beta.2'
         required: true

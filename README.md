@@ -108,6 +108,10 @@ WooCommerce products keep their WaaS settings through WooCommerce's product obje
 
 `packages/waas-payments` adds Authorize.Net card payments to FluentCart, including subscriptions charged automatically on renewal. Subscriptions need **FluentCart > Settings > Subscriptions: Store managed** with **Automatic charge** on. Setup: [packages/waas-payments/README.md](packages/waas-payments/README.md).
 
+## AnyPress Export
+
+`packages/anypress-export` moves a WordPress site from another host into an AnyPress store. On AnyPress, *Move a site in* creates a store that waits for the site and shows an import code. The site owner installs AnyPress Export on the old site, opens **Tools → Move to AnyPress** and pastes the code, or runs `wp anypress-export send <code>`. The plugin packs the database and `wp-content` in short steps that carry on after a timeout, uploads them and starts the move; the old site is never changed. The store keeps the site's own plugins and themes. It needs PHP 7.4+, zlib and cURL, and doesn't move multisite networks. More: [packages/anypress-export/README.md](packages/anypress-export/README.md).
+
 ## Account API
 
 WaaS Host has a REST API for the signed-in customer's websites (`waas-host/v1/account`): list them, sign in to one, change its address, set up its email sender, and choose a new name. Pages on the storefront call it with the login cookie; a front end on another domain signs the customer in with token sign-in (OAuth 2.0 with PKCE). How: [docs/account-api.md](docs/account-api.md).
@@ -130,7 +134,7 @@ The rest of this page is for working on the plugins themselves.
 
 ### Local development
 
-Each plugin is a Composer package under `packages/` (`waas-host`, `waas-client`, `waas-payments`, and the shared `waas-updater`). Run `composer install` in the one you work on. The quickest way to see the Host plugin running is the test environment below.
+Each plugin is a Composer package under `packages/` (`waas-host`, `waas-client`, `waas-payments`, `anypress-export`, and the shared `waas-updater`). Run `composer install` in the one you work on. The quickest way to see the Host plugin running is the test environment below.
 
 ### Test environment
 
