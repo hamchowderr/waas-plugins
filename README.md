@@ -164,7 +164,7 @@ npm run smoke    # the checks; exits 1 on a failure
 npm run serve    # the same site left running at http://127.0.0.1:9400, signed in as admin
 ```
 
-Playground keeps the database in SQLite rather than MariaDB, so it checks the plugin's PHP and WordPress behaviour; database-specific SQL still needs a real store or `test-env.sh`. Pull requests also get a "Preview in WordPress Playground" button: a throwaway storefront with that PR's WaaS Host, WooCommerce (with Subscriptions for WooCommerce) and Ollie; FluentCart needs MySQL or MariaDB, which Playground in the browser doesn't have (`pr-preview-build.yml` and `pr-preview-publish.yml`).
+Playground keeps the database in SQLite rather than MariaDB, so it checks the plugin's PHP and WordPress behaviour; database-specific SQL still needs a real store or `test-env.sh`. Pull requests also get a "Preview in WordPress Playground" button: a throwaway storefront with that PR's WaaS Host, FluentCart and Ollie. FluentCart there shows a "requires MySQL/MariaDB" notice because Playground only has SQLite; its pages work, but check real orders and payments on a store (`pr-preview-build.yml` and `pr-preview-publish.yml`).
 
 ### Tests
 
