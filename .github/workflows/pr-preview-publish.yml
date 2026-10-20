@@ -1,7 +1,9 @@
 name: PR Preview - Publish
 # Adds a "Preview in WordPress Playground" button to the pull request: a throwaway storefront with WaaS Host,
-# FluentCart and Ollie, signed in as admin on WaaS Host's Getting started page. GitHub runs this file from main
-# only, so changes to it take effect after they merge.
+# WooCommerce with Subscriptions for WooCommerce, and Ollie, signed in as admin on WaaS Host's Getting started
+# page. Playground in the browser only has SQLite, which FluentCart refuses, so the preview uses WooCommerce;
+# FluentCart still needs a real store or scripts/test-env.sh. GitHub runs this file from main only, so changes
+# to it take effect after they merge.
 on:
   workflow_run:
     workflows: ["PR Preview - Build"]
@@ -25,7 +27,10 @@ jobs:
               "themeData": { "resource": "wordpress.org/themes", "slug": "ollie" },
               "options": { "activate": true } },
             { "step": "installPlugin",
-              "pluginData": { "resource": "wordpress.org/plugins", "slug": "fluent-cart" },
+              "pluginData": { "resource": "wordpress.org/plugins", "slug": "woocommerce" },
+              "options": { "activate": true } },
+            { "step": "installPlugin",
+              "pluginData": { "resource": "wordpress.org/plugins", "slug": "subscriptions-for-woocommerce" },
               "options": { "activate": true } },
             { "step": "installPlugin",
               "pluginData": { "resource": "url", "url": "{{ARTIFACT_URL:waas-host}}" },

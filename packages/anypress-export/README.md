@@ -36,6 +36,8 @@ composer install
 composer test
 ```
 
+End to end on WordPress Playground (WordPress and PHP in Node; Node 24.18+): with `composer install --no-dev` here, `cd scripts/playground && npm ci && npm run export` builds a messy site (cache drop-in, cache and backup folders, tricky text, a table without a primary key, a 3 MB upload), moves it to a stand-in AnyPress API in short requests and checks the archive. CI runs it on every pull request.
+
 How it works: `Exporter` runs the steps (database, file list, pack, upload, start) as a state machine whose state is saved in the `anypress_export_state` option between requests. `SqlDump` writes the database in batches, `TarGz` writes a gzipped tar that grows one gzip member per request (so a large file can be split across requests at any byte), and `Api` talks to the AnyPress API with the import code as its only credential. For a local API on plain HTTP, define `ANYPRESS_EXPORT_ALLOW_HTTP` as true.
 
 License: GPL-3.0-or-later.

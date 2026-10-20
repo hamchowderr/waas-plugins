@@ -63,7 +63,8 @@ final class WpdbDatabase implements Database
 
     public function escape(string $value): string
     {
-        return $this->wpdb->_real_escape($value);
+        // _real_escape also swaps every % for a placeholder meant for wpdb::prepare(); a dump must keep the %.
+        return $this->wpdb->remove_placeholder_escape($this->wpdb->_real_escape($value));
     }
 
     public static function quote(string $name): string

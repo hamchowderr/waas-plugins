@@ -117,3 +117,33 @@ jobs:
       - name: Smoke test
         working-directory: scripts/playground
         run: npm run smoke
+
+  playground-export:
+    # AnyPress Export on a messy WordPress Playground site, moved to a stand-in AnyPress API in many short
+    # requests; checks the archive that arrives (files, database dump, a file split across requests).
+    name: anypress-export on WordPress Playground
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/anypress-export
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: Export test
+        working-directory: scripts/playground
+        run: npm run export
