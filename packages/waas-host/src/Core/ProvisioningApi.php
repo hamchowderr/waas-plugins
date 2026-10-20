@@ -215,6 +215,21 @@ class ProvisioningApi
         ]);
     }
 
+    /**
+     * Adds an email pack to the store's allowance: $emails more emails, kept until used. $reference makes the call
+     * idempotent (the same reference adds the pack once), so a retry is safe. The answer is
+     * {tenantId, externalId, emailPacks}: emailPacks is the store's total bought in packs.
+     *
+     * @throws \Exception
+     */
+    public function add_email_packs($external_id, int $emails, string $reference)
+    {
+        return $this->httpService->post('/v1/tenants/email-packs?externalId=' . rawurlencode((string) $external_id), [
+            'emails' => $emails,
+            'reference' => $reference,
+        ]);
+    }
+
     public function add_tenant_domain($args)
     {
         $this->httpService->post('/v1/tenants/domains?externalId=' . $args['external_id'], [

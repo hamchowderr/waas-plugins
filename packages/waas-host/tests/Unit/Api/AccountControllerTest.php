@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Api;
 
+use Brain\Monkey\Filters;
 use Brain\Monkey\Functions;
 use Mockery;
 use Tests\FakeCommerceAdapter;
@@ -278,6 +279,7 @@ class AccountControllerTest extends TestCase
                 'can_log_in' => false,
                 'needs_new_name' => true,
                 'manage_plan_url' => 'https://storefront.example/account/subscriptions/44',
+                'buy_emails_url' => null,
             ],
             [
                 'id' => self::WEBSITE,
@@ -288,8 +290,21 @@ class AccountControllerTest extends TestCase
                 'can_log_in' => true,
                 'needs_new_name' => false,
                 'manage_plan_url' => 'https://storefront.example/account/subscriptions/42',
+                'buy_emails_url' => null,
             ],
         ], $response->get_data()['websites']);
+    }
+
+    public function test_lists_the_email_pack_checkout_when_the_cart_sells_one(): void
+    {
+        Filters\expectApplied('waas_buy_emails_url')->andReturnUsing(function ($url, $subscription_id) {
+            return $subscription_id === self::WEBSITE ? 'https://storefront.example/?fluent-cart=instant_checkout&item_id=9&quantity=1&waas_website=42' : $url;
+        });
+
+        $websites = array_column($this->call('GET', '/websites')->get_data()['websites'], 'buy_emails_url', 'id');
+
+        $this->assertSame('https://storefront.example/?fluent-cart=instant_checkout&item_id=9&quantity=1&waas_website=42', $websites[self::WEBSITE]);
+        $this->assertNull($websites[self::WAITING_FOR_NAME]);
     }
 
     public function test_login_returns_a_fresh_sign_in_link(): void

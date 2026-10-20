@@ -15,6 +15,7 @@ How the three plugins work and fit together, with diagrams: [docs/architecture](
 - Creates the website when the subscription starts; suspends, backs up and deletes it when the subscription ends (after the paid period, then a grace period); resumes or restores it if the customer comes back.
 - **My website** in FluentCart's customer portal (the subscription page on WooCommerce): status, one-click login, the customer's own domain, and sending the store's email from their own domain. Where the customer's DNS host supports Domain Connect, a **Connect automatically** button adds the DNS records for them.
 - Plan roles and snapshot groups per product.
+- **Email packs** (FluentCart): one-time products that add emails to one of the customer's websites, bought from a **Buy more emails** link on each website ([Email packs](#email-packs)).
 - Updates itself through the provisioning API, which serves signed releases.
 
 **WaaS Client** (in every store): one-click login from the storefront, plugin access by plan role (`roles.json`), and a site-editing API that lets the AnyPress connector change the store's pages, design, header, footer and menus for an AI agent.
@@ -67,6 +68,20 @@ Notes:
 - On FluentCart, the WaaS integration's triggers decide the above. Integrations made with an older version get the "paid late" trigger added the first time they load, unless their triggers were changed by hand.
 - On WooCommerce, website data is stored through WooCommerce's order API, so it works with High-Performance Order Storage on or off.
 - Both carts fire the same actions, which developers can hook into: `waas_subscription_created`, `waas_subscription_suspended`, `waas_subscription_reactivated`, `waas_subscription_renewed`, `waas_subscription_expired` and `waas_subscription_canceled_until`.
+
+### Email packs
+
+On FluentCart, a website can buy more email than its plan sends each month. Pack emails never expire: the website uses them once its plan's monthly emails run out, and they let its paused FluentCRM campaigns send again.
+
+**Set up a pack.** Make a one-time (not subscription) product, open **Integrations**, add **WaaS Provisioning**, set **Product type** to **Email pack** and **Emails per pack** to the number of emails one pack adds (1 to 1,000,000). Role, snapshot group, size and triggers don't apply to a pack. That's all: there is no setting to turn on, and the links appear once a published pack product exists. Several pack products (e.g. 5,000 and 50,000 emails) each get their own link. Integrations made before **Product type** existed are website plans, and a pack is never treated as one: it gets no website name field at checkout, creates or suspends no website, and doesn't count toward or get the volume discount.
+
+**How a customer buys one.** Each website under **My website** that has a store gets a **Buy more emails** link: FluentCart's instant checkout for the pack, carrying the website's subscription id, e.g. `https://shop.example.com/?fluent-cart=instant_checkout&item_id=<pack variation id>&quantity=1&waas_website=<subscription id>`. FluentCart passes `waas_website` on to the checkout page, where it is kept in the cart, then on the order (`_waas_email_pack_website`). The customer can change the quantity at checkout.
+
+**When the order is paid**, each pack line adds *emails per pack × quantity* to the website through the provisioning API (`POST /v1/tenants/email-packs`), with the reference `fluentcart-order-<order id>-<line id>`, so the API adds a line once however often it is sent. The order gets a note for each line with the emails added and the website's total bought in packs.
+
+- The website must belong to the order's customer. If it doesn't, or it has been deleted, nothing is added and the order gets a note.
+- An order without a website (a pack bought from the shop page) goes to the customer's only live website. With none or several, nothing is added and the order gets a note for the shop owner to add the emails by hand.
+- If the API call fails, the order gets a note, the error is logged, and it is retried after 1, 5, 15, 30 and 60 minutes. After that the order is listed in an admin notice with a **Retry** link, and `waas_email_packs_failed` fires. Retrying is safe: lines already added are skipped and the reference stops a line being added twice.
 
 ## API base URL
 

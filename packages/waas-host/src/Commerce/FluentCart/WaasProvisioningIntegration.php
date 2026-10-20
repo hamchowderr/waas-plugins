@@ -13,6 +13,10 @@ use WaaSHost\Features\PluginBootstrap;
  * the role, snapshot group and size; its triggers create the store (subscription activated)
  * and suspend it (canceled, end of term, or access revoked; deleted after the grace period). FluentCart runs product
  * feeds in the background through Action Scheduler, outside the payment request.
+ *
+ * The same feed with "Product type: Email pack" makes the product an email pack instead: buying it adds
+ * "Emails per pack" emails (times the quantity) to one of the customer's websites (FluentCartEmailPacks). A pack is
+ * never a website plan, and its feed's triggers do nothing. Feeds saved before the product type existed are plans.
  */
 class WaasProvisioningIntegration extends BaseIntegrationManager
 {
@@ -30,6 +34,13 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
      */
     public const DEFAULT_TRIGGERS = ['subscription_activated', 'subscription_reactivated', 'subscription_canceled', 'subscription_eot'];
 
+    /** product_type values. A feed without one is a website plan. */
+    public const PRODUCT_TYPE_PLAN = 'plan';
+    public const PRODUCT_TYPE_EMAIL_PACK = 'email_pack';
+
+    /** The most emails one pack line may add (the API's limit per call). */
+    public const MAX_EMAILS_PER_PACK = 1000000;
+
     public $scopes = ['product'];
 
     private ProvisioningApi $provisioning_api;
@@ -41,7 +52,7 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
 
         $this->provisioning_api = $provisioning_api;
         $this->store = $store;
-        $this->description = __('Create a website for the customer when they subscribe to this product. When the subscription ends, the website is backed up and taken offline, then deleted after the grace period set in the WaaS settings.', WAAS_HOST_TEXTDOMAIN);
+        $this->description = __('Create a website for the customer when they subscribe to this product. When the subscription ends, the website is backed up and taken offline, then deleted after the grace period set in the WaaS settings. Or set Product type to Email pack to sell extra emails for a website.', WAAS_HOST_TEXTDOMAIN);
         $this->disableGlobalSettings = true;
     }
 
@@ -61,6 +72,8 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
         return [
             'enabled' => 'yes',
             'name' => __('Website plan', WAAS_HOST_TEXTDOMAIN),
+            'product_type' => self::PRODUCT_TYPE_PLAN,
+            'emails_per_pack' => '',
             'role' => '',
             'group_name' => '',
             'size' => '',
@@ -92,6 +105,26 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
                 'required' => true,
                 'component' => 'text',
                 'placeholder' => __('Website plan', WAAS_HOST_TEXTDOMAIN),
+            ],
+            [
+                'key' => 'product_type',
+                'label' => __('Product type', WAAS_HOST_TEXTDOMAIN),
+                'component' => 'select',
+                'is_multiple' => false,
+                'required' => false,
+                'options' => [
+                    self::PRODUCT_TYPE_PLAN => __('Website plan', WAAS_HOST_TEXTDOMAIN),
+                    self::PRODUCT_TYPE_EMAIL_PACK => __('Email pack', WAAS_HOST_TEXTDOMAIN),
+                ],
+                'inline_tip' => __('A website plan is a subscription that creates a website. An email pack is a one-time product that adds emails to one of the customer\'s websites; the emails never expire and are used once the plan\'s monthly emails run out. For an email pack, only "Emails per pack" below applies.', WAAS_HOST_TEXTDOMAIN),
+            ],
+            [
+                'key' => 'emails_per_pack',
+                'label' => __('Emails per pack', WAAS_HOST_TEXTDOMAIN),
+                'component' => 'number',
+                'required' => false,
+                'dependency' => ['depends_on' => 'product_type', 'operator' => '=', 'value' => self::PRODUCT_TYPE_EMAIL_PACK],
+                'inline_tip' => __('Email packs only: how many emails one pack adds. Buying several adds this many times the quantity.', WAAS_HOST_TEXTDOMAIN),
             ],
             [
                 'key' => 'role',
@@ -143,12 +176,38 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
         ];
     }
 
+    /** True when a feed's settings make the product an email pack, not a website plan. */
+    public static function is_email_pack($settings): bool
+    {
+        return is_array($settings) && ($settings['product_type'] ?? '') === self::PRODUCT_TYPE_EMAIL_PACK;
+    }
+
+    /** The emails one pack of an email-pack feed adds; 0 when the feed is not a pack or has no valid number. */
+    public static function emails_per_pack($settings): int
+    {
+        if (!self::is_email_pack($settings)) {
+            return 0;
+        }
+
+        $emails = $settings['emails_per_pack'] ?? '';
+        if (!is_numeric($emails) || (float) $emails != (int) $emails) {
+            return 0;
+        }
+        $emails = (int) $emails;
+
+        return $emails >= 1 && $emails <= self::MAX_EMAILS_PER_PACK ? $emails : 0;
+    }
+
     /**
      * @param \FluentCart\App\Models\Order $order
      * @param array $eventData the feed run: trigger, is_revoke_hook, feed, event_data
      */
     public function processAction($order, $eventData)
     {
+        if (self::is_email_pack($eventData['feed'] ?? null)) {
+            return; // FluentCartEmailPacks adds the emails when the order is paid; a pack never creates or removes a website
+        }
+
         $trigger = (string) ($eventData['trigger'] ?? '');
         $is_revoke = ($eventData['is_revoke_hook'] ?? '') === 'yes';
 

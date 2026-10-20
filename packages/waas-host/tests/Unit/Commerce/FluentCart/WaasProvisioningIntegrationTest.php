@@ -189,6 +189,78 @@ class WaasProvisioningIntegrationTest extends TestCase
         $this->assertSame(['peptide-store' => 'Peptide store'], $fields['role']['options']);
         $this->assertSame(['peptide-starter' => 'peptide-starter'], $fields['group_name']['options']);
         $this->assertArrayHasKey('event_trigger', $fields);
+        $this->assertSame(['plan', 'email_pack'], array_keys($fields['product_type']['options']));
+        $this->assertSame('number', $fields['emails_per_pack']['component']);
+        $this->assertSame(['depends_on' => 'product_type', 'operator' => '=', 'value' => 'email_pack'], $fields['emails_per_pack']['dependency']);
+    }
+
+    public function test_a_new_feed_is_a_website_plan(): void
+    {
+        $defaults = $this->integration->getIntegrationDefaults([]);
+
+        $this->assertSame(WaasProvisioningIntegration::PRODUCT_TYPE_PLAN, $defaults['product_type']);
+        $this->assertFalse(WaasProvisioningIntegration::is_email_pack($defaults));
+    }
+
+    public function test_a_feed_saved_before_product_types_is_a_website_plan(): void
+    {
+        $legacy = ['enabled' => 'yes', 'role' => 'peptide-store', 'group_name' => '', 'size' => 'small'];
+
+        $this->assertFalse(WaasProvisioningIntegration::is_email_pack($legacy));
+        $this->assertSame(0, WaasProvisioningIntegration::emails_per_pack($legacy));
+    }
+
+    /** @dataProvider emails_per_pack_values */
+    public function test_emails_per_pack_is_read_from_the_feed($value, int $expected): void
+    {
+        $this->assertSame($expected, WaasProvisioningIntegration::emails_per_pack(['product_type' => 'email_pack', 'emails_per_pack' => $value]));
+    }
+
+    public function emails_per_pack_values(): array
+    {
+        return [
+            'number' => [5000, 5000],
+            'numeric string from the form' => ['10000', 10000],
+            'whole float' => [2500.0, 2500],
+            'one' => [1, 1],
+            'the API maximum' => [1000000, 1000000],
+            'empty' => ['', 0],
+            'zero' => [0, 0],
+            'negative' => [-5, 0],
+            'over the maximum' => [1000001, 0],
+            'fraction' => ['12.5', 0],
+            'text' => ['lots', 0],
+            'missing' => [null, 0],
+        ];
+    }
+
+    public function test_a_plan_feed_has_no_emails_per_pack_even_if_one_was_left_in_it(): void
+    {
+        $this->assertSame(0, WaasProvisioningIntegration::emails_per_pack(['product_type' => 'plan', 'emails_per_pack' => 5000]));
+    }
+
+    /** @dataProvider all_triggers */
+    public function test_an_email_pack_feed_never_creates_or_removes_a_website(string $trigger, string $is_revoke): void
+    {
+        $this->has_store(true);
+        $this->store->expects('find_subscription_for_order')->never();
+        Actions\expectDone('waas_subscription_created')->never();
+        Actions\expectDone('waas_subscription_expired')->never();
+        Actions\expectDone('waas_subscription_canceled_until')->never();
+
+        $this->run_feed($trigger, ['is_revoke_hook' => $is_revoke, 'feed' => ['enabled' => 'yes', 'product_type' => 'email_pack', 'emails_per_pack' => 5000]]);
+
+        $this->assertSame([], $this->logs);
+    }
+
+    public function all_triggers(): array
+    {
+        return [
+            'activated' => ['subscription_activated', 'no'],
+            'order paid' => ['order_paid_done', 'no'],
+            'canceled' => ['subscription_canceled', 'no'],
+            'refunded' => ['order_fully_refunded', 'yes'],
+        ];
     }
 
     public function test_settings_still_load_when_the_api_is_down(): void

@@ -42,6 +42,15 @@ class ProvisioningApiTest extends TestCase
         $this->assertSame('bk-1', $result->backupId);
     }
 
+    public function test_add_email_packs_posts_the_emails_and_the_reference_by_external_id(): void
+    {
+        $this->http->expects('post')
+            ->with('/v1/tenants/email-packs?externalId=ext%20123', ['emails' => 5000, 'reference' => 'fluentcart-order-7-9'])
+            ->andReturn((object) ['tenantId' => 't-1', 'externalId' => 'ext 123', 'emailPacks' => 15000]);
+
+        $this->assertSame(15000, $this->service->add_email_packs('ext 123', 5000, 'fluentcart-order-7-9')->emailPacks);
+    }
+
     public function test_webhook_endpoints_are_created_listed_and_deleted(): void
     {
         $this->http->expects('post')

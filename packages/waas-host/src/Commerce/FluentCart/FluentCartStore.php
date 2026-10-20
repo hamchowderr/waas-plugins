@@ -2,9 +2,12 @@
 
 namespace WaaSHost\Commerce\FluentCart;
 
+use FluentCart\App\Models\Cart;
 use FluentCart\App\Models\Coupon;
 use FluentCart\App\Models\Customer;
+use FluentCart\App\Models\Order;
 use FluentCart\App\Models\ProductMeta;
+use FluentCart\App\Models\ProductVariation;
 use FluentCart\App\Models\Subscription;
 use FluentCart\App\Models\SubscriptionMeta;
 use FluentCart\App\Services\URL;
@@ -128,11 +131,41 @@ class FluentCartStore
     }
 
     /**
-     * Settings of the enabled WaaS feed on a product, or null when the product is not a website plan.
+     * Settings of the enabled WaaS feed on a product, or null when the product is not a website plan. An email-pack
+     * feed is not a plan.
      *
      * @return array<string, mixed>|null
      */
     public function get_plan_feed($product_id): ?array
+    {
+        foreach ($this->get_enabled_feeds($product_id) as $settings) {
+            if (!WaasProvisioningIntegration::is_email_pack($settings)) {
+                return $settings;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Settings of the enabled email-pack feed on a product with a valid number of emails, or null when the product is
+     * not an email pack.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function get_email_pack_feed($product_id): ?array
+    {
+        foreach ($this->get_enabled_feeds($product_id) as $settings) {
+            if (WaasProvisioningIntegration::emails_per_pack($settings) > 0) {
+                return $settings;
+            }
+        }
+
+        return null;
+    }
+
+    /** @return array<int, array<string, mixed>> settings of the product's enabled WaaS feeds */
+    private function get_enabled_feeds($product_id): array
     {
         $feeds = ProductMeta::query()
             ->where('object_id', (int) $product_id)
@@ -140,14 +173,56 @@ class FluentCartStore
             ->where('meta_key', WaasProvisioningIntegration::KEY)
             ->get();
 
+        $enabled = [];
         foreach ($feeds as $feed) {
             $settings = $feed->meta_value;
             if (is_array($settings) && ($settings['enabled'] ?? '') === 'yes') {
-                return $settings;
+                $enabled[] = $settings;
             }
         }
 
-        return null;
+        return $enabled;
+    }
+
+    /**
+     * The published email-pack products, fewest emails first, each with the instant-checkout link of its first
+     * variation (FluentCart's "Buy now" link: a one-item cart, straight to checkout).
+     *
+     * @return array<int, array{product_id: int, emails: int, title: string, checkout_url: string}>
+     */
+    public function get_email_pack_products(): array
+    {
+        $feeds = ProductMeta::query()
+            ->where('object_type', 'product_integration')
+            ->where('meta_key', WaasProvisioningIntegration::KEY)
+            ->get();
+
+        $packs = [];
+        foreach ($feeds as $feed) {
+            $settings = $feed->meta_value;
+            $product_id = (int) $feed->object_id;
+            $emails = is_array($settings) && ($settings['enabled'] ?? '') === 'yes' ? WaasProvisioningIntegration::emails_per_pack($settings) : 0;
+            if ($emails === 0 || isset($packs[$product_id]) || get_post_status($product_id) !== 'publish') {
+                continue;
+            }
+
+            $variation = ProductVariation::query()->where('post_id', $product_id)->orderBy('serial_index', 'ASC')->orderBy('id', 'ASC')->first();
+            if (!$variation) {
+                continue;
+            }
+
+            $packs[$product_id] = [
+                'product_id' => $product_id,
+                'emails' => $emails,
+                'title' => (string) get_the_title($product_id),
+                'checkout_url' => site_url('?fluent-cart=instant_checkout&item_id=' . (int) $variation->id . '&quantity=1'),
+            ];
+        }
+
+        $packs = array_values($packs);
+        usort($packs, fn ($a, $b) => $a['emails'] <=> $b['emails'] ?: $a['product_id'] <=> $b['product_id']);
+
+        return $packs;
     }
 
     /**
@@ -186,10 +261,18 @@ class FluentCartStore
 
     public function has_plan_feed(): bool
     {
-        return ProductMeta::query()
+        $feeds = ProductMeta::query()
             ->where('object_type', 'product_integration')
             ->where('meta_key', WaasProvisioningIntegration::KEY)
-            ->exists();
+            ->get();
+
+        foreach ($feeds as $feed) {
+            if (!WaasProvisioningIntegration::is_email_pack($feed->meta_value)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** @return int[] product ids on the order, in order */
@@ -206,6 +289,90 @@ class FluentCartStore
     public function get_order_meta($order, string $key): string
     {
         return (string) $order->getMeta($key, '');
+    }
+
+    /** @return mixed the order meta as stored (arrays stay arrays), '' when unset */
+    public function get_order_meta_value($order, string $key)
+    {
+        return $order->getMeta($key, '');
+    }
+
+    public function update_order_meta($order, string $key, $value): void
+    {
+        $order->updateMeta($key, $value);
+    }
+
+    /** @return Order|null */
+    public function find_order($order_id)
+    {
+        return Order::query()->find((int) $order_id);
+    }
+
+    /**
+     * The order's lines.
+     *
+     * @return array<int, array{id: int, product_id: int, quantity: int}>
+     */
+    public function get_order_lines($order): array
+    {
+        $lines = [];
+        foreach ($order->order_items as $item) {
+            $lines[] = [
+                'id' => (int) $item->id,
+                'product_id' => (int) $item->post_id,
+                'quantity' => max(1, (int) $item->quantity),
+            ];
+        }
+
+        return $lines;
+    }
+
+    /**
+     * The FluentCart customer who placed the order.
+     *
+     * @return array{id: int, user_id: int, email: string}|null
+     */
+    public function get_order_customer($order): ?array
+    {
+        $customer = $order->customer ?? null;
+        if (!$customer) {
+            return null;
+        }
+
+        return [
+            'id' => (int) $customer->id,
+            'user_id' => (int) $customer->user_id,
+            'email' => (string) $customer->email,
+        ];
+    }
+
+    /** @return Cart|null the cart with this hash (FluentCart's fct_cart_hash) */
+    public function find_cart_by_hash(string $cart_hash)
+    {
+        return $cart_hash === '' ? null : Cart::query()->where('cart_hash', $cart_hash)->first();
+    }
+
+    /** @return mixed a value waas-host keeps in the cart's checkout data, null when unset */
+    public function get_cart_checkout_value($cart, string $key)
+    {
+        return ((array) ($cart->checkout_data ?? []))[$key] ?? null;
+    }
+
+    /** Keeps $value in the cart's checkout data (null removes it); saves the cart only when it changes. */
+    public function set_cart_checkout_value($cart, string $key, $value): void
+    {
+        $checkout_data = (array) ($cart->checkout_data ?? []);
+        if (($checkout_data[$key] ?? null) === $value) {
+            return;
+        }
+
+        if ($value === null) {
+            unset($checkout_data[$key]);
+        } else {
+            $checkout_data[$key] = $value;
+        }
+        $cart->checkout_data = $checkout_data;
+        $cart->save();
     }
 
     /** @return int[] product ids in a checkout cart */

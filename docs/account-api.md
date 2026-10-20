@@ -126,7 +126,8 @@ The customer's websites, newest first: those with a website, or one being set up
       "active_until": "2027-01-01T00:00:00+00:00",
       "can_log_in": true,
       "needs_new_name": false,
-      "manage_plan_url": "https://shop.example.com/account/subscriptions/42"
+      "manage_plan_url": "https://shop.example.com/account/subscriptions/42",
+      "buy_emails_url": "https://shop.example.com/?fluent-cart=instant_checkout&item_id=31&quantity=1&waas_website=42"
     }
   ],
   "custom_address_records": {
@@ -140,6 +141,7 @@ The customer's websites, newest first: those with a website, or one being set up
 - `active_until` is set when the subscription is cancelled and the website stays online until the end of the paid period, else `null`.
 - `can_log_in`: the website is ready, so `POST /websites/{id}/login` works.
 - `needs_new_name`: the website name was taken; ask for a new one with `POST /websites/{id}/name`.
+- `buy_emails_url`: checkout for an email pack for this website (the pack with the fewest emails); send the customer there to buy more emails. `null` when the shop sells no email pack (FluentCart only) or the website has no store yet. See [Email packs](../README.md#email-packs).
 - `manage_plan_url`: the cart's own page to change or cancel the plan.
 - `custom_address_records`: the DNS records the customer adds before using their own domain as a website's address (the same for every website). `apex` for a bare domain (`example.com`: add each record), `subdomain` for one like `shop.example.com`. `null` when the storefront has no DNS settings: custom domains then go through support.
 
