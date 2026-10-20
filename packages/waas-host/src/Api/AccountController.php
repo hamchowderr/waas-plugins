@@ -154,6 +154,8 @@ class AccountController
                 'can_log_in' => $has_store && $state === Tenant::READY,
                 'needs_new_name' => $state === Tenant::NEEDS_NEW_NAME,
                 'manage_plan_url' => $commerce->get_subscription_url($subscription_id),
+                // Checkout for an email pack for this website, when the cart sells one (FluentCart email packs).
+                'buy_emails_url' => (string) apply_filters('waas_buy_emails_url', '', $subscription_id) ?: null,
             ];
         }
 

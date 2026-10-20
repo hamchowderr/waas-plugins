@@ -14,7 +14,8 @@ use WaaSHost\Migrations\FluentCartFeedTriggers;
  * FluentCart (1.7+), which has subscriptions built in. Subscription ids are
  * fct_subscriptions ids and their data lives in fct_subscription_meta. A product is a
  * website plan when the "WaaS Provisioning" integration is enabled on it; the feed
- * holds the role and snapshot group, and its triggers create and remove the store.
+ * holds the role and snapshot group, and its triggers create and remove the store. A feed
+ * set to "Email pack" makes the product an email pack instead (FluentCartEmailPacks), never a plan.
  */
 class FluentCartAdapter implements CommerceAdapter
 {
@@ -56,7 +57,9 @@ class FluentCartAdapter implements CommerceAdapter
         (new FluentCartSubscriptionEvents($store))->register();
         new FluentCartCheckout($provisioning_api, $this, $store);
         (new FluentCartVolumeDiscount($this, $store))->register();
-        new FluentCartPortal($this, $store, $domain_settings);
+        $email_packs = new FluentCartEmailPacks($provisioning_api, $this, $store);
+        $email_packs->register();
+        new FluentCartPortal($this, $store, $domain_settings, $email_packs);
 
         add_filter('waas_getting_started_checklist', [$this, 'mark_plan_product_checklist_item'], 20);
     }

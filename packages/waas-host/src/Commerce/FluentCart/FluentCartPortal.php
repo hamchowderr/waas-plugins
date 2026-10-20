@@ -25,12 +25,14 @@ class FluentCartPortal
     private FluentCartAdapter $adapter;
     private FluentCartStore $store;
     private UserAccountSubscriptionsSettings $domain_settings;
+    private ?FluentCartEmailPacks $email_packs;
 
-    public function __construct(FluentCartAdapter $adapter, FluentCartStore $store, UserAccountSubscriptionsSettings $domain_settings)
+    public function __construct(FluentCartAdapter $adapter, FluentCartStore $store, UserAccountSubscriptionsSettings $domain_settings, ?FluentCartEmailPacks $email_packs = null)
     {
         $this->adapter = $adapter;
         $this->store = $store;
         $this->domain_settings = $domain_settings;
+        $this->email_packs = $email_packs;
 
         add_action('fluent_cart/init', [$this, 'register_endpoint']);
         add_filter('fluent_cart/customer_portal/subscription_data', [$this, 'add_subscription_actions'], 10, 2);
@@ -185,6 +187,7 @@ class FluentCartPortal
             if ($status === Tenant::NEEDS_NEW_NAME) {
                 NameConflicts::render_form($subscription_id);
             }
+            $this->render_email_pack_links($subscription_id);
             if (!empty($this->adapter->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META))) {
                 $this->domain_settings->render_edit_domain($subscription_id);
             }
@@ -192,6 +195,21 @@ class FluentCartPortal
                 . esc_html__('Manage or cancel plan', WAAS_HOST_TEXTDOMAIN) . '</a></p>';
             echo '</section>';
         }
+    }
+
+    /** "Buy more emails": checkout for an email pack, for this website. Nothing when the shop sells no pack. */
+    private function render_email_pack_links($subscription_id): void
+    {
+        $links = $this->email_packs ? $this->email_packs->links($subscription_id) : [];
+        if (!$links) {
+            return;
+        }
+
+        $html = [];
+        foreach ($links as $link) {
+            $html[] = '<a class="waas-buy-emails" href="' . esc_url($link['url']) . '">' . esc_html($link['label']) . '</a>';
+        }
+        echo '<p>' . implode(' &middot; ', $html) . ' <small>' . esc_html__('Extra emails never expire. They are used once the plan\'s monthly emails run out, and resume paused campaigns.', WAAS_HOST_TEXTDOMAIN) . '</small></p>';
     }
 
     /** When a cancelled subscription's website goes offline (end of its paid period); 0 when not planned. */

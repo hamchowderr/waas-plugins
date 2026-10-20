@@ -7,8 +7,10 @@ use Brain\Monkey\Functions;
 use Mockery;
 use Tests\Unit\TestCase;
 use WaaSHost\Commerce\FluentCart\FluentCartAdapter;
+use WaaSHost\Commerce\FluentCart\FluentCartEmailPacks;
 use WaaSHost\Commerce\FluentCart\FluentCartPortal;
 use WaaSHost\Commerce\FluentCart\FluentCartStore;
+use WaaSHost\Core\ProvisioningApi;
 use WaaSHost\Core\Tenant;
 use WaaSHost\Features\UserAccountSubscriptionsSettings;
 
@@ -79,6 +81,38 @@ class FluentCartPortalTest extends TestCase
         $this->assertStringContainsString(Tenant::PROVISIONING, $html);
         $this->assertSame(1, substr_count($html, 'tenant/single_login?subscription_id='), 'login only for the ready website');
         $this->assertStringContainsString('subscription_id=900', $html);
+    }
+
+    public function test_each_website_with_a_store_links_to_buying_more_emails_for_it(): void
+    {
+        Functions\when('add_query_arg')->alias(fn ($key, $value, $url) => $url . '&' . $key . '=' . $value);
+        $this->store->allows('get_email_pack_products')->andReturn([
+            ['product_id' => 301, 'emails' => 5000, 'title' => '5,000 emails', 'checkout_url' => 'https://storefront.example/?fluent-cart=instant_checkout&item_id=31&quantity=1'],
+        ]);
+        $packs = new FluentCartEmailPacks(Mockery::mock(ProvisioningApi::class), new FluentCartAdapter($this->store), $this->store);
+        $portal = new FluentCartPortal(new FluentCartAdapter($this->store), $this->store, $this->domain_settings, $packs);
+        $this->domain_settings->allows('render_edit_domain');
+
+        ob_start();
+        $portal->render();
+        $html = ob_get_clean();
+
+        $this->assertStringContainsString('href="https://storefront.example/?fluent-cart=instant_checkout&item_id=31&quantity=1&waas_website=900">Buy more emails</a>', $html);
+        $this->assertStringContainsString('&waas_website=901"', $html);
+        $this->assertSame(2, substr_count($html, 'Buy more emails'));
+    }
+
+    public function test_no_buy_more_emails_link_when_the_shop_sells_no_pack(): void
+    {
+        $this->store->allows('get_email_pack_products')->andReturn([]);
+        $packs = new FluentCartEmailPacks(Mockery::mock(ProvisioningApi::class), new FluentCartAdapter($this->store), $this->store);
+        $portal = new FluentCartPortal(new FluentCartAdapter($this->store), $this->store, $this->domain_settings, $packs);
+        $this->domain_settings->allows('render_edit_domain');
+
+        ob_start();
+        $portal->render();
+
+        $this->assertStringNotContainsString('Buy more emails', ob_get_clean());
     }
 
     public function test_empty_state_without_websites(): void
