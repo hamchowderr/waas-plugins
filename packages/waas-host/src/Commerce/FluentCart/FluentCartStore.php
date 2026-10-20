@@ -601,10 +601,12 @@ class FluentCartStore
         }
     }
 
-    /** An amount in cents as FluentCart shows it, with the currency sign. */
+    /** An amount in cents as FluentCart shows it, with the currency sign, as plain text (FluentCart's sign is an HTML entity). */
     public function format_price(int $cents, string $currency): string
     {
-        return (string) Helper::toDecimal($cents, true, $currency !== '' ? $currency : null);
+        $price = (string) Helper::toDecimal($cents, true, $currency !== '' ? $currency : null);
+
+        return html_entity_decode(wp_strip_all_tags($price), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     }
 
     /** The mode (live or test) FluentCart's Stripe uses for its own calls, such as creating prices. */
