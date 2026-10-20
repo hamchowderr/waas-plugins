@@ -74,6 +74,7 @@ class FluentCartLifecycleTest extends TestCase
         $store->allows('get_plan_feed')->with(101)->andReturn(['enabled' => 'yes', 'role' => 'peptide-store', 'group_name' => 'peptide-starter']);
         $store->allows('get_plan_feed')->with(102)->andReturnNull();
         $store->allows('get_order_meta')->with($this->order, Tenant::WEBSITE_NAME_META)->andReturn('Apex Research');
+        $store->allows('get_order_billing')->with($this->order)->andReturn([]);
         // The feeds run after FluentCart changed the subscription; a cancel finds it canceled.
         $store->allows('get_subscription_status')->andReturnUsing(fn () => $this->canceled ? 'canceled' : 'active');
         $store->allows('get_paid_through')->andReturnUsing(fn () => $this->paid_through);

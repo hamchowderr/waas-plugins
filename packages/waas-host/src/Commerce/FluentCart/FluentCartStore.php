@@ -292,6 +292,29 @@ class FluentCartStore
         return array_values(array_unique(array_filter($ids)));
     }
 
+    /**
+     * The order's billing name, phone and address, as PlanPurchase::$billing.
+     *
+     * @return array<string, string>
+     */
+    public function get_order_billing($order): array
+    {
+        $address = $order->billing_address;
+        if (!$address) {
+            return [];
+        }
+
+        return [
+            'name' => (string) ($address->full_name ?: $address->name),
+            'phone' => (string) $address->phone,
+            'address_1' => (string) $address->address_1,
+            'address_2' => (string) $address->address_2,
+            'city' => (string) $address->city,
+            'state' => (string) $address->state,
+            'postcode' => (string) $address->postcode,
+        ];
+    }
+
     public function get_order_meta($order, string $key): string
     {
         return (string) $order->getMeta($key, '');

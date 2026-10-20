@@ -36,6 +36,7 @@ class FluentCartAdapterTest extends TestCase
             ->andReturn(['enabled' => 'yes', 'role' => 'peptide-store', 'group_name' => 'peptide-starter', 'size' => 'medium']);
         $this->store->allows('get_plan_feed')->with(102)->andReturnNull();
         $this->store->allows('get_order_meta')->with($order, Tenant::WEBSITE_NAME_META)->andReturn('Apex Research');
+        $this->store->allows('get_order_billing')->with($order)->andReturn(['name' => 'Jordan Reyes', 'city' => 'Austin', 'state' => 'TX']);
         $this->customer(7);
 
         $purchase = $this->adapter->get_plan_purchase(900, $order);
@@ -43,6 +44,7 @@ class FluentCartAdapterTest extends TestCase
         $this->assertEquals([new PlanProduct(101, 'peptide-store', 'peptide-starter', 'medium')], $purchase->plans);
         $this->assertSame('Apex Research', $purchase->website_name);
         $this->assertSame('owner@apexresearch.example', $purchase->customer_email);
+        $this->assertSame(['name' => 'Jordan Reyes', 'city' => 'Austin', 'state' => 'TX'], $purchase->billing);
     }
 
     public function test_customer_subscriptions_are_the_users_own_newest_first(): void
