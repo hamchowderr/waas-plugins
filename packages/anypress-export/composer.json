@@ -1,0 +1,31 @@
+{
+  "name": "otakusolutions/anypress-export",
+  "description": "Moves a WordPress site to AnyPress: packages its database and wp-content and sends them to the store waiting for it.",
+  "type": "project",
+  "license": "GPL-3.0-or-later",
+  "autoload": {
+    "psr-4": {
+      "AnyPressExport\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
+  "authors": [
+    {
+      "name": "Otaku Solutions",
+      "homepage": "https://otakusolutions.io"
+    }
+  ],
+  "require": {
+    "php": ">=7.4"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.6"
+  },
+  "scripts": {
+    "test": "phpunit"
+  }
+}

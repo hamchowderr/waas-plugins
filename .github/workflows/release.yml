@@ -1,6 +1,6 @@
 name: Release plugin
 # Builds, signs and publishes one plugin to our update channel (waas-hw4).
-# Tag the commit on main: waas-host-v2.3.0, waas-client-v2.3.0, waas-payments-v0.2.0 (stable), or
+# Tag the commit on main: waas-host-v2.3.0, waas-client-v2.3.0, waas-payments-v0.2.0, anypress-export-v1.0.0 (stable), or
 # ...-v2.4.0-beta.1 (beta channel only). Run it by hand for a dry run: it builds and signs with a
 # throwaway key and uploads nothing. Promote a tested beta to stable with the "Promote release" workflow.
 #
@@ -13,6 +13,7 @@ on:
       - 'waas-host-v*'
       - 'waas-client-v*'
       - 'waas-payments-v*'
+      - 'anypress-export-v*'
   workflow_dispatch:
     inputs:
       tag:
@@ -43,7 +44,7 @@ jobs:
       - name: Read the tag
         id: tag
         run: |
-          if [[ ! $TAG =~ ^(waas-host|waas-client|waas-payments)-v([0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?)$ ]]; then
+          if [[ ! $TAG =~ ^(waas-host|waas-client|waas-payments|anypress-export)-v([0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?)$ ]]; then
             echo "::error::$TAG is not <package>-v<x.y.z> or <package>-v<x.y.z>-beta.<n>"
             exit 1
           fi
