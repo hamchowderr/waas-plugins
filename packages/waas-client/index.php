@@ -31,6 +31,7 @@ use WaaSClient\Features\PluginBootstrap;
 use WaaSClient\Features\RolesManager;
 use WaaSClient\Features\AdminTenantSettings;
 use WaaSClient\Features\CustomerPlanPage;
+use WaaSClient\Features\ConnectPage;
 
 if (!wp_doing_ajax()) {
     define("WAAS_PLUGIN_DIR_URI", plugin_dir_url(__FILE__));
@@ -52,6 +53,8 @@ if (!wp_doing_ajax()) {
 
     // Design and content for the AnyPress connector; answers only requests signed with the store's site key.
     new SiteController();
+    // "Sign in with your website": the page where a store owner allows an AI app to edit this website.
+    new ConnectPage();
 
     // No self-update: a store's waas-client comes with its template version, and the store gets a
     // newer one by moving to a newer version (waas-hw4). Update URI keeps wordpress.org out.
