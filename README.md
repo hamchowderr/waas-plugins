@@ -136,6 +136,17 @@ Each plugin is a Composer package under `packages/` (`waas-host`, `waas-client`,
 
 On Linux with Docker, `scripts/test-env.sh up` starts a throwaway WordPress (MariaDB + WordPress in Docker) at http://127.0.0.1 with this checkout's Host and Payments plugins, FluentCart, WooCommerce and Subscriptions for WooCommerce active. Log in as admin / admin. `scripts/test-env.sh wp ...` runs WP-CLI; `scripts/test-env.sh down` removes it.
 
+Without Docker, `scripts/playground` runs WaaS Client on [WordPress Playground](https://developer.wordpress.org/playground/) (WordPress and PHP inside Node) with the Ollie theme and the store template's starter pages, and checks the site-editing API end to end with a throwaway site key. It needs Node 24.18 or newer and `composer install` in `packages/waas-client`:
+
+```shell
+cd scripts/playground
+npm ci
+npm run smoke    # the checks; exits 1 on a failure
+npm run serve    # the same site left running at http://127.0.0.1:9400, signed in as admin
+```
+
+Playground keeps the database in SQLite rather than MariaDB, so it checks the plugin's PHP and WordPress behaviour; database-specific SQL still needs a real store or `test-env.sh`. Pull requests also get a "Preview in WordPress Playground" button: a throwaway storefront with that PR's WaaS Host, FluentCart and Ollie (`pr-preview-build.yml` and `pr-preview-publish.yml`).
+
 ### Tests
 
 The plugins (and `packages/waas-updater`) have PHPUnit unit tests that run without WordPress: [Brain Monkey](https://github.com/Brain-WP/BrainMonkey) stubs the WordPress functions and outside calls are mocked. They need PHP 8.1 or newer.
@@ -148,7 +159,7 @@ composer test
 
 `waas-host` also has contract tests (`tests/Contract`, group `mock`) that run the plugin's real API client against the provisioning API: by default the public Postman mock, or the server in `WAAS_TEST_API_BASE_URL`, such as the local API. They need network access; run `vendor/bin/phpunit --exclude-group mock` to skip them.
 
-Unit tests live in each package's `tests/Unit`. The `Tests` GitHub Actions workflow runs the unit tests of all four packages (host, client, payments, updater) on every pull request and on pushes to `main`; the contract tests run there too, in a separate job that reports but doesn't block, since they depend on the public mock. Release builds strip `tests/` and `phpunit.xml.dist`.
+Unit tests live in each package's `tests/Unit`. The `Tests` GitHub Actions workflow runs the unit tests of all four packages (host, client, payments, updater) on every pull request and on pushes to `main`, plus the Playground smoke test of WaaS Client; the contract tests run there too, in a separate job that reports but doesn't block, since they depend on the public mock. Release builds strip `tests/` and `phpunit.xml.dist`.
 
 ### Old `wpcs` names
 

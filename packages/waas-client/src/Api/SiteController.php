@@ -314,7 +314,7 @@ class SiteController
         $next = \WP_Theme_JSON::remove_insecure_properties($next, 'custom');
         $next['version'] = \WP_Theme_JSON::LATEST_SCHEMA;
         $next['isGlobalStylesUserThemeJSON'] = true;
-        $saved = wp_update_post(['ID' => $id, 'post_content' => wp_slash(wp_json_encode($next))], true);
+        $saved = $this->update_post(['ID' => $id, 'post_content' => wp_slash(wp_json_encode($next))]);
         if (is_wp_error($saved)) {
             return $saved;
         }
@@ -351,7 +351,7 @@ class SiteController
         }
         $part = get_block_template(get_stylesheet() . '//' . $area, 'wp_template_part');
         if ($part && $part->wp_id) {
-            $saved = wp_update_post(['ID' => $part->wp_id, 'post_content' => $content], true);
+            $saved = $this->update_post(['ID' => $part->wp_id, 'post_content' => $content]);
         } else {
             $saved = wp_insert_post(['post_type' => 'wp_template_part', 'post_status' => 'publish', 'post_name' => $area, 'post_title' => ucfirst($area), 'post_content' => $content], true);
             if (!is_wp_error($saved)) {
@@ -387,7 +387,7 @@ class SiteController
         if ($request->get_param('title') !== null) {
             $changes['post_title'] = sanitize_text_field((string) $request->get_param('title'));
         }
-        $saved = wp_update_post($changes, true);
+        $saved = $this->update_post($changes);
 
         return is_wp_error($saved) ? $saved : ['id' => $menu->ID, 'title' => get_the_title($menu->ID), 'content' => get_post_field('post_content', $menu->ID)];
     }
@@ -446,14 +446,29 @@ class SiteController
 
     private function time($post): ?string
     {
-        $time = get_post_datetime($post, 'modified', 'gmt');
+        // A new draft has no GMT times yet (WordPress fills them in on publish); its local time is still right.
+        $time = get_post_datetime($post, 'modified', 'gmt') ?: get_post_datetime($post, 'modified');
 
-        return $time ? $time->format('Y-m-d\\TH:i:s\\Z') : null;
+        return $time ? $time->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\\TH:i:s\\Z') : null;
+    }
+
+    /**
+     * wp_update_post, after keeping the post as it is now when it has no revision yet. WordPress saves a revision
+     * of each new state, not of the one it replaces, so without this the first change to a page the template or
+     * create_page made (or to the styles, header or a menu) could never be undone.
+     */
+    private function update_post(array $changes)
+    {
+        if (!wp_get_post_revisions($changes['ID'], ['posts_per_page' => 1, 'fields' => 'ids'])) {
+            wp_save_post_revision($changes['ID']);
+        }
+
+        return wp_update_post($changes, true);
     }
 
     private function save_page(array $changes)
     {
-        $saved = wp_update_post($changes, true);
+        $saved = $this->update_post($changes);
 
         return is_wp_error($saved) ? $saved : $this->page_details(get_post($saved));
     }

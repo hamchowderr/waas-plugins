@@ -1,0 +1,19 @@
+name: PR Preview - Build
+# Builds WaaS Host from the pull request (with its Composer dependencies) for a "Preview in WordPress Playground"
+# button; PR Preview - Publish adds the button once this succeeds. Runs read-only, so it is safe for forks.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  build:
+    uses: WordPress/action-wp-playground-pr-preview/.github/workflows/preview-build.yml@v4
+    with:
+      php-version: "8.3"
+      artifacts: |
+        waas-host=preview/wpcs-waas-host.zip
+      build-command: |
+        set -euo pipefail
+        # The same zip as a release, stamped with the version already in the plugin header.
+        version=$(grep -m1 -E '^Version:' packages/waas-host/index.php | sed -E 's/^Version:[[:space:]]*//')
+        scripts/release/build.sh waas-host "$version" preview
