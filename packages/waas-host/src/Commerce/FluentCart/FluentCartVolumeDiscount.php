@@ -246,14 +246,15 @@ class FluentCartVolumeDiscount
         return is_user_logged_in() ? (int) get_current_user_id() : (int) ($cart->user_id ?? 0);
     }
 
-    private function count_live_sites(array $subscription_ids): int
+    /** Live websites among $subscription_ids: website plans in an active status. Also used by FluentCartVolumeRepricing. */
+    public function count_live_sites(array $subscription_ids): int
     {
         $product_ids = $this->store->get_active_subscription_product_ids($subscription_ids);
 
         return count(array_filter($product_ids, fn ($id) => $this->is_plan_product($id)));
     }
 
-    private function is_plan_product(int $product_id): bool
+    public function is_plan_product(int $product_id): bool
     {
         if ($product_id <= 0) {
             return false;
