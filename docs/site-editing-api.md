@@ -58,3 +58,21 @@ A store owner can connect an AI app to just their own website. On the connector'
 The page (`Features\ConnectPage`) is for administrators only; WordPress asks anyone signed out to sign in first. It names the app and what it may do. Allow or Cancel sends the owner to `back`, the API's answer URL, with `request`, `answer` (`allow`, `allow-read` or `deny`) and `s`, an HMAC-SHA256 over `waas-connect-answer\n<request>\n<answer>`.
 
 The API then gives the app a token for this website only, which can use the site routes above and nothing else. A link that was changed, was signed by another website, or is past `t` is refused.
+
+## As WordPress abilities
+
+The same actions are registered as WordPress abilities (the Abilities API in WordPress 6.9 and later; stores run 7.1), in the category `anypress`, by `Api\SiteAbilities`. They run SiteController's code, so content is cleaned and revisions are kept as above. Unlike the signed routes, an ability acts as the signed-in user and needs that user's own capabilities: `edit_pages` (and `edit_post` for that page) for pages and patterns, `edit_theme_options` for styles, header, footer and menus, `upload_files` for images.
+
+| Ability | Does |
+|---|---|
+| `anypress/get-site` | Name, tagline, address, theme, home page and every page |
+| `anypress/get-page`, `create-page`, `update-page` | Read, add or change a page |
+| `anypress/add-page-section`, `replace-page-section`, `remove-page-section` | Change one section of a page |
+| `anypress/list-page-revisions`, `restore-page-revision` | Earlier versions of a page, and undo |
+| `anypress/find-patterns`, `get-pattern` | Starter pages and sections, and their markup |
+| `anypress/get-styles`, `update-styles` | Colours, fonts and sizes, and changing them |
+| `anypress/get-site-part`, `update-site-part` | The header or footer |
+| `anypress/list-menus`, `update-menu` | Navigation menus |
+| `anypress/add-image` | Copy an image from a public https link into the media library |
+
+Each ability sets all three hints (`readonly`, `destructive`, `idempotent`). Changes that WordPress keeps a revision of are marked not destructive, since they can be undone; `remove-page-section` is marked destructive. They show in the abilities REST API (`/wp-json/wp-abilities/v1/abilities?category=anypress`) and, with `meta.mcp.public`, to MCP clients through WordPress's MCP Adapter plugin when a site has it.
