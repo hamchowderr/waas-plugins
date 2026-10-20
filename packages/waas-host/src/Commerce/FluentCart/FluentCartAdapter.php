@@ -56,7 +56,9 @@ class FluentCartAdapter implements CommerceAdapter
 
         (new FluentCartSubscriptionEvents($store))->register();
         new FluentCartCheckout($provisioning_api, $this, $store);
-        (new FluentCartVolumeDiscount($this, $store))->register();
+        $volume_discount = new FluentCartVolumeDiscount($this, $store);
+        $volume_discount->register();
+        (new FluentCartVolumeRepricing($this, $store, $volume_discount))->register();
         $email_packs = new FluentCartEmailPacks($provisioning_api, $this, $store);
         $email_packs->register();
         new FluentCartPortal($this, $store, $domain_settings, $email_packs);

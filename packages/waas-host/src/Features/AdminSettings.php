@@ -331,7 +331,7 @@ class AdminSettings
             'type' => 'checkbox',
             'label' => __('Discount website plans at checkout by how many live websites the customer has', WAAS_HOST_TEXTDOMAIN),
             /* translators: %s: the discount tiers, e.g. "10% off at 3 to 9 websites, 20% off at 10 to 24 websites" */
-            'hint' => sprintf(__('%s. Applied automatically to signed-in customers and to customers checking out with the email of an existing customer, on the first payment and every renewal. Subscriptions that already exist keep their price. Needs FluentCart.', WAAS_HOST_TEXTDOMAIN), VolumeDiscount::describe_tiers()),
+            'hint' => sprintf(__('%s. Applied automatically to signed-in customers and to customers checking out with the email of an existing customer, on the first payment and every renewal. When a customer moves to another tier, their existing website plans are re-priced from their next renewal, with no charge now (plans billed by Stripe or by the store; others get a subscription note to change by hand). Needs FluentCart.', WAAS_HOST_TEXTDOMAIN), VolumeDiscount::describe_tiers()),
         ]);
 
         // Emails

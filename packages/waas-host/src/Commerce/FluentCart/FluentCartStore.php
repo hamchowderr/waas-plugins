@@ -2,6 +2,8 @@
 
 namespace WaaSHost\Commerce\FluentCart;
 
+use FluentCart\App\Helpers\Helper;
+use FluentCart\App\Models\AppliedCoupon;
 use FluentCart\App\Models\Cart;
 use FluentCart\App\Models\Coupon;
 use FluentCart\App\Models\Customer;
@@ -10,6 +12,10 @@ use FluentCart\App\Models\ProductMeta;
 use FluentCart\App\Models\ProductVariation;
 use FluentCart\App\Models\Subscription;
 use FluentCart\App\Models\SubscriptionMeta;
+use FluentCart\App\Modules\PaymentMethods\StripeGateway\API\API as StripeApi;
+use FluentCart\App\Modules\PaymentMethods\StripeGateway\Plan as StripePlan;
+use FluentCart\App\Modules\PaymentMethods\StripeGateway\StripeSettingsBase;
+use FluentCart\App\Modules\Subscriptions\Services\SubscriptionService;
 use FluentCart\App\Services\URL;
 use WaaSHost\Core\Tenant;
 use WaaSHost\Features\StoreJobs;
@@ -387,7 +393,7 @@ class FluentCartStore
     }
 
     /**
-     * @return array{user_id: int, email: string, name: string, country: string}|null
+     * @return array{id: int, user_id: int, email: string, name: string, country: string}|null
      */
     public function get_subscription_customer($subscription_id): ?array
     {
@@ -398,6 +404,7 @@ class FluentCartStore
         }
 
         return [
+            'id' => (int) $customer->id,
             'user_id' => (int) $customer->user_id,
             'email' => (string) $customer->email,
             'name' => (string) $customer->full_name,
@@ -504,6 +511,129 @@ class FluentCartStore
     public function make_coupon(array $attributes)
     {
         return (new Coupon())->forceFill($attributes);
+    }
+
+    /**
+     * How a subscription is billed, for re-pricing it. Amounts are in cents; currency and mode are its first order's.
+     * store_billed is FluentCart's usesRenewalEngine(): the store makes the renewal orders (manual or auto-charge)
+     * rather than the gateway.
+     *
+     * @return array{id: int, status: string, product_id: int, variation_id: int, billing_interval: string, collection_method: string, store_billed: bool, payment_method: string, vendor_subscription_id: string, recurring_amount: int, recurring_tax_total: int, recurring_total: int, parent_order_id: int, currency: string, mode: string}|null
+     */
+    public function get_subscription_billing($subscription_id): ?array
+    {
+        $subscription = $this->find_subscription($subscription_id);
+        if (!$subscription) {
+            return null;
+        }
+        $order = $subscription->order;
+
+        return [
+            'id' => (int) $subscription->id,
+            'status' => (string) $subscription->status,
+            'product_id' => (int) $subscription->product_id,
+            'variation_id' => (int) $subscription->variation_id,
+            'billing_interval' => (string) $subscription->billing_interval,
+            'collection_method' => (string) $subscription->collection_method,
+            'store_billed' => (bool) $subscription->usesRenewalEngine(),
+            'payment_method' => (string) $subscription->current_payment_method,
+            'vendor_subscription_id' => (string) $subscription->vendor_subscription_id,
+            'recurring_amount' => (int) $subscription->recurring_amount,
+            'recurring_tax_total' => (int) $subscription->recurring_tax_total,
+            'recurring_total' => (int) $subscription->recurring_total,
+            'parent_order_id' => (int) $subscription->parent_order_id,
+            'currency' => $order ? (string) $order->currency : '',
+            'mode' => $order ? (string) $order->mode : '',
+        ];
+    }
+
+    /** @return string[] the coupon codes recorded on an order, the volume discount's in-memory coupons included */
+    public function get_order_coupon_codes($order_id): array
+    {
+        if ((int) $order_id <= 0) {
+            return [];
+        }
+
+        return array_map('strval', AppliedCoupon::query()->where('order_id', (int) $order_id)->pluck('code')->toArray());
+    }
+
+    /**
+     * Gives a store-billed subscription a new renewal price through FluentCart's own subscription edit, which also
+     * updates an open renewal order. That edit keeps the tax as it is and sets recurring_amount to the total minus
+     * the tax, so the new tax is put on the subscription first and saved with it.
+     *
+     * @return true|\WP_Error
+     */
+    public function update_store_billed_total($subscription_id, int $recurring_total, int $recurring_tax_total)
+    {
+        $subscription = $this->find_subscription($subscription_id);
+        if (!$subscription) {
+            return new \WP_Error('waas_no_subscription', 'The subscription no longer exists.');
+        }
+
+        $old_tax = $subscription->recurring_tax_total;
+        $subscription->recurring_tax_total = $recurring_tax_total;
+        // It takes the total as a decimal and converts it to cents.
+        $result = SubscriptionService::updateSubscription($subscription, ['recurring_total' => number_format($recurring_total / 100, 2, '.', '')]);
+        if ($result instanceof \WP_Error) {
+            $subscription->recurring_tax_total = $old_tax;
+        }
+
+        return $result;
+    }
+
+    /** Saves a subscription's recurring amounts (cents), for a price the gateway has already changed. */
+    public function set_subscription_totals($subscription_id, array $totals): void
+    {
+        $subscription = $this->find_subscription($subscription_id);
+        if ($subscription) {
+            $subscription->fill(array_intersect_key($totals, array_flip(['recurring_amount', 'recurring_tax_total', 'recurring_total'])));
+            $subscription->save();
+        }
+    }
+
+    /** Adds a note to the subscription's activity in FluentCart. */
+    public function add_subscription_note($subscription_id, string $title, string $detail, string $type = 'info'): void
+    {
+        $subscription = $this->find_subscription($subscription_id);
+        if ($subscription) {
+            $subscription->addLog($title, $detail, $type, 'WaaS');
+        }
+    }
+
+    /** An amount in cents as FluentCart shows it, with the currency sign. */
+    public function format_price(int $cents, string $currency): string
+    {
+        return (string) Helper::toDecimal($cents, true, $currency !== '' ? $currency : null);
+    }
+
+    /** The mode (live or test) FluentCart's Stripe uses for its own calls, such as creating prices. */
+    public function get_stripe_mode(): string
+    {
+        return (string) (new StripeSettingsBase())->getMode();
+    }
+
+    /**
+     * FluentCart's Stripe price for a subscription item at a recurring total, created when it doesn't exist yet.
+     *
+     * @param array $args order_id, product_id, variation_id, billing_interval, recurring_total (cents), currency, trial_days, interval_count
+     * @return array|\WP_Error the Stripe plan
+     */
+    public function get_stripe_plan(array $args)
+    {
+        return StripePlan::getStripePricing($args);
+    }
+
+    /**
+     * A call to the Stripe API with FluentCart's keys for $mode.
+     *
+     * @return array|\WP_Error the decoded response
+     */
+    public function stripe_request(string $method, string $path, array $data, string $mode)
+    {
+        $api = new StripeApi();
+
+        return $method === 'GET' ? $api->getStripeObject($path, $data, $mode) : $api->createStripeObject($path, $data, $mode);
     }
 
     public function get_portal_url(string $path): string

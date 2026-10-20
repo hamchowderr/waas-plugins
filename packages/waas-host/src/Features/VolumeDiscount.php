@@ -5,7 +5,8 @@ namespace WaaSHost\Features;
 /**
  * The volume discount rule: the more live websites a customer has, the more they save on a new one. A live website is
  * a website plan subscription in an active status, and the one being bought counts. The cart applies it
- * (FluentCartVolumeDiscount). Off until the shop owner turns it on, so the live shop's prices don't change on update.
+ * (FluentCartVolumeDiscount), and a customer's existing plans follow their tier from their next renewal
+ * (FluentCartVolumeRepricing). Off until the shop owner turns it on, so the live shop's prices don't change on update.
  */
 class VolumeDiscount
 {
@@ -89,13 +90,19 @@ class VolumeDiscount
         return null;
     }
 
+    /** A percent without trailing zeros: 10 for 10.00, 12.5 for 12.50. */
+    public static function format_percent(float $percent): string
+    {
+        return rtrim(rtrim(number_format($percent, 2, '.', ''), '0'), '.');
+    }
+
     /** "10% off at 3 to 9 websites, 20% off at 10 to 24 websites, 30% off at 25 or more websites", for the settings page. */
     public static function describe_tiers(): string
     {
         $tiers = self::tiers();
         $parts = [];
         foreach ($tiers as $index => $tier) {
-            $percent = rtrim(rtrim(number_format($tier['percent'], 2, '.', ''), '0'), '.');
+            $percent = self::format_percent($tier['percent']);
             $next = $tiers[$index + 1] ?? null;
             if ($next !== null && $next['sites'] - 1 > $tier['sites']) {
                 /* translators: 1: percent off, 2: fewest websites, 3: most websites */
