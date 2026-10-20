@@ -1,7 +1,7 @@
 // Smoke test of WaaS Client on WordPress Playground (WordPress and PHP running inside Node: no Docker, no
 // database server). Boots WordPress with WaaS Client from this checkout, the Ollie theme and the store
-// template's starter pages, then calls the site-editing routes the AnyPress connector uses, signed with a
-// throwaway site key, and checks the answers.
+// template's starter pages, then calls the site-editing routes the AnyPress connector uses (signed with a
+// throwaway site key) and the same actions as WordPress abilities, and checks the answers.
 //
 //   cd scripts/playground && npm ci
 //   npm run smoke             # run the checks, exit 1 on a failure
@@ -33,6 +33,8 @@ const STARTER_PAGES_URL =
     'https://raw.githubusercontent.com/hamchowderr/waas-provisioning-api/main/templates/anypress-store/mu-plugins/anypress-patterns.php';
 // A throwaway key for this test site only; real stores get theirs from the API as WAAS_SITE_KEY.
 const SITE_KEY = randomBytes(24).toString('hex');
+// Stands in for a signed-in user on the abilities checks: requests carrying it act as that user.
+const USER_TOKEN = randomBytes(24).toString('hex');
 
 if (!existsSync(resolve(CLIENT, 'vendor/autoload.php'))) {
     console.error('packages/waas-client/vendor is missing: run composer install in packages/waas-client first.');
@@ -57,6 +59,24 @@ const blueprint = {
             step: 'writeFile',
             path: '/wordpress/wp-content/mu-plugins/waas-test-site-key.php',
             data: `<?php putenv('WAAS_SITE_KEY=${SITE_KEY}');\n`,
+        },
+        {
+            // Test only: X-Test-User: <token>:<login> signs the request in as that user, and a contributor exists
+            // (can't edit pages or styles) to check the abilities' permissions.
+            step: 'writeFile',
+            path: '/wordpress/wp-content/mu-plugins/waas-test-users.php',
+            data: `<?php
+add_action('init', function () {
+    if (!get_user_by('login', 'contributor')) {
+        wp_insert_user(['user_login' => 'contributor', 'user_pass' => wp_generate_password(), 'role' => 'contributor']);
+    }
+});
+add_filter('determine_current_user', function ($id) {
+    [$token, $login] = array_pad(explode(':', $_SERVER['HTTP_X_TEST_USER'] ?? '', 2), 2, '');
+    $user = hash_equals('${USER_TOKEN}', $token) ? get_user_by('login', $login) : false;
+    return $user ? $user->ID : $id;
+}, 30);
+`,
         },
         { step: 'setSiteOptions', options: { blogname: 'Playground Store', permalink_structure: '/%postname%/' } },
     ],
@@ -110,6 +130,31 @@ async function site(method, path, body, { sign = true } = {}) {
 function rawurlencode(value) {
     return encodeURIComponent(value).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
 }
+
+/** Runs an ability through WordPress's abilities REST API, as the given user (or nobody). */
+async function ability(name, input, { as = 'admin', method } = {}) {
+    const info = abilities.get(name);
+    const verb = method ?? (info?.meta?.annotations?.readonly ? 'GET' : 'POST');
+    let url = `${base}/wp-json/wp-abilities/v1/abilities/${name}/run`;
+    const headers = { 'content-type': 'application/json' };
+    if (as) headers['x-test-user'] = `${USER_TOKEN}:${as}`;
+    let body;
+    if (verb === 'GET') {
+        if (input) url += `?${new URLSearchParams(Object.entries(input).map(([k, v]) => [`input[${k}]`, String(v)]))}`;
+    } else {
+        body = JSON.stringify({ input });
+    }
+    const res = await fetch(url, { method: verb, headers, body });
+    const text = await res.text();
+    let data;
+    try {
+        data = JSON.parse(text);
+    } catch {
+        data = text;
+    }
+    return { status: res.status, data };
+}
+const abilities = new Map();
 
 const results = [];
 async function check(name, fn) {
@@ -227,6 +272,56 @@ await check('menus: listed', async () => {
     const res = await site('GET', '/menus');
     expectStatus(res, 200);
     expect(Array.isArray(res.data), 'not a list');
+});
+
+await check('abilities: listed with all three safety hints', async () => {
+    const res = await fetch(`${base}/wp-json/wp-abilities/v1/abilities?category=anypress&per_page=100`, {
+        headers: { 'x-test-user': `${USER_TOKEN}:admin` },
+    });
+    const list = await res.json();
+    expect(res.status === 200 && Array.isArray(list), `HTTP ${res.status}: ${JSON.stringify(list).slice(0, 300)}`);
+    for (const a of list) abilities.set(a.name, a);
+    expect(list.length === 18, `${list.length} abilities: ${list.map((a) => a.name).join(', ')}`);
+    const unsure = list.filter((a) => ['readonly', 'destructive', 'idempotent'].some((k) => typeof a.meta?.annotations?.[k] !== 'boolean'));
+    expect(!unsure.length, `missing hints: ${unsure.map((a) => a.name).join(', ')}`);
+});
+
+await check('abilities: refused when signed out, or without the capability', async () => {
+    const nobody = await ability('anypress/get-site', undefined, { as: null });
+    expect(nobody.status === 401, `signed out: HTTP ${nobody.status}`);
+    const contributor = await ability('anypress/update-styles', { styles: { color: { background: '#000000' } } }, { as: 'contributor' });
+    expect(contributor.status === 403, `contributor: HTTP ${contributor.status}`);
+});
+
+await check('abilities: overview, then a page built and undone', async () => {
+    const site = await ability('anypress/get-site');
+    expectStatus(site, 200);
+    expect(site.data.name === 'Playground Store' && Array.isArray(site.data.pages), JSON.stringify(site.data).slice(0, 300));
+    const page = await ability('anypress/create-page', { title: 'Abilities page', content: '<!-- wp:paragraph --><p>One</p><!-- /wp:paragraph -->' });
+    expectStatus(page, 200);
+    const id = page.data.id;
+    const added = await ability('anypress/add-page-section', { id, content: '<!-- wp:paragraph --><p>Two</p><!-- /wp:paragraph -->' });
+    expectStatus(added, 200);
+    expect(added.data.outline.length === 2, `outline has ${added.data.outline.length} sections`);
+    const read = await ability('anypress/get-page', { id });
+    expect(read.status === 200 && read.data.content.includes('Two'), `get-page: HTTP ${read.status}`);
+    const removed = await ability('anypress/remove-page-section', { id, section: 0 });
+    expect(removed.status === 200 && !removed.data.content.includes('One'), `remove: HTTP ${removed.status}`);
+    const revisions = await ability('anypress/list-page-revisions', { id });
+    expect(revisions.status === 200 && revisions.data.length >= 2, `revisions: HTTP ${revisions.status}, ${revisions.data.length}`);
+    const restored = await ability('anypress/restore-page-revision', { id, revision: revisions.data[revisions.data.length - 1].id });
+    expectStatus(restored, 200);
+    const after = await ability('anypress/get-page', { id });
+    expect(after.data.content.includes('One') && !after.data.content.includes('Two'), 'restore did not put the first version back');
+});
+
+await check('abilities: styles, patterns and header', async () => {
+    const styles = await ability('anypress/update-styles', { styles: { color: { text: '#111111' } } });
+    expect(styles.status === 200 && styles.data.siteChanges.styles?.color?.text === '#111111', `update-styles: HTTP ${styles.status}`);
+    const patterns = await ability('anypress/find-patterns', { category: 'anypress/pages' });
+    expect(patterns.status === 200 && patterns.data.length >= 4, `find-patterns: HTTP ${patterns.status}`);
+    const header = await ability('anypress/get-site-part', { area: 'header' });
+    expectStatus(header, 200);
 });
 
 const failed = results.filter(([ok]) => !ok).length;

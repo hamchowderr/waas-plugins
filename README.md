@@ -133,7 +133,7 @@ WaaS Host has a REST API for the signed-in customer's websites (`waas-host/v1/ac
 
 ## Site editing API
 
-WaaS Client lets the AnyPress connector edit a store's design and content (`waas-client/v1/site`): pages and their sections, the theme's patterns, colours and fonts, the header and footer, menus, revisions and images. Only the AnyPress API can call it, with requests signed by the store's own site key. How: [docs/site-editing-api.md](docs/site-editing-api.md).
+WaaS Client lets the AnyPress connector edit a store's design and content (`waas-client/v1/site`): pages and their sections, the theme's patterns, colours and fonts, the header and footer, menus, revisions and images. Only the AnyPress API can call it, with requests signed by the store's own site key. The same actions are also WordPress abilities (category `anypress`) for a signed-in user with the right capabilities, so WordPress's MCP Adapter and AI agents on the site can use them. How: [docs/site-editing-api.md](docs/site-editing-api.md).
 
 ## Updates
 
@@ -155,7 +155,7 @@ Each plugin is a Composer package under `packages/` (`waas-host`, `waas-client`,
 
 On Linux with Docker, `scripts/test-env.sh up` starts a throwaway WordPress (MariaDB + WordPress in Docker) at http://127.0.0.1 with this checkout's Host and Payments plugins, FluentCart, WooCommerce and Subscriptions for WooCommerce active. Log in as admin / admin. `scripts/test-env.sh wp ...` runs WP-CLI; `scripts/test-env.sh down` removes it.
 
-Without Docker, `scripts/playground` runs WaaS Client on [WordPress Playground](https://developer.wordpress.org/playground/) (WordPress and PHP inside Node) with the Ollie theme and the store template's starter pages, and checks the site-editing API end to end with a throwaway site key. It needs Node 24.18 or newer and `composer install` in `packages/waas-client`:
+Without Docker, `scripts/playground` runs WaaS Client on [WordPress Playground](https://developer.wordpress.org/playground/) (WordPress and PHP inside Node) with the Ollie theme and the store template's starter pages, and checks the site-editing API and its abilities end to end with a throwaway site key. It needs Node 24.18 or newer and `composer install` in `packages/waas-client`:
 
 ```shell
 cd scripts/playground

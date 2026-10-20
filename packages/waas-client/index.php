@@ -23,6 +23,7 @@ define( 'WAAS_CLIENT_VERSION', '2.3.1' );
 define( 'WAAS_CLIENT_TEXTDOMAIN', 'waas-client' );
 
 use WaaSClient\Api\SingleSignOnController;
+use WaaSClient\Api\SiteAbilities;
 use WaaSClient\Api\SiteController;
 use WaaSClient\Core\DecryptionService;
 use WaaSClient\Core\HttpService;
@@ -52,7 +53,8 @@ if (!wp_doing_ajax()) {
     new SingleSignOnController($decryptionService);
 
     // Design and content for the AnyPress connector; answers only requests signed with the store's site key.
-    new SiteController();
+    // The same actions as WordPress abilities, for the signed-in user (WordPress's MCP Adapter, AI agents on the site).
+    new SiteAbilities(new SiteController());
     // "Sign in with your website": the page where a store owner allows an AI app to edit this website.
     new ConnectPage();
 
