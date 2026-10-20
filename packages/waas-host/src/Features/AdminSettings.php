@@ -103,6 +103,8 @@ class AdminSettings
             }
             $this->provisioningApi->update_is_reachable($reachable);
             if ($reachable) {
+                // Before the sections below, so the Webhooks section shows the outcome.
+                do_action('waas_api_connection_saved');
                 echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Connected to the WaaS API.', WAAS_HOST_TEXTDOMAIN) . '</p></div>';
             } else {
                 $this->waas_could_not_connect_to_api_notice_error();
@@ -252,7 +254,7 @@ class AdminSettings
             'type' => 'password',
             'class_name' => 'regular-text code',
             'constant' => 'API_SECRET',
-            'hint' => self::constant_hint('API_SECRET', __('Saving checks the connection.', WAAS_HOST_TEXTDOMAIN)),
+            'hint' => self::constant_hint('API_SECRET', __('Saving checks the connection and registers this storefront for the API\'s webhooks.', WAAS_HOST_TEXTDOMAIN)),
         ]);
 
         // Stores

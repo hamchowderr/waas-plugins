@@ -7,6 +7,7 @@ use Tests\FakeCommerceAdapter;
 use Tests\Unit\TestCase;
 use WaaSHost\Commerce\Commerce;
 use WaaSHost\Core\PrivateKeyStore;
+use WaaSHost\Core\SecretBox;
 use WaaSHost\Core\Tenant;
 
 class PrivateKeyStoreTest extends TestCase
@@ -121,5 +122,16 @@ class PrivateKeyStoreTest extends TestCase
         $this->assertSame('', PrivateKeyStore::open($tampered));
         $this->assertSame('', PrivateKeyStore::open(PrivateKeyStore::PREFIX . 'not base64!'));
         $this->assertSame('', PrivateKeyStore::open(PrivateKeyStore::PREFIX . base64_encode('short')));
+    }
+
+    /** SecretBox is shared with the webhook secret; keys sealed before that still open, and each purpose has its own key. */
+    public function test_keys_sealed_before_secretbox_was_shared_still_open(): void
+    {
+        $key = sodium_crypto_generichash('waas-host-private-key-encryption|auth-salt-from-wp-config', '', SODIUM_CRYPTO_SECRETBOX_KEYBYTES);
+        $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+        $sealed = PrivateKeyStore::PREFIX . base64_encode($nonce . sodium_crypto_secretbox(self::PEM, $nonce, $key));
+
+        $this->assertSame(self::PEM, PrivateKeyStore::open($sealed));
+        $this->assertSame('', SecretBox::open($sealed, 'waas-host-webhook-secret'));
     }
 }

@@ -5,7 +5,7 @@ namespace WaaSHost\Core;
 use WaaSHost\Commerce\Commerce;
 
 /**
- * Stores each tenant's one-click-login private key encrypted at rest (libsodium secretbox), in the active cart's
+ * Stores each tenant's one-click-login private key encrypted at rest (SecretBox), in the active cart's
  * subscription meta.
  *
  * The encryption key comes from wp-config: the WAAS_HOST_KEY_ENCRYPTION_KEY constant if defined, otherwise
@@ -18,8 +18,10 @@ use WaaSHost\Commerce\Commerce;
  */
 class PrivateKeyStore
 {
-    public const PREFIX = 'waasenc:v1:';
-    public const KEY_CONSTANT = 'WAAS_HOST_KEY_ENCRYPTION_KEY';
+    public const PREFIX = SecretBox::PREFIX;
+    public const KEY_CONSTANT = SecretBox::KEY_CONSTANT;
+    /** Keys are derived per purpose; this one is what the keys were sealed with before SecretBox was shared. */
+    private const PURPOSE = 'waas-host-private-key-encryption';
 
     public static function save($subscription_id, string $private_key): void
     {
@@ -75,35 +77,16 @@ class PrivateKeyStore
 
     public static function is_sealed(string $stored): bool
     {
-        return strpos($stored, self::PREFIX) === 0;
+        return SecretBox::is_sealed($stored);
     }
 
     public static function seal(string $plaintext): string
     {
-        $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
-        $ciphertext = sodium_crypto_secretbox($plaintext, $nonce, self::encryption_key());
-
-        return self::PREFIX . base64_encode($nonce . $ciphertext);
+        return SecretBox::seal($plaintext, self::PURPOSE);
     }
 
     public static function open(string $stored): string
     {
-        $raw = base64_decode(substr($stored, strlen(self::PREFIX)), true);
-        if ($raw === false || strlen($raw) <= SODIUM_CRYPTO_SECRETBOX_NONCEBYTES) {
-            return '';
-        }
-
-        $nonce = substr($raw, 0, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
-        $ciphertext = substr($raw, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
-        $plaintext = sodium_crypto_secretbox_open($ciphertext, $nonce, self::encryption_key());
-
-        return $plaintext === false ? '' : $plaintext;
-    }
-
-    private static function encryption_key(): string
-    {
-        $secret = defined(self::KEY_CONSTANT) ? (string) constant(self::KEY_CONSTANT) : wp_salt('auth');
-
-        return sodium_crypto_generichash('waas-host-private-key-encryption|' . $secret, '', SODIUM_CRYPTO_SECRETBOX_KEYBYTES);
+        return SecretBox::open($stored, self::PURPOSE);
     }
 }

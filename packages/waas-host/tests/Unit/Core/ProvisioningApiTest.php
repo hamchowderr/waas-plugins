@@ -42,6 +42,19 @@ class ProvisioningApiTest extends TestCase
         $this->assertSame('bk-1', $result->backupId);
     }
 
+    public function test_webhook_endpoints_are_created_listed_and_deleted(): void
+    {
+        $this->http->expects('post')
+            ->with('/v1/webhooks', ['url' => 'https://shop.example/wp-json/waas-host/v1/webhook', 'eventTypes' => ['tenant.ready'], 'description' => 'Storefront'])
+            ->andReturn((object) ['id' => 'ep-1', 'secret' => 'whsec_abc']);
+        $this->http->expects('get')->with('/v1/webhooks')->andReturn([(object) ['id' => 'ep-1']]);
+        $this->http->expects('delete')->with('/v1/webhooks/ep-1')->andReturn((object) ['id' => 'ep-1']);
+
+        $this->assertSame('whsec_abc', $this->service->create_webhook_endpoint('https://shop.example/wp-json/waas-host/v1/webhook', ['tenant.ready'], 'Storefront')->secret);
+        $this->assertSame('ep-1', $this->service->get_webhook_endpoints()[0]->id);
+        $this->service->delete_webhook_endpoint('ep-1');
+    }
+
     public function test_resume_tenant_posts_an_empty_body_by_external_id(): void
     {
         $this->http->expects('post')

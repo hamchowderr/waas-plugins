@@ -75,6 +75,7 @@ if (!class_exists('WP_REST_Request')) {
         private $route;
         private $params;
         private $headers = [];
+        private $body = '';
 
         public function __construct($method = '', $route = '', array $params = [])
         {
@@ -111,6 +112,16 @@ if (!class_exists('WP_REST_Request')) {
         public function set_param($key, $value)
         {
             $this->params[$key] = $value;
+        }
+
+        public function get_body()
+        {
+            return $this->body ?? '';
+        }
+
+        public function set_body($body)
+        {
+            $this->body = $body;
         }
     }
 }
