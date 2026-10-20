@@ -6,6 +6,7 @@ use WaaSHost\Api\AccountSignIn;
 use WaaSHost\Api\AccountTokens;
 use WaaSHost\Api\RolesController;
 use WaaSHost\Api\SingleLogin;
+use WaaSHost\Api\WebhookReceiver;
 use WaaSHost\Commerce\Commerce;
 use WaaSHost\Commerce\FluentCart\FluentCartAdapter;
 use WaaSHost\Commerce\WooCommerce\WooCommerceAdapter;
@@ -21,6 +22,7 @@ use WaaSHost\Features\AdminHome;
 use WaaSHost\Features\AdminNotices;
 use WaaSHost\Features\Notifications;
 use WaaSHost\Features\TenantStatusService;
+use WaaSHost\Features\Webhooks;
 use WaaSHost\Features\WebsiteSettings;
 
 require_once __DIR__ . '/vendor/autoload.php';
@@ -71,7 +73,9 @@ Commerce::register(new FluentCartAdapter());
 Commerce::register(new WooCommerceAdapter());
 Commerce::boot($provisioningApi);
 
-new TenantStatusService($provisioningApi);
+$tenantStatusService = new TenantStatusService($provisioningApi);
+// The API's signed events (waas-host/v1/webhook) act at once; the status poll stays on as a backstop
+new WebhookReceiver($tenantStatusService);
 // The customer's websites as a REST API (waas-host/v1/account), with token sign-in for front ends on other domains
 $accountTokens = new AccountTokens();
 new AccountController(new WebsiteSettings($provisioningApi), $nameConflicts, $configService, $accountTokens);
@@ -82,6 +86,7 @@ if (defined('WP_CLI') && WP_CLI) {
 AdminNotices::init($configService);
 new AdminHome($configService);
 new AdminSettings($provisioningApi, $configService);
+new Webhooks($provisioningApi, $configService);
 WaaSHost\Assets\Module::init();
 
 WaaSHost\Updater\Module::init($configService);

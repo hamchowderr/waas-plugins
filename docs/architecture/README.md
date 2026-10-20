@@ -5,7 +5,7 @@ These pages explain how **WaaS Host**, **WaaS Client** and **WaaS Payments** wor
 | Page | What it covers |
 |---|---|
 | This page | Where each plugin runs, a website's life from purchase to login, plan roles, updates |
-| [WaaS Host](waas-host.md) | Cart adapters, the background job queue, store states, every API call, the account API |
+| [WaaS Host](waas-host.md) | Cart adapters, the background job queue, store states, every API call, the API's webhooks, the account API |
 | [WaaS Client](waas-client.md) | What runs on the template and in each store, plan-based plugins, one-click login checks |
 | [WaaS Payments](waas-payments.md) | Authorize.Net checkout, saved cards, renewals, webhooks, refunds |
 
@@ -44,6 +44,7 @@ flowchart TB
   BUY -->|"one-click login link"| CLIENT
   PAY <-->|"charges, refunds,<br/>saved cards, webhooks"| ANET
   HOST -->|"create, suspend, resume,<br/>delete, domains, status poll"| REST
+  REST -.->|"signed webhooks<br/>ready, domains, failed"| HOST
   HOST -->|"downloads roles.json"| TPL
   COOL -->|"builds and runs"| STORE
   HOST -.->|"update checks"| REST
@@ -60,7 +61,7 @@ flowchart TB
 Three things worth knowing up front:
 
 - **WaaS Host is the only plugin that calls the provisioning API** (`waas-host/src/Core/ProvisioningApi.php`). WaaS Client never calls it, and WaaS Payments only talks to Authorize.Net.
-- **The API never calls the plugins.** WaaS Host polls for progress instead of receiving webhooks (`waas-host/src/Features/TenantStatusService.php`).
+- **The API calls only WaaS Host, and only with signed webhooks.** WaaS Host registers its own endpoint and the API tells it when a website is ready, restored, has new domains or failed. A poll every minute stays on as a backstop, every five seconds if the endpoint couldn't be registered (`waas-host/src/Features/Webhooks.php`, `waas-host/src/Api/WebhookReceiver.php`, `waas-host/src/Features/TenantStatusService.php`). See [WaaS Host, webhooks](waas-host.md#webhooks).
 - **WaaS Client is not installed by the API.** It ships inside the template, so every website made from that template already has it, active.
 
 ## A website's life, end to end
@@ -86,18 +87,18 @@ sequenceDiagram
   HOST->>API: POST /v1/tenants (name, user, roles, public key)
   API-->>HOST: id, externalId, domain
   API->>ST: Background job builds WordPress from the template
-  loop Every 5 seconds
-    HOST->>API: GET /v1/tenants?externalId=
-  end
+  API->>HOST: Webhook tenant.ready (signed)
+  HOST->>API: GET /v1/tenants?externalId= (fresh state)
   HOST->>ST: HEAD https://domain (certificate ready?)
   HOST->>C: "Your website is ready" email, state Ready
+  Note over HOST,API: Backstop: the same check runs every minute,<br/>every 5 seconds without a webhook endpoint
   C->>HOST: Click "Log in" on My website
   HOST-->>C: Redirect with a token signed by the private key
   C->>ST: /wp-json/waas-client/v1/single_login/verify?token=
   ST-->>C: Logged in to wp-admin
 ```
 
-Sources: `waas-host/src/Commerce/FluentCart/FluentCartCheckout.php`, `waas-host/src/Features/UserWcTenantsCheckout.php`, `waas-host/src/Features/TenantsSubscriptionManager.php` (`create_tenant_when_subscription_created`, `job_create`), `waas-host/src/Features/TenantStatusService.php`, `waas-host/src/Features/Notifications.php`, `waas-host/src/Api/SingleLogin.php`, `waas-client/src/Api/SingleSignOnController.php`.
+Sources: `waas-host/src/Commerce/FluentCart/FluentCartCheckout.php`, `waas-host/src/Features/UserWcTenantsCheckout.php`, `waas-host/src/Features/TenantsSubscriptionManager.php` (`create_tenant_when_subscription_created`, `job_create`), `waas-host/src/Api/WebhookReceiver.php`, `waas-host/src/Features/TenantStatusService.php`, `waas-host/src/Features/Notifications.php`, `waas-host/src/Api/SingleLogin.php`, `waas-client/src/Api/SingleSignOnController.php`.
 
 ## One-click login
 

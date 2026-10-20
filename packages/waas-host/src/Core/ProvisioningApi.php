@@ -300,6 +300,41 @@ class ProvisioningApi
     }
 
     /**
+     * Registers a webhook endpoint for this storefront. The answer carries the signing secret (whsec_…), the only
+     * time the API shows it. The API refuses (400) a URL that isn't https:// on a public address.
+     *
+     * @param string[] $event_types
+     * @throws \Exception
+     */
+    public function create_webhook_endpoint(string $url, array $event_types, string $description = '')
+    {
+        return $this->httpService->post('/v1/webhooks', [
+            'url' => $url,
+            'eventTypes' => array_values($event_types),
+            'description' => $description,
+        ]);
+    }
+
+    /**
+     * The storefront's webhook endpoints, without their secrets.
+     *
+     * @throws \Exception
+     */
+    public function get_webhook_endpoints(): array
+    {
+        $endpoints = $this->httpService->get('/v1/webhooks');
+        return is_array($endpoints) ? $endpoints : [];
+    }
+
+    /**
+     * @throws \Exception
+     */
+    public function delete_webhook_endpoint(string $id)
+    {
+        return $this->httpService->delete('/v1/webhooks/' . rawurlencode($id));
+    }
+
+    /**
      * Every store of this storefront, as the API has them.
      *
      * @throws \Exception

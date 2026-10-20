@@ -28,7 +28,7 @@ You need a WordPress site to sell from (the **storefront**: WordPress 6.4 or new
 1. **Install a cart.** FluentCart 1.7 or newer (recommended), or WooCommerce with WP Swings' free Subscriptions for WooCommerce or the paid WooCommerce Subscriptions.
 2. **Install WaaS Host** on the storefront (and **WaaS Payments** if you want Authorize.Net card payments on FluentCart). Build the zips with Composer installed: `scripts/release/build.sh waas-host <version> dist`, and `scripts/release/build.sh waas-payments <version> dist` for WaaS Payments. Upload them under **Plugins → Add New → Upload Plugin**.
 3. **Add a secret to `wp-config.php`:** `define('WAAS_HOST_KEY_ENCRYPTION_KEY', '…');` with a long random string (`openssl rand -base64 48`). Keep it stable ([Storefront secrets](#storefront-secrets)).
-4. **Connect to the API.** In **WaaS → Settings**, on the **Connection** tab, enter the **API URL**, **API key** and **API secret**. On the **Websites** tab, set **Website domain** (the domain customers' websites are named under, e.g. `example.com`).
+4. **Connect to the API.** In **WaaS → Settings**, on the **Connection** tab, enter the **API URL**, **API key** and **API secret**. Saving also registers the storefront for the API's webhooks ([Website status](#website-status)). On the **Websites** tab, set **Website domain** (the domain customers' websites are named under, e.g. `example.com`).
 5. **Make a product.** Create a subscription product and turn on WaaS for it, choosing the plan role and snapshot group ([Storefront cart](#storefront-cart) shows where this is on each cart).
 6. **Run cron every minute.** Websites are created in the background; on a quiet site WordPress's own cron waits for the next visitor. Define `DISABLE_WP_CRON` and run `wp action-scheduler run` and `wp cron event run --due-now` every minute from a real cron job.
 7. **Test it.** Buy the product: checkout asks for a website name, and a few minutes after payment the customer finds the website, with a one-click login, under **My website**.
@@ -80,6 +80,15 @@ define('WAAS_API_BASE_URL', 'https://api.example.com');
 
 The **API key** and **API secret** go on the same tab. **Website domain**, on the **Websites** tab, is the domain customers' websites are named under.
 
+## Website status
+
+The provisioning API tells the storefront when a new website is ready, so the customer gets the "website ready" email and their login button as soon as the website answers over HTTPS.
+
+- **Registration.** Saving the **Connection** tab, when the API answers, registers the storefront's address `https://<storefront>/wp-json/waas-host/v1/webhook` with the API. The **Webhooks** section of that tab shows whether it is registered, and if not, why. **Register again** replaces the registration, for example after moving the site. With the API settings in `wp-config.php` there is nothing to save: the plugin registers itself within the hour, and does the same when the site's address or the API changes.
+- **What the API reports.** A website that is ready or restored, a website whose domains changed, and a change that still failed after the API's retries. The last one shows as an admin notice until you dismiss it or the website becomes ready. Every request is signed with a secret that is stored encrypted with the key from [Storefront secrets](#storefront-secrets).
+- **Checking as a backstop.** Websites being set up are still checked every minute. When the storefront isn't registered, they are checked every five seconds instead.
+- **Local and test sites.** The API only calls `https://` addresses it can reach from the internet, so a storefront on `http://` or a private address isn't registered and checks every five seconds.
+
 ## Storefront secrets
 
 Each store's one-click-login private key is stored encrypted on its subscription. The encryption key comes from `wp-config.php` on the storefront:
@@ -90,6 +99,8 @@ define('WAAS_HOST_KEY_ENCRYPTION_KEY', '...');
 ```
 
 Without the constant, WordPress's auth salt is used instead. Either way, keep it stable: changing it makes the stored keys unreadable and one-click login stops working for existing stores. Keys saved by older versions in plain text are encrypted the first time they're used. The key's meta name, `_waas_tenant_private_key`, starts with an underscore so WooCommerce doesn't show it in the Custom Fields box or the REST API; keys under the old `WPCS_TENANT_PRIVATE_KEY_META` name move there when waas-host updates (or on first use), and WooCommerce Subscriptions renewal orders don't get a copy.
+
+The webhook signing secret ([Website status](#website-status)) is encrypted with the same key. If it can no longer be read, the storefront registers again on its own.
 
 WooCommerce products keep their WaaS settings through WooCommerce's product object, under `_waas_product_role` and `_waas_product_group_name`. Settings under the old `WPCS_PRODUCT_ROLE_META` and `WPCS_PRODUCT_GROUPNAME_META` names are still read, and move to the new names when waas-host updates.
 

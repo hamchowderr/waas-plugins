@@ -14,7 +14,7 @@ flowchart TB
     CFG["ConfigService<br/>API URL, key, secret, DNS targets<br/>constant, then option, then filter"]
     HTTP["HttpService<br/>Basic auth, 10 s GET, 20 s writes"]
     PAPI["ProvisioningApi<br/>one method per endpoint"]
-    ENC["EncryptionService and PrivateKeyStore<br/>login key pairs"]
+    ENC["EncryptionService, PrivateKeyStore, SecretBox<br/>login key pairs, sealed secrets"]
     CFG --> HTTP --> PAPI
   end
 
@@ -31,13 +31,15 @@ flowchart TB
     ADD["TenantsAddOnSubscriptionManager<br/>roles change"]
     NC["NameConflicts<br/>name taken after checkout"]
     JOBS["StoreJobs<br/>background queue with retries"]
-    TSS["TenantStatusService<br/>polls until Ready, syncs domains"]
+    TSS["TenantStatusService<br/>takes a website to Ready, syncs domains"]
+    WH["Webhooks<br/>registers the endpoint"]
     NOTE["Notifications<br/>customer emails"]
   end
 
   subgraph FACE["What people see"]
     PORTAL["My website page<br/>FluentCartPortal, SubscriptionDetails"]
     ACC["Account REST API<br/>src/Api/Account*"]
+    WHR["WebhookReceiver<br/>waas-host/v1/webhook"]
     SL["SingleLogin<br/>login redirect"]
     ROLES["RolesController<br/>refresh plan roles"]
     ADM["AdminSettings, AdminHome, AdminNotices"]
@@ -53,6 +55,9 @@ flowchart TB
   NC --> JOBS
   JOBS -->|"runs handlers that call"| PAPI
   TSS --> PAPI
+  WH --> PAPI
+  WHR -->|"one website, now"| TSS
+  WHR -->|"secret"| WH
   TSS -->|"waas_tenant_ready"| NOTE
   ACC --> PAPI
   PORTAL --> SL
@@ -171,20 +176,25 @@ sequenceDiagram
     API-->>TSM: id, externalId, baseDomain, customDomain
     TSM->>TSM: Save externalId and domains, fire waas_tenant_linked_to_subscription
     TSM->>TSS: state Provisioning
-    loop Status poll cron, every 5 seconds
-      TSS->>API: GET /v1/tenants?externalId=
-      Note right of TSS: Provisioning, then Linking Domain<br/>until statusCode is not 0 and the<br/>domain matches
+    API->>TSS: Webhook tenant.ready, through WebhookReceiver
+    TSS->>API: GET /v1/tenants?externalId=
+    Note right of TSS: Provisioning, then Linking Domain<br/>once statusCode is not 0 and the<br/>domain matches
+    TSS->>TSS: Requesting SSL: HEAD https://domain
+    opt Not 200 yet
+      TSS->>TSS: One re-check 5 seconds later, then the poll
     end
-    TSS->>TSS: Requesting SSL: HEAD https://domain until 200
+    loop Status poll cron, every minute (every 5 seconds without webhooks)
+      TSS->>API: The same steps for websites still on their way
+    end
     TSS->>C: State Ready, waas_tenant_ready, "website ready" email
   end
 ```
 
-Sources: `src/Commerce/FluentCart/FluentCartCheckout.php`, `src/Features/UserWcTenantsCheckout.php`, `src/Features/TenantsSubscriptionManager.php` (`create_tenant_when_subscription_created`, `new_store_args`, `job_create`, `key_pair`), `src/Features/NameConflicts.php`, `src/Features/TenantStatusService.php` (`poll_tenant_status`), `src/Features/Notifications.php`.
+Sources: `src/Commerce/FluentCart/FluentCartCheckout.php`, `src/Features/UserWcTenantsCheckout.php`, `src/Features/TenantsSubscriptionManager.php` (`create_tenant_when_subscription_created`, `new_store_args`, `job_create`, `key_pair`), `src/Features/NameConflicts.php`, `src/Api/WebhookReceiver.php`, `src/Features/TenantStatusService.php` (`process_subscription`, `poll_tenant_status`), `src/Features/Notifications.php`.
 
 - If a retry runs after an earlier attempt already created the website, `job_create` asks the API for it by `externalId` and adopts it, so a website is never made twice.
 - The `POST /v1/tenants` body carries: name, WordPress username (from the customer's name) and email, the default user role, group and size, the roles, the public login key, whether to remove plugin rights from administrators, and the options `blogname`, `admin_email` and `waas_store_owner`.
-- Every 1 minute a second cron copies each website's current domain from `GET /v1/tenants`, so the API stays the source of truth for domains.
+- Every 1 minute a second cron copies each website's current domain from `GET /v1/tenants`, so the API stays the source of truth for domains. A `tenant.domains_changed` webhook does the same for one website at once.
 
 ## The background job queue
 
@@ -215,7 +225,7 @@ Source: `src/Features/StoreJobs.php` (`enqueue`, `run`, `RETRY_DELAYS`, `retry`,
 
 ## Website states
 
-The state is kept in subscription meta and shown to the customer. The API has its own simpler status code (0 pending, 1 done, 2 failed, 3 removing) which WaaS Host reads while polling.
+The state is kept in subscription meta and shown to the customer. The API has its own simpler status code (0 pending, 1 done, 2 failed, 3 removing) which WaaS Host reads when a webhook arrives and while polling.
 
 ```mermaid
 stateDiagram-v2
@@ -239,10 +249,62 @@ stateDiagram-v2
   RequestingSSL: Requesting SSL
 ```
 
-Source: `src/Core/Tenant.php` (state names), `src/Features/TenantStatusService.php` (the three polling states), `src/Features/TenantsSubscriptionManager.php`, `src/Features/StoreJobs.php`.
+Source: `src/Core/Tenant.php` (state names), `src/Features/TenantStatusService.php` (the three in-progress states), `src/Features/TenantsSubscriptionManager.php`, `src/Features/StoreJobs.php`.
 
 - Failed can follow any job, not only the two drawn. Retry returns to whatever state was saved with the failure.
 - A suspension has a reason. `on_hold` keeps the website with no backup and no deletion date. `ended` takes a backup and schedules deletion. Only these two are resumed by a renewal (`src/Core/Tenant.php`).
+
+## Webhooks
+
+The API tells WaaS Host when a website changes, so the customer doesn't wait on a poll. WaaS Host registers one endpoint for the storefront and acts on four events. The payload only names the website: its state is read from the API again by the poller's own code, so the HTTPS check, the Ready state and `waas_tenant_ready` behave as they do when polling.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor A as Admin
+  participant SET as AdminSettings
+  participant WH as Webhooks
+  participant API as Provisioning API
+  participant WHR as WebhookReceiver
+  participant TSS as TenantStatusService
+  participant ST as Website
+
+  A->>SET: Save the Connection tab
+  SET->>API: GET /v1/versions (reachable?)
+  SET->>WH: waas_api_connection_saved
+  alt Same URL and API already registered
+    WH->>WH: Keep it
+  else New, or the site URL or API changed
+    WH->>API: DELETE /v1/webhooks/{old id} (best effort)
+    WH->>API: POST /v1/webhooks (url, eventTypes)
+    API-->>WH: id and whsec_ secret
+    WH->>WH: Save id, URL, API, secret sealed with SecretBox
+  end
+  Note over WH,API: Refused (http or private address): the reason is saved<br/>and shown on the Connection tab, polling stays every 5 s
+  API->>WHR: POST /wp-json/waas-host/v1/webhook (tenant.ready)
+  WHR->>WHR: Check webhook-signature, timestamp within 300 s,<br/>webhook-id not seen in the last day
+  WHR->>TSS: process_subscription (found by externalId)
+  TSS->>API: GET /v1/tenants?externalId=
+  TSS->>ST: HEAD https://domain
+  TSS->>TSS: 200 is Ready and waas_tenant_ready,<br/>otherwise one re-check in 5 s
+  WHR-->>API: 200
+  loop Backstop, every minute
+    TSS->>API: The same steps for websites still on their way
+  end
+```
+
+Sources: `src/Features/AdminSettings.php` (`render_waas_admin_page`), `src/Features/Webhooks.php` (`ensure_registered`), `src/Api/WebhookReceiver.php` (`verify`, `handle`, `dispatch`), `src/Features/TenantStatusService.php` (`process_subscription`, `recheck_soon`, `poll_recurrence`), `src/Core/SecretBox.php`.
+
+| Event | What WaaS Host does |
+|---|---|
+| `tenant.ready`, `tenant.restored` | Runs the poller's steps for that website now. If HTTPS doesn't answer 200 yet, one re-check 5 seconds later, then the poll |
+| `tenant.domains_changed` | A live website takes the API's current domain, read again with `GET /v1/tenants?externalId=`. One still being set up gets the poller's next step |
+| `tenant.failed` | Saved on the subscription (`_waas_tenant_api_failure`), logged, `waas_tenant_failed` fired, and shown in an admin notice until dismissed or the website is Ready. The state is left to the poll |
+| Anything else | Answered 200 and ignored. Suspend, resume and delete start on the storefront, which already knows |
+
+- **Registering** happens when the Connection tab is saved and the API answers, from the tab's **Register** button, and in an hourly WP-Cron check that needs no admin (API settings in `wp-config.php`, a site that moved). Endpoints at the same URL that WaaS Host has no secret for are deleted first, so a lost answer doesn't leave extras behind.
+- **Answers:** 401 for a missing, stale or wrong signature, 400 for a body that isn't an event, 200 for everything else, a repeat included. The event id is remembered only once the event was handled, so a delivery that failed here is retried by the API.
+- **Polling:** the status cron runs every minute while an endpoint is registered and every five seconds while not. The cron run moves itself to the other schedule when that changes.
 
 ## Every API call WaaS Host makes
 
@@ -262,9 +324,10 @@ All calls go through `src/Core/ProvisioningApi.php` with `Authorization: Basic b
 | `GET /v1/tenants/domains/available` | `domain_available` | Checkout and new-name checks |
 | `GET`, `PUT`, `DELETE /v1/tenants/mail-domain` | `get_mail_domain`, `set_mail_domain`, `remove_mail_domain` | Customer's own email sending domain |
 | `GET /v1/tenants/domain-connect` | `domain_connect` | "Connect automatically" DNS button |
+| `GET`, `POST /v1/webhooks`, `DELETE /v1/webhooks/{id}` | `get_webhook_endpoints`, `create_webhook_endpoint`, `delete_webhook_endpoint` | Registering the webhook endpoint |
 | `GET /v1/plugins/{slug}/update` | `src/Updater/Updater.php` | Update checks |
 
-Two calls go elsewhere: `RolesController` downloads `roles.json` from the Production version's site, and the status poll sends `HEAD https://<domain>` to the website itself.
+Two calls go elsewhere: `RolesController` downloads `roles.json` from the Production version's site, and the status check sends `HEAD https://<domain>` to the website itself. The API calls WaaS Host back only at `POST /wp-json/waas-host/v1/webhook` ([Webhooks](#webhooks)).
 
 ## Customer account API
 
@@ -311,3 +374,5 @@ Sources: `src/Api/AccountSignIn.php`, `src/Api/AccountTokens.php`, `src/Api/Acco
 | API login, website domain, DNS targets, grace days, emails | Options or `wp-config.php` constants (`src/Core/ConfigService.php`, `src/Features/AdminSettings.php`) |
 | Account sessions | User meta `waas_account_sessions` |
 | Account front ends | Option `waas_host_account_clients` |
+| Webhook endpoint: id, URL, API, signing secret sealed by `src/Core/SecretBox.php`, last error, last event | Option `waas_host_webhook` |
+| Webhook event ids already handled | Transients, one day |
