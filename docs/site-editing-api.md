@@ -50,3 +50,11 @@ A section is a top-level block of a page (the whitespace between blocks doesn't 
 - Content goes through WordPress's post HTML filter (`wp_kses_post`), so scripts and event attributes are removed, as for an author without `unfiltered_html`. Style changes go through `WP_Theme_JSON::remove_insecure_properties`.
 - No route runs code, installs plugins or themes, or changes settings outside design and content.
 - WordPress keeps a revision of every page, header, footer, menu and style change.
+
+## Sign in with your website
+
+A store owner can connect an AI app to just their own website. On the connector's approve page they type the website's address, and the API sends them to `wp-admin/admin.php?page=waas-connect` on that website. The link is signed with the site key (`Core\ConnectLink`): HMAC-SHA256 over `waas-connect\n<request>\n<app>\n<to>\n<write>\n<back>\n<t>`.
+
+The page (`Features\ConnectPage`) is for administrators only; WordPress asks anyone signed out to sign in first. It names the app and what it may do. Allow or Cancel sends the owner to `back`, the API's answer URL, with `request`, `answer` (`allow`, `allow-read` or `deny`) and `s`, an HMAC-SHA256 over `waas-connect-answer\n<request>\n<answer>`.
+
+The API then gives the app a token for this website only, which can use the site routes above and nothing else. A link that was changed, was signed by another website, or is past `t` is refused.
