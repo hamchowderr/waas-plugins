@@ -4,6 +4,8 @@ WordPress plugins for selling websites as a service: **WaaS Host** runs on the s
 
 They are the WordPress side of [AnyPress](https://anypress.io) and are open source (GPL-3.0): the [provisioning API](https://github.com/hamchowderr/waas-provisioning-api) builds and runs the stores, and the [dashboard](https://github.com/hamchowderr/waas-dashboard) manages them. To run the whole platform yourself, see the API's [self-hosting guide](https://github.com/hamchowderr/waas-provisioning-api/blob/main/docs/self-hosting.md).
 
+How the three plugins work and fit together, with diagrams: [docs/architecture](docs/architecture/README.md).
+
 ## Features
 
 **WaaS Host** (storefront):
