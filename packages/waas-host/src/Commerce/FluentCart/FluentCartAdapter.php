@@ -90,7 +90,8 @@ class FluentCartAdapter implements CommerceAdapter
             $plans,
             $this->store->get_order_meta($purchase_context, Tenant::WEBSITE_NAME_META),
             $customer['email'] ?? '',
-            $customer['country'] ?? ''
+            $customer['country'] ?? '',
+            $this->store->get_order_billing($purchase_context)
         );
     }
 

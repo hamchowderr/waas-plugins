@@ -500,7 +500,7 @@ class TenantsSubscriptionManager
                 'WPCS_TENANT_ROLES' => ['value' => implode(",", $subscription_roles), 'isPrivate' => false],
             ],
             // Not sent as is: job_create turns it into the store's settings.
-            'owner' => ['country' => strtoupper((string) preg_replace('/[^A-Za-z]/', '', $purchase->country))],
+            'owner' => ['country' => strtoupper((string) preg_replace('/[^A-Za-z]/', '', $purchase->country))] + $this->owner_billing($purchase->billing),
         ];
 
         $tenant_root_domain = get_option('wpcs_host_settings_root_domain', '');
@@ -515,11 +515,25 @@ class TenantsSubscriptionManager
         ];
     }
 
+    /** The buyer's billing details the store fills in as its business details (name, address, phone), cleaned. */
+    private function owner_billing(array $billing): array
+    {
+        $owner = [];
+        foreach (['name', 'phone', 'address_1', 'address_2', 'city', 'state', 'postcode'] as $key) {
+            $value = trim(sanitize_text_field((string) ($billing[$key] ?? '')));
+            if ($value !== '') {
+                $owner[$key] = $value;
+            }
+        }
+
+        return $owner;
+    }
+
     /**
      * WordPress settings the new store starts with: its title is the website name, and its admin email (where
      * WordPress and the store's plugins send owner notices) is the buyer's, not the template's placeholder.
-     * `waas_store_owner` carries the rest for templates that set up their plugins from it. Read at job time, so
-     * a name changed after a conflict is the one used.
+     * `waas_store_owner` (JSON) carries the rest: the country and the buyer's billing name, phone and address, which
+     * the store fills in as its business details. Read at job time, so a name changed after a conflict is the one used.
      */
     private function store_options(array $args): array
     {

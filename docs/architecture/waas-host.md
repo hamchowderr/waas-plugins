@@ -193,7 +193,7 @@ sequenceDiagram
 Sources: `src/Commerce/FluentCart/FluentCartCheckout.php`, `src/Features/UserWcTenantsCheckout.php`, `src/Features/TenantsSubscriptionManager.php` (`create_tenant_when_subscription_created`, `new_store_args`, `job_create`, `key_pair`), `src/Features/NameConflicts.php`, `src/Api/WebhookReceiver.php`, `src/Features/TenantStatusService.php` (`process_subscription`, `poll_tenant_status`), `src/Features/Notifications.php`.
 
 - If a retry runs after an earlier attempt already created the website, `job_create` asks the API for it by `externalId` and adopts it, so a website is never made twice.
-- The `POST /v1/tenants` body carries: name, WordPress username (from the customer's name) and email, the default user role, group and size, the roles, the public login key, whether to remove plugin rights from administrators, and the options `blogname`, `admin_email` and `waas_store_owner`.
+- The `POST /v1/tenants` body carries: name, WordPress username (from the customer's name) and email, the default user role, group and size, the roles, the public login key, whether to remove plugin rights from administrators, and the options `blogname`, `admin_email` and `waas_store_owner` (JSON: the billing country, name, phone and address, which the store fills in as its business details, time zone and currency).
 - Every 1 minute a second cron copies each website's current domain from `GET /v1/tenants`, so the API stays the source of truth for domains. A `tenant.domains_changed` webhook does the same for one website at once.
 
 ## The background job queue

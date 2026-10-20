@@ -113,7 +113,16 @@ class WooCommerceAdapter implements CommerceAdapter
             $plans,
             (string) $purchase_context->get_meta(Tenant::WEBSITE_NAME_META),
             (string) $purchase_context->get_billing_email(),
-            (string) $purchase_context->get_billing_country()
+            (string) $purchase_context->get_billing_country(),
+            [
+                'name' => trim($purchase_context->get_billing_first_name() . ' ' . $purchase_context->get_billing_last_name()),
+                'phone' => (string) $purchase_context->get_billing_phone(),
+                'address_1' => (string) $purchase_context->get_billing_address_1(),
+                'address_2' => (string) $purchase_context->get_billing_address_2(),
+                'city' => (string) $purchase_context->get_billing_city(),
+                'state' => (string) $purchase_context->get_billing_state(),
+                'postcode' => (string) $purchase_context->get_billing_postcode(),
+            ]
         );
     }
 

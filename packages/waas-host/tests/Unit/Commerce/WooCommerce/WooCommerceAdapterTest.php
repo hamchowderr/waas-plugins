@@ -31,6 +31,11 @@ class WooCommerceAdapterTest extends TestCase
         $order->allows('get_meta')->with(Tenant::WEBSITE_NAME_META)->andReturn('Apex Research');
         $order->allows('get_billing_email')->andReturn('owner@apexresearch.example');
         $order->allows('get_billing_country')->andReturn('US');
+        $billing = ['first_name' => 'Jordan', 'last_name' => 'Reyes', 'phone' => '512 555 0100', 'address_1' => '1 Main St', 'address_2' => '',
+            'city' => 'Austin', 'state' => 'TX', 'postcode' => '78701'];
+        foreach ($billing as $field => $value) {
+            $order->allows("get_billing_$field")->andReturn($value);
+        }
         $order->allows('get_items')->andReturn(array_map([$this, 'item'], [101, 102, 103]));
 
         $purchase = (new WooCommerceAdapter())->get_plan_purchase(900, $order);
@@ -42,6 +47,8 @@ class WooCommerceAdapterTest extends TestCase
         $this->assertSame('Apex Research', $purchase->website_name);
         $this->assertSame('owner@apexresearch.example', $purchase->customer_email);
         $this->assertSame('US', $purchase->country);
+        $this->assertSame(['name' => 'Jordan Reyes', 'phone' => '512 555 0100', 'address_1' => '1 Main St', 'address_2' => '',
+            'city' => 'Austin', 'state' => 'TX', 'postcode' => '78701'], $purchase->billing);
     }
 
     public function test_prefers_wp_swings_when_both_subscription_plugins_are_active(): void
