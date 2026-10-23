@@ -132,8 +132,9 @@ class LegacyNames
                 }
             }
         }
+        // wp_unschedule_hook, not wp_clear_scheduled_hook: the latter only removes events scheduled without arguments.
         foreach (array_keys(self::HOOKS) as $old) {
-            wp_clear_scheduled_hook($old);
+            wp_unschedule_hook($old);
         }
     }
 
