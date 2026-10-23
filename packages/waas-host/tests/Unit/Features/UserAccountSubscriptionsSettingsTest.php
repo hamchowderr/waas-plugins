@@ -171,8 +171,8 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
     public function test_dns_instructions_show_the_configured_records(): void
     {
         $this->stubDnsOptions([
-            'wpcs_dns_a_records_setting' => '203.0.113.10, 203.0.113.11',
-            'wpcs_dns_cname_target_setting' => 'sites.example.net',
+            'waas_dns_a_records' => '203.0.113.10, 203.0.113.11',
+            'waas_dns_cname_target' => 'sites.example.net',
         ]);
 
         $html = $this->renderDnsInstructions();
@@ -184,7 +184,7 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
 
     public function test_without_settings_customers_are_told_to_contact_support_even_with_a_leftover_region_setting(): void
     {
-        $this->stubDnsOptions(['wpcs_credentials_region_setting' => 'us1']);
+        $this->stubDnsOptions(['waas_region' => 'us1']);
 
         $html = $this->renderDnsInstructions();
 
@@ -196,7 +196,7 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
 
     public function test_only_the_configured_record_is_shown(): void
     {
-        $this->stubDnsOptions(['wpcs_dns_cname_target_setting' => 'sites.example.net']);
+        $this->stubDnsOptions(['waas_dns_cname_target' => 'sites.example.net']);
 
         $html = $this->renderDnsInstructions();
 

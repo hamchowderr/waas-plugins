@@ -75,8 +75,8 @@ class SubscriptionDetailsTest extends TestCase
         $html = $this->render(5);
 
         $this->assertStringContainsString('Website status: Choose a new website name', $html);
-        $this->assertStringContainsString('name="action" value="wpcs_choose_website_name"', $html);
-        $this->assertStringContainsString('data-action="wpcs_choose_website_name_5"', $html);
+        $this->assertStringContainsString('name="action" value="waas_choose_website_name"', $html);
+        $this->assertStringContainsString('data-action="waas_choose_website_name_5"', $html);
         $this->assertStringContainsString('name="website_name"', $html);
         $this->assertStringNotContainsString('single_login', $html);
     }
@@ -119,7 +119,7 @@ class SubscriptionDetailsTest extends TestCase
     {
         // The wait was paused (subscription cancelled) after the customer opened the page with the form.
         $this->cart->meta[5] = [Tenant::NAME_CONFLICT_META => ['name' => 'Apex Research', 'paused' => true], Tenant::TENANT_STATE => ''];
-        $_GET = ['wpcs_website_name' => 'not_active', 'wpcs_website_name_for' => '5'];
+        $_GET = ['waas_website_name' => 'not_active', 'waas_website_name_for' => '5'];
         Functions\when('sanitize_text_field')->returnArg();
         Functions\when('wp_unslash')->returnArg();
         Functions\when('sanitize_key')->returnArg();

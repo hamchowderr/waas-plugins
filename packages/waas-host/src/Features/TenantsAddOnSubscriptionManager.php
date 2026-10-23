@@ -40,7 +40,7 @@ class TenantsAddOnSubscriptionManager
         }
 
         $this->provisioningApi->update_tenant($tenant_external_id, [
-            'php_constants' => ['WPCS_TENANT_ROLES' => ['value' => implode(",", $args['roles']), 'isPrivate' => false]]
+            'php_constants' => ['WAAS_TENANT_ROLES' => ['value' => implode(",", $args['roles']), 'isPrivate' => false]]
         ]);
         $commerce->update_subscription_meta($subscription_id, Tenant::SUBSCRIPTION_USER_ROLES, $args['roles']);
 

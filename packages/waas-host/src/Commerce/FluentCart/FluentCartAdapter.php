@@ -72,7 +72,7 @@ class FluentCartAdapter implements CommerceAdapter
     }
 
     /**
-     * @param \FluentCart\App\Models\Order $purchase_context the order the integration passes with wpcs_subscription_created
+     * @param \FluentCart\App\Models\Order $purchase_context the order the integration passes with waas_subscription_created
      */
     public function get_plan_purchase($subscription_id, $purchase_context): PlanPurchase
     {

@@ -73,7 +73,7 @@ class FakeCommerceAdapter implements CommerceAdapter
     public function is_domain_taken(string $domain_name): bool
     {
         foreach ($this->meta as $meta) {
-            if (($meta['WPCS_DOMAIN_NAME_META'] ?? null) === $domain_name && ($meta['WPCS_TENANT_STATE'] ?? '') !== 'Deleted') {
+            if (($meta['waas_domain_name'] ?? null) === $domain_name && ($meta['waas_tenant_state'] ?? '') !== 'Deleted') {
                 return true;
             }
         }

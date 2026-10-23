@@ -71,7 +71,7 @@ class ProvisioningApiContractTest extends TestCase
             'custom_domain_name' => 'apex-research.stores.waas.example',
             'group_name' => 'peptide-starter',
             'php_constants' => [
-                'WPCS_TENANT_ROLES' => ['value' => 'peptide-store', 'isPrivate' => false],
+                'WAAS_TENANT_ROLES' => ['value' => 'peptide-store', 'isPrivate' => false],
             ],
         ]);
 
@@ -104,7 +104,7 @@ class ProvisioningApiContractTest extends TestCase
         $this->mock_example('Update tenant options and constants: Scheduled (roles updated)');
 
         $result = $this->service->update_tenant('store-1042', [
-            'php_constants' => ['WPCS_TENANT_ROLES' => ['value' => 'peptide-store,peptide-coa-addon', 'isPrivate' => false]],
+            'php_constants' => ['WAAS_TENANT_ROLES' => ['value' => 'peptide-store,peptide-coa-addon', 'isPrivate' => false]],
         ]);
 
         $this->assertSame('store-1042', $result->externalId);

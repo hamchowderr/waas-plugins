@@ -8,7 +8,7 @@ class RolesManager
     {
         add_action('init', [$this, 'activate_enabled_plugins']);
 
-        if (defined(PluginBootstrap::TENANT_ROLES_CONSTANT)) {
+        if (PluginBootstrap::has_constant(PluginBootstrap::TENANT_ROLES_CONSTANT)) {
             add_filter('option_' . PluginBootstrap::TENANT_ROLES, [$this, 'get_roles_from_constant']);
             add_filter('default_option_' . PluginBootstrap::TENANT_ROLES, [$this, 'get_roles_from_constant']);
         }
@@ -16,7 +16,7 @@ class RolesManager
 
     public function activate_enabled_plugins(): void
     {
-        if (getenv('WPCS_IS_TENANT') !== 'true') {
+        if (!PluginBootstrap::is_store()) {
             // This is not a WaaS store. Either we're in a version or some local environment
             return;
         }
@@ -92,7 +92,7 @@ class RolesManager
 
     public function get_roles_from_constant()
     {
-        return array_map('trim', explode(',', constant(PluginBootstrap::TENANT_ROLES_CONSTANT)));
+        return array_map('trim', explode(',', (string) PluginBootstrap::constant(PluginBootstrap::TENANT_ROLES_CONSTANT)));
     }
 
     public function waas_no_roles_json_found_admin_notice() {

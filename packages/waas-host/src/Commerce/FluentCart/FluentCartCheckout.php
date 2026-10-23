@@ -81,7 +81,7 @@ class FluentCartCheckout
             return $errors;
         }
 
-        $root_domain = get_option('wpcs_host_settings_root_domain', '');
+        $root_domain = get_option('waas_root_domain', '');
         if ($root_domain === '') {
             return $errors; // the provisioning API picks a unique domain itself
         }

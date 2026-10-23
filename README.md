@@ -85,7 +85,7 @@ On FluentCart, a website can buy more email than its plan sends each month. Pack
 
 ## API base URL
 
-The Host plugin talks to the provisioning API at the **API URL** on the **Connection** tab of **WaaS → Settings**, or the `WAAS_API_BASE_URL` constant in `wp-config.php` (the constant wins). Without either, the plugin has no API and sells nothing. (`WPCS_API_BASE_URL`, `WPCS_API_KEY` and the other `WPCS_` constants from before the rename still work.) The `waas_settings_api_base_url` filter can change it.
+The Host plugin talks to the provisioning API at the **API URL** on the **Connection** tab of **WaaS → Settings**, or the `WAAS_API_BASE_URL` constant in `wp-config.php` (the constant wins). Without either, the plugin has no API and sells nothing. (The same constants under the old platform's prefix, from before the rename, still work.) The `waas_settings_api_base_url` filter can change it.
 
 ```php
 define('WAAS_API_BASE_URL', 'https://api.example.com');
@@ -113,11 +113,11 @@ Each store's one-click-login private key is stored encrypted on its subscription
 define('WAAS_HOST_KEY_ENCRYPTION_KEY', '...');
 ```
 
-Without the constant, WordPress's auth salt is used instead. Either way, keep it stable: changing it makes the stored keys unreadable and one-click login stops working for existing stores. Keys saved by older versions in plain text are encrypted the first time they're used. The key's meta name, `_waas_tenant_private_key`, starts with an underscore so WooCommerce doesn't show it in the Custom Fields box or the REST API; keys under the old `WPCS_TENANT_PRIVATE_KEY_META` name move there when waas-host updates (or on first use), and WooCommerce Subscriptions renewal orders don't get a copy.
+Without the constant, WordPress's auth salt is used instead. Either way, keep it stable: changing it makes the stored keys unreadable and one-click login stops working for existing stores. Keys saved by older versions in plain text are encrypted the first time they're used. The key's meta name, `_waas_tenant_private_key`, starts with an underscore so WooCommerce doesn't show it in the Custom Fields box or the REST API; keys under the old name move there when waas-host updates (or on first use), and WooCommerce Subscriptions renewal orders don't get a copy.
 
 The webhook signing secret ([Website status](#website-status)) is encrypted with the same key. If it can no longer be read, the storefront registers again on its own.
 
-WooCommerce products keep their WaaS settings through WooCommerce's product object, under `_waas_product_role` and `_waas_product_group_name`. Settings under the old `WPCS_PRODUCT_ROLE_META` and `WPCS_PRODUCT_GROUPNAME_META` names are still read, and move to the new names when waas-host updates.
+WooCommerce products keep their WaaS settings through WooCommerce's product object, under `_waas_product_role` and `_waas_product_group_name`. Settings under the old names are still read, and move to the new names when waas-host updates.
 
 ## WaaS Payments
 
@@ -180,14 +180,13 @@ composer test
 
 Unit tests live in each package's `tests/Unit`. The `Tests` GitHub Actions workflow runs the unit tests of all four packages (host, client, payments, updater) on every pull request and on pushes to `main`, plus the Playground smoke test of WaaS Client; the contract tests run there too, in a separate job that reports but doesn't block, since they depend on the public mock. Release builds strip `tests/` and `phpunit.xml.dist`.
 
-### Old `wpcs` names
+### Names from before the rename
 
-The plugins' code, admin screens and hooks are named WaaS (`waas_*` actions and filters). Some names stored on sites or used between the plugins and the API still start with `wpcs`, from where the plugins started, because changing them would cut existing stores off:
+Since WaaS Host 2.3.0 and WaaS Client 2.4.0, everything the plugins save or schedule is named `waas_*`: settings (`waas_api_key`, `waas_root_domain`, `waas_notification_settings_send_tenant_ready_email`, …), order, subscription and product meta (`waas_website_name`, `waas_tenant_state`, `_is_waas_product`, …) and scheduled jobs (`waas_run_store_jobs`, `waas_suspend_at_period_end`, …). When WaaS Host updates, it moves values saved under the old platform's names once, before anything reads them (`WaaSHost\Migrations\LegacyNames`); WaaS Client does the same for its two options.
 
-- option names (`wpcs_credentials_*`, `wpcs_host_settings_*`, `wpcs_notification_settings_*`), order and subscription meta (`WPCS_TENANT_STATE` and friends), and scheduled-event hooks (`wpcs_run_store_jobs`, `wpcs_suspend_at_period_end`, …);
-- the update slugs and `Update URI` (`wpcs-waas-host`, `wpcs-waas-client`), which the provisioning API and the release bucket use;
-- the constants and environment variables the provisioning API sets on each store (`WPCS_IS_TENANT`, `WPCS_PUBLIC_KEY`, `WPCS_TENANT_ROLES`, `WPCS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS`);
-- the `wpcs_choose_website_name` link parameters, which are in emails customers already have.
+The shop gives each store its wp-config constants as `WAAS_TENANT_ROLES`, `WAAS_PUBLIC_KEY` and `WAAS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS`, and the provisioning API sets `WAAS_IS_TENANT`. Stores built earlier have them only under the old prefix, so the shop also sends the old spelling and WaaS Client reads either, the new one first.
+
+Two names stay: the update slugs and `Update URI` (`wpcs-waas-host`, `wpcs-waas-client`) are the installed plugins' identity, which the provisioning API and the release bucket use, so changing them would stop updates reaching existing sites.
 
 ## License
 

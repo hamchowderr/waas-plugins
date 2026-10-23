@@ -10,7 +10,7 @@ use WaaSHost\Features\SingleLoginService;
 use WaaSHost\Features\TenantsSubscriptionManager;
 
 /**
- * The store's panel on the customer's subscription page: the domain form (wpcs_after_subscription_details_html),
+ * The store's panel on the customer's subscription page: the domain form (waas_after_subscription_details_html),
  * the one-click login link and the store's status ("Active until <date>" while a cancelled subscription's paid period
  * runs out). Shown only on subscriptions that have a store, except for the
  * result of a new website name the customer just submitted.

@@ -1,6 +1,6 @@
 # Releases and updates
 
-The plugins update from one channel only: the provisioning API they are connected to, which serves releases from its release bucket (`RELEASES_S3_BUCKET`). Nothing comes from GitHub, wordpress.org or the upstream Daxez/waas-wpcs.
+The plugins update from one channel only: the provisioning API they are connected to, which serves releases from its release bucket (`RELEASES_S3_BUCKET`). Nothing comes from GitHub, wordpress.org or the upstream project.
 
 | Plugin | Slug | Updates |
 |---|---|---|

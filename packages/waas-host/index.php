@@ -52,6 +52,9 @@ define( 'WAAS_HOST_UPDATE_URI', 'wpcs-waas-host' );
 define( 'WAAS_HOST_VERSION', '2.2.7' );
 define( 'WAAS_HOST_TEXTDOMAIN', 'waas-host' );
 
+// Settings and data saved under the old platform's names move to the waas_ names before anything reads them
+WaaSHost\Migrations\LegacyNames::maybe_run();
+
 // Controllers to list for APIs
 $configService = new ConfigService();
 $http_service = new HttpService($configService);
@@ -68,7 +71,7 @@ $nameConflicts = new NameConflicts($provisioningApi, $storeJobs);
 new TenantsSubscriptionManager($provisioningApi, $storeJobs, $nameConflicts);
 new TenantsAddOnSubscriptionManager($provisioningApi, $storeJobs);
 
-// Cart: the first active one registered here wins; the wpcs_commerce_adapter filter can override
+// Cart: the first active one registered here wins; the waas_commerce_adapter filter can override
 Commerce::register(new FluentCartAdapter());
 Commerce::register(new WooCommerceAdapter());
 Commerce::boot($provisioningApi);

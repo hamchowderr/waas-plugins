@@ -62,7 +62,7 @@ class WooCommerceProductDataTest extends TestCase
         $this->product_data->save_product_settings($product);
 
         $this->assertSame([
-            '_is_wpcs_product' => 'yes',
+            '_is_waas_product' => 'yes',
             StoreProduct::PRODUCT_ROLE_META => 'peptide-store',
             StoreProduct::PRODUCT_GROUPNAME_META => "peptide's starter",
         ], $product->meta);
@@ -72,11 +72,11 @@ class WooCommerceProductDataTest extends TestCase
 
     public function test_unticking_the_checkbox_marks_the_product_not_a_waas_product(): void
     {
-        $product = new \WC_Product(42, ['_is_wpcs_product' => 'yes']);
+        $product = new \WC_Product(42, ['_is_waas_product' => 'yes']);
 
         $this->product_data->save_product_settings($product);
 
-        $this->assertSame(['_is_wpcs_product' => 'no'], $product->meta);
+        $this->assertSame(['_is_waas_product' => 'no'], $product->meta);
     }
 
     public function test_ignores_a_role_the_template_does_not_define(): void

@@ -9,7 +9,7 @@ use WaaSHost\Features\PluginBootstrap;
 class RolesController
 {
     public const REFRESH_NONCE_ACTION = 'waas_refresh_roles';
-    public const REFRESH_LOCK_TRANSIENT = 'wpcs_roles_refresh_lock';
+    public const REFRESH_LOCK_TRANSIENT = 'waas_roles_refresh_lock';
     public const REFRESH_LOCK_SECONDS = 60;
 
     private ProvisioningApi $provisioningApi;

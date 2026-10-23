@@ -9,12 +9,12 @@ use WaaSHost\Features\NameConflicts;
 /**
  * Turns subscription status changes from either WooCommerce subscription plugin into the storefront's own events:
  *
- * - wpcs_subscription_created($subscription_id, $order): the subscription became active and has no store yet.
- * - wpcs_subscription_suspended($subscription_id): a subscription with a store went on hold (failed renewal
+ * - waas_subscription_created($subscription_id, $order): the subscription became active and has no store yet.
+ * - waas_subscription_suspended($subscription_id): a subscription with a store went on hold (failed renewal
  *   payment, or put on hold by an admin). Fired once per hold.
- * - wpcs_subscription_reactivated($subscription_id): a held subscription with a store became active again.
- * - wpcs_subscription_expired($subscription_id): a subscription with a store was cancelled or expired.
- * - wpcs_subscription_canceled_until($subscription_id, $paid_through): a subscription with a store was cancelled with
+ * - waas_subscription_reactivated($subscription_id): a held subscription with a store became active again.
+ * - waas_subscription_expired($subscription_id): a subscription with a store was cancelled or expired.
+ * - waas_subscription_canceled_until($subscription_id, $paid_through): a subscription with a store was cancelled with
  *   paid time left; the store stays online until $paid_through (TenantsSubscriptionManager).
  *
  * Pending-cancel fires nothing: the customer has paid until the end of the term, and the subscription plugin

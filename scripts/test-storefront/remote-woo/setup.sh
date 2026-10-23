@@ -35,11 +35,11 @@ case "${1:-}" in
     $WP plugin list ;;
   configure)
     [ -n "${WAAS_API_KEY:-}" ] && [ -n "${WAAS_API_SECRET:-}" ] || { echo WAAS_API_KEY/SECRET missing; exit 1; }
-    $WP option update wpcs_credentials_api_base_url_setting https://waas-api.otakusolutions.io
-    $WP option update wpcs_credentials_api_key_setting "$WAAS_API_KEY" >/dev/null
-    $WP option update wpcs_credentials_api_secret_setting "$WAAS_API_SECRET" >/dev/null
+    $WP option update waas_api_base_url https://waas-api.otakusolutions.io
+    $WP option update waas_api_key "$WAAS_API_KEY" >/dev/null
+    $WP option update waas_api_secret "$WAAS_API_SECRET" >/dev/null
     echo api key and secret set
-    $WP option update wpcs_notification_settings_send_tenant_ready_email on
+    $WP option update waas_notification_settings_send_tenant_ready_email on
     $WP eval-file $X/check.php
     $WP eval-file $X/roles.php ;;
   pages)

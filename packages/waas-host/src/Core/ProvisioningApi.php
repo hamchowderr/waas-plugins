@@ -8,8 +8,8 @@ use WaaSHost\Core\Exceptions\InvalidDomainException;
 
 class ProvisioningApi
 {
-    const CAN_REACH_API_OPTION_NAME = 'WPCS_CAN_REACH_API';
-    const GROUP_NAMES_TRANSIENT = 'wpcs_available_group_names';
+    const CAN_REACH_API_OPTION_NAME = 'waas_can_reach_api';
+    const GROUP_NAMES_TRANSIENT = 'waas_available_group_names';
 
     private HttpService $httpService;
 
@@ -147,7 +147,7 @@ class ProvisioningApi
         }
 
         if (isset($args['php_constants'])) {
-            $payload['phpConstants'] = $args['php_constants'];
+            $payload['phpConstants'] = Tenant::with_legacy_constants($args['php_constants']);
         }
 
         if (!empty($args['wp_options'])) {
@@ -164,7 +164,7 @@ class ProvisioningApi
         $payload = [];
 
         if (isset($args['php_constants'])) {
-            $payload['phpConstants'] = $args['php_constants'];
+            $payload['phpConstants'] = Tenant::with_legacy_constants($args['php_constants']);
         }
 
         if (isset($args['wp_options'])) {

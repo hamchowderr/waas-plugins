@@ -52,7 +52,7 @@ class TenantsSubscriptionManagerTest extends StoreJobsTestCase
 
     private function stub_new_store_functions(): void
     {
-        $this->options['wpcs_host_settings_root_domain'] = 'stores.waas.example';
+        $this->options['waas_root_domain'] = 'stores.waas.example';
         $this->options[Tenant::DEFAULT_USER_ROLE] = 'administrator';
         Functions\when('sanitize_text_field')->returnArg();
         Functions\when('remove_accents')->returnArg();
@@ -96,13 +96,13 @@ class TenantsSubscriptionManagerTest extends StoreJobsTestCase
                 && $args['group_name'] === 'peptide-starter'
                 && $args['size'] === null
                 && $args['wordpress_user_role'] === 'administrator'
-                && $args['php_constants']['WPCS_TENANT_ROLES']['value'] === 'peptide-store'
+                && $args['php_constants']['WAAS_TENANT_ROLES']['value'] === 'peptide-store'
                 && $args['wp_options'] === [
                     'blogname' => 'Apex Research',
                     'admin_email' => 'owner@apexresearch.example',
                     'waas_store_owner' => '{"country":"US"}',
                 ]
-                && strpos(base64_decode($args['php_constants']['WPCS_PUBLIC_KEY']['value']), 'PUBLIC KEY') !== false;
+                && strpos(base64_decode($args['php_constants']['WAAS_PUBLIC_KEY']['value']), 'PUBLIC KEY') !== false;
         }))->andReturn((object) [
             'externalId' => '5f0b7c3e-2d1a-4e8b-9c6f-0a1b2c3d4e5f',
             'baseDomain' => 't-1.stores.waas.example',
@@ -156,7 +156,7 @@ class TenantsSubscriptionManagerTest extends StoreJobsTestCase
         // First try: the API created the store but the answer timed out.
         $sent_keys = [];
         $this->api->expects('create_tenant')->once()->andReturnUsing(function ($args) use (&$sent_keys) {
-            $sent_keys[] = $args['php_constants']['WPCS_PUBLIC_KEY']['value'];
+            $sent_keys[] = $args['php_constants']['WAAS_PUBLIC_KEY']['value'];
             throw new \Exception('Failed: cURL error 28: Operation timed out');
         });
         $this->run_due(901);
@@ -184,7 +184,7 @@ class TenantsSubscriptionManagerTest extends StoreJobsTestCase
 
         $sent = [];
         $this->api->expects('create_tenant')->twice()->andReturnUsing(function ($args) use (&$sent) {
-            $sent[] = [$args['external_id'], $args['php_constants']['WPCS_PUBLIC_KEY']['value']];
+            $sent[] = [$args['external_id'], $args['php_constants']['WAAS_PUBLIC_KEY']['value']];
             if (count($sent) === 1) {
                 throw new \Exception('Failed: 503');
             }

@@ -19,10 +19,10 @@ use WaaSHost\Core\Tenant;
  */
 class StoreJobs
 {
-    public const QUEUE_META = 'WPCS_STORE_JOBS';
-    public const FAILURE_META = 'WPCS_STORE_JOB_FAILURE';
-    public const RUN_HOOK = 'wpcs_run_store_jobs';
-    public const SWEEP_HOOK = 'wpcs_sweep_store_jobs';
+    public const QUEUE_META = 'waas_store_jobs';
+    public const FAILURE_META = 'waas_store_job_failure';
+    public const RUN_HOOK = 'waas_run_store_jobs';
+    public const SWEEP_HOOK = 'waas_sweep_store_jobs';
     public const RETRY_ACTION = 'waas_retry_store_jobs';
     public const GROUP = 'waas-host';
     /**
@@ -351,7 +351,7 @@ class StoreJobs
 
     private function lock($subscription_id): bool
     {
-        $name = 'wpcs_store_jobs_lock_' . md5((string) $subscription_id);
+        $name = 'waas_store_jobs_lock_' . md5((string) $subscription_id);
         if (add_option($name, time(), '', 'no')) {
             return true;
         }
@@ -366,6 +366,6 @@ class StoreJobs
 
     private function unlock($subscription_id): void
     {
-        delete_option('wpcs_store_jobs_lock_' . md5((string) $subscription_id));
+        delete_option('waas_store_jobs_lock_' . md5((string) $subscription_id));
     }
 }

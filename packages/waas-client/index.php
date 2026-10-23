@@ -61,7 +61,7 @@ if (!wp_doing_ajax()) {
     // No self-update: a store's waas-client comes with its template version, and the store gets a
     // newer one by moving to a newer version (waas-hw4). Update URI keeps wordpress.org out.
 
-    if (getenv("WPCS_IS_TENANT") !== 'true') {
+    if (!PluginBootstrap::is_store()) {
         new AdminTenantSettings();
         new AdminRolesSettings($host_http_service);
     } else {

@@ -28,7 +28,7 @@ class RolesManagerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        putenv('WPCS_IS_TENANT=true');
+        putenv('WAAS_IS_TENANT=true');
         if (!is_dir(AdminRolesSettings::ROLES_FILE_DIR_PATH)) {
             mkdir(AdminRolesSettings::ROLES_FILE_DIR_PATH, 0755, true);
         }
@@ -41,7 +41,7 @@ class RolesManagerTest extends TestCase
 
     protected function tearDown(): void
     {
-        putenv('WPCS_IS_TENANT');
+        putenv('WAAS_IS_TENANT');
         @unlink(AdminRolesSettings::ROLES_FILE_PATH);
         parent::tearDown();
     }

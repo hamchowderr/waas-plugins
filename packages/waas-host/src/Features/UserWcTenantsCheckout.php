@@ -12,7 +12,7 @@ use WP_Error;
 /**
  * The required "Website name" field at checkout, shown when the cart has a website plan (and isn't a renewal,
  * resubscribe or plan switch). The name is checked against existing stores and the API's availability check, and
- * saved on the order as WPCS_WEBSITE_NAME_META. When the API can't answer, the name is still accepted (and marked
+ * saved on the order as waas_website_name. When the API can't answer, the name is still accepted (and marked
  * unverified on the order) as long as no store in this storefront has it.
  *
  * Block checkout (WooCommerce's default): an additional checkout field (woocommerce_register_additional_checkout_field)
@@ -193,7 +193,7 @@ class UserWcTenantsCheckout
      */
     public function check_website_name(string $website_name): ?string
     {
-        $tenant_root_domain = (string) get_option('wpcs_host_settings_root_domain', '');
+        $tenant_root_domain = (string) get_option('waas_root_domain', '');
         if ($tenant_root_domain === '') {
             // Without a root domain the provisioning API picks a unique domain itself.
             return null;

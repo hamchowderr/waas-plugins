@@ -19,11 +19,11 @@ use WaaSHost\Core\Tenant;
 class TenantsSubscriptionManager
 {
     /** Days a suspended store is kept before it is deleted. */
-    public const DELETION_GRACE_DAYS_OPTION = 'wpcs_host_settings_deletion_grace_days';
+    public const DELETION_GRACE_DAYS_OPTION = 'waas_deletion_grace_days';
     public const DEFAULT_DELETION_GRACE_DAYS = 30;
-    public const DELETE_SUSPENDED_TENANT_HOOK = 'wpcs_delete_suspended_tenant';
+    public const DELETE_SUSPENDED_TENANT_HOOK = 'waas_delete_suspended_store';
     /** Fires when a cancelled subscription's paid period ends. */
-    public const SUSPEND_AT_PERIOD_END_HOOK = 'wpcs_suspend_at_period_end';
+    public const SUSPEND_AT_PERIOD_END_HOOK = 'waas_suspend_at_period_end';
 
     /** Jobs that bring a store into existence; until they have run the subscription has no externalId yet. */
     private const CREATING_JOBS = ['create', 'restore_or_create'];
@@ -284,8 +284,8 @@ class TenantsSubscriptionManager
             $args = $store['request'];
             $args['external_id'] = $external_id;
             $args['wordpress_user_role'] = get_option(Tenant::DEFAULT_USER_ROLE);
-            $args['php_constants']['WPCS_PUBLIC_KEY'] = ['value' => base64_encode($public_key), 'isPrivate' => false];
-            $args['php_constants']['WPCS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS'] = [
+            $args['php_constants']['WAAS_PUBLIC_KEY'] = ['value' => base64_encode($public_key), 'isPrivate' => false];
+            $args['php_constants']['WAAS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS'] = [
                 'value' => apply_filters('waas_remove_tenant_administrator_plugin_capabilities', true) ? "true" : "false",
                 'isPrivate' => false,
             ];
@@ -497,13 +497,13 @@ class TenantsSubscriptionManager
             'group_name' => empty($group_name) ? null : $group_name,
             'size' => $size === '' ? null : $size,
             'php_constants' => [
-                'WPCS_TENANT_ROLES' => ['value' => implode(",", $subscription_roles), 'isPrivate' => false],
+                'WAAS_TENANT_ROLES' => ['value' => implode(",", $subscription_roles), 'isPrivate' => false],
             ],
             // Not sent as is: job_create turns it into the store's settings.
             'owner' => ['country' => strtoupper((string) preg_replace('/[^A-Za-z]/', '', $purchase->country))] + $this->owner_billing($purchase->billing),
         ];
 
-        $tenant_root_domain = get_option('wpcs_host_settings_root_domain', '');
+        $tenant_root_domain = get_option('waas_root_domain', '');
         if ($tenant_root_domain !== '') {
             $request['custom_domain_name'] = sanitize_title_with_dashes(remove_accents($website_name)) . '.' . $tenant_root_domain;
         }
