@@ -41,7 +41,7 @@ class CustomerPlanPage
     /** One line above the Plugins list pointing to the plan page. */
     public function plugins_screen_notice()
     {
-        if (!current_user_can('manage_options') || !defined(PluginBootstrap::TENANT_ROLES_CONSTANT)) {
+        if (!current_user_can('manage_options') || !PluginBootstrap::has_constant(PluginBootstrap::TENANT_ROLES_CONSTANT)) {
             return;
         }
 

@@ -12,7 +12,7 @@ if (!defined('ABSPATH'))
 
 class Module
 {
-    const PLUGIN_VERSION_OPTION = 'wpcs-plugin-version';
+    const PLUGIN_VERSION_OPTION = 'waas_host_db_version';
 
     private ProvisioningApi $provisioningApi;
     public function __construct(ProvisioningApi $provisioningApi)

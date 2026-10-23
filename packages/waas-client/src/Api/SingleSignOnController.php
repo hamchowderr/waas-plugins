@@ -10,7 +10,7 @@ use WP_REST_Request;
 class SingleSignOnController
 {
     public const TENANT_PUBLIC_KEY = 'TENANT_PUBLIC_KEY';
-    public const PUBLIC_KEY_CONST_NAME = 'WPCS_PUBLIC_KEY';
+    public const PUBLIC_KEY_CONST_NAME = 'WAAS_PUBLIC_KEY';
     private DecryptionService $decryptionService;
 
     public function __construct(DecryptionService $decryptionService)
@@ -50,14 +50,14 @@ class SingleSignOnController
         }
 
         $public_key = '';
-        if (!defined(static::PUBLIC_KEY_CONST_NAME)) {
+        if (!PluginBootstrap::has_constant(static::PUBLIC_KEY_CONST_NAME)) {
             $public_key = get_option(static::TENANT_PUBLIC_KEY);
 
             if ($public_key === false || empty($public_key)) {
                 return $this->reject();
             }
         } else {
-            $public_key = base64_decode(constant(static::PUBLIC_KEY_CONST_NAME));
+            $public_key = base64_decode((string) PluginBootstrap::constant(static::PUBLIC_KEY_CONST_NAME));
         }
 
         $data = $this->decryptionService->decrypt($public_key, $token_decoded);

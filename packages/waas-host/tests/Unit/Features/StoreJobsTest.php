@@ -179,7 +179,7 @@ class StoreJobsTest extends StoreJobsTestCase
     public function test_a_second_runner_waits_for_the_first(): void
     {
         $this->jobs->enqueue(7, 'a');
-        $this->options['wpcs_store_jobs_lock_' . md5('7')] = time();
+        $this->options['waas_store_jobs_lock_' . md5('7')] = time();
 
         $this->run_due(7);
 
@@ -190,12 +190,12 @@ class StoreJobsTest extends StoreJobsTestCase
     public function test_a_runner_that_died_holding_the_lock_does_not_block_the_store(): void
     {
         $this->jobs->enqueue(7, 'a');
-        $this->options['wpcs_store_jobs_lock_' . md5('7')] = time() - StoreJobs::LOCK_TTL - 1;
+        $this->options['waas_store_jobs_lock_' . md5('7')] = time() - StoreJobs::LOCK_TTL - 1;
 
         $this->run_due(7);
 
         $this->assertSame(['a@0'], $this->ran);
-        $this->assertArrayNotHasKey('wpcs_store_jobs_lock_' . md5('7'), $this->options);
+        $this->assertArrayNotHasKey('waas_store_jobs_lock_' . md5('7'), $this->options);
     }
 
     public function test_the_sweep_restarts_a_store_whose_runner_was_lost(): void

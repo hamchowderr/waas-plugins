@@ -8,16 +8,16 @@ use WaaSHost\Core\Tenant;
 
 class AdminSettings
 {
-    const SHOULD_SEND_TENANT_READY_EMAIL_OPTION = 'wpcs_notification_settings_send_tenant_ready_email';
-    const TENANT_READY_EMAIL_SUBJECT_OPTION = 'wpcs_notification_settings_tenant_ready_email_subject';
-    const TENANT_READY_EMAIL_BODY_OPTION = 'wpcs_notification_settings_tenant_ready_email_body';
-    const SHOULD_SEND_SUSPEND_SCHEDULED_EMAIL_OPTION = 'wpcs_notification_settings_send_suspend_scheduled_email';
-    const SUSPEND_SCHEDULED_EMAIL_SUBJECT_OPTION = 'wpcs_notification_settings_suspend_scheduled_email_subject';
-    const SUSPEND_SCHEDULED_EMAIL_BODY_OPTION = 'wpcs_notification_settings_suspend_scheduled_email_body';
+    const SHOULD_SEND_TENANT_READY_EMAIL_OPTION = 'waas_notification_settings_send_tenant_ready_email';
+    const TENANT_READY_EMAIL_SUBJECT_OPTION = 'waas_notification_settings_tenant_ready_email_subject';
+    const TENANT_READY_EMAIL_BODY_OPTION = 'waas_notification_settings_tenant_ready_email_body';
+    const SHOULD_SEND_SUSPEND_SCHEDULED_EMAIL_OPTION = 'waas_notification_settings_send_suspend_scheduled_email';
+    const SUSPEND_SCHEDULED_EMAIL_SUBJECT_OPTION = 'waas_notification_settings_suspend_scheduled_email_subject';
+    const SUSPEND_SCHEDULED_EMAIL_BODY_OPTION = 'waas_notification_settings_suspend_scheduled_email_body';
     const SHOULD_SEND_SUSPENDED_EMAIL_OPTION = 'waas_notification_settings_send_suspended_email';
     const SUSPENDED_EMAIL_SUBJECT_OPTION = 'waas_notification_settings_suspended_email_subject';
     const SUSPENDED_EMAIL_BODY_OPTION = 'waas_notification_settings_suspended_email_body';
-    const SHOULD_REMOVE_ADMINISTRATOR_PLUGIN_CAPABILITIES_OPTION = 'wpcs_host_setting_remove_admininistrator_plugin_capabilities_on_tenant';
+    const SHOULD_REMOVE_ADMINISTRATOR_PLUGIN_CAPABILITIES_OPTION = 'waas_remove_administrator_plugin_caps';
 
     private ProvisioningApi $provisioningApi;
     private ConfigService $configService;
@@ -34,8 +34,8 @@ class AdminSettings
         add_filter('waas_tenant_ready_email_subject', [$this, 'tenant_ready_email_subject'], 10, 1);
         add_filter('waas_tenant_ready_email_body', [$this, 'tenant_ready_email_body'], 10, 1);
         add_filter('waas_suspend_scheduled_email_allowed', [$this, 'allow_suspend_scheduled_email']);
-        add_filter('waas_suspend_scheduled_email_subject', [$this, 'suspend_scheduled_email_subject'], 10, 1);
-        add_filter('waas_suspend_scheduled_email_body', [$this, 'suspend_scheduled_email_body'], 10, 1);
+        add_filter('waas_notification_settings_suspend_scheduled_email_subject', [$this, 'suspend_scheduled_email_subject'], 10, 1);
+        add_filter('waas_notification_settings_suspend_scheduled_email_body', [$this, 'suspend_scheduled_email_body'], 10, 1);
         add_filter('waas_suspended_email_allowed', [$this, 'allow_suspended_email']);
         add_filter('waas_suspended_email_subject', [$this, 'suspended_email_subject'], 10, 1);
         add_filter('waas_suspended_email_body', [$this, 'suspended_email_body'], 10, 1);
@@ -138,23 +138,23 @@ class AdminSettings
 
     public function register_waas_admin_settings()
     {
-        register_setting('waas-admin', 'wpcs_credentials_api_base_url_setting', [
+        register_setting('waas-admin', 'waas_api_base_url', [
             'sanitize_callback' => 'esc_url_raw'
         ]);
-        register_setting('waas-admin', 'wpcs_credentials_api_key_setting', [
+        register_setting('waas-admin', 'waas_api_key', [
             'sanitize_callback' => 'sanitize_text_field'
         ]);
-        register_setting('waas-admin', 'wpcs_credentials_api_secret_setting', [
+        register_setting('waas-admin', 'waas_api_secret', [
             'sanitize_callback' => 'sanitize_text_field'
         ]);
 
-        register_setting('waas-admin-stores', 'wpcs_host_settings_root_domain', [
+        register_setting('waas-admin-stores', 'waas_root_domain', [
             'sanitize_callback' => 'sanitize_text_field'
         ]);
-        register_setting('waas-admin-stores', 'wpcs_dns_a_records_setting', [
+        register_setting('waas-admin-stores', 'waas_dns_a_records', [
             'sanitize_callback' => [ConfigService::class, 'sanitize_ip_list']
         ]);
-        register_setting('waas-admin-stores', 'wpcs_dns_cname_target_setting', [
+        register_setting('waas-admin-stores', 'waas_dns_cname_target', [
             'sanitize_callback' => [ConfigService::class, 'sanitize_hostname']
         ]);
         register_setting('waas-admin-stores', Tenant::DEFAULT_USER_ROLE, [
@@ -237,20 +237,20 @@ class AdminSettings
             'waas-admin'
         );
 
-        $this->add_field('wpcs_credentials_api_base_url_setting', __('API URL', WAAS_HOST_TEXTDOMAIN), 'waas-admin', 'api_credentials', [
+        $this->add_field('waas_api_base_url', __('API URL', WAAS_HOST_TEXTDOMAIN), 'waas-admin', 'api_credentials', [
             'type' => 'url',
             'class_name' => 'regular-text code',
             'placeholder' => 'https://api.example.com',
             'constant' => 'API_BASE_URL',
             'hint' => self::constant_hint('API_BASE_URL', __('The address of the provisioning API.', WAAS_HOST_TEXTDOMAIN)),
         ]);
-        $this->add_field('wpcs_credentials_api_key_setting', __('API key', WAAS_HOST_TEXTDOMAIN), 'waas-admin', 'api_credentials', [
+        $this->add_field('waas_api_key', __('API key', WAAS_HOST_TEXTDOMAIN), 'waas-admin', 'api_credentials', [
             'type' => 'text',
             'class_name' => 'regular-text code',
             'constant' => 'API_KEY',
             'hint' => self::constant_hint('API_KEY', ''),
         ]);
-        $this->add_field('wpcs_credentials_api_secret_setting', __('API secret', WAAS_HOST_TEXTDOMAIN), 'waas-admin', 'api_credentials', [
+        $this->add_field('waas_api_secret', __('API secret', WAAS_HOST_TEXTDOMAIN), 'waas-admin', 'api_credentials', [
             'type' => 'password',
             'class_name' => 'regular-text code',
             'constant' => 'API_SECRET',
@@ -265,20 +265,20 @@ class AdminSettings
             'waas-admin-stores'
         );
 
-        $this->add_field('wpcs_host_settings_root_domain', __('Website domain', WAAS_HOST_TEXTDOMAIN), 'waas-admin-stores', 'waas_host_settings', [
+        $this->add_field('waas_root_domain', __('Website domain', WAAS_HOST_TEXTDOMAIN), 'waas-admin-stores', 'waas_host_settings', [
             'type' => 'text',
             'class_name' => 'regular-text code',
             'placeholder' => 'sites.example.com',
             'hint' => __('Each new website gets an address under this domain: with sites.example.com, a website named shop is at shop.sites.example.com.', WAAS_HOST_TEXTDOMAIN),
         ]);
-        $this->add_field('wpcs_dns_a_records_setting', __('A record IPs', WAAS_HOST_TEXTDOMAIN), 'waas-admin-stores', 'waas_host_settings', [
+        $this->add_field('waas_dns_a_records', __('A record IPs', WAAS_HOST_TEXTDOMAIN), 'waas-admin-stores', 'waas_host_settings', [
             'type' => 'text',
             'class_name' => 'regular-text code',
             'placeholder' => '203.0.113.10',
             'constant' => 'DNS_A_RECORDS',
             'hint' => self::constant_hint('DNS_A_RECORDS', __('The IP addresses a customer points their own domain at, separated by commas. Shown on the customer\'s domain page.', WAAS_HOST_TEXTDOMAIN)),
         ]);
-        $this->add_field('wpcs_dns_cname_target_setting', __('CNAME target', WAAS_HOST_TEXTDOMAIN), 'waas-admin-stores', 'waas_host_settings', [
+        $this->add_field('waas_dns_cname_target', __('CNAME target', WAAS_HOST_TEXTDOMAIN), 'waas-admin-stores', 'waas_host_settings', [
             'type' => 'text',
             'class_name' => 'regular-text code',
             'placeholder' => 'sites.example.com',

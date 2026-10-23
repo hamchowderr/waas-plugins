@@ -42,7 +42,7 @@ class AdminNoticesTest extends TestCase
 
     public function test_notice_names_only_what_is_missing(): void
     {
-        $this->options['wpcs_dns_a_records_setting'] = '203.0.113.10';
+        $this->options['waas_dns_a_records'] = '203.0.113.10';
 
         $html = $this->renderNotice();
 
@@ -51,8 +51,8 @@ class AdminNoticesTest extends TestCase
 
     public function test_no_notice_when_both_are_set(): void
     {
-        $this->options['wpcs_dns_a_records_setting'] = '203.0.113.10';
-        $this->options['wpcs_dns_cname_target_setting'] = 'sites.example.net';
+        $this->options['waas_dns_a_records'] = '203.0.113.10';
+        $this->options['waas_dns_cname_target'] = 'sites.example.net';
 
         $this->assertSame('', $this->renderNotice());
     }

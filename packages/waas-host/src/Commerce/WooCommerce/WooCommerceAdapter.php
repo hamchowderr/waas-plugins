@@ -18,7 +18,7 @@ use WaaSHost\Integrations\SelfServiceDashboard\SelfServiceDashboardIntegration;
 /**
  * WooCommerce, with subscriptions from one subscription plugin (see SubscriptionPlugin). WP Swings' free
  * Subscriptions for WooCommerce is used when it is active, otherwise WooCommerce Subscriptions; the
- * wpcs_woocommerce_subscription_plugin filter can pick another.
+ * waas_woocommerce_subscription_plugin filter can pick another.
  *
  * Subscriptions and orders are read and written with WooCommerce's order API only, so the storefront works with
  * High-Performance Order Storage (the default, with posts sync off since WooCommerce 10.7) as well as posts storage.
@@ -96,7 +96,7 @@ class WooCommerceAdapter implements CommerceAdapter
     }
 
     /**
-     * @param \WC_Order $purchase_context the order passed with wpcs_subscription_created: the order the subscription
+     * @param \WC_Order $purchase_context the order passed with waas_subscription_created: the order the subscription
      *                                   was bought with, or the subscription itself when it has none
      */
     public function get_plan_purchase($subscription_id, $purchase_context): PlanPurchase

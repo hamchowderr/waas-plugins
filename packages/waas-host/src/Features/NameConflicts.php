@@ -15,11 +15,11 @@ use WaaSHost\Core\Tenant;
  */
 class NameConflicts
 {
-    public const CHOOSE_ACTION = 'wpcs_choose_website_name';
+    public const CHOOSE_ACTION = 'waas_choose_website_name';
     /** The result of a submit, as a code (see result_message): the page never shows text taken from its URL. */
-    public const RESULT_ARG = 'wpcs_website_name';
+    public const RESULT_ARG = 'waas_website_name';
     /** The subscription the result is for, so a page with several websites shows it at the right one. */
-    public const RESULT_FOR_ARG = 'wpcs_website_name_for';
+    public const RESULT_FOR_ARG = 'waas_website_name_for';
     /** Seconds after which a lock left by a request that died is ignored. */
     private const LOCK_TTL = 60;
 
@@ -116,7 +116,7 @@ class NameConflicts
             return;
         }
 
-        $conflict['store']['request']['php_constants']['WPCS_TENANT_ROLES'] = ['value' => implode(',', $roles), 'isPrivate' => false];
+        $conflict['store']['request']['php_constants']['WAAS_TENANT_ROLES'] = ['value' => implode(',', $roles), 'isPrivate' => false];
         $conflict['store']['roles'] = $roles;
         $commerce->update_subscription_meta($subscription_id, Tenant::NAME_CONFLICT_META, $conflict);
     }
@@ -198,7 +198,7 @@ class NameConflicts
         }
 
         $store = $conflict['store'];
-        $root_domain = (string) get_option('wpcs_host_settings_root_domain', '');
+        $root_domain = (string) get_option('waas_root_domain', '');
         $domain_name = $root_domain === '' ? '' : $label . '.' . $root_domain;
 
         if ($domain_name !== '') {
@@ -368,7 +368,7 @@ class NameConflicts
 
     private function lock($subscription_id): bool
     {
-        $name = 'wpcs_choose_name_lock_' . md5((string) $subscription_id);
+        $name = 'waas_choose_name_lock_' . md5((string) $subscription_id);
         if (add_option($name, time(), '', 'no')) {
             return true;
         }
@@ -383,7 +383,7 @@ class NameConflicts
 
     private function unlock($subscription_id): void
     {
-        delete_option('wpcs_choose_name_lock_' . md5((string) $subscription_id));
+        delete_option('waas_choose_name_lock_' . md5((string) $subscription_id));
     }
 
     private function email_admin($subscription_id, string $name, string $error): void

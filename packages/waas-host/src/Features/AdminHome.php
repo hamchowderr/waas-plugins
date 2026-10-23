@@ -146,7 +146,7 @@ class AdminHome
 
         $has_credentials = $this->config_service->check_credentials();
         $reachable = $has_credentials && get_option(\WaaSHost\Core\ProvisioningApi::CAN_REACH_API_OPTION_NAME, false);
-        $root_domain = (string) get_option('wpcs_host_settings_root_domain', '');
+        $root_domain = (string) get_option('waas_root_domain', '');
 ?>
         <div class="wrap waas-admin waas-home">
             <h1><?php esc_html_e('WaaS Host', WAAS_HOST_TEXTDOMAIN); ?></h1>

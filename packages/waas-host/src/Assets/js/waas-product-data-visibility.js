@@ -1,5 +1,5 @@
 jQuery(function($){
-    const waasProductCheckbox = $('#is_wpcs_product');
+    const waasProductCheckbox = $('#is_waas_product');
     const waasProductOptionsTab = $('.waas_options');
 
     function manageProductOptionsTab() {

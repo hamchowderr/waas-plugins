@@ -38,7 +38,7 @@ class NameConflictsTest extends StoreJobsTestCase
         $this->conflicts = new NameConflictsWithoutExit($this->api, $this->jobs);
         $this->manager = new TenantsSubscriptionManager($this->api, $this->jobs, $this->conflicts);
 
-        $this->options['wpcs_host_settings_root_domain'] = 'stores.waas.example';
+        $this->options['waas_root_domain'] = 'stores.waas.example';
         $this->options[Tenant::DEFAULT_USER_ROLE] = 'administrator';
         Functions\when('sanitize_text_field')->alias('trim');
         Functions\when('wp_unslash')->returnArg();
@@ -69,7 +69,7 @@ class NameConflictsTest extends StoreJobsTestCase
     private function submit(string $name, bool $nonce_ok = true): void
     {
         $_POST = ['subscription_id' => '901', 'website_name' => $name, '_wpnonce' => 'nonce'];
-        Functions\when('wp_verify_nonce')->alias(fn ($nonce, $action) => $nonce_ok && $action === 'wpcs_choose_website_name_901' ? 1 : false);
+        Functions\when('wp_verify_nonce')->alias(fn ($nonce, $action) => $nonce_ok && $action === 'waas_choose_website_name_901' ? 1 : false);
         Functions\when('get_current_user_id')->justReturn(7);
         $this->conflicts->handle_choose_request();
     }
@@ -285,7 +285,7 @@ class NameConflictsTest extends StoreJobsTestCase
     {
         $this->parked();
         $_POST = ['subscription_id' => '901', 'website_name' => 'Apex Labs', '_wpnonce' => 'nonce'];
-        Functions\expect('wp_verify_nonce')->once()->with('nonce', 'wpcs_choose_website_name_901')->andReturn(1);
+        Functions\expect('wp_verify_nonce')->once()->with('nonce', 'waas_choose_website_name_901')->andReturn(1);
         Functions\when('get_current_user_id')->justReturn(8); // the subscription's customer is user 7
         Functions\when('esc_html__')->returnArg();
         Functions\when('wp_die')->alias(function () {
@@ -384,7 +384,7 @@ class NameConflictsTest extends StoreJobsTestCase
 
         $this->submit('Apex Labs');
 
-        $this->assertSame(['https://storefront.example/account/subscriptions/901?wpcs_website_name=not_active&wpcs_website_name_for=901#waas-website-name-result-901'], $this->redirects);
+        $this->assertSame(['https://storefront.example/account/subscriptions/901?waas_website_name=not_active&waas_website_name_for=901#waas-website-name-result-901'], $this->redirects);
         $this->assertStringContainsString('This subscription is not active', $this->result_shown_after_redirect());
         $this->assertSame([], $this->queue(901));
     }
@@ -412,7 +412,7 @@ class NameConflictsTest extends StoreJobsTestCase
     {
         $this->parked();
         // A lock left by a request that died long ago doesn't count.
-        $this->options['wpcs_choose_name_lock_' . md5('901')] = time() - 120;
+        $this->options['waas_choose_name_lock_' . md5('901')] = time() - 120;
         $second = null;
         $calls = 0;
         // The second submit (another tab, a double click) arrives while the first waits for the API.
@@ -428,7 +428,7 @@ class NameConflictsTest extends StoreJobsTestCase
         $this->assertStringContainsString('being saved right now', (string) $second);
         $this->assertCount(1, $this->queue(901));
         $this->assertSame('Apex Labs', $this->queue(901)[0]['args']['request']['name']);
-        $this->assertArrayNotHasKey('wpcs_choose_name_lock_' . md5('901'), $this->options, 'the lock is released');
+        $this->assertArrayNotHasKey('waas_choose_name_lock_' . md5('901'), $this->options, 'the lock is released');
     }
 
     public function test_a_page_left_open_too_long_asks_for_the_name_again_instead_of_failing(): void
@@ -512,7 +512,7 @@ class NameConflictsTest extends StoreJobsTestCase
 
         $this->api->expects('domain_available')->andReturn(true);
         $this->assertNull($this->conflicts->choose_new_name(901, 'Apex Labs'));
-        $this->api->expects('create_tenant')->once()->with(Mockery::on(fn ($args) => $args['php_constants']['WPCS_TENANT_ROLES']['value'] === 'peptide-store,peptide-pro'))
+        $this->api->expects('create_tenant')->once()->with(Mockery::on(fn ($args) => $args['php_constants']['WAAS_TENANT_ROLES']['value'] === 'peptide-store,peptide-pro'))
             ->andReturn((object) ['externalId' => self::SECOND_ID, 'baseDomain' => 't-1.stores.waas.example', 'customDomain' => 'apex-labs.stores.waas.example']);
         $this->run_due(901);
 

@@ -50,8 +50,8 @@ class FluentCartLifecycleTest extends TestCase
         }
         Commerce::reset();
         $this->use_mock_api([
-            'wpcs_host_settings_root_domain' => 'stores.waas.example',
-            'wpcs_host_settings_default_user_role' => 'administrator',
+            'waas_root_domain' => 'stores.waas.example',
+            'waas_default_user_role' => 'administrator',
         ]);
         Functions\stubTranslationFunctions();
         Functions\when('sanitize_text_field')->alias(fn ($value) => trim(strip_tags((string) $value)));
@@ -130,6 +130,8 @@ class FluentCartLifecycleTest extends TestCase
         $this->assertSame('owner@apexresearch.example', $sent['wordPressUserEmail']);
         $this->assertSame('apex-research.stores.waas.example', $sent['customDomainName']);
         $this->assertSame('peptide-starter', $sent['groupName']);
+        $this->assertSame('peptide-store', $sent['phpConstants']['WAAS_TENANT_ROLES']['value']);
+        // Stores on an older WaaS Client read the old name.
         $this->assertSame('peptide-store', $sent['phpConstants']['WPCS_TENANT_ROLES']['value']);
 
         $meta = $this->meta[self::SUBSCRIPTION_ID];

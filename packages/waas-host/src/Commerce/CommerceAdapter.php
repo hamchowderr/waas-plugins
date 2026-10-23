@@ -22,9 +22,9 @@ interface CommerceAdapter
     /**
      * Register the cart's own hooks: plan settings on products, the website-name
      * field at checkout, subscription events, and the customer page. Events:
-     * wpcs_subscription_created (active; firing it again for a subscription that has a
-     * store resumes or restores that store), wpcs_subscription_suspended (on hold),
-     * wpcs_subscription_reactivated (active after a hold) and wpcs_subscription_expired
+     * waas_subscription_created (active; firing it again for a subscription that has a
+     * store resumes or restores that store), waas_subscription_suspended (on hold),
+     * waas_subscription_reactivated (active after a hold) and waas_subscription_expired
      * (cancelled or expired).
      */
     public function boot(ProvisioningApi $provisioning_api): void;
@@ -33,7 +33,7 @@ interface CommerceAdapter
      * What a new store needs from the purchase: its website-plan products (with the
      * role and snapshot group each grants, read from wherever this cart keeps product
      * settings), the website name and the customer's email. $purchase_context is
-     * whatever the adapter passed as the second argument of wpcs_subscription_created.
+     * whatever the adapter passed as the second argument of waas_subscription_created.
      */
     public function get_plan_purchase($subscription_id, $purchase_context): PlanPurchase;
 

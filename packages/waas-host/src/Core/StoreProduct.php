@@ -9,7 +9,7 @@ namespace WaaSHost\Core;
 class StoreProduct
 {
     /** The "WaaS product" checkbox; WooCommerce stores product type options as "_<id>". */
-    public const IS_STORE_PRODUCT_META = 'is_wpcs_product';
+    public const IS_STORE_PRODUCT_META = 'is_waas_product';
 
     // Leading underscore: WooCommerce keeps these out of the Custom Fields box and the REST meta_data.
     public const PRODUCT_ROLE_META = '_waas_product_role';

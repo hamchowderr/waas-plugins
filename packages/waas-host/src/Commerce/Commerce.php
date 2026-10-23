@@ -7,7 +7,7 @@ use WaaSHost\Core\ProvisioningApi;
 
 /**
  * Registry of cart adapters. The first registered adapter whose cart is active
- * wins; the wpcs_commerce_adapter filter can pick another.
+ * wins; the waas_commerce_adapter filter can pick another.
  */
 final class Commerce
 {

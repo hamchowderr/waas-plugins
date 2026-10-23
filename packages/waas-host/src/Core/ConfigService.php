@@ -29,13 +29,13 @@ class ConfigService
 
     public function get_api_key()
     {
-        $value = self::has_constant('API_KEY') ? self::constant('API_KEY') : get_option('wpcs_credentials_api_key_setting');
+        $value = self::has_constant('API_KEY') ? self::constant('API_KEY') : get_option('waas_api_key');
         return apply_filters('waas_settings_api_key', $value);
     }
 
     public function get_api_secret()
     {
-        $value = self::has_constant('API_SECRET') ? self::constant('API_SECRET') : get_option('wpcs_credentials_api_secret_setting');
+        $value = self::has_constant('API_SECRET') ? self::constant('API_SECRET') : get_option('waas_api_secret');
         return apply_filters('waas_settings_api_secret', $value);
     }
 
@@ -45,7 +45,7 @@ class ConfigService
      */
     public function get_api_base_url()
     {
-        $value = self::has_constant('API_BASE_URL') ? self::constant('API_BASE_URL') : get_option('wpcs_credentials_api_base_url_setting');
+        $value = self::has_constant('API_BASE_URL') ? self::constant('API_BASE_URL') : get_option('waas_api_base_url');
         $value = apply_filters('waas_settings_api_base_url', $value);
         return empty($value) ? false : untrailingslashit($value);
     }
@@ -57,7 +57,7 @@ class ConfigService
      */
     public function get_dns_a_records(): array
     {
-        $value = self::has_constant('DNS_A_RECORDS') ? self::constant('DNS_A_RECORDS') : get_option('wpcs_dns_a_records_setting', '');
+        $value = self::has_constant('DNS_A_RECORDS') ? self::constant('DNS_A_RECORDS') : get_option('waas_dns_a_records', '');
         $value = apply_filters('waas_settings_dns_a_records', $value);
 
         return self::parse_ip_list($value);
@@ -69,7 +69,7 @@ class ConfigService
      */
     public function get_dns_cname_target(): string
     {
-        $value = self::has_constant('DNS_CNAME_TARGET') ? self::constant('DNS_CNAME_TARGET') : get_option('wpcs_dns_cname_target_setting', '');
+        $value = self::has_constant('DNS_CNAME_TARGET') ? self::constant('DNS_CNAME_TARGET') : get_option('waas_dns_cname_target', '');
         $value = apply_filters('waas_settings_dns_cname_target', $value);
 
         return self::sanitize_hostname($value);

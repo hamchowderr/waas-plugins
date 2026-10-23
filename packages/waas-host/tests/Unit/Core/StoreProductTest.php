@@ -37,7 +37,7 @@ class StoreProductTest extends TestCase
             // A plan from before the WaaS product checkbox existed.
             1 => new \WC_Product(1, [StoreProduct::LEGACY_PRODUCT_ROLE_META => 'peptide-store', StoreProduct::LEGACY_PRODUCT_GROUPNAME_META => 'peptide-starter']),
             // A product the owner unticked: it stays unticked.
-            2 => new \WC_Product(2, ['_is_wpcs_product' => 'no', StoreProduct::LEGACY_PRODUCT_ROLE_META => 'crm']),
+            2 => new \WC_Product(2, ['_is_waas_product' => 'no', StoreProduct::LEGACY_PRODUCT_ROLE_META => 'crm']),
         ];
         Functions\when('get_posts')->justReturn([1, 2]);
         Functions\when('wc_get_product')->alias(fn ($id) => $products[$id] ?? false);
@@ -45,12 +45,12 @@ class StoreProductTest extends TestCase
         $this->assertSame(2, StoreProduct::migrate_legacy_meta());
 
         $this->assertSame([
-            '_is_wpcs_product' => 'yes',
+            '_is_waas_product' => 'yes',
             StoreProduct::PRODUCT_ROLE_META => 'peptide-store',
             StoreProduct::PRODUCT_GROUPNAME_META => 'peptide-starter',
         ], $products[1]->meta);
         $this->assertSame([
-            '_is_wpcs_product' => 'no',
+            '_is_waas_product' => 'no',
             StoreProduct::PRODUCT_ROLE_META => 'crm',
         ], $products[2]->meta);
         $this->assertSame(1, $products[1]->saves);

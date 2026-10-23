@@ -29,7 +29,7 @@ class FluentCartCheckoutTest extends TestCase
         Functions\when('sanitize_text_field')->alias('trim');
         Functions\when('remove_accents')->returnArg();
         Functions\when('sanitize_title_with_dashes')->alias(fn ($s) => trim(preg_replace('/[^a-z0-9]+/', '-', strtolower($s)), '-'));
-        Functions\when('get_option')->alias(fn ($key, $default = '') => $key === 'wpcs_host_settings_root_domain' ? 'sites.example' : $default);
+        Functions\when('get_option')->alias(fn ($key, $default = '') => $key === 'waas_root_domain' ? 'sites.example' : $default);
 
         $this->api = Mockery::mock(ProvisioningApi::class);
         $this->store = Mockery::mock(FluentCartStore::class);

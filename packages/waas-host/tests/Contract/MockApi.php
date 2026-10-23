@@ -28,9 +28,9 @@ trait MockApi
         $this->extra_headers = [];
         $this->requests = [];
         $this->options = array_merge([
-            'wpcs_credentials_api_base_url_setting' => getenv('WAAS_TEST_API_BASE_URL'),
-            'wpcs_credentials_api_key_setting' => 'test-key',
-            'wpcs_credentials_api_secret_setting' => 'test-secret',
+            'waas_api_base_url' => getenv('WAAS_TEST_API_BASE_URL'),
+            'waas_api_key' => 'test-key',
+            'waas_api_secret' => 'test-secret',
         ], $options);
 
         Functions\when('get_option')->alias(fn ($name, $default = false) => $this->options[$name] ?? $default);

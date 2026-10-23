@@ -23,7 +23,7 @@ class ConfigServiceTest extends TestCase
 
     public function test_base_url_setting_is_used_without_trailing_slash(): void
     {
-        $this->options['wpcs_credentials_api_base_url_setting'] = 'https://api.example.com/';
+        $this->options['waas_api_base_url'] = 'https://api.example.com/';
 
         $this->assertSame('https://api.example.com', (new ConfigService())->get_api_base_url());
     }
@@ -31,8 +31,8 @@ class ConfigServiceTest extends TestCase
     /** A leftover region setting from older installs is ignored: the API URL setting decides where calls go. */
     public function test_a_leftover_region_setting_is_ignored(): void
     {
-        $this->options['wpcs_credentials_api_base_url_setting'] = '';
-        $this->options['wpcs_credentials_region_setting'] = 'eu1';
+        $this->options['waas_api_base_url'] = '';
+        $this->options['waas_region'] = 'eu1';
 
         $this->assertFalse((new ConfigService())->get_api_base_url());
     }
@@ -57,7 +57,7 @@ class ConfigServiceTest extends TestCase
 
     public function test_filter_can_change_base_url(): void
     {
-        $this->options['wpcs_credentials_api_base_url_setting'] = 'https://api.example.com';
+        $this->options['waas_api_base_url'] = 'https://api.example.com';
         Filters\expectApplied('waas_settings_api_base_url')->once()->andReturn('http://localhost:4111/');
 
         $this->assertSame('http://localhost:4111', (new ConfigService())->get_api_base_url());
@@ -65,26 +65,26 @@ class ConfigServiceTest extends TestCase
 
     public function test_credentials_incomplete_without_base_url(): void
     {
-        $this->options['wpcs_credentials_api_key_setting'] = 'key';
-        $this->options['wpcs_credentials_api_secret_setting'] = 'secret';
+        $this->options['waas_api_key'] = 'key';
+        $this->options['waas_api_secret'] = 'secret';
 
         $this->assertFalse((new ConfigService())->check_credentials());
     }
 
     public function test_credentials_complete_with_base_url_only(): void
     {
-        $this->options['wpcs_credentials_api_base_url_setting'] = 'https://api.example.com';
-        $this->options['wpcs_credentials_api_key_setting'] = 'key';
-        $this->options['wpcs_credentials_api_secret_setting'] = 'secret';
+        $this->options['waas_api_base_url'] = 'https://api.example.com';
+        $this->options['waas_api_key'] = 'key';
+        $this->options['waas_api_secret'] = 'secret';
 
         $this->assertTrue((new ConfigService())->check_credentials());
     }
 
     public function test_credentials_incomplete_when_saved_empty(): void
     {
-        $this->options['wpcs_credentials_api_base_url_setting'] = 'https://api.example.com';
-        $this->options['wpcs_credentials_api_key_setting'] = '';
-        $this->options['wpcs_credentials_api_secret_setting'] = '';
+        $this->options['waas_api_base_url'] = 'https://api.example.com';
+        $this->options['waas_api_key'] = '';
+        $this->options['waas_api_secret'] = '';
 
         $this->assertFalse((new ConfigService())->check_credentials());
     }
@@ -96,14 +96,14 @@ class ConfigServiceTest extends TestCase
     public function test_constant_wins_over_setting(): void
     {
         define('WPCS_API_BASE_URL', 'https://api.from-constant.example');
-        $this->options['wpcs_credentials_api_base_url_setting'] = 'https://api.example.com';
+        $this->options['waas_api_base_url'] = 'https://api.example.com';
 
         $this->assertSame('https://api.from-constant.example', (new ConfigService())->get_api_base_url());
     }
 
     public function test_http_service_sends_requests_to_base_url(): void
     {
-        $this->options['wpcs_credentials_api_base_url_setting'] = 'https://api.example.com/';
+        $this->options['waas_api_base_url'] = 'https://api.example.com/';
         Functions\when('is_wp_error')->justReturn(false);
         Functions\when('wp_remote_retrieve_response_code')->justReturn(200);
         Functions\expect('wp_remote_get')
@@ -116,14 +116,14 @@ class ConfigServiceTest extends TestCase
 
     public function test_dns_a_records_from_setting_drop_invalid_and_duplicate_ips(): void
     {
-        $this->options['wpcs_dns_a_records_setting'] = "203.0.113.10, 203.0.113.11\n203.0.113.10 not-an-ip 2001:db8::1";
+        $this->options['waas_dns_a_records'] = "203.0.113.10, 203.0.113.11\n203.0.113.10 not-an-ip 2001:db8::1";
 
         $this->assertSame(['203.0.113.10', '203.0.113.11', '2001:db8::1'], (new ConfigService())->get_dns_a_records());
     }
 
     public function test_no_dns_records_by_default(): void
     {
-        $this->options['wpcs_credentials_region_setting'] = 'us1';
+        $this->options['waas_region'] = 'us1';
         $config = new ConfigService();
 
         $this->assertSame([], $config->get_dns_a_records());
@@ -132,10 +132,10 @@ class ConfigServiceTest extends TestCase
 
     public function test_dns_cname_target_is_normalized_and_validated(): void
     {
-        $this->options['wpcs_dns_cname_target_setting'] = ' Sites.Example.NET. ';
+        $this->options['waas_dns_cname_target'] = ' Sites.Example.NET. ';
         $this->assertSame('sites.example.net', (new ConfigService())->get_dns_cname_target());
 
-        $this->options['wpcs_dns_cname_target_setting'] = 'https://sites.example.net';
+        $this->options['waas_dns_cname_target'] = 'https://sites.example.net';
         $this->assertSame('', (new ConfigService())->get_dns_cname_target());
     }
 
@@ -152,8 +152,8 @@ class ConfigServiceTest extends TestCase
     {
         define('WPCS_DNS_A_RECORDS', ['198.51.100.1', '198.51.100.2']);
         define('WPCS_DNS_CNAME_TARGET', 'edge.from-constant.example');
-        $this->options['wpcs_dns_a_records_setting'] = '203.0.113.10';
-        $this->options['wpcs_dns_cname_target_setting'] = 'sites.example.net';
+        $this->options['waas_dns_a_records'] = '203.0.113.10';
+        $this->options['waas_dns_cname_target'] = 'sites.example.net';
         $config = new ConfigService();
 
         $this->assertSame(['198.51.100.1', '198.51.100.2'], $config->get_dns_a_records());

@@ -25,13 +25,13 @@ class TenantStatusService
 
         add_filter('cron_schedules', [$this, 'add_cron_schedules']);
 
-        if (!wp_next_scheduled('wpcs_cron_poll_tenant_status')) {
-            wp_schedule_event(time(), 'five_seconds', 'wpcs_cron_poll_tenant_status');
+        if (!wp_next_scheduled('waas_poll_store_status')) {
+            wp_schedule_event(time(), 'five_seconds', 'waas_poll_store_status');
         }
 
         add_action('waas_tenant_linked_to_subscription', [$this, 'start_poll_tenant_status']);
         add_action('waas_subscription_removed', [$this, 'set_tenant_deleted']);
-        add_action('wpcs_cron_poll_tenant_status', [$this, 'poll_tenant_status']);
+        add_action('waas_poll_store_status', [$this, 'poll_tenant_status']);
 
         if (!wp_next_scheduled(self::SYNC_DOMAINS_HOOK)) {
             wp_schedule_event(time(), 'every_minute', self::SYNC_DOMAINS_HOOK);

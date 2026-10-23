@@ -185,7 +185,7 @@ class FluentCartPortalTest extends TestCase
 
         $this->assertSame([900, 901, 902], $this->portal->current_user_websites());
         $this->assertStringContainsString('Status: Choose a new website name', $html);
-        $this->assertStringContainsString('data-action="wpcs_choose_website_name_902"', $html);
+        $this->assertStringContainsString('data-action="waas_choose_website_name_902"', $html);
         $this->assertSame(1, substr_count($html, 'waas-choose-website-name"'));
     }
 
@@ -198,7 +198,7 @@ class FluentCartPortalTest extends TestCase
 
     private function render_after_result(string $code, string $for): string
     {
-        $_GET = ['wpcs_website_name' => $code, 'wpcs_website_name_for' => $for];
+        $_GET = ['waas_website_name' => $code, 'waas_website_name_for' => $for];
         Functions\when('sanitize_text_field')->returnArg();
         Functions\when('wp_unslash')->returnArg();
         Functions\when('sanitize_key')->returnArg();

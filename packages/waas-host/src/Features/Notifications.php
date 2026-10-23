@@ -79,8 +79,8 @@ class Notifications
 
         $recipient = apply_filters('waas_suspend_scheduled_email_recipient', Commerce::require_adapter()->get_customer_email($subscription_id), $subscription_id);
         $replaceables = self::get_suspend_scheduled_replaceables($subscription_id, $recipient, (int) $suspend_at);
-        $subject = self::do_replacements(apply_filters('waas_suspend_scheduled_email_subject', self::get_default_suspend_scheduled_subject(), $subscription_id), $replaceables);
-        $body = self::do_replacements(apply_filters('waas_suspend_scheduled_email_body', self::get_default_suspend_scheduled_body(), $subscription_id, $recipient), $replaceables);
+        $subject = self::do_replacements(apply_filters('waas_notification_settings_suspend_scheduled_email_subject', self::get_default_suspend_scheduled_subject(), $subscription_id), $replaceables);
+        $body = self::do_replacements(apply_filters('waas_notification_settings_suspend_scheduled_email_body', self::get_default_suspend_scheduled_body(), $subscription_id, $recipient), $replaceables);
         $headers = apply_filters('waas_suspend_scheduled_email_headers', ['Content-Type: text/html; charset=UTF-8'], $subscription_id);
 
         wp_mail($recipient, $subject, $body, $headers);
