@@ -41,7 +41,7 @@ class LegacyNamesTest extends TestCase
             $this->scheduled[] = [$timestamp, $hook, $args];
             return true;
         });
-        Functions\when('wp_clear_scheduled_hook')->alias(function ($hook) {
+        Functions\when('wp_unschedule_hook')->alias(function ($hook) {
             $this->cleared[] = $hook;
             return 0;
         });
