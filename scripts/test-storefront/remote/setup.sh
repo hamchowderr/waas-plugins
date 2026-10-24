@@ -1,7 +1,7 @@
 #!/bin/sh
 # Storefront setup steps, run by Coolify scheduled tasks as root in the wordpress container.
 #   sh /opt/wpcli/x/setup.sh <step> [payments mode: store|gateway]
-# Steps, in order: bootstrap install plugins configure pages product payments cron (check any time).
+# Steps, in order: bootstrap install plugins configure pages product payments cron (check any time; crm on the shop).
 set -eu
 X=/opt/wpcli/x
 WP="sh $X/wp"
@@ -73,6 +73,13 @@ case "${1:-}" in
     # WordPress no longer runs cron on page loads; the service's every-minute wp-cron task does.
     $WP config set DISABLE_WP_CRON true --raw --type=constant
     $WP config get DISABLE_WP_CRON ;;
+  crm)
+    # AnyPress's own CRM (shop only): lifecycle tags, lead form endpoint and checkout question (mu-plugin), then the
+    # lists, contact fields and draft email automations (crm.php, crm-emails.json).
+    mkdir -p /var/www/html/wp-content/mu-plugins && cp $X/anypress-crm.php /var/www/html/wp-content/mu-plugins/
+    chown 33:33 /var/www/html/wp-content/mu-plugins/anypress-crm.php
+    $WP eval-file $X/crm.php --user=admin
+    $WP cron event list --hook=anypress_crm_daily --fields=hook,next_run_relative ;;
   check)
     $WP eval-file $X/check.php ;;
   *) echo "unknown step"; exit 2 ;;
