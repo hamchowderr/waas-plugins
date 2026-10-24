@@ -1,0 +1,390 @@
+[
+ {
+  "title": "Email: Website owner welcome",
+  "trigger": "fluent_cart/subscription_activated",
+  "settings": {
+   "subscription_status": "transactional"
+  },
+  "conditions": {
+   "product_ids": [],
+   "run_multiple": "no"
+  },
+  "note": "New website owners: four setup emails over 10 days, then the referral ask after the 30-day money-back window.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "Your website is on its way",
+    "preheader": "Here is what happens next.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Thank you for choosing AnyPress. We're setting up your website now. It usually takes a few minutes, and you'll get a second email the moment it's ready.</p><p>When it is, sign in to your account to open your site. Everything you bought lives there: your website, your plan and your invoices.</p><p><a href=\"https://shop.anypress.io/account/\"><strong>Open your account</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 2,
+    "subject": "Put your website on your own domain",
+    "preheader": "Your name, your address.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Your site starts on a free AnyPress address so you can build right away. When you're ready, connect a domain you own (like yourbusiness.com) from your account.</p><p>Don't have one yet? Buy it from any domain company, then come back and connect it. We set up the secure padlock (https) for you.</p><p><a href=\"https://shop.anypress.io/account/\"><strong>Connect your domain</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 5,
+    "subject": "Change your site by just asking",
+    "preheader": "No designer needed.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>You can edit any page yourself in the site editor: click, type, done.</p><p>Or let an AI assistant do it. Connect Claude or ChatGPT to your website from your account, then ask in plain words: \"add our opening hours to the home page\" or \"write a page about our services\".</p><p><a href=\"https://anypress.io/help\"><strong>See how</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 10,
+    "subject": "Send email from your own address",
+    "preheader": "Receipts and newsletters that come from you.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Your website can already send receipts, booking confirmations and newsletters. Once your domain is connected, they go out from your own address, so customers see your name, not ours.</p><p>Your plan includes a monthly email allowance. You can see how much you've used in your account.</p><p><a href=\"https://shop.anypress.io/account/\"><strong>Open your account</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 31,
+    "subject": "Know someone who needs a website?",
+    "preheader": "Earn 30% when they join.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>You've had your AnyPress website for a month now. If it's working for you, chances are you know someone else who needs one.</p><p>Join our affiliate program and share your link. When someone buys a plan through it, you earn 30% of their first payment, paid by PayPal.</p><p><a href=\"https://anypress.io/affiliates\"><strong>Become an affiliate</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Win-back",
+  "trigger": "fluent_cart/subscription_canceled",
+  "settings": {
+   "subscription_status": "transactional"
+  },
+  "conditions": {
+   "product_ids": [],
+   "run_multiple": "yes"
+  },
+  "note": "Cancelled plans: ask why, then a come-back offer after 30 days. OWNER: pick the offer before switching this on.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "Can we ask one quick question?",
+    "preheader": "It helps us do better.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>We saw that you cancelled your AnyPress plan. Sorry to see you go.</p><p>Could you hit reply and tell us why, in a sentence or two? Too expensive, missing something, didn't have time to set it up? We read every answer, and it shapes what we build next.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 30,
+    "subject": "Your website is one click away",
+    "preheader": "Come back any time.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>It's been a month since you left AnyPress. If you still need a website, it's easy to start again: pick a plan and we'll set it up in minutes.</p><p>[OFFER: the owner picks the come-back offer before this automation is switched on.]</p><p><a href=\"https://anypress.io/pricing\"><strong>See the plans</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Affiliate welcome",
+  "trigger": "manual",
+  "note": "Started by the CRM plugin when a contact gets Affiliate: Active (affiliate approved).",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "You're an AnyPress affiliate",
+    "preheader": "Your link, and how you get paid.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Welcome aboard. You're approved, and your personal link is in your affiliate dashboard.</p><p>How it works: anyone who buys a plan within 30 days of clicking your link counts as yours. You earn 30% of their first payment. Commission is held for 30 days (our money-back window), then paid by PayPal once you reach $50.</p><p>Ready-made wording for each kind of business, plus logos, is in the affiliate kit.</p><p><a href=\"https://shop.anypress.io/affiliates/\"><strong>Open your affiliate dashboard</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 7,
+    "subject": "Three easy ways to share your link",
+    "preheader": "Small things that work.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>1. Put it in your email signature or link-in-bio with one line, like \"My website runs on AnyPress\".</p><p>2. When someone asks who built your site or how you set up your shop, send them the link.</p><p>3. Pick the group you know best (shops, coaches, churches, chambers, agencies) and use that wording from the kit.</p><p><a href=\"https://anypress.io/affiliates/kit\"><strong>Open the affiliate kit</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Seller welcome",
+  "trigger": "manual",
+  "note": "Started by the CRM plugin when a contact gets Seller: Active (application approved).",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "Welcome, you can now sell websites",
+    "preheader": "Your first steps.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Your seller account is ready. You'll have a separate email with a link to sign in to your dashboard.</p><p>From the dashboard you can open your free storefront (the shop your customers buy from), set your own prices, and see every website you sell.</p><p><a href=\"https://app.anypress.io\"><strong>Sign in to your dashboard</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 3,
+    "subject": "Make your first sale",
+    "preheader": "Start with someone you already know.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>The quickest first sale is a past client or a friend's business that needs a site. Send them your storefront link. When they buy, their website is built automatically, under your name.</p><p>Your customers never see AnyPress. They deal with you.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 7,
+    "subject": "The more you sell, the less you pay",
+    "preheader": "How the volume discount works.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>You pay us the listed price per website, and you charge your customers whatever you like. The difference is yours.</p><p>Once you run 3 or more websites, your price drops automatically: 10% off at 3 to 9 sites, 20% at 10 to 24, and 30% at 25 or more.</p><p><a href=\"https://anypress.io/pricing\"><strong>See the prices</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Reseller welcome",
+  "trigger": "manual",
+  "note": "Started by the CRM plugin when a contact gets Reseller: Active.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "Your reseller account is ready",
+    "preheader": "Several brands, one login, one bill.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Your reseller account is set up. You can run several storefronts, each with its own brand and prices, from one dashboard login.</p><p>You'll get one bill each month for all your websites, at your wholesale price. Partner keys for the API are on your reseller page if you want to create sites from your own software.</p><p><a href=\"https://app.anypress.io\"><strong>Sign in to your dashboard</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Nurture shops",
+  "trigger": "manual",
+  "note": "Nurture for online shops. Started by the CRM plugin when a lead from anypress.io with customer_group=shops confirms their email.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "Your own shop, without the tech",
+    "preheader": "A shop on your own domain.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>You want to sell online, on your own domain, without learning to run a website. That's exactly what AnyPress is for.</p><p>We set up your shop, keep it secure and up to date, and back it up every night. You add your products and start selling.</p><p><a href=\"https://anypress.io/who/shops\"><strong>Learn more</strong></a></p><p>Free, no sign-up needed: <a href=\"https://anypress.io/guides/shops\">Moving your shop: a step-by-step checklist</a>.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 3,
+    "subject": "What your shop can do",
+    "preheader": "Products, subscriptions, downloads and more.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Your shop can sell physical products, digital downloads and subscriptions, take coupons, and send receipts from your own email address.</p><p>Payments go straight into your own Stripe or PayPal account.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 7,
+    "subject": "See a real example",
+    "preheader": "A ceramics shop built on AnyPress.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Fern & Clay Ceramics is one of our example sites: a small shop with a product catalogue, cart and checkout, ready on day one.</p><p>Have a look at it on our home page, then picture your products in it.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 14,
+    "subject": "Start your shop for $29 a month",
+    "preheader": "30-day money-back guarantee.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Store plan is $29 a month (or $290 a year) and includes everything above. If it isn't right for you in the first 30 days, you get your money back.</p><p>Already selling somewhere else? We can help you move your shop over.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Nurture regulated",
+  "trigger": "manual",
+  "note": "Nurture for supplement and wellness brands. Started by the CRM plugin when a lead from anypress.io with customer_group=regulated confirms their email.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "A store that's yours",
+    "preheader": "Your own domain, your own payment account.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>If you sell supplements or other regulated products, you know how often big platforms change the rules or close accounts.</p><p>With AnyPress, the store is a website on your own domain, and payments go into your own payment account. We just keep it running.</p><p><a href=\"https://anypress.io/who/regulated\"><strong>Learn more</strong></a></p><p>Free, no sign-up needed: <a href=\"https://anypress.io/guides/regulated\">Regulated store checklist</a>.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 3,
+    "subject": "What your store can do",
+    "preheader": "Subscriptions, bundles, coupons.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Sell one-off orders and subscribe-and-save, run coupons, and email your customers from your own address.</p><p>You stay responsible for what you sell and how you describe it; we take care of the website.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 7,
+    "subject": "See a real example",
+    "preheader": "A complete store, ready on day one.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Our example shop on the home page shows what you get: product pages, a cart and a checkout, with nothing to install.</p><p>Your own products, wording and payment account go in, and you're ready to sell.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 14,
+    "subject": "Start your store for $29 a month",
+    "preheader": "30-day money-back guarantee.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Store plan is $29 a month (or $290 a year). If it isn't right for you in the first 30 days, you get your money back.</p><p>Questions about your products or payment setup? Reply and ask before you buy.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Nurture courses",
+  "trigger": "manual",
+  "note": "Nurture for course creators. Started by the CRM plugin when a lead from anypress.io with customer_group=courses confirms their email.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "Your courses on your own site",
+    "preheader": "No platform taking a cut.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Course platforms charge more every year, and some take a share of every sale. On AnyPress your courses, community and memberships live on your own site, for a flat monthly price.</p><p>We run the website. You teach.</p><p><a href=\"https://anypress.io/who/courses\"><strong>Learn more</strong></a></p><p>Free, no sign-up needed: <a href=\"https://anypress.io/guides/courses\">What your course platform really costs</a>.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 3,
+    "subject": "Courses, community and memberships in one place",
+    "preheader": "Everything your students need.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Sell courses one-off or by subscription, run a members-only community, and email your students from your own address.</p><p>Students sign in once and find everything in one place.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 7,
+    "subject": "See a real example",
+    "preheader": "A guitar school built on AnyPress.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Brightside Guitar School is one of our example sites: lessons, a members area and sign-ups, all on one website.</p><p>Have a look on our home page and imagine your own course in it.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 14,
+    "subject": "Start for $39 a month",
+    "preheader": "30-day money-back guarantee.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Community & courses plan is $39 a month (or $390 a year). If it isn't right for you in the first 30 days, you get your money back.</p><p>Moving from another platform? Reply and we'll tell you how.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Nurture chambers",
+  "trigger": "manual",
+  "note": "Nurture for chambers and associations. Started by the CRM plugin when a lead from anypress.io with customer_group=chambers confirms their email.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "Members, events and dues in one place",
+    "preheader": "One website instead of five tools.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Chambers and associations often juggle a website, a membership tool, an events tool and a mailing list. AnyPress puts them in one website you don't have to maintain.</p><p>Members join and pay dues online, sign up for events, and get your newsletter.</p><p><a href=\"https://anypress.io/who/chambers\"><strong>Learn more</strong></a></p><p>Free, no sign-up needed: <a href=\"https://anypress.io/guides/chambers\">Member website program: a one-page guide</a>.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 3,
+    "subject": "A website perk for your members",
+    "preheader": "New value, and new income.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Some chambers also offer member businesses a website of their own. With a free seller storefront, you can sell websites to members under the chamber's name and keep the difference.</p><p>It's a member benefit that pays for itself.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 7,
+    "subject": "See a real example",
+    "preheader": "A business alliance built on AnyPress.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Riverbend Business Alliance is one of our example sites: a member directory, events, sign-ups and a newsletter.</p><p>Have a look on our home page.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 14,
+    "subject": "Start for $79 a month",
+    "preheader": "30-day money-back guarantee.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Everything plan is $79 a month (or $790 a year) and includes membership, events, bookings and your newsletter. If it isn't right in the first 30 days, you get your money back.</p><p>Want to talk about websites for your members too? Just reply.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Nurture churches",
+  "trigger": "manual",
+  "note": "Nurture for churches. Started by the CRM plugin when a lead from anypress.io with customer_group=churches confirms their email.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "Your church online, without a web volunteer",
+    "preheader": "Events, giving, groups and email.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Most church websites depend on one volunteer who knows how it works. AnyPress runs the website for you, so anyone on your team can update it.</p><p>Service times, events, sermons and your weekly email, all in one place.</p><p><a href=\"https://anypress.io/who/churches\"><strong>Learn more</strong></a></p><p>Free, no sign-up needed: <a href=\"https://anypress.io/guides/churches\">Church website checklist</a>.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 3,
+    "subject": "Online giving, groups and sign-ups",
+    "preheader": "One-time and monthly giving.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Members can give online, one time or monthly, straight into your church's own payment account. Small groups, classes, volunteer sign-ups and prayer requests all live on the same site.</p><p>Your weekly email goes out from your own address.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 7,
+    "subject": "What it looks like",
+    "preheader": "A complete site, ready on day one.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Our example sites on the home page show how events, sign-ups, members areas and newsletters look on AnyPress.</p><p>Your church's name, photos and service times go in, and you're live.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 14,
+    "subject": "Start for $79 a month",
+    "preheader": "30-day money-back guarantee.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Everything plan is $79 a month (or $790 a year). Smaller churches often start with Community & courses at $39. If it isn't right in the first 30 days, you get your money back.</p><p>Part of a network of churches? Reply, and we'll show you how to run sites for all of them.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Nurture franchises",
+  "trigger": "manual",
+  "note": "Nurture for multi-location businesses. Started by the CRM plugin when a lead from anypress.io with customer_group=franchises confirms their email.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "The same great site for every location",
+    "preheader": "Consistent brand, local details.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>When every location builds its own website, the brand drifts and some sites fall out of date. AnyPress gives every location the same site, with its own address, hours, bookings and domain.</p><p>Head office controls the look. Locations keep their details current.</p><p><a href=\"https://anypress.io/who/franchises\"><strong>Learn more</strong></a></p><p>Free, no sign-up needed: <a href=\"https://anypress.io/guides/franchises\">Rolling out 10 locations: a worked example</a>.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 3,
+    "subject": "Bookings for every location",
+    "preheader": "Customers book the right place.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Each location's site takes its own bookings and payments, and sends confirmations from its own email address.</p><p>Head office can run all of them from one account, with one monthly bill.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 7,
+    "subject": "How a rollout works",
+    "preheader": "From one site to many.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>We start with one location's site. Once it's right, every other location gets a copy with its own details.</p><p>Adding a location later takes minutes, not weeks.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 14,
+    "subject": "From $19 a month per location",
+    "preheader": "Volume discounts from 3 locations.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Bookings plan is $19 a month per location. From 3 locations the price drops automatically: 10% off at 3 to 9, 20% at 10 to 24, 30% at 25 or more.</p><p>Want a rollout plan for your locations? Just reply.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Nurture agencies",
+  "trigger": "manual",
+  "note": "Nurture for agencies and freelancers. Started by the CRM plugin when a lead from anypress.io with customer_group=agencies confirms their email.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "Sell websites as a monthly service",
+    "preheader": "Under your own name.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Building a website once pays once. Selling it as a monthly service pays every month. AnyPress lets you do that under your own brand, while we run the servers, updates, security and backups.</p><p>Your clients deal with you and never see AnyPress.</p><p><a href=\"https://anypress.io/sell\"><strong>Learn more</strong></a></p><p>Free, no sign-up needed: <a href=\"https://anypress.io/guides/agencies\">Agency profit calculator</a>.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 3,
+    "subject": "Your own storefront, free",
+    "preheader": "Your brand, your prices.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>As a seller you get a free storefront: your own shop where clients pick a plan and pay you. Their website is built automatically.</p><p>You set the prices. You pay us per site, and the difference is yours.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 7,
+    "subject": "The more sites, the bigger your margin",
+    "preheader": "Automatic volume discounts.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>From 3 sites your price per site drops automatically: 10% off at 3 to 9, 20% at 10 to 24, 30% at 25 or more.</p><p>Running several brands? A reseller account gives you several storefronts under one login and one monthly bill.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 14,
+    "subject": "Apply to become a seller",
+    "preheader": "We review every application by hand.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>It takes two minutes to apply. Once we approve you, you get a dashboard, your storefront and everything you need to make your first sale.</p><p>Questions first? Just reply.</p><p><a href=\"https://anypress.io/sell\"><strong>Apply to sell</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Nurture developers",
+  "trigger": "manual",
+  "note": "Nurture for software teams. Started by the CRM plugin when a lead from anypress.io with customer_group=developers confirms their email.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "A website for each of your customers",
+    "preheader": "Created from your own app.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>If your customers need a website (a booking page, a shop, a members area), you can create one for each of them straight from your software with the AnyPress API.</p><p>We run the WordPress servers, updates and backups. You call one endpoint.</p><p><a href=\"https://anypress.io/developers\"><strong>Learn more</strong></a></p><p>Free, no sign-up needed: <a href=\"https://anypress.io/guides/developers\">Your first site from the API, step by step</a>.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 3,
+    "subject": "How the API works",
+    "preheader": "Keys, webhooks and a request log.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Create sites, check their status and suspend or remove them with an API key. Signed webhooks tell your app when a site is ready, and a request log shows every call.</p><p>There's also an MCP server, so AI agents can manage sites too.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 7,
+    "subject": "White-label from the start",
+    "preheader": "Your brand, not ours.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Sites can run on your customers' own domains and send email from their own addresses. Your customers never need to know we exist.</p><p>At scale, a reseller account gives you partner keys across several storefronts and one monthly bill.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 14,
+    "subject": "Get an API key",
+    "preheader": "Apply in two minutes.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Apply as a seller and tell us you want API access. Once approved, you can create keys from your dashboard.</p><p>The docs are at anypress.io/developers. Questions? Just reply.</p><p><a href=\"https://anypress.io/developers\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Monthly newsletter template",
+  "trigger": "manual",
+  "note": "Template only. Copy it into a campaign each month and send to the Newsletter list.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "What's new at AnyPress this month",
+    "preheader": "One update, one tip, one example.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p><strong>What's new:</strong> [one thing that shipped this month, in a sentence or two].</p><p><strong>Tip of the month:</strong> [one small thing readers can do on their website today].</p><p><strong>Worth a look:</strong> [one example site or idea, with a link].</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ }
+]
