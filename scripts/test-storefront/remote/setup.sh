@@ -79,6 +79,8 @@ case "${1:-}" in
     mkdir -p /var/www/html/wp-content/mu-plugins && cp $X/anypress-crm.php /var/www/html/wp-content/mu-plugins/
     chown 33:33 /var/www/html/wp-content/mu-plugins/anypress-crm.php
     $WP eval-file $X/crm.php --user=admin
+    # The AnyPress API's CRM_SECRET, so its approvals can tag sellers and resellers (POST /wp-json/anypress/v1/offering).
+    if [ -n "${CRM_SECRET:-}" ]; then $WP option update anypress_crm_secret "$CRM_SECRET" --autoload=no; fi
     $WP cron event list --hook=anypress_crm_daily --fields=hook,next_run_relative ;;
   check)
     $WP eval-file $X/check.php ;;

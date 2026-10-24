@@ -436,6 +436,39 @@ final class AnyPress_CRM
             'permission_callback' => '__return_true',
             'callback'            => [self::class, 'lead'],
         ]);
+        register_rest_route('anypress/v1', '/offering', [
+            'methods'             => 'POST',
+            'permission_callback' => [self::class, 'from_api'],
+            'callback'            => [self::class, 'offering'],
+        ]);
+    }
+
+    /** The AnyPress API's CRM_SECRET, saved here as the anypress_crm_secret option. No option: the route is closed. */
+    public static function from_api(\WP_REST_Request $request)
+    {
+        $secret = (string) get_option('anypress_crm_secret', '');
+        return $secret !== '' && hash_equals($secret, (string) $request->get_header('x-crm-secret'));
+    }
+
+    /**
+     * POST /wp-json/anypress/v1/offering {email, name, business, offering: Seller|Reseller, stage: Active}, sent by the
+     * AnyPress API when the admin approves an application to sell (Beads waas-api-gtb.4). The tag starts the welcome emails.
+     */
+    public static function offering(\WP_REST_Request $request)
+    {
+        $email = sanitize_email((string) $request->get_param('email'));
+        $offering = (string) $request->get_param('offering');
+        $stage = (string) $request->get_param('stage');
+        if (!is_email($email) || !in_array($offering, ['Seller', 'Reseller'], true) || $stage !== 'Active') {
+            return new \WP_Error('invalid', 'email, offering (Seller or Reseller) and stage (Active) are required.', ['status' => 400]);
+        }
+        $parts = preg_split('/\s+/', trim(substr(sanitize_text_field((string) $request->get_param('name')), 0, 100)), 2);
+        $contact = self::contact_by_email($email, ['first_name' => $parts[0] ?? '', 'last_name' => $parts[1] ?? '']);
+        if (!$contact) {
+            return new \WP_Error('failed', 'The contact could not be saved.', ['status' => 500]);
+        }
+        self::add($contact, $offering, $stage);
+        return new \WP_REST_Response(['ok' => true], 200);
     }
 
     /**
