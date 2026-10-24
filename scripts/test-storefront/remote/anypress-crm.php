@@ -67,6 +67,10 @@ final class AnyPress_CRM
         if (!wp_next_scheduled('anypress_crm_daily')) {
             wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', 'anypress_crm_daily');
         }
+        add_action('anypress_crm_weekly', [self::class, 'email_weekly_numbers']);
+        if (!wp_next_scheduled('anypress_crm_weekly')) {
+            wp_schedule_event(strtotime('next monday 14:00 UTC'), 'weekly', 'anypress_crm_weekly');
+        }
     }
 
     // ---- Tags ------------------------------------------------------------------------------------------------
@@ -357,6 +361,61 @@ final class AnyPress_CRM
                 $contact->detachTags([$id]);
             }
         }
+    }
+
+    // ---- Weekly numbers -------------------------------------------------------------------------------------------
+
+    /** Who the Monday numbers go to. */
+    const REPORT_TO = 'admin@otakusolutions.io';
+
+    /** The last 7 days: leads by group and source, seller interest, purchases, affiliates, cancellations, monthly revenue. */
+    public static function weekly_numbers()
+    {
+        global $wpdb;
+        $since = gmdate('Y-m-d H:i:s', time() - 7 * DAY_IN_SECONDS);
+        $p = $wpdb->prefix;
+        $count = function ($sql, ...$args) use ($wpdb) {
+            return (int) $wpdb->get_var($args ? $wpdb->prepare($sql, ...$args) : $sql);
+        };
+        $by_field = function ($key) use ($wpdb, $p, $since) {
+            $rows = $wpdb->get_results($wpdb->prepare(
+                "SELECT m.value AS v, COUNT(*) AS n FROM {$p}fc_subscribers s JOIN {$p}fc_subscriber_meta m ON m.subscriber_id = s.id AND m.`key` = %s
+                 WHERE s.created_at >= %s GROUP BY m.value ORDER BY n DESC", $key, $since
+            ));
+            return $rows ? implode(', ', array_map(fn($r) => ($r->v ?: 'not given') . ' ' . $r->n, $rows)) : 'none';
+        };
+        $tagged = function ($offering, $stage) use ($count, $p, $since) {
+            $id = self::existing_tag_id($offering, $stage);
+            return $id ? $count("SELECT COUNT(*) FROM {$p}fc_subscriber_pivot WHERE object_type = %s AND object_id = %d AND created_at >= %s", 'FluentCrm\\App\\Models\\Tag', $id, $since) : 0;
+        };
+        $lines = [
+            'New contacts: ' . $count("SELECT COUNT(*) FROM {$p}fc_subscribers WHERE created_at >= %s", $since)
+                . ' (confirmed ' . $count("SELECT COUNT(*) FROM {$p}fc_subscribers WHERE created_at >= %s AND status = 'subscribed'", $since) . ')',
+            'By group: ' . $by_field('customer_group'),
+            'By source: ' . $by_field('source'),
+            'Seller applications: ' . $tagged('Seller', 'Interested'),
+        ];
+        if (class_exists('\\FluentCart\\App\\Models\\Subscription')) {
+            $lines[] = 'Paid orders: ' . $count("SELECT COUNT(*) FROM {$p}fct_orders WHERE payment_status = 'paid' AND created_at >= %s", $since);
+            $lines[] = 'New plans: ' . implode(', ', array_map(fn($plan) => $plan . ' ' . $tagged($plan, 'Active'), self::PLANS));
+            $lines[] = 'Cancelled or ended plans: ' . implode(', ', array_map(fn($plan) => $plan . ' ' . $tagged($plan, 'Past'), self::PLANS));
+            $mrr = 0;
+            foreach (\FluentCart\App\Models\Subscription::whereIn('status', ['active', 'trialing'])->get(['recurring_amount', 'billing_interval']) as $sub) {
+                $months = ['yearly' => 12, 'half_yearly' => 6, 'quarterly' => 3, 'monthly' => 1, 'weekly' => 12 / 52, 'daily' => 12 / 365][$sub->billing_interval] ?? 1;
+                $mrr += $sub->recurring_amount / 100 / $months;
+            }
+            $lines[] = 'Monthly revenue from live plans: $' . number_format($mrr, 2);
+        }
+        if ($wpdb->get_var("SHOW TABLES LIKE '{$p}fa_affiliates'")) {
+            $lines[] = 'Affiliate sign-ups: ' . $count("SELECT COUNT(*) FROM {$p}fa_affiliates WHERE created_at >= %s", $since);
+        }
+        return $lines;
+    }
+
+    public static function email_weekly_numbers()
+    {
+        $lines = self::weekly_numbers();
+        wp_mail(self::REPORT_TO, 'AnyPress weekly numbers, ' . gmdate('j M Y'), "The last 7 days on shop.anypress.io:\n\n" . implode("\n", $lines));
     }
 
     /** The nurture series for the contact's customer group, once they can receive marketing email. */
