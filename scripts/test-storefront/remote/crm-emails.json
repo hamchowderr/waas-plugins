@@ -65,7 +65,7 @@
     "day": 30,
     "subject": "Your website is one click away",
     "preheader": "Come back any time.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>It's been a month since you left AnyPress. If you still need a website, it's easy to start again: pick a plan and we'll set it up in minutes.</p><p>[OFFER: the owner picks the come-back offer before this automation is switched on.]</p><p><a href=\"https://anypress.io/pricing\"><strong>See the plans</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>It's been a month since you left AnyPress. If you still need a website, it's easy to start again: pick a plan and we'll set it up in minutes.</p><p>Come back and your first month is half price. Use the code <strong>COMEBACK50</strong> at checkout (one use per customer).</p><p><a href=\"https://anypress.io/pricing\"><strong>See the plans</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
  },
