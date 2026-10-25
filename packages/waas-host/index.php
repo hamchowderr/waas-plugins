@@ -14,6 +14,7 @@ use WaaSHost\Core\ConfigService;
 use WaaSHost\Core\HttpService;
 use WaaSHost\Core\ProvisioningApi;
 use WaaSHost\Features\NameConflicts;
+use WaaSHost\Features\RunSoon;
 use WaaSHost\Features\StoreJobs;
 use WaaSHost\Features\TenantsAddOnSubscriptionManager;
 use WaaSHost\Features\TenantsSubscriptionManager;
@@ -66,6 +67,8 @@ new RolesController($provisioningApi);
 // UI
 SingleLogin::init();
 // Store API calls run as background jobs, never inside the cart's hooks
+// Background work starts when the request that asked for it ends, not on the next cron run
+new RunSoon();
 $storeJobs = new StoreJobs();
 $nameConflicts = new NameConflicts($provisioningApi, $storeJobs);
 new TenantsSubscriptionManager($provisioningApi, $storeJobs, $nameConflicts);
