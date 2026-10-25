@@ -109,6 +109,8 @@ class TenantStatusService
         if (!wp_next_scheduled(self::RECHECK_HOOK, [$subscription_id])) {
             wp_schedule_single_event(time() + self::RECHECK_DELAY, self::RECHECK_HOOK, [$subscription_id]);
         }
+        // The scheduled event only runs with cron, which may be minutes away.
+        RunSoon::request(self::RECHECK_HOOK, $subscription_id, self::RECHECK_DELAY);
     }
 
     /** With webhooks registered the poll is only a backstop, so it runs every minute instead of every five seconds. */

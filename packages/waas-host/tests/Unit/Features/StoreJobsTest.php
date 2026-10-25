@@ -5,6 +5,7 @@ namespace Tests\Unit\Features;
 use Brain\Monkey\Actions;
 use Brain\Monkey\Functions;
 use WaaSHost\Core\Tenant;
+use WaaSHost\Features\RunSoon;
 use WaaSHost\Features\StoreJobs;
 
 /**
@@ -41,6 +42,23 @@ class StoreJobsTest extends StoreJobsTestCase
 
         $this->assertSame([], $this->ran);
         $this->assertSame([[time(), StoreJobs::RUN_HOOK, [7], StoreJobs::GROUP]], $this->actions);
+        // The runner also starts once this request ends, instead of on the next cron run.
+        $this->assertSame([[StoreJobs::RUN_HOOK, 7, 0]], RunSoon::pending());
+    }
+
+    public function test_a_retry_waits_for_its_scheduled_time(): void
+    {
+        $this->jobs->register('a', function () {
+            throw new \RuntimeException('API down');
+        });
+        $this->jobs->enqueue(7, 'a');
+        RunSoon::reset();
+        $this->actions = [];
+
+        $this->jobs->run(7);
+
+        $this->assertSame([], RunSoon::pending());
+        $this->assertSame(time() + StoreJobs::RETRY_DELAYS[0], $this->actions[0][0]);
     }
 
     public function test_runs_jobs_in_the_order_they_were_queued(): void

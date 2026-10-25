@@ -27,6 +27,7 @@ abstract class StoreJobsTestCase extends TestCase
     {
         parent::setUp();
         Commerce::reset();
+        \WaaSHost\Features\RunSoon::reset();
         if (!defined('DAY_IN_SECONDS')) {
             define('DAY_IN_SECONDS', 86400);
         }

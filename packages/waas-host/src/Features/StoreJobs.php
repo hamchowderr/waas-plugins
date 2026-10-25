@@ -327,6 +327,10 @@ class StoreJobs
 
     private function schedule_run($subscription_id, int $timestamp): void
     {
+        if ($timestamp <= time()) {
+            // Don't wait for the next cron run; the scheduled runner stays as the fallback.
+            RunSoon::request(self::RUN_HOOK, $subscription_id);
+        }
         if ($this->is_scheduled($subscription_id)) {
             return;
         }

@@ -37,6 +37,7 @@ class WebhookReceiverTest extends TestCase
             define('DAY_IN_SECONDS', 86400);
         }
         Commerce::reset();
+        \WaaSHost\Features\RunSoon::reset();
         Commerce::register($this->cart = new FakeCommerceAdapter());
 
         $this->options = [];
@@ -201,6 +202,8 @@ class WebhookReceiverTest extends TestCase
         $this->assertSame(TenantStatusService::RECHECK_HOOK, $hook);
         $this->assertSame([900], $args);
         $this->assertEqualsWithDelta(time() + 5, $timestamp, 2);
+        // And one in its own request, without waiting for cron.
+        $this->assertSame([[TenantStatusService::RECHECK_HOOK, 900, 5]], \WaaSHost\Features\RunSoon::pending());
     }
 
     public function test_a_repeated_delivery_is_answered_without_acting_again(): void
