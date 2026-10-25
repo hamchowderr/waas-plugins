@@ -28,7 +28,7 @@ Settings in `wp-config.php`:
 ## Releasing
 
 1. Merge to `main`.
-2. Tag the commit and push the tag: `waas-host-v2.3.0`, `waas-payments-v0.2.0`, `waas-client-v2.3.0`. A `-beta.N` suffix (`waas-host-v2.4.0-beta.1`) publishes to the beta channel only. An annotated tag's message becomes the changelog.
+2. Run the **Tag and release plugin** workflow (Actions tab, or `POST /repos/<owner>/<repo>/actions/workflows/tag-release.yml/dispatches`) with the tag, the changelog and optionally the commit (main's newest by default). It tags the commit and runs step 3 itself. Or tag the commit and push the tag yourself: `waas-host-v2.3.0`, `waas-payments-v0.2.0`, `waas-client-v2.3.0`. A `-beta.N` suffix (`waas-host-v2.4.0-beta.1`) publishes to the beta channel only. An annotated tag's message becomes the changelog.
 3. The **Release plugin** workflow builds the zip (`composer install --no-dev`, version stamped from the tag into the header and the version constant, no tests), signs it, checks the signature against the keys the plugins trust, and uploads `releases/<slug>/<version>/<slug>.zip` and `manifest.json`. Then it moves the channel forward: a stable release also moves beta, and a channel never moves back to an older release. A version that is already in the bucket is never overwritten.
 4. To give a tested beta to stable sites without rebuilding it: **Promote release** (package, version).
 
