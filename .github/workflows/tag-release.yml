@@ -1,0 +1,59 @@
+name: Tag and release plugin
+# Tags a commit on main and publishes that release, started from the Actions tab or the API, so a release needs no
+# tag pushed from someone's machine. A tag pushed with the workflow's own token starts no other workflow, so this one
+# runs "Release plugin" itself.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to create, like waas-host-v2.3.1 (stable) or waas-host-v2.4.0-beta.1 (beta channel only)'
+        required: true
+      notes:
+        description: 'What changed, for the changelog (the tag message)'
+        required: true
+      commit:
+        description: 'Commit on main to tag (the newest on main when empty)'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    name: Tag ${{ inputs.tag }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create and push the tag
+        env:
+          TAG: ${{ inputs.tag }}
+          NOTES: ${{ inputs.notes }}
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          if [[ ! $TAG =~ ^(waas-host|waas-client|waas-payments|anypress-export)-v[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$ ]]; then
+            echo "::error::$TAG is not <package>-v<x.y.z> or <package>-v<x.y.z>-beta.<n>"
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "::error::$TAG already exists"
+            exit 1
+          fi
+          sha=$(git rev-parse --verify "${COMMIT:-origin/main}^{commit}")
+          git merge-base --is-ancestor "$sha" origin/main || { echo "::error::$sha is not on main"; exit 1; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" "$sha" -m "$NOTES"
+          git push origin "refs/tags/$TAG"
+          echo "Tagged $sha as $TAG" >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    needs: tag
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ inputs.tag }}
+      publish: true
+    secrets: inherit

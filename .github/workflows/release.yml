@@ -3,6 +3,7 @@ name: Release plugin
 # Tag the commit on main: waas-host-v2.3.0, waas-client-v2.3.0, waas-payments-v0.2.0, anypress-export-v1.0.0 (stable), or
 # ...-v2.4.0-beta.1 (beta channel only). Run it by hand for a dry run: it builds and signs with a
 # throwaway key and uploads nothing. Promote a tested beta to stable with the "Promote release" workflow.
+# "Tag and release plugin" calls it to publish a tag it has just made (tags it pushes start no workflow themselves).
 #
 # Secrets: WAAS_RELEASE_SIGNING_KEY (ed25519 private key PEM), R2_RELEASES_ACCESS_KEY_ID and
 # R2_RELEASES_SECRET_ACCESS_KEY (an R2 token for the releases bucket only).
@@ -19,6 +20,15 @@ on:
       tag:
         description: 'Tag to dry-run, like waas-host-v2.3.0-beta.1 (builds the selected branch; nothing is uploaded)'
         required: true
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+      publish:
+        description: 'Publish the tag (it must already exist on main); false is a dry run'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -30,16 +40,18 @@ concurrency:
 
 jobs:
   release:
-    name: ${{ inputs.tag || github.ref_name }}${{ github.event_name != 'push' && ' (dry run)' || '' }}
+    name: ${{ inputs.tag || github.ref_name }}${{ github.event_name != 'push' && !inputs.publish && ' (dry run)' || '' }}
     runs-on: ubuntu-latest
     env:
       TAG: ${{ inputs.tag || github.ref_name }}
-      DRY_RUN: ${{ github.event_name != 'push' }}
+      DRY_RUN: ${{ github.event_name != 'push' && !inputs.publish }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # Called to publish: the tag, not the caller's branch.
+          ref: ${{ inputs.publish && format('refs/tags/{0}', inputs.tag) || '' }}
 
       - name: Read the tag
         id: tag
@@ -55,7 +67,7 @@ jobs:
       - name: Releases come from main
         if: env.DRY_RUN != 'true'
         run: |
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::$TAG is not on main"; exit 1; }
+          git merge-base --is-ancestor "$(git rev-parse HEAD)" origin/main || { echo "::error::$TAG is not on main"; exit 1; }
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
