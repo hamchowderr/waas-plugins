@@ -47,6 +47,8 @@ final class AnyPress_CRM
         add_action('fluent_cart/subscription_expired_validity', [self::class, 'on_subscription_end'], 20, 1);
         add_action('fluent_cart/subscription_eot', [self::class, 'on_subscription_end'], 20, 1);
         add_action('fluent_cart/order_fully_refunded', [self::class, 'on_full_refund'], 5, 1);
+        // After FluentCRM's own triggers (priority 10): a cancellation caused by a refund gets no win-back emails.
+        add_action('fluent_cart/subscription_canceled', [self::class, 'after_cancel_emails'], 99, 1);
 
         add_action('fluent_affiliate/affiliate_created', [self::class, 'on_affiliate_created'], 20, 1);
         add_action('fluent_affiliate/affiliate_status_to_active', [self::class, 'on_affiliate_active'], 20, 1);
@@ -176,6 +178,27 @@ final class AnyPress_CRM
         }
     }
 
+    /**
+     * Takes the contact out of an automation by title, so its remaining emails don't send (free FluentCRM has no
+     * "Cancel automations" step). Cancelled keeps the history; $forget removes it, so the automation can start again.
+     */
+    public static function stop_automation($title, $contact, $forget = false)
+    {
+        if (!$contact || !class_exists('\FluentCrm\App\Models\Funnel')) {
+            return;
+        }
+        $funnel = \FluentCrm\App\Models\Funnel::where('title', $title)->first();
+        if (!$funnel) {
+            return;
+        }
+        if ($forget) {
+            \FluentCrm\App\Services\Funnel\FunnelHelper::removeSubscribersFromFunnel($funnel->id, [$contact->id]);
+            return;
+        }
+        \FluentCrm\App\Models\FunnelSubscriber::where('funnel_id', $funnel->id)->where('subscriber_id', $contact->id)
+            ->where('status', 'active')->update(['status' => 'cancelled']);
+    }
+
     /** Starts a published automation by title for the contact (free FluentCRM has no tag triggers). */
     public static function start_automation($title, $contact)
     {
@@ -218,6 +241,8 @@ final class AnyPress_CRM
         $contact = self::contact_from_customer($data['customer'] ?? $sub->customer);
         self::add($contact, $plan, 'Active');
         self::set_fields($contact, ['refunded' => '']);
+        // Back again: the come-back offer would arrive after they have already come back.
+        self::stop_automation('Email: Win-back', $contact);
     }
 
     public static function on_subscription_status($data)
@@ -273,6 +298,25 @@ final class AnyPress_CRM
             $hadPastBefore = self::has($contact, $plan, 'Past') && !self::has($contact, $plan, 'Active');
             self::remove($contact, $plan, $hadPastBefore ? ['Active'] : ['Active', 'Past']);
             self::set_fields($contact, ['refunded' => current_time('Y-m-d')]);
+            // No setup tips, referral ask or come-back offer for someone who just asked for their money back. The
+            // welcome is forgotten, not cancelled, so a later real purchase starts it again.
+            self::stop_automation('Email: Website owner welcome', $contact, true);
+            self::stop_automation('Email: Win-back', $contact);
+        }
+    }
+
+    /** A refund cancels the subscription too; whichever of the two hooks runs last makes sure no win-back starts. */
+    public static function after_cancel_emails($data)
+    {
+        $sub = $data['subscription'] ?? null;
+        $contact = $sub ? self::contact_from_customer($data['customer'] ?? $sub->customer) : null;
+        if (!$contact) {
+            return;
+        }
+        $refunded = (string) (((array) $contact->custom_fields())['refunded'] ?? '');
+        $plan = self::plan_for_product($sub->product_id);
+        if ($refunded === current_time('Y-m-d') || ($plan && isset(self::$refunding[$contact->id . ':' . $plan]))) {
+            self::stop_automation('Email: Win-back', $contact);
         }
     }
 
