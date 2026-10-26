@@ -1,7 +1,8 @@
 <?php
 /**
  * AnyPress's own CRM on the shop (Beads waas-api-gtb.1): the lists and contact fields the lifecycle tags rely on, and
- * the email automations from crm-emails.json, imported as drafts. Safe to run again: lists, fields and automations
+ * the email automations from crm-emails.json, imported as drafts, abandoned checkout tracking, and removal of the empty
+ * tags and list from before the lifecycle model. Safe to run again: lists, fields and automations
  * that already exist (by slug or title) are left as they are, so edits made in FluentCRM survive.
  *   wp eval-file crm.php --user=admin
  *
@@ -118,4 +119,36 @@ foreach ($automations as $a) {
     $emails = count($a['emails']);
     echo "Automation: {$a['title']} added as a draft ($emails emails)\n";
 }
+// Abandoned checkout tracking for FluentCart (free FluentCRM, an experimental module): on, through FluentCRM's own
+// settings route, so its tables are created and the switch under Settings > Experimental is set with it.
+$get = rest_do_request(new WP_REST_Request('GET', '/fluent-crm/v2/setting/abandon-cart'));
+$cart = (array) (($get->get_data()['settings'] ?? []));
+if (($cart['enabled'] ?? 'no') !== 'yes' || !in_array('fluent_cart', (array) ($cart['enabled_providers'] ?? []), true)) {
+    $cart['enabled'] = 'yes';
+    $cart['enabled_providers'] = array_values(array_unique(array_merge((array) ($cart['enabled_providers'] ?? []), ['fluent_cart'])));
+    $save = new WP_REST_Request('POST', '/fluent-crm/v2/setting/abandon-cart');
+    $save->set_body_params(['settings' => $cart]);
+    $saved = rest_do_request($save);
+    echo $saved->is_error() ? 'Abandoned cart: FAILED ' . wp_json_encode($saved->get_data()) . "\n" : "Abandoned cart: tracking on for FluentCart\n";
+} else {
+    echo "Abandoned cart: already on\n";
+}
+
+// Tags and lists from before the lifecycle model. Removed only while nobody has them.
+foreach (['tags' => ['Customer', 'Lead', 'Subscriber'], 'lists' => ['Customers']] as $type => $titles) {
+    $model = $type === 'tags' ? \FluentCrm\App\Models\Tag::class : Lists::class;
+    foreach ($titles as $title) {
+        $item = $model::where('title', $title)->first();
+        if (!$item) {
+            continue;
+        }
+        if ($item->totalCount()) {
+            echo "Old $type: $title kept (has contacts)\n";
+            continue;
+        }
+        $item->delete();
+        echo "Old $type: $title removed\n";
+    }
+}
+
 echo "Done: $made automations added. Publish each in FluentCRM > Automations once its emails are approved.\n";

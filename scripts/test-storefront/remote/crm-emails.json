@@ -386,5 +386,60 @@
     "body": "<p>Hi {{contact.first_name|there}},</p><p><strong>What's new:</strong> [one thing that shipped this month, in a sentence or two].</p><p><strong>Tip of the month:</strong> [one small thing readers can do on their website today].</p><p><strong>Worth a look:</strong> [one example site or idea, with a link].</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
+ },
+ {
+  "title": "Email: Abandoned checkout",
+  "trigger": "fc_ab_cart_simulation_fluent_cart",
+  "settings": {
+   "priority": 10
+  },
+  "conditions": {
+   "cart_conditions": [
+    []
+   ],
+   "active_once": "no",
+   "require_subscribed": "no"
+  },
+  "note": "Someone started a checkout on the shop and left. FluentCRM starts this 30 minutes after they leave and takes them out of it as soon as they buy. Needs abandoned cart tracking on (FluentCRM > Settings > Abandoned Cart).",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "Your website is waiting at checkout",
+    "preheader": "Pick up where you left off.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>You started setting up a website with AnyPress but didn't finish checking out. Your choice is saved:</p>{{ab_cart_fluent_cart.cart_items_table}}<p>Finish in a minute and we'll start building your site straight away.</p><p><a href=\"##ab_cart_fluent_cart.recovery_url##\"><strong>Finish checking out</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 1,
+    "subject": "Any questions before you start?",
+    "preheader": "What happens after you check out.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>If something made you stop, here is what happens after you check out:</p><p>We build your website in a few minutes and email you when it's ready. You sign in from your account and change anything you like, or just ask Claude or ChatGPT to make the changes for you. If it isn't right for you, you get a full refund in the first 30 days.</p><p>Not sure which plan fits? Reply to this email and tell us what you need. A person will answer.</p><p><a href=\"##ab_cart_fluent_cart.recovery_url##\"><strong>Go back to your checkout</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 3,
+    "subject": "Last reminder about your website",
+    "preheader": "We'll stop here.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>This is our last note about the website you started. Your checkout is still saved if you'd like to finish it.</p><p><a href=\"##ab_cart_fluent_cart.recovery_url##\"><strong>Finish checking out</strong></a></p><p>If now isn't the right time, no problem. You can start again whenever you're ready at <a href=\"https://anypress.io/pricing\">anypress.io/pricing</a>.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Affiliate first referral",
+  "trigger": "fluent_affiliate/referral_marked_unpaid",
+  "settings": {
+   "subscription_status": "transactional"
+  },
+  "conditions": {
+   "update_type": "update",
+   "run_multiple": "no"
+  },
+  "note": "An affiliate's first successful referral (FluentAffiliate's own trigger, free). Runs once per affiliate.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "Your first AnyPress referral",
+    "preheader": "Someone bought through your link.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Good news: someone just bought an AnyPress plan through your link. That's your first referral, and you've earned 30% of their first payment.</p><p>The commission is held for 30 days (our money-back window), then paid by PayPal once you reach $50. You can follow it in your affiliate dashboard.</p><p>Whatever you did to share it, it's working. The affiliate kit has more ready-made wording if you'd like to do it again.</p><p><a href=\"https://shop.anypress.io/affiliates/\"><strong>Open your affiliate dashboard</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
  }
 ]
