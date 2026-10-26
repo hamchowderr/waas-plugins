@@ -18,6 +18,8 @@ final class AnyPress_CRM
 {
     /** Days an "Interested" tag stays without a purchase. */
     const STALE_DAYS = 120;
+    /** Days after a Website plan starts before the upgrade email (after the 30-day refund window and the welcome series). */
+    const UPGRADE_DAYS = 60;
     /** Plan offerings, matched against product names; the most specific word first. */
     const PLANS = ['Everything', 'Community', 'Bookings', 'Store', 'Website'];
     const OTHER_OFFERINGS = ['Seller', 'Reseller', 'Affiliate'];
@@ -62,6 +64,7 @@ final class AnyPress_CRM
         // A lead who confirms the double opt-in email starts their group's nurture series then.
         add_action('fluentcrm_subscriber_status_to_subscribed', [self::class, 'start_nurture'], 20, 1);
         add_action('anypress_crm_daily', [self::class, 'remove_stale_interest']);
+        add_action('anypress_crm_daily', [self::class, 'start_upgrade_nudge']);
         // Automations this plugin starts sit on the registration trigger as a placeholder; never start them there.
         add_filter('fluentcrm_funnel_will_process_user_register', function ($will, $funnel) {
             return in_array('anypress_started_by_code', (array) (($funnel->conditions ?? [])['user_roles'] ?? []), true) ? false : $will;
@@ -383,6 +386,36 @@ final class AnyPress_CRM
             self::add($contact, 'Affiliate', 'Past');
         } else {
             self::remove($contact, 'Affiliate', ['Interested']);
+        }
+    }
+
+    // ---- Upgrade nudge ------------------------------------------------------------------------------------------
+
+    /**
+     * Website customers about two months in, with no other plan, who agreed to marketing email, hear about Bookings
+     * and Store once. Only tags applied in the last 30 days of the window count, so switching this on doesn't email
+     * every long-standing customer at once.
+     */
+    public static function start_upgrade_nudge()
+    {
+        global $wpdb;
+        $id = self::existing_tag_id('Website', 'Active');
+        if (!$id) {
+            return;
+        }
+        $ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT subscriber_id FROM {$wpdb->prefix}fc_subscriber_pivot WHERE object_type = %s AND object_id = %d AND created_at < %s AND created_at >= %s LIMIT 500",
+            'FluentCrm\App\Models\Tag', $id,
+            gmdate('Y-m-d H:i:s', time() - self::UPGRADE_DAYS * DAY_IN_SECONDS),
+            gmdate('Y-m-d H:i:s', time() - (self::UPGRADE_DAYS + 30) * DAY_IN_SECONDS)
+        ));
+        foreach (\FluentCrm\App\Models\Subscriber::whereIn('id', array_map('intval', $ids))->where('status', 'subscribed')->get() as $contact) {
+            $other = array_filter(self::PLANS, function ($plan) use ($contact) {
+                return $plan !== 'Website' && self::has($contact, $plan, 'Active');
+            });
+            if (!$other) {
+                self::start_automation('Email: Website upgrade', $contact);
+            }
         }
     }
 

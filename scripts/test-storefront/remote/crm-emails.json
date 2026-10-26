@@ -441,5 +441,18 @@
     "body": "<p>Hi {{contact.first_name|there}},</p><p>Good news: someone just bought an AnyPress plan through your link. That's your first referral, and you've earned 30% of their first payment.</p><p>The commission is held for 30 days (our money-back window), then paid by PayPal once you reach $50. You can follow it in your affiliate dashboard.</p><p>Whatever you did to share it, it's working. The affiliate kit has more ready-made wording if you'd like to do it again.</p><p><a href=\"https://shop.anypress.io/affiliates/\"><strong>Open your affiliate dashboard</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
+ },
+ {
+  "title": "Email: Website upgrade",
+  "trigger": "manual",
+  "note": "Started by the CRM plugin's daily job for subscribed contacts who have had only Website: Active for about 60 days.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "Ready for bookings or a shop on your site?",
+    "preheader": "Your website can do more.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Your AnyPress website has been live for a couple of months. If your business has grown into it, it can take on more:</p><p><strong>Bookings</strong> lets customers book and pay for appointments on your own site, with reminders sent for you.</p><p><strong>Store</strong> adds a shop with products, checkout and your own payment account.</p><p>Want one of these on the site you already have? Reply to this email and tell us which, and we'll help you move to the plan that fits.</p><p><a href=\"https://anypress.io/pricing\"><strong>Compare the plans</strong></a></p><p>Happy where you are? That's great too. You don't need to do anything.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
  }
 ]
