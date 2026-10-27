@@ -56,6 +56,9 @@ final class AnyPress_CRM
         add_filter('waas_suspend_scheduled_email_body', [self::class, 'ask_why_they_left'], 20, 1);
         add_filter('waas_suspend_scheduled_email_headers', [self::class, 'replies_to_support'], 20, 1);
 
+        // FluentCart makes a WordPress account at every first purchase; its "New Sales" email already tells the admin.
+        add_filter('wp_send_new_user_notification_to_admin', '__return_false');
+
         add_action('fluent_affiliate/affiliate_created', [self::class, 'on_affiliate_created'], 20, 1);
         add_action('fluent_affiliate/affiliate_status_to_active', [self::class, 'on_affiliate_active'], 20, 1);
         add_action('fluent_affiliate/affiliate_status_to_inactive', [self::class, 'on_affiliate_inactive'], 20, 1);
