@@ -52,6 +52,10 @@ final class AnyPress_CRM
         // After FluentCRM's own triggers (priority 10): a cancellation caused by a refund gets no win-back emails.
         add_action('fluent_cart/subscription_canceled', [self::class, 'after_cancel_emails'], 99, 1);
 
+        // The day they cancel, WaaS Host's "stays online until" email also asks why, so it's the only email that day.
+        add_filter('waas_suspend_scheduled_email_body', [self::class, 'ask_why_they_left'], 20, 1);
+        add_filter('waas_suspend_scheduled_email_headers', [self::class, 'replies_to_support'], 20, 1);
+
         add_action('fluent_affiliate/affiliate_created', [self::class, 'on_affiliate_created'], 20, 1);
         add_action('fluent_affiliate/affiliate_status_to_active', [self::class, 'on_affiliate_active'], 20, 1);
         add_action('fluent_affiliate/affiliate_status_to_inactive', [self::class, 'on_affiliate_inactive'], 20, 1);
@@ -321,6 +325,23 @@ final class AnyPress_CRM
         if ($refunded === current_time('Y-m-d') || ($plan && isset(self::$refunding[$contact->id . ':' . $plan]))) {
             self::stop_automation('Email: Win-back', $contact);
         }
+    }
+
+    /** Adds the why-did-you-leave question (once the win-back's own day-0 email) above the sign-off. */
+    public static function ask_why_they_left($body)
+    {
+        $ask = '<p>Could you hit reply and tell us why you cancelled, in a sentence or two? Too expensive, missing something, '
+            . "didn't have time to set it up? We read every answer, and it shapes what we build next.</p>\n\n                &nbsp;\n\n                ";
+        $at = strpos((string) $body, '<p>Regards,</p>');
+        return $at === false ? $body : substr_replace($body, $ask, $at, 0);
+    }
+
+    /** Replies to the cancellation email reach a person. */
+    public static function replies_to_support($headers)
+    {
+        $headers = (array) $headers;
+        $headers[] = 'Reply-To: AnyPress <support@anypress.io>';
+        return $headers;
     }
 
     public static function on_order_paid($data)

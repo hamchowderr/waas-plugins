@@ -9,14 +9,8 @@
    "product_ids": [],
    "run_multiple": "no"
   },
-  "note": "New website owners: four setup emails over 10 days, then the referral ask after the 30-day money-back window.",
+  "note": "New website owners: three setup emails over 10 days, then the referral ask after the 30-day money-back window. No day-0 email: the receipt and \"Your website is ready\" arrive within minutes of buying.",
   "emails": [
-   {
-    "day": 0,
-    "subject": "Your website is on its way",
-    "preheader": "Here is what happens next.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>Thank you for choosing AnyPress. We're setting up your website now. It usually takes a few minutes, and you'll get a second email the moment it's ready.</p><p>When it is, sign in to your account to open your site. Everything you bought lives there: your website, your plan and your invoices.</p><p><a href=\"https://shop.anypress.io/account/\"><strong>Open your account</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
-   },
    {
     "day": 2,
     "subject": "Put your website on your own domain",
@@ -53,14 +47,8 @@
    "product_ids": [],
    "run_multiple": "yes"
   },
-  "note": "Cancelled plans: ask why, then a come-back offer after 30 days. OWNER: pick the offer before switching this on.",
+  "note": "Cancelled plans: a come-back offer after 30 days. The why-did-you-leave question rides in WaaS Host's \"stays online until\" email on the day they cancel (anypress-crm.php).",
   "emails": [
-   {
-    "day": 0,
-    "subject": "Can we ask one quick question?",
-    "preheader": "It helps us do better.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>We saw that you cancelled your AnyPress plan. Sorry to see you go.</p><p>Could you hit reply and tell us why, in a sentence or two? Too expensive, missing something, didn't have time to set it up? We read every answer, and it shapes what we build next.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
-   },
    {
     "day": 30,
     "subject": "Your website is one click away",
@@ -91,14 +79,8 @@
  {
   "title": "Email: Seller welcome",
   "trigger": "manual",
-  "note": "Started by the CRM plugin when a contact gets Seller: Active (application approved).",
+  "note": "Started by the CRM plugin when a contact gets Seller: Active (application approved). No day-0 email: the AnyPress API's approval email is the welcome.",
   "emails": [
-   {
-    "day": 0,
-    "subject": "Welcome, you can now sell websites",
-    "preheader": "Your first steps.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>Your seller account is ready. You'll have a separate email with a link to sign in to your dashboard.</p><p>From the dashboard you can open your free storefront (the shop your customers buy from), set your own prices, and see every website you sell.</p><p><a href=\"https://app.anypress.io\"><strong>Sign in to your dashboard</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
-   },
    {
     "day": 3,
     "subject": "Make your first sale",
@@ -110,19 +92,6 @@
     "subject": "The more you sell, the less you pay",
     "preheader": "How the volume discount works.",
     "body": "<p>Hi {{contact.first_name|there}},</p><p>You pay us the listed price per website, and you charge your customers whatever you like. The difference is yours.</p><p>Once you run 3 or more websites, your price drops automatically: 10% off at 3 to 9 sites, 20% at 10 to 24, and 30% at 25 or more.</p><p><a href=\"https://anypress.io/pricing\"><strong>See the prices</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
-   }
-  ]
- },
- {
-  "title": "Email: Reseller welcome",
-  "trigger": "manual",
-  "note": "Started by the CRM plugin when a contact gets Reseller: Active.",
-  "emails": [
-   {
-    "day": 0,
-    "subject": "Your reseller account is ready",
-    "preheader": "Several brands, one login, one bill.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>Your reseller account is set up. You can run several storefronts, each with its own brand and prices, from one dashboard login.</p><p>You'll get one bill each month for all your websites, at your wholesale price. Partner keys for the API are on your reseller page if you want to create sites from your own software.</p><p><a href=\"https://app.anypress.io\"><strong>Sign in to your dashboard</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
  },
@@ -419,26 +388,6 @@
     "subject": "Last reminder about your website",
     "preheader": "We'll stop here.",
     "body": "<p>Hi {{contact.first_name|there}},</p><p>This is our last note about the website you started. Your checkout is still saved if you'd like to finish it.</p><p><a href=\"##ab_cart_fluent_cart.recovery_url##\"><strong>Finish checking out</strong></a></p><p>If now isn't the right time, no problem. You can start again whenever you're ready at <a href=\"https://anypress.io/pricing\">anypress.io/pricing</a>.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
-   }
-  ]
- },
- {
-  "title": "Email: Affiliate first referral",
-  "trigger": "fluent_affiliate/referral_marked_unpaid",
-  "settings": {
-   "subscription_status": "transactional"
-  },
-  "conditions": {
-   "update_type": "update",
-   "run_multiple": "no"
-  },
-  "note": "An affiliate's first successful referral (FluentAffiliate's own trigger, free). Runs once per affiliate.",
-  "emails": [
-   {
-    "day": 0,
-    "subject": "Your first AnyPress referral",
-    "preheader": "Someone bought through your link.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>Good news: someone just bought an AnyPress plan through your link. That's your first referral, and you've earned 30% of their first payment.</p><p>The commission is held for 30 days (our money-back window), then paid by PayPal once you reach $50. You can follow it in your affiliate dashboard.</p><p>Whatever you did to share it, it's working. The affiliate kit has more ready-made wording if you'd like to do it again.</p><p><a href=\"https://shop.anypress.io/affiliates/\"><strong>Open your affiliate dashboard</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
  },
