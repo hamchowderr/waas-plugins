@@ -200,14 +200,14 @@ await check('site: name and theme', async () => {
     expect(res.data.theme === 'Ollie', `theme ${res.data.theme}`);
 });
 
-await check('patterns: starter pages are listed and Ollie promotions hidden', async () => {
+// The Ollie promotion patterns were hidden by anypress-patterns.php until new stores moved to the AnyPress theme
+// (waas-provisioning-api #163), which dropped that code; stores no longer run Ollie, so nothing hides them now.
+await check('patterns: starter pages are listed', async () => {
     const res = await site('GET', '/patterns?category=anypress/pages');
     expectStatus(res, 200);
     const names = res.data.map((p) => p.name);
     expect(names.length >= 4, `only ${names.length} starter pages: ${names.join(', ')}`);
     expect(names.every((n) => n.startsWith('anypress/')), `unexpected: ${names.join(', ')}`);
-    const all = await site('GET', '/patterns?search=download');
-    expect(!all.data.some((p) => p.name === 'ollie/page-download'), 'ollie/page-download is still offered');
 });
 
 await check('pages: create a draft from a starter page', async () => {
