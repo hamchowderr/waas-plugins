@@ -46,6 +46,15 @@ $utility::updateOption('_fluent_cart_connector_config', array_merge((array) $uti
 $utility::updateOption('_registration_settings', ['enabled' => 'yes', 'require_approval' => 'yes']);
 echo "Settings: 30% of the first payment, 30-day cookie, PayPal, sign-ups need approval\n";
 
+// One welcome at approval: the shop's CRM sends "You're an AnyPress affiliate", so FluentAffiliate's own approval
+// email is off. Its other emails (application received, each sale, payouts) stay on.
+$notifications = (array) $utility::getOption('email_notifications', []);
+$notifications['account_approved_to_affiliate'] = array_merge((array) ($notifications['account_approved_to_affiliate'] ?? []), [
+    'active' => 'no', 'is_default_body' => 'yes', 'email_body' => '',
+]);
+$utility::updateOption('email_notifications', $notifications);
+echo "Email: FluentAffiliate's approval email off (the CRM welcome replaces it)\n";
+
 // The shop's mail relay sends from the platform address under this name; replies go to support.
 $email = array_merge($utility::defaultEmailSettings(), (array) $utility::getOption('global_email_settings', []));
 $utility::updateOption('global_email_settings', array_merge($email, [

@@ -16,6 +16,7 @@ if (!defined('FLUENTCRM')) {
 }
 use FluentCrm\App\Models\Funnel;
 use FluentCrm\App\Models\FunnelCampaign;
+use FluentCrm\App\Models\FunnelSequence;
 use FluentCrm\App\Models\Lists;
 
 // Lists are consent: who asked for which kind of email.
@@ -119,6 +120,34 @@ foreach ($automations as $a) {
     $emails = count($a['emails']);
     echo "Automation: {$a['title']} added as a draft ($emails emails)\n";
 }
+// Emails retired because another email goes out at the same moment (Beads waas-api-mi4): taken out of automations
+// installed before, and two whole automations unpublished. The receipt and "Your website is ready" cover the day of
+// purchase, WaaS Host's "stays online until" email asks why they cancelled, the AnyPress API's approval email welcomes
+// sellers and resellers, and FluentAffiliate's own sale email covers the first referral.
+$retiredEmails = [
+    'Email: Website owner welcome' => 'Your website is on its way',
+    'Email: Win-back' => 'Can we ask one quick question?',
+    'Email: Seller welcome' => 'Welcome, you can now sell websites',
+];
+foreach ($retiredEmails as $title => $subject) {
+    $funnel = Funnel::where('title', $title)->first();
+    $step = $funnel ? FunnelSequence::where('funnel_id', $funnel->id)->where('action_name', 'send_custom_email')
+        ->where('title', 'like', '%: ' . $subject)->first() : null;
+    if (!$step) {
+        continue;
+    }
+    $step->delete();
+    echo "Retired: \"$subject\" taken out of $title\n";
+}
+foreach (['Email: Reseller welcome', 'Email: Affiliate first referral'] as $title) {
+    $funnel = Funnel::where('title', $title)->where('status', 'published')->first();
+    if ($funnel) {
+        $funnel->status = 'draft';
+        $funnel->save();
+        echo "Retired: $title unpublished\n";
+    }
+}
+
 // Abandoned checkout tracking for FluentCart (free FluentCRM, an experimental module): on, through FluentCRM's own
 // settings route, so its tables are created and the switch under Settings > Experimental is set with it.
 $get = rest_do_request(new WP_REST_Request('GET', '/fluent-crm/v2/setting/abandon-cart'));
