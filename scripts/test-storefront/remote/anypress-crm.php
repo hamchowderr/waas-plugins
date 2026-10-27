@@ -38,6 +38,8 @@ final class AnyPress_CRM
     const CHECKOUT_FIELD = 'anypress_source';
     /** Set while a full refund is handled, so the cancellation it causes doesn't record Past. */
     private static $refunding = [];
+    /** WordPress accounts FluentCart made at checkout in this request. */
+    private static $checkout_accounts = [];
 
     public static function boot()
     {
@@ -58,6 +60,10 @@ final class AnyPress_CRM
 
         // FluentCart makes a WordPress account at every first purchase; its "New Sales" email already tells the admin.
         add_filter('wp_send_new_user_notification_to_admin', '__return_false');
+        // The buyer's "Login Details" email lands with the receipt; "Your website is ready" carries the set-password link instead.
+        add_action('fluent_cart/user/after_register', [self::class, 'note_checkout_account'], 10, 1);
+        add_filter('wp_send_new_user_notification_to_user', [self::class, 'skip_login_details'], 20, 2);
+        add_filter('waas_tenant_ready_email_body', [self::class, 'add_set_password_link'], 20, 3);
 
         add_action('fluent_affiliate/affiliate_created', [self::class, 'on_affiliate_created'], 20, 1);
         add_action('fluent_affiliate/affiliate_status_to_active', [self::class, 'on_affiliate_active'], 20, 1);
@@ -337,6 +343,36 @@ final class AnyPress_CRM
             . "didn't have time to set it up? We read every answer, and it shapes what we build next.</p>\n\n                &nbsp;\n\n                ";
         $at = strpos((string) $body, '<p>Regards,</p>');
         return $at === false ? $body : substr_replace($body, $ask, $at, 0);
+    }
+
+    public static function note_checkout_account($user_id)
+    {
+        self::$checkout_accounts[(int) $user_id] = true;
+    }
+
+    /** Accounts made at checkout get their password link in the ready email; other sign-ups keep WordPress's email. */
+    public static function skip_login_details($send, $user)
+    {
+        return ($user && isset(self::$checkout_accounts[(int) $user->ID])) ? false : $send;
+    }
+
+    /** A buyer who hasn't set a shop password yet gets a link to set one, next to the login button that needs it. */
+    public static function add_set_password_link($body, $subscription_id = 0, $recipient = '')
+    {
+        $user = $recipient ? get_user_by('email', $recipient) : false;
+        if (!$user || !get_user_meta($user->ID, 'default_password_nag', true)) {
+            return $body;
+        }
+        $key = get_password_reset_key($user);
+        if (is_wp_error($key)) {
+            return $body;
+        }
+        $url = network_site_url('wp-login.php?action=rp&key=' . $key . '&login=' . rawurlencode($user->user_login), 'login');
+        $set = '<p>First, set a password for your account at ' . esc_html(get_bloginfo('name')) . ': <a href="' . esc_url($url)
+            . '" target="_blank" rel="noopener"><strong>Set your password</strong></a>. You sign in with your email address, '
+            . "and the link works for 24 hours (after that, use \"Lost your password?\" on the sign-in page).</p>\n\n                ";
+        $at = strpos((string) $body, '<p><a href="{{ tenant_one_click_login_url }}"');
+        return $at === false ? $body : substr_replace($body, $set, $at, 0);
     }
 
     /** Replies to the cancellation email reach a person. */
