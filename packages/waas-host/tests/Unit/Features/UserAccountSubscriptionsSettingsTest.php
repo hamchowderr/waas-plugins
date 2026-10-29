@@ -177,8 +177,9 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
 
         $html = $this->renderDnsInstructions();
 
-        $this->assertStringContainsString("<pre>203.0.113.10\n203.0.113.11</pre>", $html);
-        $this->assertStringContainsString('<pre>sites.example.net</pre>', $html);
+        $this->assertStringContainsString('<b>A</b><code>203.0.113.10</code>', $html);
+        $this->assertStringContainsString('<b>A</b><code>203.0.113.11</code>', $html);
+        $this->assertStringContainsString('<b>CNAME</b><code>sites.example.net</code>', $html);
         $this->assertStringNotContainsString('wpcs.io', $html);
     }
 
@@ -189,7 +190,7 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
         $html = $this->renderDnsInstructions();
 
         $this->assertStringContainsString('contact support', $html);
-        $this->assertStringNotContainsString('<pre>', $html);
+        $this->assertStringNotContainsString('<code>', $html);
         $this->assertStringNotContainsString('wpcs.io', $html);
         $this->assertStringNotContainsString('54.166.55.112', $html);
     }
@@ -200,7 +201,7 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
 
         $html = $this->renderDnsInstructions();
 
-        $this->assertStringContainsString('<pre>sites.example.net</pre>', $html);
+        $this->assertStringContainsString('<b>CNAME</b><code>sites.example.net</code>', $html);
         $this->assertStringNotContainsString('A records', $html);
     }
 
@@ -247,7 +248,7 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
 
         $html = $this->renderMailSender();
 
-        $this->assertStringContainsString('<p class="woocommerce-error">shop.anypress.io belongs to the platform; use a domain the store owns</p>', $html);
+        $this->assertStringContainsString('<p class="woocommerce-error waas-acct-error">shop.anypress.io belongs to the platform; use a domain the store owns</p>', $html);
         $this->assertStringContainsString("name='mail_domain_name'", $html);
     }
 

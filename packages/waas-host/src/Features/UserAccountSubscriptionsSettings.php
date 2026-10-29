@@ -44,27 +44,38 @@ class UserAccountSubscriptionsSettings
         $domain_name = $commerce->get_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META);
         $base_domain_name = $commerce->get_subscription_meta($subscription_id, Tenant::BASE_DOMAIN_NAME_META);
 
-        $domain_name = esc_attr($domain_name ?: $base_domain_name);
+        $current = (string) ($domain_name ?: $base_domain_name);
+        $domain_name = esc_attr($current);
         $nonce_field = wp_nonce_field(self::DOMAIN_NONCE_ACTION . $subscription_id, self::DOMAIN_NONCE_FIELD, true, false);
 
-        echo '<h4>Website Details</h4>';
-        if ($this->domain_error !== '') {
-            echo '<p class="woocommerce-error">' . esc_html($this->domain_error) . '</p>';
+        AccountStyles::print_once();
+        echo '<details class="waas-acct-panel"' . ($this->domain_error !== '' ? ' open' : '') . '>';
+        echo '<summary>' . esc_html('Use your own domain') . ($current !== '' ? ' <small>' . esc_html('Now: ' . $current) . '</small>' : '') . '</summary>';
+        echo '<div class="waas-acct-panel-body">';
+        $has_records = $this->config->get_dns_a_records() || $this->config->get_dns_cname_target() !== '';
+        if ($has_records) {
+            echo '<p class="waas-acct-step"><b>1.</b> ' . esc_html('Add these records where you bought your domain (look for its DNS settings).') . '</p>';
         }
-        echo "<form method='post' action=''>
-                $nonce_field
-                <p class='woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide'>
-                    <label for='account_email'>Domain Name (optional)</label>
-                    <input type='text' placeholder='example.com' class='woocommerce-Input woocommerce-Input--email input-text' name='domain_name' id='domain_name' value='$domain_name'>
-	            </p>
-	            <button class='button' type='submit'>Update</button>
-	           </form><br /><br />";
-
         $this->render_dns_instructions();
         $custom_domain = (string) $commerce->get_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META);
         if ($custom_domain !== '') {
             $this->render_connect_button($subscription_id, $custom_domain, 'website');
         }
+        if ($has_records) {
+            echo '<p class="waas-acct-step"><b>2.</b> ' . esc_html('Then type the domain here. New records can take up to an hour to work; if it says they are missing, try again later.') . '</p>';
+        }
+        if ($this->domain_error !== '') {
+            echo '<p class="woocommerce-error waas-acct-error">' . esc_html($this->domain_error) . '</p>';
+        }
+        echo "<form method='post' action='' class='waas-acct-form'>
+                $nonce_field
+                <label for='domain_name'>Your domain
+                    <input type='text' placeholder='example.com' class='input-text' name='domain_name' id='domain_name' value='$domain_name'>
+                </label>
+                <button class='button waas-acct-btn is-primary fct-btn fct-btn-primary' type='submit'>Use this domain</button>
+               </form>";
+        echo '</div></details>';
+
         $this->render_mail_sender($subscription_id);
     }
 
@@ -88,36 +99,45 @@ class UserAccountSubscriptionsSettings
         }
 
         $nonce_field = wp_nonce_field(self::MAIL_NONCE_ACTION . $subscription_id, self::MAIL_NONCE_FIELD, true, false);
-        echo '<h4>Email Sender</h4>';
-        if ($this->mail_error !== '') {
-            echo '<p class="woocommerce-error">' . esc_html($this->mail_error) . '</p>';
-        }
+        $status = $mail_domain ? (string) ($mail_domain->status ?? 'pending') : '';
+        $labels = ['pending' => 'Waiting for DNS records', 'verified' => 'Sending', 'removing' => 'Being removed'];
 
+        AccountStyles::print_once();
+        echo '<details class="waas-acct-panel"' . ($this->mail_error !== '' || $status === 'pending' ? ' open' : '') . '>';
+        echo '<summary>' . esc_html('Send email from your own domain')
+            . ($mail_domain ? ' <small>' . esc_html($labels[$status] ?? $labels['pending']) . '</small>' : '') . '</summary>';
+        echo '<div class="waas-acct-panel-body">';
+        if ($this->mail_error !== '') {
+            echo '<p class="woocommerce-error waas-acct-error">' . esc_html($this->mail_error) . '</p>';
+        }
+        $this->render_mail_sender_body($subscription_id, $mail_domain, $status, $nonce_field);
+        echo '</div></details>';
+    }
+
+    /** Inside the email panel: the form to add a domain, or the domain's status and its records. */
+    private function render_mail_sender_body($subscription_id, $mail_domain, string $status, string $nonce_field): void
+    {
         if (!$mail_domain) {
             echo '<p>Your store sends its email (receipts, password resets) from our address. '
                 . 'Add your own domain to send it from no-reply at that domain instead.</p>';
-            echo "<form method='post' action=''>
+            echo "<form method='post' action='' class='waas-acct-form'>
                 $nonce_field
-                <p class='woocommerce-form-row woocommerce-form-row--wide form-row form-row-wide'>
-                    <label for='mail_domain_name'>Sending Domain</label>
-                    <input type='text' placeholder='example.com' class='woocommerce-Input input-text' name='mail_domain_name' id='mail_domain_name' value=''>
-                </p>
-                <button class='button' type='submit'>Use this domain</button>
-               </form><br /><br />";
+                <label for='mail_domain_name'>Sending domain
+                    <input type='text' placeholder='example.com' class='input-text' name='mail_domain_name' id='mail_domain_name' value=''>
+                </label>
+                <button class='button waas-acct-btn is-primary fct-btn fct-btn-primary' type='submit'>Use this domain</button>
+               </form>";
             return;
         }
 
-        $status = (string) ($mail_domain->status ?? 'pending');
-        $labels = ['pending' => 'Waiting for DNS records', 'verified' => 'Sending', 'removing' => 'Being removed'];
-        echo '<p>Sends from <b>' . esc_html('no-reply@' . $mail_domain->domainName) . '</b> ('
-            . esc_html($labels[$status] ?? $labels['pending']) . ')</p>';
+        echo '<p>Sends from <b>' . esc_html('no-reply@' . $mail_domain->domainName) . '</b></p>';
 
         if ($status === 'removing') {
             echo '<p>' . esc_html('Your store goes back to sending from our address within 10 minutes.') . '</p>';
             return;
         }
         if ($status === 'pending') {
-            echo '<p>Add these records at your domain\'s DNS host. They are checked every 10 minutes and your store '
+            echo '<p>Add these records where you bought your domain (in its DNS settings). They are checked every 10 minutes and your store '
                 . 'switches over on its own once they are found. Until then it sends from our address.</p>';
             $this->render_connect_button($subscription_id, (string) $mail_domain->domainName, 'email');
         }
@@ -134,11 +154,11 @@ class UserAccountSubscriptionsSettings
         } else {
             echo '<p>' . esc_html('The DNS records could not be loaded right now. Reload the page to try again.') . '</p>';
         }
-        echo "<form method='post' action=''>
+        echo "<form method='post' action='' class='waas-acct-form'>
                 $nonce_field
                 <input type='hidden' name='mail_domain_remove' value='1'>
-                <button class='button' type='submit'>Stop using this domain</button>
-               </form><br /><br />";
+                <button class='button waas-acct-btn fct-btn fct-btn-secondary' type='submit'>Stop using this domain</button>
+               </form>";
     }
 
     /**
@@ -220,14 +240,16 @@ class UserAccountSubscriptionsSettings
         }
 
         echo '<div class="waas-ip-instructions">';
-        echo '<p>Before verifying a domain, make sure that its DNS contains the following settings.</p>';
         if ($a_records) {
-            echo '<p>For the domain apex add A records with <b>each of the following IPs</b> as their values:</p>';
-            echo '<pre>' . esc_html(implode("\n", $a_records)) . '</pre>';
+            echo '<p class="waas-acct-note">' . esc_html('For a domain like example.com, add an A record for each of these:') . '</p><div class="waas-acct-records">';
+            foreach ($a_records as $ip) {
+                echo '<div class="waas-acct-record"><b>A</b><code>' . esc_html($ip) . '</code></div>';
+            }
+            echo '</div>';
         }
         if ($cname_target !== '') {
-            echo '<p>If you are verifying a subdomain, create a CNAME record with the value:</p>';
-            echo '<pre>' . esc_html($cname_target) . '</pre>';
+            echo '<p class="waas-acct-note">' . esc_html('For one like shop.example.com, add a CNAME record:') . '</p>'
+                . '<div class="waas-acct-records"><div class="waas-acct-record"><b>CNAME</b><code>' . esc_html($cname_target) . '</code></div></div>';
         }
         echo '</div>';
     }
