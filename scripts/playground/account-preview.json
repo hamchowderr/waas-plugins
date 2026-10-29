@@ -54,7 +54,10 @@
     },
     {
       "step": "runPHP",
-      "code": "<?php require '/wordpress/wp-load.php'; do_action('init');"
+      "code": "<?php\n// Loading WordPress once runs the seed (mu-plugin, on init), so the first page view has the account page ready.\nrequire '/wordpress/wp-load.php';",
+      "progress": {
+        "caption": "Adding the sample websites"
+      }
     }
   ],
   "meta": {
