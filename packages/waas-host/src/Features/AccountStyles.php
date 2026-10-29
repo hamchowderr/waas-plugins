@@ -19,6 +19,8 @@ class AccountStyles
         }
         self::$printed = true;
 
+        // AnyPress's own font, as on anypress.io and the dashboard.
+        echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&display=swap">';
         echo '<style id="waas-account-styles">' . self::css() . '</style>';
     }
 
@@ -31,23 +33,26 @@ class AccountStyles
     private static function css(): string
     {
         return <<<'CSS'
-.waas-acct{display:grid;gap:20px;min-width:0}
+.fct_customer_profile_wrap.fct_customer_profile_wrap{max-width:1040px!important;margin-left:auto!important;margin-right:auto!important;font-family:"Hanken Grotesk",system-ui,sans-serif}
+.waas-acct,.waas-acct-notice{font-family:"Hanken Grotesk",system-ui,sans-serif;color:#141414}
+.waas-acct{display:grid;gap:22px;min-width:0;max-width:760px}
 .waas-acct *,.waas-acct-notice *{box-sizing:border-box}
-.waas-acct-site{min-width:0;max-width:100%;border:1px solid rgba(0,0,0,.14);border-radius:14px;padding:22px 24px;background:#fff;font-size:16px}
-.waas-acct-site h3{margin:10px 0 2px;font-size:1.3em;font-weight:700;line-height:1.25;overflow-wrap:anywhere}
-.waas-acct-visit{font-weight:600}
+.waas-acct-site{min-width:0;max-width:100%;border:1.5px solid #141414;border-radius:16px;padding:22px 24px;background:#fff;font-size:16px}
+.waas-acct-site:first-child{box-shadow:6px 6px 0 #ffc75a}
+.waas-acct-site h3{margin:10px 0 2px;font-size:22px;font-weight:800;letter-spacing:-.01em;font-family:inherit;line-height:1.25;overflow-wrap:anywhere}
+.waas-acct-visit{font-weight:700;color:#c8264d}
 .waas-acct-status{display:inline-flex;align-items:center;gap:7px;padding:3px 11px;border-radius:999px;background:rgba(0,0,0,.05);font-size:.85em;font-weight:600}
 .waas-acct-status i{width:8px;height:8px;border-radius:999px;background:#8a8580}
 .waas-acct-status.is-ready i{background:#17703d}
 .waas-acct-status.is-busy i{background:#e59a00}
 .waas-acct-status.is-attention i{background:#c8264d}
-.waas-acct-lead{margin:12px 0 0;opacity:.85;max-width:62ch}
+.waas-acct-lead{margin:12px 0 0;color:#5f5a55;max-width:62ch}
 .waas-acct-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
 .waas-acct-actions a{text-decoration:none}
-.waas-acct-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 18px;border-radius:9px;border:1.5px solid #141414;background:#fff;color:#141414;font-size:15px;font-weight:600;line-height:1.2;text-decoration:none;cursor:pointer}
+.waas-acct-btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 18px;border-radius:10px;font-family:inherit;border:1.5px solid #141414;background:#fff;color:#141414;font-size:15px;font-weight:600;line-height:1.2;text-decoration:none;cursor:pointer}
 .waas-acct-btn:hover{background:#f4f2ef;color:#141414}
 .waas-acct-btn.is-primary{background:#141414;color:#fff}
-.waas-acct-btn.is-primary:hover{background:#333;color:#fff}
+.waas-acct-btn.is-primary:hover{background:#141414;color:#fff;box-shadow:0 4px 0 #ffb338}
 .waas-acct-panel{border-top:1px solid rgba(0,0,0,.1);margin-top:18px}
 .waas-acct-panel+.waas-acct-panel{margin-top:0}
 .waas-acct-panel>summary{cursor:pointer;list-style:none;padding:14px 0;font-weight:600;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
@@ -75,7 +80,7 @@ class AccountStyles
 .waas-acct .waas-choose-website-name label{display:flex;flex-direction:column;gap:6px;font-weight:600;margin:10px 0}
 .waas-acct .waas-choose-website-name input[type=text]{padding:10px 12px;font-size:15px;border:1px solid rgba(0,0,0,.25);border-radius:8px;font-weight:400;max-width:420px}
 .waas-acct-emails{margin:14px 0 0;opacity:.85}
-.waas-acct-notice{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;border:1px solid rgba(0,0,0,.14);border-radius:14px;padding:16px 20px;margin-bottom:18px;background:#fff;font-size:15px}
+.waas-acct-notice{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;border:1.5px solid #141414;border-radius:16px;box-shadow:5px 5px 0 #ffc75a;padding:16px 20px;margin-bottom:18px;background:#fff;font-size:15px}
 .waas-acct-notice p{margin:0;flex:1 1 260px;overflow-wrap:anywhere}
 .waas-acct-notice .waas-acct-actions{margin-top:0}
 @media (max-width:600px){.waas-acct-panel>summary small{flex-basis:100%;padding-left:32px}.waas-acct-site{padding:18px 16px}.waas-acct-panel-body{padding-left:0}.waas-acct-actions>*{flex:1 1 100%;text-align:center}.waas-acct table.waas-mail-records{display:block;overflow-x:auto}}

@@ -43,6 +43,8 @@ class FluentCartPortal
         add_filter('fluent_cart/global_customer_menu_items', [$this, 'move_menu_item_after_dashboard'], 20);
         // Before FluentCart's own content (priority 10), so the notice sits above the page.
         add_action('fluent_cart/customer_app', [$this, 'render_ready_notice'], 5);
+        // The AnyPress look and a narrower page, on every portal page.
+        add_action('fluent_cart/customer_app', [AccountStyles::class, 'print_once'], 1);
     }
 
     /**
