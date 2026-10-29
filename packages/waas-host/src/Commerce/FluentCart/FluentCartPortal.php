@@ -3,6 +3,7 @@
 namespace WaaSHost\Commerce\FluentCart;
 
 use WaaSHost\Core\Tenant;
+use WaaSHost\Features\AccountStyles;
 use WaaSHost\Features\NameConflicts;
 use WaaSHost\Features\Notifications;
 use WaaSHost\Features\TenantsSubscriptionManager;
@@ -42,6 +43,8 @@ class FluentCartPortal
         add_filter('fluent_cart/global_customer_menu_items', [$this, 'move_menu_item_after_dashboard'], 20);
         // Before FluentCart's own content (priority 10), so the notice sits above the page.
         add_action('fluent_cart/customer_app', [$this, 'render_ready_notice'], 5);
+        // The AnyPress look and a narrower page, on every portal page.
+        add_action('fluent_cart/customer_app', [AccountStyles::class, 'print_once'], 1);
     }
 
     /**
@@ -103,9 +106,12 @@ class FluentCartPortal
             $domain = $this->adapter->get_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META)
                 ?: $this->adapter->get_subscription_meta($subscription_id, Tenant::BASE_DOMAIN_NAME_META);
 
-            echo '<div class="waas-website-ready-notice fct-alert fct-alert-success" style="margin-bottom:16px">';
+            AccountStyles::print_once();
+            echo '<div class="waas-website-ready-notice waas-acct-notice">';
             $name = '<strong>' . esc_html((string) ($domain ?: __('Your website', WAAS_HOST_TEXTDOMAIN))) . '</strong>';
             $suspend_at = $this->suspend_at($subscription_id);
+            echo '<span class="waas-acct-status is-' . ($suspend_at ? 'attention' : 'ready') . '"><i aria-hidden="true"></i>'
+                . esc_html($suspend_at ? __('Cancelled', WAAS_HOST_TEXTDOMAIN) : __('Online', WAAS_HOST_TEXTDOMAIN)) . '</span>';
             echo '<p>' . ($suspend_at
                 ? sprintf(
                     /* translators: 1: the website's domain, 2: date */
@@ -117,10 +123,12 @@ class FluentCartPortal
                     /* translators: %s: the website's domain */
                     esc_html__('Your website %s is ready.', WAAS_HOST_TEXTDOMAIN),
                     $name
-                )) . ' ';
-            echo '<a class="fct-btn fct-btn-primary" target="_blank" rel="noopener" href="' . esc_url(SingleLoginService::get_login_link($subscription_id)) . '">'
-                . esc_html__('Log in to your website', WAAS_HOST_TEXTDOMAIN) . '</a> ';
-            echo '<a href="' . esc_url($this->store->get_portal_url(self::ENDPOINT)) . '">' . esc_html__('Manage website', WAAS_HOST_TEXTDOMAIN) . '</a></p>';
+                )) . '</p>';
+            echo '<div class="waas-acct-actions">';
+            echo '<a class="waas-acct-btn is-primary fct-btn fct-btn-primary" target="_blank" rel="noopener" href="' . esc_url(SingleLoginService::get_login_link($subscription_id)) . '">'
+                . esc_html__('Log in to your website', WAAS_HOST_TEXTDOMAIN) . '</a>';
+            echo '<a class="waas-acct-btn" href="' . esc_url($this->store->get_portal_url(self::ENDPOINT)) . '">' . esc_html__('Manage website', WAAS_HOST_TEXTDOMAIN) . '</a>';
+            echo '</div>';
             echo '</div>';
         }
     }
@@ -157,43 +165,92 @@ class FluentCartPortal
             return;
         }
 
+        AccountStyles::print_once();
+        echo '<div class="waas-acct">';
         foreach ($websites as $subscription_id) {
-            $domain = $this->adapter->get_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META)
-                ?: $this->adapter->get_subscription_meta($subscription_id, Tenant::BASE_DOMAIN_NAME_META);
-            $status = $this->adapter->get_subscription_meta($subscription_id, Tenant::TENANT_STATE) ?: Tenant::PROVISIONING;
+            $this->render_website($subscription_id);
+        }
+        echo '</div>';
+    }
 
-            echo '<section class="waas-website">';
-            echo '<h3>' . esc_html((string) ($domain ?: __('Your website', WAAS_HOST_TEXTDOMAIN))) . '</h3>';
-            NameConflicts::render_result($subscription_id);
-            $suspend_at = $status === Tenant::READY ? $this->suspend_at($subscription_id) : 0;
-            if ($suspend_at) {
-                echo '<p>' . esc_html__('Status:', WAAS_HOST_TEXTDOMAIN) . ' ' . esc_html(sprintf(
-                    /* translators: %s: date */
-                    __('Active until %s', WAAS_HOST_TEXTDOMAIN),
-                    Notifications::format_date($suspend_at)
-                )) . '</p>';
-                echo '<p>' . esc_html(sprintf(
+    /** One website's card: its status in a word and a line, the main buttons, then its settings folded away. */
+    private function render_website($subscription_id): void
+    {
+        $domain = $this->adapter->get_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META)
+            ?: $this->adapter->get_subscription_meta($subscription_id, Tenant::BASE_DOMAIN_NAME_META);
+        $status = $this->adapter->get_subscription_meta($subscription_id, Tenant::TENANT_STATE) ?: Tenant::PROVISIONING;
+        $suspend_at = $status === Tenant::READY ? $this->suspend_at($subscription_id) : 0;
+        [$tone, $label, $lead] = $this->describe($status, $suspend_at);
+
+        echo '<section class="waas-acct-site waas-website">';
+        echo '<span class="waas-acct-status is-' . esc_attr($tone) . '"><i aria-hidden="true"></i>'
+            . '<span class="screen-reader-text">' . esc_html__('Status:', WAAS_HOST_TEXTDOMAIN) . ' </span>' . esc_html($label) . '</span>';
+        echo '<h3>' . esc_html((string) ($domain ?: __('Your website', WAAS_HOST_TEXTDOMAIN))) . '</h3>';
+        if ($domain && $status === Tenant::READY) {
+            echo '<a class="waas-acct-visit" target="_blank" rel="noopener" href="' . esc_url('https://' . $domain) . '">'
+                . esc_html__('Visit your website', WAAS_HOST_TEXTDOMAIN) . ' &#8599;</a>';
+        }
+        NameConflicts::render_result($subscription_id);
+        if ($lead !== '') {
+            echo '<p class="waas-acct-lead">' . esc_html($lead) . '</p>';
+        }
+        if ($status === Tenant::NEEDS_NEW_NAME) {
+            NameConflicts::render_form($subscription_id);
+        }
+
+        echo '<div class="waas-acct-actions">';
+        if ($status === Tenant::READY) {
+            echo '<a class="waas-acct-btn is-primary fct-btn fct-btn-primary" target="_blank" rel="noopener" href="' . esc_url(SingleLoginService::get_login_link($subscription_id)) . '">'
+                . esc_html__('Log in to your website', WAAS_HOST_TEXTDOMAIN) . '</a>';
+        }
+        echo '<a class="waas-acct-btn fct-btn fct-btn-secondary" href="' . esc_url($this->adapter->get_subscription_url($subscription_id)) . '">'
+            . esc_html__('Manage or cancel plan', WAAS_HOST_TEXTDOMAIN) . '</a>';
+        echo '</div>';
+
+        // The domain and email settings, once the website is up (they change a running website).
+        if ($status === Tenant::READY && !empty($this->adapter->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META))) {
+            $this->domain_settings->render_edit_domain($subscription_id);
+        }
+        $this->render_email_pack_links($subscription_id);
+        echo '</section>';
+    }
+
+    /**
+     * The website's state for its owner: a tone for the pill, a few words, and one line on what it means.
+     * @return array{0: string, 1: string, 2: string}
+     */
+    private function describe(string $status, int $suspend_at): array
+    {
+        if ($suspend_at) {
+            $date = Notifications::format_date($suspend_at);
+            return [
+                'attention',
+                /* translators: %s: date */
+                sprintf(__('Active until %s', WAAS_HOST_TEXTDOMAIN), $date),
+                sprintf(
                     /* translators: %d: number of days */
                     __('Your subscription is cancelled. Your website stays online until then; after that it is taken offline, and deleted %d days later.', WAAS_HOST_TEXTDOMAIN),
                     TenantsSubscriptionManager::get_deletion_grace_days()
-                )) . '</p>';
-            } else {
-                echo '<p>' . esc_html__('Status:', WAAS_HOST_TEXTDOMAIN) . ' ' . esc_html(Tenant::customer_status_label($status)) . '</p>';
-            }
-            if ($status === Tenant::READY) {
-                echo '<p><a class="fct-btn fct-btn-primary" target="_blank" rel="noopener" href="' . esc_url(SingleLoginService::get_login_link($subscription_id)) . '">'
-                    . esc_html__('Log in to your website', WAAS_HOST_TEXTDOMAIN) . '</a></p>';
-            }
-            if ($status === Tenant::NEEDS_NEW_NAME) {
-                NameConflicts::render_form($subscription_id);
-            }
-            $this->render_email_pack_links($subscription_id);
-            if (!empty($this->adapter->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META))) {
-                $this->domain_settings->render_edit_domain($subscription_id);
-            }
-            echo '<p><a href="' . esc_url($this->adapter->get_subscription_url($subscription_id)) . '">'
-                . esc_html__('Manage or cancel plan', WAAS_HOST_TEXTDOMAIN) . '</a></p>';
-            echo '</section>';
+                ),
+            ];
+        }
+
+        switch ($status) {
+            case Tenant::READY:
+                return ['ready', __('Online', WAAS_HOST_TEXTDOMAIN), __('Your website is live. Log in to change its pages, photos and products.', WAAS_HOST_TEXTDOMAIN)];
+            case Tenant::QUEUED:
+            case Tenant::PROVISIONING:
+                return ['busy', Tenant::customer_status_label(Tenant::QUEUED), __('This usually takes a few minutes. We will email you when it is ready.', WAAS_HOST_TEXTDOMAIN)];
+            case Tenant::LINKING_DOMAIN:
+                return ['busy', __('Connecting your domain', WAAS_HOST_TEXTDOMAIN), __('This takes a few minutes. Your website stays online meanwhile.', WAAS_HOST_TEXTDOMAIN)];
+            case Tenant::FAILED:
+                return ['busy', Tenant::customer_status_label($status), __('Setting up your website is taking longer than usual. We will email you when it is ready.', WAAS_HOST_TEXTDOMAIN)];
+            case Tenant::NEEDS_NEW_NAME:
+                return ['attention', Tenant::customer_status_label($status), ''];
+            case Tenant::SUSPENDED:
+                return ['off', __('Offline', WAAS_HOST_TEXTDOMAIN), __('Your website is offline. Manage your plan to bring it back, or write to us if you are not sure why.', WAAS_HOST_TEXTDOMAIN)];
+            default:
+                return ['busy', Tenant::customer_status_label($status), ''];
         }
     }
 
@@ -209,7 +266,7 @@ class FluentCartPortal
         foreach ($links as $link) {
             $html[] = '<a class="waas-buy-emails" href="' . esc_url($link['url']) . '">' . esc_html($link['label']) . '</a>';
         }
-        echo '<p>' . implode(' &middot; ', $html) . ' <small>' . esc_html__('Extra emails never expire. They are used once the plan\'s monthly emails run out, and resume paused campaigns.', WAAS_HOST_TEXTDOMAIN) . '</small></p>';
+        echo '<p class="waas-acct-emails">' . esc_html__('Sending lots of email?', WAAS_HOST_TEXTDOMAIN) . ' ' . implode(' &middot; ', $html) . '. <small>' . esc_html__('Extra emails never expire. They are used once the plan\'s monthly emails run out, and resume paused campaigns.', WAAS_HOST_TEXTDOMAIN) . '</small></p>';
     }
 
     /** When a cancelled subscription's website goes offline (end of its paid period); 0 when not planned. */

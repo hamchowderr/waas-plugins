@@ -67,10 +67,10 @@ class FluentCartPortalTest extends TestCase
         $this->assertSame([], $this->portal->current_user_websites());
     }
 
-    public function test_renders_status_login_and_domain_form_for_each_website(): void
+    public function test_renders_status_and_login_for_each_website_and_the_domain_form_once_ready(): void
     {
         $this->domain_settings->expects('render_edit_domain')->with(900);
-        $this->domain_settings->expects('render_edit_domain')->with(901);
+        $this->domain_settings->expects('render_edit_domain')->with(901)->never(); // still being set up
 
         ob_start();
         $this->portal->render();
@@ -78,7 +78,7 @@ class FluentCartPortalTest extends TestCase
 
         $this->assertStringContainsString('apex.sites.example', $html);
         $this->assertStringContainsString('new.sites.example', $html);
-        $this->assertStringContainsString(Tenant::PROVISIONING, $html);
+        $this->assertStringContainsString('Setting up your website', $html);
         $this->assertSame(1, substr_count($html, 'tenant/single_login?subscription_id='), 'login only for the ready website');
         $this->assertStringContainsString('subscription_id=900', $html);
     }
@@ -151,7 +151,7 @@ class FluentCartPortalTest extends TestCase
 
         $this->assertSame([900, 901, 902], $this->portal->current_user_websites());
         $this->assertStringContainsString('Your website', $html);
-        $this->assertStringContainsString('Status: Setting up your website', $html);
+        $this->assertStringContainsString('Status: </span>Setting up your website', $html);
         $this->assertStringNotContainsString('Status: Queued', $html);
     }
 
@@ -164,7 +164,7 @@ class FluentCartPortalTest extends TestCase
         $this->portal->render();
         $html = ob_get_clean();
 
-        $this->assertStringContainsString('Status: Setup delayed — we&#039;re on it', $html);
+        $this->assertStringContainsString('Status: </span>Setup delayed — we&#039;re on it', $html);
         $this->assertStringNotContainsString('Status: Failed', $html);
     }
 
@@ -184,7 +184,7 @@ class FluentCartPortalTest extends TestCase
         $html = ob_get_clean();
 
         $this->assertSame([900, 901, 902], $this->portal->current_user_websites());
-        $this->assertStringContainsString('Status: Choose a new website name', $html);
+        $this->assertStringContainsString('Status: </span>Choose a new website name', $html);
         $this->assertStringContainsString('data-action="waas_choose_website_name_902"', $html);
         $this->assertSame(1, substr_count($html, 'waas-choose-website-name"'));
     }
@@ -315,7 +315,7 @@ class FluentCartPortalTest extends TestCase
         $this->portal->render();
         $html = ob_get_clean();
 
-        $this->assertStringContainsString('Status: Active until November 7, 2026', $html);
+        $this->assertStringContainsString('Status: </span>Active until November 7, 2026', $html);
         $this->assertStringContainsString('deleted 30 days later', $html);
         $this->assertStringContainsString('tenant/single_login?subscription_id=900', $html, 'login stays until then');
 

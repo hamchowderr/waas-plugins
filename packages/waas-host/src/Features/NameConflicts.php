@@ -279,7 +279,7 @@ class NameConflicts
             <label><?php esc_html_e('New website name', WAAS_HOST_TEXTDOMAIN); ?>
                 <input type="text" name="website_name" required maxlength="63" />
             </label>
-            <button type="submit" class="button"><?php esc_html_e('Use this name', WAAS_HOST_TEXTDOMAIN); ?></button>
+            <button type="submit" class="button waas-acct-btn is-primary fct-btn fct-btn-primary"><?php esc_html_e('Use this name', WAAS_HOST_TEXTDOMAIN); ?></button>
         </form>
         <?php
     }
