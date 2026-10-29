@@ -59,6 +59,7 @@
   ],
   "meta": {
     "title": "WaaS Host: the customer account page",
-    "description": "FluentCart customer portal with three sample websites (ready, being set up, name taken), signed in as their owner."
+    "description": "FluentCart customer portal with three sample websites (ready, being set up, name taken), signed in as their owner.",
+    "author": "hamchowderr"
   }
 }
