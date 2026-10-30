@@ -48,7 +48,7 @@ blueprint.login = SERVE;
 const WP_ZIP = `https://wordpress.org/wordpress-${WP}.zip`;
 blueprint.preferredVersions = { php: PHP, wp: WP_ZIP };
 // PHP warnings and notices go to wp-content/debug.log, checked at the end.
-blueprint.steps.unshift({ step: 'defineWpConfigConsts', consts: { WP_DEBUG: true, WP_DEBUG_LOG: true, WP_DEBUG_DISPLAY: false } });
+blueprint.steps.unshift({ step: 'defineWpConfigConsts', consts: { WP_DEBUG: true, WP_DEBUG_LOG: true, WP_DEBUG_DISPLAY: false, AUTOMATIC_UPDATER_DISABLED: true, DISABLE_WP_CRON: true } });
 blueprint.steps.push({
     step: 'writeFile',
     path: '/wordpress/wp-content/mu-plugins/forms-test-users.php',

@@ -149,8 +149,10 @@ class AdminSettings
         register_setting('waas-admin', 'waas_api_secret', [
             'sanitize_callback' => 'sanitize_text_field'
         ]);
+        // Shown filled in, so saving this page keeps the assistant on unless the field is cleared.
         register_setting('waas-admin', 'waas_assistant_url', [
-            'sanitize_callback' => 'esc_url_raw'
+            'sanitize_callback' => 'esc_url_raw',
+            'default' => (new ConfigService())->default_assistant_url(),
         ]);
 
         register_setting('waas-admin-stores', 'waas_root_domain', [
@@ -266,7 +268,7 @@ class AdminSettings
             'class_name' => 'regular-text code',
             'placeholder' => 'https://assistant.example.com',
             'constant' => 'ASSISTANT_URL',
-            'hint' => self::constant_hint('ASSISTANT_URL', __('The website assistant\'s address. When set, each ready website on the customer\'s account page gets an "Ask the website assistant" button that opens it already signed in. Leave empty to hide the button.', 'waas-host')),
+            'hint' => self::constant_hint('ASSISTANT_URL', __('The website assistant\'s address. Each ready website on the customer\'s account page gets an "Ask the website assistant" button that opens it already signed in. On the AnyPress API this is AnyPress\'s own assistant; clear the field to hide the button.', 'waas-host')),
         ]);
 
         // Stores
