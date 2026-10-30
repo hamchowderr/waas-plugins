@@ -504,7 +504,7 @@ class AdminSettings
     {
         $option_val = get_option(self::SUSPEND_SCHEDULED_EMAIL_BODY_OPTION);
 
-        return !empty($option_val) ? $option_val : $text;
+        return !empty($option_val) && !Notifications::is_old_default_body((string) $option_val) ? $option_val : $text;
     }
 
     function allow_suspended_email($allowed)
@@ -527,7 +527,7 @@ class AdminSettings
     {
         $option_val = get_option(self::SUSPENDED_EMAIL_BODY_OPTION);
 
-        return !empty($option_val) ? $option_val : $text;
+        return !empty($option_val) && !Notifications::is_old_default_body((string) $option_val) ? $option_val : $text;
     }
 
         function remove_tenant_administrator_plugin_capabilities($allowed)
@@ -551,7 +551,7 @@ class AdminSettings
     {
         $option_val = get_option(self::TENANT_READY_EMAIL_BODY_OPTION);
 
-        return !empty($option_val) ? $option_val : $text;
+        return !empty($option_val) && !Notifications::is_old_default_body((string) $option_val) ? $option_val : $text;
     }
 
     public function waas_could_not_connect_to_api_notice_error()
