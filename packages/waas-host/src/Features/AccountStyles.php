@@ -50,7 +50,7 @@ class AccountStyles
 .waas-acct *,.waas-acct-notice *{box-sizing:border-box}
 .waas-acct-site{min-width:0;max-width:100%;border:1.5px solid #141414;border-radius:16px;padding:22px 24px;background:#fff;font-size:16px}
 .waas-acct-site:first-child{box-shadow:6px 6px 0 #ffc75a}
-.waas-acct-site h3{margin:10px 0 2px;font-size:22px;font-weight:800;letter-spacing:-.01em;font-family:inherit;line-height:1.25;overflow-wrap:anywhere}
+.waas-acct-site h3{margin:10px 0 2px;font-size:22px;font-weight:800;letter-spacing:-.01em;font-family:inherit;line-height:1.25;overflow-wrap:break-word}
 .waas-acct-visit{font-weight:700;color:#c8264d}
 .waas-acct-status{display:inline-flex;align-items:center;gap:7px;padding:3px 11px;border-radius:999px;background:rgba(0,0,0,.05);font-size:.85em;font-weight:600}
 .waas-acct-status i{width:8px;height:8px;border-radius:999px;background:#8a8580}
@@ -94,7 +94,7 @@ class AccountStyles
 .waas-acct-notice{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;border:1.5px solid #141414;border-radius:16px;box-shadow:5px 5px 0 #ffc75a;padding:16px 20px;margin-bottom:18px;background:#fff;font-size:15px}
 .waas-acct-notice p{margin:0;flex:1 1 260px;overflow-wrap:anywhere}
 .waas-acct-notice .waas-acct-actions{margin-top:0}
-@media (max-width:600px){.waas-acct-panel>summary small{flex-basis:100%;padding-left:32px}.waas-acct-site{padding:18px 16px}.waas-acct-panel-body{padding-left:0}.waas-acct-actions>*{flex:1 1 100%;text-align:center}.waas-acct table.waas-mail-records{display:block;overflow-x:auto}}
+@media (max-width:600px){.waas-acct-panel>summary small{flex-basis:100%;padding-left:32px}.waas-acct-site{padding:18px 16px}.waas-acct-panel-body{padding-left:0}.waas-acct-actions>*,.waas-acct-form>.waas-acct-btn{flex:1 1 100%;text-align:center}.waas-acct table.waas-mail-records{display:block;overflow-x:auto}}
 CSS;
     }
 }

@@ -168,6 +168,10 @@ class FluentCartPortal
             return;
         }
 
+        // Removed websites last, so the first (highlighted) card is one the owner can use.
+        usort($websites, fn ($a, $b) => (int) ($this->adapter->get_subscription_meta($a, Tenant::TENANT_STATE) === Tenant::DELETED)
+            <=> (int) ($this->adapter->get_subscription_meta($b, Tenant::TENANT_STATE) === Tenant::DELETED));
+
         AccountStyles::print_once();
         echo '<div class="waas-acct">';
         foreach ($websites as $subscription_id) {
@@ -188,7 +192,8 @@ class FluentCartPortal
         echo '<section class="waas-acct-site waas-website">';
         echo '<span class="waas-acct-status is-' . esc_attr($tone) . '"><i aria-hidden="true"></i>'
             . '<span class="screen-reader-text">' . esc_html__('Status:', 'waas-host') . ' </span>' . esc_html($label) . '</span>';
-        echo '<h3>' . esc_html((string) ($domain ?: __('Your website', 'waas-host'))) . '</h3>';
+        // A long address breaks after a dot on a phone, not in the middle of a word.
+        echo '<h3>' . ($domain ? implode('.<wbr>', array_map('esc_html', explode('.', (string) $domain))) : esc_html__('Your website', 'waas-host')) . '</h3>';
         if ($domain && $status === Tenant::READY) {
             echo '<a class="waas-acct-visit" target="_blank" rel="noopener" href="' . esc_url('https://' . $domain) . '">'
                 . esc_html__('Visit your website', 'waas-host') . ' &#8599;</a>';
