@@ -13,7 +13,8 @@
     "shop": "node shop-preview.mjs",
     "forms": "node forms.mjs",
     "shop-switch": "node shop-switch.mjs",
-    "emails": "node email-preview.mjs"
+    "emails": "node email-preview.mjs",
+    "editor": "node editor-assistant.mjs"
   },
   "dependencies": {
     "@wp-playground/cli": "3.1.59"

@@ -1,0 +1,16 @@
+/* The Assistant panel beside the editor: a little wider than WordPress's settings sidebar, with the chat filling it. */
+@media (min-width: 782px) {
+	.interface-complementary-area.waas-editor-assistant {
+		width: 380px;
+	}
+}
+.interface-complementary-area.waas-editor-assistant .components-panel {
+	height: 100%;
+}
+.waas-editor-assistant__frame {
+	display: block;
+	width: 100%;
+	height: calc(100vh - var(--wp-admin--admin-bar--height, 0px) - 125px);
+	min-height: 420px;
+	border: 0;
+}
