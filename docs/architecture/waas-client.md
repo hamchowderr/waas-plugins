@@ -167,6 +167,36 @@ Running it again adds nothing twice: the add-on skips each step it has finished,
 
 The galleries before the switch, the copied zone and method ids and each merged customer (its row and the rows moved off it) are kept in the `waas_client_shop_switch` option (not autoloaded). Sources: `src/Shop/ShopSwitch.php`, `src/Shop/GalleryImages.php`, `src/Shop/ShippingZones.php`, `src/Shop/CustomerMerge.php`, `src/Shop/ShopReview.php`, `src/Shop/ShopCompare.php`, `src/Shop/ShopCommand.php`, `src/Shop/ShopAbilities.php`. Tested end to end, with HPOS off and on, by `scripts/playground/shop-switch.mjs` (`npm run shop-switch`).
 
+## Bringing buyers and subscribers into FluentCRM
+
+The CRM switch brings a website's WooCommerce buyers and email-list subscribers into FluentCRM (the free plugin, whose own importers cover only WordPress users, CSV files and a few hosted services; its WooCommerce importer needs FluentCRM Pro). Run it with WP-CLI as an administrator, with FluentCRM active:
+
+```sh
+wp waas crm switch --user=admin --dry-run   # report what would come in, and with which status; changes nothing
+wp waas crm switch --user=admin             # do it
+wp waas crm switch --user=admin --undo      # take it back out
+```
+
+Add `--format=json` for the report as JSON, and `--without-consent=unsubscribed` to give buyers with no consent record the status unsubscribed instead of transactional. The same is available as two abilities: `anypress/check-crm` (the dry run, read-only) and `anypress/switch-crm` (with `{"undo": true}` to undo). Both take `without_consent` and need an administrator.
+
+Sources, in this order (the first source with a name, phone or address gives it):
+
+1. **WooCommerce buyers, guests included**, read from the orders through WooCommerce's own order API, so HPOS on or off reads the same. Only paid orders (processing, completed and any other paid status) and fully refunded ones count; pending, failed and cancelled orders don't make anyone a buyer. A registered customer comes in under their account email, a guest under their billing email. They get their name, phone and billing address from their latest order, the type "customer", two number fields (`woocommerce_orders`, the paid orders that weren't fully refunded, and `woocommerce_spent`, the total less refunds), and a tag per product bought, `Product: Past` (the Offering: Interested/Active/Past tagging model: past buyers get Past only, a full refund gives no tag, and a `Product: Interested` tag on the contact is removed).
+2. **MailPoet subscribers**, read from its tables. Subscribed stays subscribed, unconfirmed becomes pending, unsubscribed and bounced stay that way, inactive becomes unsubscribed, and trashed subscribers are left out. MailPoet's own lists become FluentCRM lists of the same name, with the people who are on them; its automatic lists and segments (WordPress Users, WooCommerce Customers) are reported, not copied.
+3. **Newsletter plugin subscribers**, read from its table: confirmed becomes subscribed, not confirmed pending, and unsubscribed, bounced and complained stay that way; unfinished sign-ups are left out. Its named lists become FluentCRM lists.
+
+Other email-list plugins (Mailster, Icegram Express, Noptin and others) are named in the report: export their subscribers to CSV and bring them in with FluentCRM's CSV import.
+
+**Consent.** A contact is subscribed only where a source holds a consent record that says so: a MailPoet or Newsletter subscription, or a Mailchimp for WooCommerce opt-in (on the order or the account). An unsubscribe, bounce or complaint in any source wins over a subscription in another. A buyer with no consent record gets "transactional": FluentCRM sends them order and account emails but no campaigns. A contact already in FluentCRM keeps its own data: only empty fields are filled, a subscription only lifts a pending or transactional contact, a suppression is never lifted, and with no consent record its status is left alone.
+
+**No email.** FluentCRM's tag and list events are off while it writes (as in FluentCRM's own command-line import), so no automation starts, and any email something tries to send during the run is held back and counted in the report. No double opt-in email is sent to pending contacts.
+
+Running it again changes nothing already there. MailPoet, Newsletter and WooCommerce and their data are never changed. Undo deletes the contacts, tags, lists and custom fields the switch created, and puts back what it changed on contacts that were already in FluentCRM (their fields, status, custom values, and the tags and lists it added or removed).
+
+What doesn't come across: order lines and history (FluentCRM free keeps none), campaigns, automations, statistics and engagement scores, MailPoet's custom subscriber fields, and the Newsletter plugin's profile fields.
+
+What the switch created, and each existing contact's values before it changed them, are kept in the `waas_client_crm_switch` option (not autoloaded). Sources: `src/Crm/CrmSwitch.php`, `src/Crm/ContactPlan.php`, `src/Crm/WooBuyers.php`, `src/Crm/MailPoetSubscribers.php`, `src/Crm/NewsletterSubscribers.php`, `src/Crm/CrmWriter.php`, `src/Crm/CrmCommand.php`, `src/Crm/CrmAbilities.php`. Tested end to end, with HPOS off and on, by `scripts/playground/crm-switch.mjs` (`npm run crm-switch`).
+
 ## Updates
 
 WaaS Client does not update itself. Its `Update URI` header only keeps wordpress.org from offering updates. A website gets a newer WaaS Client when it is moved to a newer template version, whose code replaces the website's plugins (`index.php`, `tests/Unit/NoSelfUpdateTest.php`).

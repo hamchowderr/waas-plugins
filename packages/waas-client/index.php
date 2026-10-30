@@ -12,7 +12,7 @@ Plugin Name: WaaS Client
 Plugin URI: https://github.com/hamchowderr/waas-plugins
 Description: Runs on each WaaS store: one-click login from the storefront, turns plugins on or off to match the store's plan (roles), and lets the AnyPress connector edit the site's design and content.
 Author: Otaku Solutions
-Version: 2.6.0
+Version: 2.7.0
 Author URI: https://otakusolutions.io
 Update URI: wpcs-waas-client
 Requires at least: 6.9
@@ -25,7 +25,7 @@ Text Domain: waas-client
 define( 'WAAS_CLIENT_SLUG', 'wpcs-waas-client' );
 define( 'WAAS_CLIENT_BASENAME', plugin_basename( __FILE__ ) );
 define( 'WAAS_CLIENT_UPDATE_URI', 'wpcs-waas-client' );
-define( 'WAAS_CLIENT_VERSION', '2.6.0' );
+define( 'WAAS_CLIENT_VERSION', '2.7.0' );
 define( 'WAAS_CLIENT_TEXTDOMAIN', 'waas-client' );
 
 use WaaSClient\Api\SingleSignOnController;
@@ -40,6 +40,9 @@ use WaaSClient\Features\AdminTenantSettings;
 use WaaSClient\Features\CustomerPlanPage;
 use WaaSClient\Features\ConnectPage;
 use WaaSClient\Features\McpServer;
+use WaaSClient\Crm\CrmAbilities;
+use WaaSClient\Crm\CrmCommand;
+use WaaSClient\Crm\CrmSwitch;
 use WaaSClient\Forms\ConditionalConfirmations;
 use WaaSClient\Forms\FormsAbilities;
 use WaaSClient\Forms\FormsCommand;
@@ -90,6 +93,13 @@ if (!wp_doing_ajax()) {
     new ShopAbilities(new ShopSwitch());
     if (defined('WP_CLI') && WP_CLI) {
         \WP_CLI::add_command('waas shop', ShopCommand::class);
+    }
+
+    // Bringing WooCommerce buyers (guests too), MailPoet and Newsletter subscribers into FluentCRM:
+    // `wp waas crm switch` and the check-crm and switch-crm abilities.
+    new CrmAbilities(new CrmSwitch());
+    if (defined('WP_CLI') && WP_CLI) {
+        \WP_CLI::add_command('waas crm', CrmCommand::class);
     }
 
     // No self-update: a store's waas-client comes with its template version, and the store gets a
