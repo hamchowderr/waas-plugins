@@ -23,12 +23,40 @@
             return json.data;
         });
     };
+    // The site check's notes: short groups of plain sentences, built with textContent.
+    var notes = function (groups, empty) {
+        var box = $('[data-field="notes"]');
+        box.textContent = '';
+        var add = function (tag, text, parent) {
+            var el = document.createElement(tag);
+            if (text) el.textContent = text;
+            (parent || box).appendChild(el);
+            return el;
+        };
+        (groups || []).forEach(function (group) {
+            add('h2', group.title).style.fontSize = '1.1em';
+            if (group.text) add('p', group.text);
+            var list = add('ul', '');
+            list.style.listStyle = 'disc';
+            list.style.paddingLeft = '20px';
+            group.items.forEach(function (item) { add('li', item, list); });
+        });
+        if (!(groups && groups.length) && empty) add('p', empty);
+        box.hidden = !box.firstChild;
+    };
+    var preflight = function () {
+        notes([], __('Checking your site…', 'anypress-export'));
+        request('preflight').then(function (r) {
+            notes(r.notes, __('We checked your site: nothing to flag.', 'anypress-export'));
+        }).catch(function () { notes([]); });
+    };
     var show = function (p) {
         view('progress');
         var store = p.store || {};
         $('[data-field="store"]').textContent = store.domain ? (store.size ? sprintf(/* translators: 1: the AnyPress address, 2: the store's size */ __('Moving to %1$s (%2$s)', 'anypress-export'), store.domain, store.size) : sprintf(/* translators: %s: the AnyPress address */ __('Moving to %s', 'anypress-export'), store.domain)) : '';
         $('[data-field="bar"]').style.width = p.percent + '%';
         $('[data-field="message"]').textContent = p.message;
+        if (p.notes && p.notes.length) notes(p.notes);
     };
     var poll = function () {
         request('status').then(function (s) {
@@ -62,12 +90,13 @@
     });
     $('[data-action="cancel"]').addEventListener('click', function () {
         if (!confirm(__('Stop moving this site? What was packed so far is deleted.', 'anypress-export'))) return;
-        request('cancel').then(function () { error(''); view('start'); });
+        request('cancel').then(function () { error(''); view('start'); preflight(); }).catch(function (e) { error(e.message); });
     });
     if (config.progress) {
         show(config.progress);
         if (config.progress.step === 'moving') poll(); else step();
     } else {
         view('start');
+        preflight();
     }
 })();

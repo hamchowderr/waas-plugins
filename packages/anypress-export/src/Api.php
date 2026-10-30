@@ -10,6 +10,12 @@ defined('ABSPATH') || exit;
 /** The AnyPress API calls the export makes, with the import code as the only credential. */
 class Api
 {
+    /** Why a server without cURL can't move: shown before anything is packed. */
+    public static function noCurl(): string
+    {
+        return __('This server has no cURL for PHP, which the upload needs. Ask your host to turn it on, then start again.', 'anypress-export');
+    }
+
     /** @var ImportCode */
     private $code;
 
@@ -37,15 +43,19 @@ class Api
     }
 
     /**
-     * PUTs the archive to the upload link in one streamed request.
+     * PUTs the archive to the upload link in one streamed request. `$heartbeat` is called about every
+     * 20 seconds while it runs (the plugin renews its lock with it, so a reload can't start a second
+     * upload). A link that has expired or is refused (HTTP 403) throws ApiError with status 403, so the
+     * caller can ask AnyPress for a new one.
      *
-     * @throws \RuntimeException
+     * @throws ApiError
      */
-    public function put(string $url, string $file): void
+    public function put(string $url, string $file, ?callable $heartbeat = null): void
     {
-        if (!function_exists('curl_init')) throw new \RuntimeException(__('This server has no cURL for PHP, which the upload needs. Ask your host to turn it on.', 'anypress-export'));
+        if (!function_exists('curl_init')) throw new ApiError(self::noCurl());
         $fh = fopen($file, 'rb');
-        if (!$fh) throw new \RuntimeException(__('Could not read the export to upload it.', 'anypress-export'));
+        if (!$fh) throw new ApiError(__('Could not read the export to upload it.', 'anypress-export'));
+        $last = time();
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_UPLOAD => true,
@@ -53,19 +63,31 @@ class Api
             CURLOPT_INFILESIZE => filesize($file),
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CONNECTTIMEOUT => 30,
+            // Give up on a stalled upload (under 1 KB/s for two minutes) instead of hanging for good.
+            CURLOPT_LOW_SPEED_LIMIT => 1024,
+            CURLOPT_LOW_SPEED_TIME => 120,
             CURLOPT_HTTPHEADER => ['Content-Type: application/octet-stream', 'Expect:'],
+            CURLOPT_NOPROGRESS => $heartbeat === null,
+            CURLOPT_PROGRESSFUNCTION => function () use ($heartbeat, &$last) {
+                if ($heartbeat !== null && time() - $last >= 20) {
+                    $last = time();
+                    $heartbeat();
+                }
+                return 0;
+            },
         ]);
         $body = curl_exec($ch);
         $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         $error = curl_error($ch);
         curl_close($ch);
         fclose($fh);
+        if ($status === 403) throw new ApiError(__('The upload link has expired.', 'anypress-export'), 403);
         if ($body === false || $status < 200 || $status >= 300) {
-            throw new \RuntimeException(sprintf(
+            throw new ApiError(sprintf(
                 /* translators: %s: why, such as "(HTTP 502)" or a network error */
                 __('Uploading the export failed %s. Try again.', 'anypress-export'),
                 trim(($status ? "(HTTP $status)" : '') . ($error ? " $error" : ''))
-            ));
+            ), $status);
         }
     }
 
@@ -78,7 +100,7 @@ class Api
             'body' => wp_json_encode(['code' => $this->code->code()] + $body),
         ]);
         if (is_wp_error($response)) {
-            throw new \RuntimeException(sprintf(
+            throw new ApiError(sprintf(
                 /* translators: %s: the network error */
                 __('Could not reach AnyPress: %s', 'anypress-export'),
                 $response->get_error_message()
@@ -92,9 +114,9 @@ class Api
                 __('AnyPress answered HTTP %d.', 'anypress-export'),
                 $status
             );
-            throw new \RuntimeException($message);
+            throw new ApiError($message, $status);
         }
-        if (!is_array($data)) throw new \RuntimeException(__('AnyPress sent an answer this plugin does not understand.', 'anypress-export'));
+        if (!is_array($data)) throw new ApiError(__('AnyPress sent an answer this plugin does not understand.', 'anypress-export'));
         return $data;
     }
 }
