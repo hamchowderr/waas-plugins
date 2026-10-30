@@ -177,3 +177,34 @@ jobs:
       - name: Forms switch test
         working-directory: scripts/playground
         run: npm run forms
+
+  playground-shop-switch:
+    # The shop switch (wp waas shop switch and its abilities) on a WordPress Playground site with WooCommerce,
+    # FluentCart and the FluentCart Migrator add-on (downloaded from FluentCart's add-ons CDN): checks, switches,
+    # runs again, undoes, and compares the two shops, with HPOS off and then on.
+    name: waas-client shop switch on WordPress Playground
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/waas-client
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: Shop switch test
+        working-directory: scripts/playground
+        run: npm run shop-switch

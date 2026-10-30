@@ -15,7 +15,7 @@ How they fit together: `docs/architecture/`. Releases and the update channel: `d
 ## Building and testing
 
 - In the package you change: `composer install`, then `composer test -- --exclude-group mock` (the `mock` group needs network). CI runs PHP 8.1 and 8.3, so keep code valid on 8.1.
-- `scripts/playground`: `npm ci`, then `npm run smoke` (WaaS Client's site-editing API and abilities on WordPress Playground with the AnyPress theme), `npm run export` (AnyPress Export end to end), `npm run forms` (WaaS Client's forms switch from Contact Form 7, WPForms and Ninja Forms to Fluent Forms) and `npm run shop` (a copy of shop.anypress.io with its design from `scripts/test-storefront/remote/design`; `-- --shots` screenshots every page). Playground uses SQLite; plugins that need MySQL warn there but most still work.
+- `scripts/playground`: `npm ci`, then `npm run smoke` (WaaS Client's site-editing API and abilities on WordPress Playground with the AnyPress theme), `npm run export` (AnyPress Export end to end), `npm run forms` (WaaS Client's forms switch from Contact Form 7, WPForms and Ninja Forms to Fluent Forms), `npm run shop-switch` (WaaS Client's shop switch from WooCommerce to FluentCart, with HPOS off and on) and `npm run shop` (a copy of shop.anypress.io with its design from `scripts/test-storefront/remote/design`; `-- --shots` screenshots every page). Playground uses SQLite; plugins that need MySQL warn there but most still work.
 - `scripts/test-env.sh` and `docker-compose.yml`: a full local storefront with the Host plugin.
 - After changing `packages/waas-updater`, run `scripts/sync-updater.sh`; CI fails when the copies drift.
 
