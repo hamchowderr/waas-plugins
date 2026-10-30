@@ -19,7 +19,7 @@
       "pluginData": {
         "resource": "git:directory",
         "url": "https://github.com/hamchowderr/waas-plugins",
-        "ref": "a29ed6a1164dfe7d780c8d6c5975c7b618b35231",
+        "ref": "41d4a8259644d38a0f529f7e9613026f375d993f",
         "refType": "commit",
         "path": "packages/waas-host"
       },
