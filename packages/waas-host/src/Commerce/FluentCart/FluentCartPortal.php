@@ -65,7 +65,7 @@ class FluentCartPortal
         }
 
         fluent_cart_api()->addCustomerDashboardEndpoint(self::ENDPOINT, [
-            'title' => __('My website', WAAS_HOST_TEXTDOMAIN),
+            'title' => __('My website', 'waas-host'),
             'icon_svg' => self::ICON_SVG,
             'render_callback' => [$this, 'render'],
         ]);
@@ -108,26 +108,28 @@ class FluentCartPortal
 
             AccountStyles::print_once();
             echo '<div class="waas-website-ready-notice waas-acct-notice">';
-            $name = '<strong>' . esc_html((string) ($domain ?: __('Your website', WAAS_HOST_TEXTDOMAIN))) . '</strong>';
+            $name = '<strong>' . esc_html((string) ($domain ?: __('Your website', 'waas-host'))) . '</strong>';
             $suspend_at = $this->suspend_at($subscription_id);
             echo '<span class="waas-acct-status is-' . ($suspend_at ? 'attention' : 'ready') . '"><i aria-hidden="true"></i>'
-                . esc_html($suspend_at ? __('Cancelled', WAAS_HOST_TEXTDOMAIN) : __('Online', WAAS_HOST_TEXTDOMAIN)) . '</span>';
+                . esc_html($suspend_at ? __('Cancelled', 'waas-host') : __('Online', 'waas-host')) . '</span>';
+            // phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- $name is escaped where it is built; the rest is esc_html__().
             echo '<p>' . ($suspend_at
                 ? sprintf(
                     /* translators: 1: the website's domain, 2: date */
-                    esc_html__('Your website %1$s is active until %2$s.', WAAS_HOST_TEXTDOMAIN),
+                    esc_html__('Your website %1$s is active until %2$s.', 'waas-host'),
                     $name,
                     esc_html(Notifications::format_date($suspend_at))
                 )
                 : sprintf(
                     /* translators: %s: the website's domain */
-                    esc_html__('Your website %s is ready.', WAAS_HOST_TEXTDOMAIN),
+                    esc_html__('Your website %s is ready.', 'waas-host'),
                     $name
                 )) . '</p>';
+            // phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
             echo '<div class="waas-acct-actions">';
             echo '<a class="waas-acct-btn is-primary fct-btn fct-btn-primary" target="_blank" rel="noopener" href="' . esc_url(SingleLoginService::get_login_link($subscription_id)) . '">'
-                . esc_html__('Log in to your website', WAAS_HOST_TEXTDOMAIN) . '</a>';
-            echo '<a class="waas-acct-btn" href="' . esc_url($this->store->get_portal_url(self::ENDPOINT)) . '">' . esc_html__('Manage website', WAAS_HOST_TEXTDOMAIN) . '</a>';
+                . esc_html__('Log in to your website', 'waas-host') . '</a>';
+            echo '<a class="waas-acct-btn" href="' . esc_url($this->store->get_portal_url(self::ENDPOINT)) . '">' . esc_html__('Manage website', 'waas-host') . '</a>';
             echo '</div>';
             echo '</div>';
         }
@@ -161,7 +163,7 @@ class FluentCartPortal
         }
 
         if (!$websites) {
-            echo '<p>' . esc_html__('You have no websites yet. They appear here a few minutes after you subscribe to a website plan.', WAAS_HOST_TEXTDOMAIN) . '</p>';
+            echo '<p>' . esc_html__('You have no websites yet. They appear here a few minutes after you subscribe to a website plan.', 'waas-host') . '</p>';
             return;
         }
 
@@ -184,11 +186,11 @@ class FluentCartPortal
 
         echo '<section class="waas-acct-site waas-website">';
         echo '<span class="waas-acct-status is-' . esc_attr($tone) . '"><i aria-hidden="true"></i>'
-            . '<span class="screen-reader-text">' . esc_html__('Status:', WAAS_HOST_TEXTDOMAIN) . ' </span>' . esc_html($label) . '</span>';
-        echo '<h3>' . esc_html((string) ($domain ?: __('Your website', WAAS_HOST_TEXTDOMAIN))) . '</h3>';
+            . '<span class="screen-reader-text">' . esc_html__('Status:', 'waas-host') . ' </span>' . esc_html($label) . '</span>';
+        echo '<h3>' . esc_html((string) ($domain ?: __('Your website', 'waas-host'))) . '</h3>';
         if ($domain && $status === Tenant::READY) {
             echo '<a class="waas-acct-visit" target="_blank" rel="noopener" href="' . esc_url('https://' . $domain) . '">'
-                . esc_html__('Visit your website', WAAS_HOST_TEXTDOMAIN) . ' &#8599;</a>';
+                . esc_html__('Visit your website', 'waas-host') . ' &#8599;</a>';
         }
         NameConflicts::render_result($subscription_id);
         if ($lead !== '') {
@@ -201,10 +203,10 @@ class FluentCartPortal
         echo '<div class="waas-acct-actions">';
         if ($status === Tenant::READY) {
             echo '<a class="waas-acct-btn is-primary fct-btn fct-btn-primary" target="_blank" rel="noopener" href="' . esc_url(SingleLoginService::get_login_link($subscription_id)) . '">'
-                . esc_html__('Log in to your website', WAAS_HOST_TEXTDOMAIN) . '</a>';
+                . esc_html__('Log in to your website', 'waas-host') . '</a>';
         }
         echo '<a class="waas-acct-btn fct-btn fct-btn-secondary" href="' . esc_url($this->adapter->get_subscription_url($subscription_id)) . '">'
-            . esc_html__('Manage or cancel plan', WAAS_HOST_TEXTDOMAIN) . '</a>';
+            . esc_html__('Manage or cancel plan', 'waas-host') . '</a>';
         echo '</div>';
 
         // The domain and email settings, once the website is up (they change a running website).
@@ -226,10 +228,10 @@ class FluentCartPortal
             return [
                 'attention',
                 /* translators: %s: date */
-                sprintf(__('Active until %s', WAAS_HOST_TEXTDOMAIN), $date),
+                sprintf(__('Active until %s', 'waas-host'), $date),
                 sprintf(
                     /* translators: %d: number of days */
-                    __('Your subscription is cancelled. Your website stays online until then; after that it is taken offline, and deleted %d days later.', WAAS_HOST_TEXTDOMAIN),
+                    __('Your subscription is cancelled. Your website stays online until then; after that it is taken offline, and deleted %d days later.', 'waas-host'),
                     TenantsSubscriptionManager::get_deletion_grace_days()
                 ),
             ];
@@ -237,18 +239,18 @@ class FluentCartPortal
 
         switch ($status) {
             case Tenant::READY:
-                return ['ready', __('Online', WAAS_HOST_TEXTDOMAIN), __('Your website is live. Log in to change its pages, photos and products.', WAAS_HOST_TEXTDOMAIN)];
+                return ['ready', __('Online', 'waas-host'), __('Your website is live. Log in to change its pages, photos and products.', 'waas-host')];
             case Tenant::QUEUED:
             case Tenant::PROVISIONING:
-                return ['busy', Tenant::customer_status_label(Tenant::QUEUED), __('This usually takes a few minutes. We will email you when it is ready.', WAAS_HOST_TEXTDOMAIN)];
+                return ['busy', Tenant::customer_status_label(Tenant::QUEUED), __('This usually takes a few minutes. We will email you when it is ready.', 'waas-host')];
             case Tenant::LINKING_DOMAIN:
-                return ['busy', __('Connecting your domain', WAAS_HOST_TEXTDOMAIN), __('This takes a few minutes. Your website stays online meanwhile.', WAAS_HOST_TEXTDOMAIN)];
+                return ['busy', __('Connecting your domain', 'waas-host'), __('This takes a few minutes. Your website stays online meanwhile.', 'waas-host')];
             case Tenant::FAILED:
-                return ['busy', Tenant::customer_status_label($status), __('Setting up your website is taking longer than usual. We will email you when it is ready.', WAAS_HOST_TEXTDOMAIN)];
+                return ['busy', Tenant::customer_status_label($status), __('Setting up your website is taking longer than usual. We will email you when it is ready.', 'waas-host')];
             case Tenant::NEEDS_NEW_NAME:
                 return ['attention', Tenant::customer_status_label($status), ''];
             case Tenant::SUSPENDED:
-                return ['off', __('Offline', WAAS_HOST_TEXTDOMAIN), __('Your website is offline. Manage your plan to bring it back, or write to us if you are not sure why.', WAAS_HOST_TEXTDOMAIN)];
+                return ['off', __('Offline', 'waas-host'), __('Your website is offline. Manage your plan to bring it back, or write to us if you are not sure why.', 'waas-host')];
             default:
                 return ['busy', Tenant::customer_status_label($status), ''];
         }
@@ -266,7 +268,8 @@ class FluentCartPortal
         foreach ($links as $link) {
             $html[] = '<a class="waas-buy-emails" href="' . esc_url($link['url']) . '">' . esc_html($link['label']) . '</a>';
         }
-        echo '<p class="waas-acct-emails">' . esc_html__('Sending lots of email?', WAAS_HOST_TEXTDOMAIN) . ' ' . implode(' &middot; ', $html) . '. <small>' . esc_html__('Extra emails never expire. They are used once the plan\'s monthly emails run out, and resume paused campaigns.', WAAS_HOST_TEXTDOMAIN) . '</small></p>';
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- each link in $html is escaped as it is built.
+        echo '<p class="waas-acct-emails">' . esc_html__('Sending lots of email?', 'waas-host') . ' ' . implode(' &middot; ', $html) . '. <small>' . esc_html__('Extra emails never expire. They are used once the plan\'s monthly emails run out, and resume paused campaigns.', 'waas-host') . '</small></p>';
     }
 
     /** When a cancelled subscription's website goes offline (end of its paid period); 0 when not planned. */
@@ -286,13 +289,13 @@ class FluentCartPortal
         if ($this->adapter->get_subscription_meta($subscription->id, Tenant::TENANT_STATE) === Tenant::READY) {
             $actions[] = [
                 'key' => 'waas_login',
-                'label' => __('Log in to website', WAAS_HOST_TEXTDOMAIN),
+                'label' => __('Log in to website', 'waas-host'),
                 'url' => SingleLoginService::get_login_link($subscription->id),
             ];
         }
         $actions[] = [
             'key' => 'waas_manage',
-            'label' => __('Manage website', WAAS_HOST_TEXTDOMAIN),
+            'label' => __('Manage website', 'waas-host'),
             'url' => $this->store->get_portal_url(self::ENDPOINT),
         ];
         $data['custom_actions'] = $actions;

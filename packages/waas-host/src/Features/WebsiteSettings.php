@@ -59,6 +59,7 @@ class WebsiteSettings
     {
         $domain = self::normalize_domain($domain);
         if (!UserAccountSubscriptionsSettings::is_valid_hostname($domain)) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not printed here; every place that shows the message escapes it.
             throw WebsiteSettingsError::invalid_input(self::INVALID_DOMAIN_MESSAGE);
         }
 
@@ -75,6 +76,7 @@ class WebsiteSettings
                 'domain_name' => $domain,
             ]);
         } catch (Exception $e) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not printed here; every place that shows the message escapes it.
             throw WebsiteSettingsError::from_api($e);
         }
 
@@ -97,6 +99,7 @@ class WebsiteSettings
         try {
             return $this->provisioning_api->get_mail_domain($this->external_id($subscription_id));
         } catch (Exception $e) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not printed here; every place that shows the message escapes it.
             throw WebsiteSettingsError::from_api($e);
         }
     }
@@ -111,12 +114,14 @@ class WebsiteSettings
     {
         $domain = self::normalize_domain($domain);
         if (!UserAccountSubscriptionsSettings::is_valid_hostname($domain)) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not printed here; every place that shows the message escapes it.
             throw WebsiteSettingsError::invalid_input(self::INVALID_DOMAIN_MESSAGE);
         }
 
         try {
             return $this->provisioning_api->set_mail_domain($this->external_id($subscription_id), $domain);
         } catch (Exception $e) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not printed here; every place that shows the message escapes it.
             throw WebsiteSettingsError::from_api($e);
         }
     }
@@ -131,6 +136,7 @@ class WebsiteSettings
         try {
             $this->provisioning_api->remove_mail_domain($this->external_id($subscription_id));
         } catch (Exception $e) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not printed here; every place that shows the message escapes it.
             throw WebsiteSettingsError::from_api($e);
         }
     }
@@ -150,6 +156,7 @@ class WebsiteSettings
         try {
             $link = $this->provisioning_api->domain_connect($this->external_id($subscription_id), $domain, $service);
         } catch (Exception $e) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not printed here; every place that shows the message escapes it.
             throw WebsiteSettingsError::from_api($e);
         }
         $provider = is_string($link->dnsProvider ?? null) ? $link->dnsProvider : '';

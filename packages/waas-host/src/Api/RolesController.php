@@ -42,7 +42,7 @@ class RolesController
     public function admin_post_update_tenant_roles_list()
     {
         if (!current_user_can('manage_woocommerce') && !current_user_can('manage_options')) {
-            wp_die(esc_html__('You are not allowed to refresh roles.'), 403);
+            wp_die(esc_html__('You are not allowed to refresh roles.', 'waas-host'), 403);
         }
 
         check_admin_referer(self::REFRESH_NONCE_ACTION);
@@ -51,7 +51,7 @@ class RolesController
             $this->update_tenant_roles_list();
         } catch (\Exception $error) {
             // Set a transient notice message
-            set_transient(AdminNotices::REFRESH_ROLES_FAILED_NOTICE, __('Roles could not be loaded. Check that your template version labelled "Production" is running, has WaaS Client active, and has at least one role.', WAAS_HOST_TEXTDOMAIN), 5);
+            set_transient(AdminNotices::REFRESH_ROLES_FAILED_NOTICE, __('Roles could not be loaded. Check that your template version labelled "Production" is running, has WaaS Client active, and has at least one role.', 'waas-host'), 5);
         }
 
         wp_safe_redirect(wp_get_referer());
@@ -70,6 +70,7 @@ class RolesController
         $response_code = wp_remote_retrieve_response_code($response);
 
         if(200 !== $response_code) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not printed here; every place that shows the message escapes it.
             throw new \Exception('Refreshing roles failed with code '.$response_code);
         }
 

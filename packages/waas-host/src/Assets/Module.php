@@ -23,7 +23,7 @@ class Module
         {
             $script_name = 'sub-confirm-cancel-button.js';
             $src = plugin_dir_url( __FILE__ ) . "/js/$script_name";
-            $version = date("ymd-Gis", filemtime( plugin_dir_path( __FILE__ ) . "js/$script_name" ));
+            $version = gmdate("ymd-Gis", (int) filemtime( plugin_dir_path( __FILE__ ) . "js/$script_name" ));
             wp_enqueue_script('confirm-cancel-button', $src, ['jquery'], $version, true);
         }
     }
@@ -32,7 +32,7 @@ class Module
     {
         $script_name = 'waas-product-data-visibility.js';
         $src = plugin_dir_url( __FILE__ ) . "/js/$script_name";
-        $version = date("ymd-Gis", filemtime( plugin_dir_path( __FILE__ ) . "js/$script_name" ));
+        $version = gmdate("ymd-Gis", (int) filemtime( plugin_dir_path( __FILE__ ) . "js/$script_name" ));
         wp_enqueue_script('waas-product-data-visibility', $src, ['jquery'], $version, true);
     }
 
@@ -45,7 +45,7 @@ class Module
 
         $style_name = 'waas-settings-home.css';
         $src = plugin_dir_url( __FILE__ ) . "/css/$style_name";
-        $version = date("ymd-Gis", filemtime( plugin_dir_path( __FILE__ ) . "css/$style_name" ));
+        $version = gmdate("ymd-Gis", (int) filemtime( plugin_dir_path( __FILE__ ) . "css/$style_name" ));
         wp_enqueue_style('waas-settings-home-style', $src, [], $version);
     }
 
@@ -58,7 +58,7 @@ class Module
 
         $style_name = 'waas-settings.css';
         $src = plugin_dir_url( __FILE__ ) . "/css/$style_name";
-        $version = date("ymd-Gis", filemtime( plugin_dir_path( __FILE__ ) . "css/$style_name" ));
+        $version = gmdate("ymd-Gis", (int) filemtime( plugin_dir_path( __FILE__ ) . "css/$style_name" ));
         wp_enqueue_style('waas-settings-style', $src, [], $version);
     }
 }

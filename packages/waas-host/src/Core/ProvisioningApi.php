@@ -109,7 +109,7 @@ class ProvisioningApi
         $snapshots = $this->httpService->get('/v1/snapshots?onlyProductionVersion=true');
         $a = array();
         foreach ($snapshots as $snapshot) {
-            if (isset($snapshot->groupName) && !empty($snapshot->groupName) && !in_array($snapshot->groupName, $a)) {
+            if (isset($snapshot->groupName) && !empty($snapshot->groupName) && !in_array($snapshot->groupName, $a, true)) {
                 array_push($a, $snapshot->groupName);
             }
         }
@@ -308,6 +308,7 @@ class ProvisioningApi
         // Anything but a 200 with a boolean answer (401/403 credentials, 5xx, a proxy page) is an error, not "taken".
         $body = json_decode((string) wp_remote_retrieve_body($response));
         if ($code !== 200 || !is_object($body) || !isset($body->available) || !is_bool($body->available)) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not printed here; every place that shows the message escapes it.
             throw new \Exception('Unexpected answer from the domain availability check: HTTP ' . $code);
         }
 

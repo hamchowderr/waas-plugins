@@ -73,8 +73,8 @@ class AdminHome
         $cap = 'manage_options';
         $slug = 'waas-admin';
         add_menu_page(
-            __('WaaS Host', WAAS_HOST_TEXTDOMAIN),
-            __('WaaS', WAAS_HOST_TEXTDOMAIN),
+            __('WaaS Host', 'waas-host'),
+            __('WaaS', 'waas-host'),
             $cap,
             $slug,
             [$this, 'render_waas_admin_page'],
@@ -84,8 +84,8 @@ class AdminHome
 
         add_submenu_page(
             $slug,
-            __('WaaS Host', WAAS_HOST_TEXTDOMAIN),
-            __('Getting started', WAAS_HOST_TEXTDOMAIN),
+            __('WaaS Host', 'waas-host'),
+            __('Getting started', 'waas-host'),
             $cap,
             $slug,
             [$this, 'render_waas_admin_page']
@@ -106,32 +106,32 @@ class AdminHome
     {
         return [
             "api_credentials" => [
-                "label" => __('Connect to the WaaS API', WAAS_HOST_TEXTDOMAIN),
-                "description" => __('Enter the API URL, key and secret this storefront uses to create websites.', WAAS_HOST_TEXTDOMAIN),
-                "action_label" => __('Open connection settings', WAAS_HOST_TEXTDOMAIN),
+                "label" => __('Connect to the WaaS API', 'waas-host'),
+                "description" => __('Enter the API URL, key and secret this storefront uses to create websites.', 'waas-host'),
+                "action_label" => __('Open connection settings', 'waas-host'),
                 "action_url" => AdminSettings::url('connection'),
                 "is_done" => false,
             ],
             "required_plugins_installed" => [
-                "label" => __('Install a cart', WAAS_HOST_TEXTDOMAIN),
-                "description" => __('FluentCart, or WooCommerce with WooCommerce Subscriptions (or Subscriptions for WooCommerce), takes the orders and the recurring payments.', WAAS_HOST_TEXTDOMAIN),
-                "action_label" => __('Add plugins', WAAS_HOST_TEXTDOMAIN),
+                "label" => __('Install a cart', 'waas-host'),
+                "description" => __('FluentCart, or WooCommerce with WooCommerce Subscriptions (or Subscriptions for WooCommerce), takes the orders and the recurring payments.', 'waas-host'),
+                "action_label" => __('Add plugins', 'waas-host'),
                 "action_url" => admin_url('plugin-install.php?s=fluentcart&tab=search&type=term'),
                 "is_done" => false,
             ],
             "setup_tenant_roles" => [
-                "label" => __('Load your plan roles', WAAS_HOST_TEXTDOMAIN),
-                "description" => __('Roles decide which plugins a website gets. They are set up with WaaS Client on your template website and loaded from there.', WAAS_HOST_TEXTDOMAIN),
-                "action_label" => __('Load roles now', WAAS_HOST_TEXTDOMAIN),
+                "label" => __('Load your plan roles', 'waas-host'),
+                "description" => __('Roles decide which plugins a website gets. They are set up with WaaS Client on your template website and loaded from there.', 'waas-host'),
+                "action_label" => __('Load roles now', 'waas-host'),
                 "action_url" => \WaaSHost\Api\RolesController::get_refresh_url(),
                 "is_done" => false,
             ],
             "create_woo_waas_product" => [
-                "label" => __('Create a website plan', WAAS_HOST_TEXTDOMAIN),
+                "label" => __('Create a website plan', 'waas-host'),
                 "description" => defined('FLUENTCART_VERSION')
-                    ? __('A subscription product with the WaaS Provisioning integration. Buying it creates the customer\'s website.', WAAS_HOST_TEXTDOMAIN)
-                    : __('A subscription product marked "WaaS product". Buying it creates the customer\'s website.', WAAS_HOST_TEXTDOMAIN),
-                "action_label" => __('Add a product', WAAS_HOST_TEXTDOMAIN),
+                    ? __('A subscription product with the WaaS Provisioning integration. Buying it creates the customer\'s website.', 'waas-host')
+                    : __('A subscription product marked "WaaS product". Buying it creates the customer\'s website.', 'waas-host'),
+                "action_label" => __('Add a product', 'waas-host'),
                 "action_url" => self::new_plan_product_url(),
                 "is_done" => false,
             ],
@@ -149,22 +149,22 @@ class AdminHome
         $root_domain = (string) get_option('waas_root_domain', '');
 ?>
         <div class="wrap waas-admin waas-home">
-            <h1><?php esc_html_e('WaaS Host', WAAS_HOST_TEXTDOMAIN); ?></h1>
+            <h1><?php esc_html_e('WaaS Host', 'waas-host'); ?></h1>
             <p class="waas-lead">
-                <?php esc_html_e('This storefront sells websites. Each purchase creates the customer\'s website through the WaaS provisioning API, and the subscription keeps it online.', WAAS_HOST_TEXTDOMAIN); ?>
+                <?php esc_html_e('This storefront sells websites. Each purchase creates the customer\'s website through the WaaS provisioning API, and the subscription keeps it online.', 'waas-host'); ?>
             </p>
 
             <div class="waas-columns">
                 <div class="waas-card waas-checklist">
                     <h2>
-                        <?php esc_html_e('Getting started', WAAS_HOST_TEXTDOMAIN); ?>
+                        <?php esc_html_e('Getting started', 'waas-host'); ?>
                         <span class="waas-count"><?php
                             /* translators: 1: steps done, 2: all steps */
-                            echo esc_html(sprintf(__('%1$d of %2$d done', WAAS_HOST_TEXTDOMAIN), $done, $total));
+                            echo esc_html(sprintf(__('%1$d of %2$d done', 'waas-host'), $done, $total));
                         ?></span>
                     </h2>
                     <?php if ($done === $total) : ?>
-                        <p><?php esc_html_e('All set. This storefront is ready to take orders.', WAAS_HOST_TEXTDOMAIN); ?></p>
+                        <p><?php esc_html_e('All set. This storefront is ready to take orders.', 'waas-host'); ?></p>
                     <?php endif; ?>
                     <ol>
                         <?php foreach ($checklist_items as $item) :
@@ -173,12 +173,12 @@ class AdminHome
                                 <span class="dashicons <?php echo $is_done ? 'dashicons-yes-alt' : 'dashicons-marker'; ?>" aria-hidden="true"></span>
                                 <div>
                                     <strong><?php echo esc_html($item['label'] ?? ''); ?></strong>
-                                    <span class="screen-reader-text"><?php echo $is_done ? esc_html__('(done)', WAAS_HOST_TEXTDOMAIN) : esc_html__('(to do)', WAAS_HOST_TEXTDOMAIN); ?></span>
+                                    <span class="screen-reader-text"><?php echo $is_done ? esc_html__('(done)', 'waas-host') : esc_html__('(to do)', 'waas-host'); ?></span>
                                     <?php if (!empty($item['description'])) : ?>
                                         <p><?php echo esc_html($item['description']); ?></p>
                                     <?php endif; ?>
                                     <?php if (!$is_done && !empty($item['action_url'])) : ?>
-                                        <a class="button" href="<?php echo esc_url($item['action_url']); ?>"><?php echo esc_html($item['action_label'] ?? __('Set up', WAAS_HOST_TEXTDOMAIN)); ?></a>
+                                        <a class="button" href="<?php echo esc_url($item['action_url']); ?>"><?php echo esc_html($item['action_label'] ?? __('Set up', 'waas-host')); ?></a>
                                     <?php endif; ?>
                                 </div>
                             </li>
@@ -188,31 +188,31 @@ class AdminHome
 
                 <div class="waas-side">
                     <div class="waas-card">
-                        <h2><?php esc_html_e('Status', WAAS_HOST_TEXTDOMAIN); ?></h2>
+                        <h2><?php esc_html_e('Status', 'waas-host'); ?></h2>
                         <table class="waas-facts">
                             <tr>
-                                <th scope="row"><?php esc_html_e('WaaS API', WAAS_HOST_TEXTDOMAIN); ?></th>
+                                <th scope="row"><?php esc_html_e('WaaS API', 'waas-host'); ?></th>
                                 <td>
                                     <?php if (!$has_credentials) : ?>
-                                        <span class="waas-badge is-warning"><?php esc_html_e('Not set up', WAAS_HOST_TEXTDOMAIN); ?></span>
+                                        <span class="waas-badge is-warning"><?php esc_html_e('Not set up', 'waas-host'); ?></span>
                                     <?php elseif ($reachable) : ?>
-                                        <span class="waas-badge is-ok"><?php esc_html_e('Connected', WAAS_HOST_TEXTDOMAIN); ?></span>
+                                        <span class="waas-badge is-ok"><?php esc_html_e('Connected', 'waas-host'); ?></span>
                                     <?php else : ?>
-                                        <span class="waas-badge is-error"><?php esc_html_e('Can\'t connect', WAAS_HOST_TEXTDOMAIN); ?></span>
+                                        <span class="waas-badge is-error"><?php esc_html_e('Can\'t connect', 'waas-host'); ?></span>
                                     <?php endif; ?>
                                 </td>
                             </tr>
                             <tr>
-                                <th scope="row"><?php esc_html_e('Website domain', WAAS_HOST_TEXTDOMAIN); ?></th>
-                                <td><?php echo $root_domain !== '' ? '<code>' . esc_html($root_domain) . '</code>' : esc_html__('Not set', WAAS_HOST_TEXTDOMAIN); ?></td>
+                                <th scope="row"><?php esc_html_e('Website domain', 'waas-host'); ?></th>
+                                <td><?php echo $root_domain !== '' ? '<code>' . esc_html($root_domain) . '</code>' : esc_html__('Not set', 'waas-host'); ?></td>
                             </tr>
                             <tr>
-                                <th scope="row"><?php esc_html_e('WaaS Host', WAAS_HOST_TEXTDOMAIN); ?></th>
+                                <th scope="row"><?php esc_html_e('WaaS Host', 'waas-host'); ?></th>
                                 <td><?php echo esc_html(defined('WAAS_HOST_VERSION') ? WAAS_HOST_VERSION : ''); ?></td>
                             </tr>
                             <?php if (defined('WAAS_PAYMENTS_VERSION')) : ?>
                                 <tr>
-                                    <th scope="row"><?php esc_html_e('WaaS Payments', WAAS_HOST_TEXTDOMAIN); ?></th>
+                                    <th scope="row"><?php esc_html_e('WaaS Payments', 'waas-host'); ?></th>
                                     <td><?php echo esc_html(WAAS_PAYMENTS_VERSION); ?></td>
                                 </tr>
                             <?php endif; ?>
@@ -220,7 +220,7 @@ class AdminHome
                     </div>
 
                     <div class="waas-card">
-                        <h2><?php esc_html_e('Settings', WAAS_HOST_TEXTDOMAIN); ?></h2>
+                        <h2><?php esc_html_e('Settings', 'waas-host'); ?></h2>
                         <ul class="waas-links">
                             <?php foreach (AdminSettings::tabs() as $slug => [$title]) : ?>
                                 <li><a href="<?php echo esc_url(AdminSettings::url($slug)); ?>"><?php echo esc_html($title); ?></a></li>

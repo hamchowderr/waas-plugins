@@ -543,7 +543,7 @@ class TenantsSubscriptionManager
         }
         $owner = array_filter((array) ($args['owner'] ?? []), 'strlen');
         if ($owner) {
-            $options['waas_store_owner'] = (string) json_encode($owner);
+            $options['waas_store_owner'] = (string) wp_json_encode($owner);
         }
 
         return (array) apply_filters('waas_tenant_wp_options', $options, $args);

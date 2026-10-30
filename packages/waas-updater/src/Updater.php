@@ -118,7 +118,7 @@ final class Updater
         }
 
         // "Check again" on Dashboard > Updates asks the channel, not the cache.
-        $info = $this->info(!empty($_GET['force-check']));
+        $info = $this->info(!empty($_GET['force-check'])); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only skips the cache; core's own update-core.php link.
         if (is_wp_error($info))
         {
             return $update;
@@ -209,7 +209,7 @@ final class Updater
         $error = $this->verify($file, $info);
         if ($error)
         {
-            @unlink($file);
+            wp_delete_file($file);
             return $error;
         }
         return $file;
@@ -312,7 +312,7 @@ final class Updater
     /** Null when the downloaded file is the release that was signed; a WP_Error otherwise. */
     private function verify($file, array $info)
     {
-        $actual = @hash_file('sha256', $file);
+        $actual = is_readable($file) ? hash_file('sha256', $file) : false;
         if (!is_string($actual) || !hash_equals($info['sha256'], $actual))
         {
             return new \WP_Error('waas_update_checksum', sprintf('The %s %s download does not match its checksum. Nothing was changed.', $this->name, $info['version']));

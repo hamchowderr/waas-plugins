@@ -61,13 +61,14 @@ class AccountSignIn
             exit;
         }
 
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- an OAuth authorize request from another site; checked against the registered client and its redirect URI.
         $result = $this->authorize(wp_unslash($_GET), get_current_user_id());
         if (isset($result['error'])) {
-            wp_die(esc_html($result['error']), esc_html('Sign-in error'), ['response' => 400]);
+            wp_die(esc_html($result['error']), esc_html__('Sign-in error', 'waas-host'), ['response' => 400]);
         }
 
         // An exact registered redirect URI on another host, so not wp_safe_redirect.
-        wp_redirect($result['redirect']);
+        wp_redirect($result['redirect']); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
         exit;
     }
 
@@ -224,7 +225,7 @@ class AccountSignIn
 
     private static function failure_key(): string
     {
-        return self::FAILURE_TRANSIENT . md5((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+        return self::FAILURE_TRANSIENT . md5(isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : '');
     }
 
     /** An OAuth error body: {"error": ..., "error_description": ...}. */

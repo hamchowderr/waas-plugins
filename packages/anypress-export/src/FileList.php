@@ -4,6 +4,9 @@ namespace AnyPressExport;
 
 defined('ABSPATH') || exit;
 
+// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- messages are not printed here; Plugin and Cli show them as JSON or CLI text.
+// phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fopen, WordPress.WP.AlternativeFunctions.file_system_operations_fclose, WordPress.WP.AlternativeFunctions.file_system_operations_fwrite, WordPress.WP.AlternativeFunctions.file_system_operations_fread, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir, WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- writes the file list line by line to a temporary file; WP_Filesystem has no streaming handles.
+
 /**
  * The wp-content files that go into the export, one relative path per line in a list file, so the
  * archive can be built over several requests. Leaves out caches, other backup plugins' archives,
@@ -32,7 +35,7 @@ final class FileList
             return rtrim($path, '/');
         }, $skip);
         $out = fopen($listFile, 'wb');
-        if (!$out) throw new \RuntimeException('Could not write the file list.');
+        if (!$out) throw new \RuntimeException(__('Could not write the file list.', 'anypress-export'));
         $files = 0;
         $bytes = 0;
         $dirs = [''];

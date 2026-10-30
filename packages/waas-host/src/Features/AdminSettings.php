@@ -48,7 +48,7 @@ class AdminSettings
     /** A Settings link on the Plugins screen. */
     public function add_settings_link($links)
     {
-        array_unshift($links, '<a href="' . esc_url(self::url()) . '">' . esc_html__('Settings', WAAS_HOST_TEXTDOMAIN) . '</a>');
+        array_unshift($links, '<a href="' . esc_url(self::url()) . '">' . esc_html__('Settings', 'waas-host') . '</a>');
 
         return $links;
     }
@@ -57,14 +57,15 @@ class AdminSettings
     public static function tabs(): array
     {
         return [
-            'connection' => [__('Connection', WAAS_HOST_TEXTDOMAIN), 'waas-admin'],
-            'stores' => [__('Websites', WAAS_HOST_TEXTDOMAIN), 'waas-admin-stores'],
-            'emails' => [__('Emails', WAAS_HOST_TEXTDOMAIN), 'waas-admin-emails'],
+            'connection' => [__('Connection', 'waas-host'), 'waas-admin'],
+            'stores' => [__('Websites', 'waas-host'), 'waas-admin-stores'],
+            'emails' => [__('Emails', 'waas-host'), 'waas-admin-emails'],
         ];
     }
 
     public static function current_tab(): string
     {
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- which settings tab to show.
         $tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : '';
 
         return array_key_exists($tab, self::tabs()) ? $tab : 'connection';
@@ -79,8 +80,8 @@ class AdminSettings
     {
         add_submenu_page(
             'waas-admin',
-            __('WaaS Host settings', WAAS_HOST_TEXTDOMAIN),
-            __('Settings', WAAS_HOST_TEXTDOMAIN),
+            __('WaaS Host settings', 'waas-host'),
+            __('Settings', 'waas-host'),
             'manage_options',
             'waas-admin-settings',
             [$this, 'render_waas_admin_page'],
@@ -93,8 +94,9 @@ class AdminSettings
         $is_api_setup = $this->configService->check_credentials();
 
         echo '<div class="wrap waas-admin">';
-        echo '<h1>' . esc_html__('WaaS Host settings', WAAS_HOST_TEXTDOMAIN) . '</h1>';
+        echo '<h1>' . esc_html__('WaaS Host settings', 'waas-host') . '</h1>';
 
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- set by options.php after it checked its own nonce.
         if ($tab === 'connection' && !empty($_GET['settings-updated']) && $is_api_setup) {
             try {
                 $reachable = (bool) $this->provisioningApi->test_reachability();
@@ -105,7 +107,7 @@ class AdminSettings
             if ($reachable) {
                 // Before the sections below, so the Webhooks section shows the outcome.
                 do_action('waas_api_connection_saved');
-                echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Connected to the WaaS API.', WAAS_HOST_TEXTDOMAIN) . '</p></div>';
+                echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Connected to the WaaS API.', 'waas-host') . '</p></div>';
             } else {
                 $this->waas_could_not_connect_to_api_notice_error();
             }
@@ -116,7 +118,7 @@ class AdminSettings
         // options.php only adds this notice on pages under Settings.
         settings_errors();
 
-        echo '<nav class="nav-tab-wrapper wp-clearfix" aria-label="' . esc_attr__('Settings sections', WAAS_HOST_TEXTDOMAIN) . '">';
+        echo '<nav class="nav-tab-wrapper wp-clearfix" aria-label="' . esc_attr__('Settings sections', 'waas-host') . '">';
         foreach (self::tabs() as $slug => [$title]) {
             printf(
                 '<a href="%s" class="nav-tab%s"%s>%s</a>',
@@ -210,7 +212,7 @@ class AdminSettings
         }
 
         /* translators: %s: a wp-config.php constant name */
-        return sprintf(__('Set in wp-config.php as %s, so it can\'t be changed here.', WAAS_HOST_TEXTDOMAIN), defined('WAAS_' . $name) ? 'WAAS_' . $name : 'WPCS_' . $name);
+        return sprintf(__('Set in wp-config.php as %s, so it can\'t be changed here.', 'waas-host'), defined('WAAS_' . $name) ? 'WAAS_' . $name : 'WPCS_' . $name);
     }
 
     private function add_field(string $id, string $title, string $page, string $section, array $args)
@@ -225,177 +227,177 @@ class AdminSettings
 
     public function add_waas_admin_settings()
     {
-        $placeholders = '<code>{{ tenant_domain }}</code> ' . esc_html__('(the website address),', WAAS_HOST_TEXTDOMAIN)
-            . ' <code>{{ tenant_one_click_login_url }}</code> ' . esc_html__('(the login page),', WAAS_HOST_TEXTDOMAIN)
+        $placeholders = '<code>{{ tenant_domain }}</code> ' . esc_html__('(the website address),', 'waas-host')
+            . ' <code>{{ tenant_one_click_login_url }}</code> ' . esc_html__('(the login page),', 'waas-host')
             . ' <code>{{ storefront_name }}</code>, <code>{{ storefront_url }}</code>, <code>{{ storefront_subscription_details_url }}</code>';
 
         // Connection
         add_settings_section(
             'api_credentials',
-            __('WaaS API', WAAS_HOST_TEXTDOMAIN),
-            fn () => print('<p>' . esc_html__('This storefront creates, suspends and restores customer websites through the WaaS provisioning API. Your API key and secret come from whoever runs the API for you.', WAAS_HOST_TEXTDOMAIN) . '</p>'),
+            __('WaaS API', 'waas-host'),
+            fn () => print('<p>' . esc_html__('This storefront creates, suspends and restores customer websites through the WaaS provisioning API. Your API key and secret come from whoever runs the API for you.', 'waas-host') . '</p>'),
             'waas-admin'
         );
 
-        $this->add_field('waas_api_base_url', __('API URL', WAAS_HOST_TEXTDOMAIN), 'waas-admin', 'api_credentials', [
+        $this->add_field('waas_api_base_url', __('API URL', 'waas-host'), 'waas-admin', 'api_credentials', [
             'type' => 'url',
             'class_name' => 'regular-text code',
             'placeholder' => 'https://api.example.com',
             'constant' => 'API_BASE_URL',
-            'hint' => self::constant_hint('API_BASE_URL', __('The address of the provisioning API.', WAAS_HOST_TEXTDOMAIN)),
+            'hint' => self::constant_hint('API_BASE_URL', __('The address of the provisioning API.', 'waas-host')),
         ]);
-        $this->add_field('waas_api_key', __('API key', WAAS_HOST_TEXTDOMAIN), 'waas-admin', 'api_credentials', [
+        $this->add_field('waas_api_key', __('API key', 'waas-host'), 'waas-admin', 'api_credentials', [
             'type' => 'text',
             'class_name' => 'regular-text code',
             'constant' => 'API_KEY',
             'hint' => self::constant_hint('API_KEY', ''),
         ]);
-        $this->add_field('waas_api_secret', __('API secret', WAAS_HOST_TEXTDOMAIN), 'waas-admin', 'api_credentials', [
+        $this->add_field('waas_api_secret', __('API secret', 'waas-host'), 'waas-admin', 'api_credentials', [
             'type' => 'password',
             'class_name' => 'regular-text code',
             'constant' => 'API_SECRET',
-            'hint' => self::constant_hint('API_SECRET', __('Saving checks the connection and registers this storefront for the API\'s webhooks.', WAAS_HOST_TEXTDOMAIN)),
+            'hint' => self::constant_hint('API_SECRET', __('Saving checks the connection and registers this storefront for the API\'s webhooks.', 'waas-host')),
         ]);
 
         // Stores
         add_settings_section(
             'waas_host_settings',
-            __('Website addresses', WAAS_HOST_TEXTDOMAIN),
-            fn () => print('<p>' . esc_html__('Where new websites live, and the DNS records customers use to connect their own domain.', WAAS_HOST_TEXTDOMAIN) . '</p>'),
+            __('Website addresses', 'waas-host'),
+            fn () => print('<p>' . esc_html__('Where new websites live, and the DNS records customers use to connect their own domain.', 'waas-host') . '</p>'),
             'waas-admin-stores'
         );
 
-        $this->add_field('waas_root_domain', __('Website domain', WAAS_HOST_TEXTDOMAIN), 'waas-admin-stores', 'waas_host_settings', [
+        $this->add_field('waas_root_domain', __('Website domain', 'waas-host'), 'waas-admin-stores', 'waas_host_settings', [
             'type' => 'text',
             'class_name' => 'regular-text code',
             'placeholder' => 'sites.example.com',
-            'hint' => __('Each new website gets an address under this domain: with sites.example.com, a website named shop is at shop.sites.example.com.', WAAS_HOST_TEXTDOMAIN),
+            'hint' => __('Each new website gets an address under this domain: with sites.example.com, a website named shop is at shop.sites.example.com.', 'waas-host'),
         ]);
-        $this->add_field('waas_dns_a_records', __('A record IPs', WAAS_HOST_TEXTDOMAIN), 'waas-admin-stores', 'waas_host_settings', [
+        $this->add_field('waas_dns_a_records', __('A record IPs', 'waas-host'), 'waas-admin-stores', 'waas_host_settings', [
             'type' => 'text',
             'class_name' => 'regular-text code',
             'placeholder' => '203.0.113.10',
             'constant' => 'DNS_A_RECORDS',
-            'hint' => self::constant_hint('DNS_A_RECORDS', __('The IP addresses a customer points their own domain at, separated by commas. Shown on the customer\'s domain page.', WAAS_HOST_TEXTDOMAIN)),
+            'hint' => self::constant_hint('DNS_A_RECORDS', __('The IP addresses a customer points their own domain at, separated by commas. Shown on the customer\'s domain page.', 'waas-host')),
         ]);
-        $this->add_field('waas_dns_cname_target', __('CNAME target', WAAS_HOST_TEXTDOMAIN), 'waas-admin-stores', 'waas_host_settings', [
+        $this->add_field('waas_dns_cname_target', __('CNAME target', 'waas-host'), 'waas-admin-stores', 'waas_host_settings', [
             'type' => 'text',
             'class_name' => 'regular-text code',
             'placeholder' => 'sites.example.com',
             'constant' => 'DNS_CNAME_TARGET',
-            'hint' => self::constant_hint('DNS_CNAME_TARGET', __('The hostname a customer points a subdomain (like www) at. Shown on the customer\'s domain page.', WAAS_HOST_TEXTDOMAIN)),
+            'hint' => self::constant_hint('DNS_CNAME_TARGET', __('The hostname a customer points a subdomain (like www) at. Shown on the customer\'s domain page.', 'waas-host')),
         ]);
 
         add_settings_section(
             'waas_store_access',
-            __('Customer access', WAAS_HOST_TEXTDOMAIN),
-            fn () => print('<p>' . esc_html__('What customers can do on their own website. Changes apply to websites created from now on.', WAAS_HOST_TEXTDOMAIN) . '</p>'),
+            __('Customer access', 'waas-host'),
+            fn () => print('<p>' . esc_html__('What customers can do on their own website. Changes apply to websites created from now on.', 'waas-host') . '</p>'),
             'waas-admin-stores'
         );
 
-        $this->add_field(Tenant::DEFAULT_USER_ROLE, __('Customer\'s role', WAAS_HOST_TEXTDOMAIN), 'waas-admin-stores', 'waas_store_access', [
+        $this->add_field(Tenant::DEFAULT_USER_ROLE, __('Customer\'s role', 'waas-host'), 'waas-admin-stores', 'waas_store_access', [
             'type' => 'text',
             'class_name' => 'regular-text code',
             'placeholder' => 'administrator',
-            'hint' => __('The WordPress role the customer gets on their website when they use the login button on their account page. Empty means administrator.', WAAS_HOST_TEXTDOMAIN),
+            'hint' => __('The WordPress role the customer gets on their website when they use the login button on their account page. Empty means administrator.', 'waas-host'),
         ]);
-        $this->add_field(self::SHOULD_REMOVE_ADMINISTRATOR_PLUGIN_CAPABILITIES_OPTION, __('Plugins', WAAS_HOST_TEXTDOMAIN), 'waas-admin-stores', 'waas_store_access', [
+        $this->add_field(self::SHOULD_REMOVE_ADMINISTRATOR_PLUGIN_CAPABILITIES_OPTION, __('Plugins', 'waas-host'), 'waas-admin-stores', 'waas_store_access', [
             'type' => 'checkbox',
-            'label' => __('Customers can\'t install, activate or delete plugins', WAAS_HOST_TEXTDOMAIN),
-            'hint' => __('The plugins a website has come from its plan. Websites that already exist keep what they have.', WAAS_HOST_TEXTDOMAIN),
+            'label' => __('Customers can\'t install, activate or delete plugins', 'waas-host'),
+            'hint' => __('The plugins a website has come from its plan. Websites that already exist keep what they have.', 'waas-host'),
         ]);
 
         add_settings_section(
             'waas_store_cancellation',
-            __('Cancelled subscriptions', WAAS_HOST_TEXTDOMAIN),
+            __('Cancelled subscriptions', 'waas-host'),
             fn () => '',
             'waas-admin-stores'
         );
 
-        $this->add_field(TenantsSubscriptionManager::DELETION_GRACE_DAYS_OPTION, __('Delete after', WAAS_HOST_TEXTDOMAIN), 'waas-admin-stores', 'waas_store_cancellation', [
+        $this->add_field(TenantsSubscriptionManager::DELETION_GRACE_DAYS_OPTION, __('Delete after', 'waas-host'), 'waas-admin-stores', 'waas_store_cancellation', [
             'type' => 'number',
             'class_name' => 'small-text',
             'min' => 1,
-            'suffix' => __('days', WAAS_HOST_TEXTDOMAIN),
-            'hint' => __('When a subscription is cancelled or expires, its website is backed up and taken offline, then deleted after this many days. If the subscription becomes active again before then, the website comes back as it was.', WAAS_HOST_TEXTDOMAIN),
+            'suffix' => __('days', 'waas-host'),
+            'hint' => __('When a subscription is cancelled or expires, its website is backed up and taken offline, then deleted after this many days. If the subscription becomes active again before then, the website comes back as it was.', 'waas-host'),
         ]);
 
         add_settings_section(
             'waas_volume_discount',
-            __('Volume discount', WAAS_HOST_TEXTDOMAIN),
-            fn () => print('<p>' . esc_html__('A discount on new websites for customers who already have several. Their live websites (active website plan subscriptions) are counted together with the one they are buying.', WAAS_HOST_TEXTDOMAIN) . '</p>'),
+            __('Volume discount', 'waas-host'),
+            fn () => print('<p>' . esc_html__('A discount on new websites for customers who already have several. Their live websites (active website plan subscriptions) are counted together with the one they are buying.', 'waas-host') . '</p>'),
             'waas-admin-stores'
         );
 
-        $this->add_field(VolumeDiscount::ENABLED_OPTION, __('Volume discount', WAAS_HOST_TEXTDOMAIN), 'waas-admin-stores', 'waas_volume_discount', [
+        $this->add_field(VolumeDiscount::ENABLED_OPTION, __('Volume discount', 'waas-host'), 'waas-admin-stores', 'waas_volume_discount', [
             'type' => 'checkbox',
-            'label' => __('Discount website plans at checkout by how many live websites the customer has', WAAS_HOST_TEXTDOMAIN),
+            'label' => __('Discount website plans at checkout by how many live websites the customer has', 'waas-host'),
             /* translators: %s: the discount tiers, e.g. "10% off at 3 to 9 websites, 20% off at 10 to 24 websites" */
-            'hint' => sprintf(__('%s. Applied automatically to signed-in customers and to customers checking out with the email of an existing customer, on the first payment and every renewal. When a customer moves to another tier, their existing website plans are re-priced from their next renewal, with no charge now (plans billed by Stripe or by the store; others get a subscription note to change by hand). Needs FluentCart.', WAAS_HOST_TEXTDOMAIN), VolumeDiscount::describe_tiers()),
+            'hint' => sprintf(__('%s. Applied automatically to signed-in customers and to customers checking out with the email of an existing customer, on the first payment and every renewal. When a customer moves to another tier, their existing website plans are re-priced from their next renewal, with no charge now (plans billed by Stripe or by the store; others get a subscription note to change by hand). Needs FluentCart.', 'waas-host'), VolumeDiscount::describe_tiers()),
         ]);
 
         // Emails
         add_settings_section(
             'waas_notification_settings',
-            __('Website ready', WAAS_HOST_TEXTDOMAIN),
-            fn () => print('<p>' . esc_html__('Sent to the customer when their new website is up.', WAAS_HOST_TEXTDOMAIN) . '</p>'),
+            __('Website ready', 'waas-host'),
+            fn () => print('<p>' . esc_html__('Sent to the customer when their new website is up.', 'waas-host') . '</p>'),
             'waas-admin-emails'
         );
 
-        $this->add_field(self::SHOULD_SEND_TENANT_READY_EMAIL_OPTION, __('Send', WAAS_HOST_TEXTDOMAIN), 'waas-admin-emails', 'waas_notification_settings', [
+        $this->add_field(self::SHOULD_SEND_TENANT_READY_EMAIL_OPTION, __('Send', 'waas-host'), 'waas-admin-emails', 'waas_notification_settings', [
             'type' => 'checkbox',
-            'label' => __('Email the customer when their website is ready', WAAS_HOST_TEXTDOMAIN),
+            'label' => __('Email the customer when their website is ready', 'waas-host'),
         ]);
-        $this->add_field(self::TENANT_READY_EMAIL_SUBJECT_OPTION, __('Subject', WAAS_HOST_TEXTDOMAIN), 'waas-admin-emails', 'waas_notification_settings', [
+        $this->add_field(self::TENANT_READY_EMAIL_SUBJECT_OPTION, __('Subject', 'waas-host'), 'waas-admin-emails', 'waas_notification_settings', [
             'type' => 'text',
             'class_name' => 'large-text',
         ]);
-        $this->add_field(self::TENANT_READY_EMAIL_BODY_OPTION, __('Message', WAAS_HOST_TEXTDOMAIN), 'waas-admin-emails', 'waas_notification_settings', [
+        $this->add_field(self::TENANT_READY_EMAIL_BODY_OPTION, __('Message', 'waas-host'), 'waas-admin-emails', 'waas_notification_settings', [
             'type' => 'html-editor',
-            'hint_html' => esc_html__('Placeholders:', WAAS_HOST_TEXTDOMAIN) . ' ' . $placeholders,
+            'hint_html' => esc_html__('Placeholders:', 'waas-host') . ' ' . $placeholders,
         ]);
 
         add_settings_section(
             'waas_cancellation_email_settings',
-            __('Subscription cancelled', WAAS_HOST_TEXTDOMAIN),
-            fn () => print('<p>' . esc_html__('Sent when a customer cancels: their website stays online until the end of the period they paid for.', WAAS_HOST_TEXTDOMAIN) . '</p>'),
+            __('Subscription cancelled', 'waas-host'),
+            fn () => print('<p>' . esc_html__('Sent when a customer cancels: their website stays online until the end of the period they paid for.', 'waas-host') . '</p>'),
             'waas-admin-emails'
         );
 
-        $this->add_field(self::SHOULD_SEND_SUSPEND_SCHEDULED_EMAIL_OPTION, __('Send', WAAS_HOST_TEXTDOMAIN), 'waas-admin-emails', 'waas_cancellation_email_settings', [
+        $this->add_field(self::SHOULD_SEND_SUSPEND_SCHEDULED_EMAIL_OPTION, __('Send', 'waas-host'), 'waas-admin-emails', 'waas_cancellation_email_settings', [
             'type' => 'checkbox',
-            'label' => __('Email the customer how long their website stays online', WAAS_HOST_TEXTDOMAIN),
+            'label' => __('Email the customer how long their website stays online', 'waas-host'),
         ]);
-        $this->add_field(self::SUSPEND_SCHEDULED_EMAIL_SUBJECT_OPTION, __('Subject', WAAS_HOST_TEXTDOMAIN), 'waas-admin-emails', 'waas_cancellation_email_settings', [
+        $this->add_field(self::SUSPEND_SCHEDULED_EMAIL_SUBJECT_OPTION, __('Subject', 'waas-host'), 'waas-admin-emails', 'waas_cancellation_email_settings', [
             'type' => 'text',
             'class_name' => 'large-text',
         ]);
-        $this->add_field(self::SUSPEND_SCHEDULED_EMAIL_BODY_OPTION, __('Message', WAAS_HOST_TEXTDOMAIN), 'waas-admin-emails', 'waas_cancellation_email_settings', [
+        $this->add_field(self::SUSPEND_SCHEDULED_EMAIL_BODY_OPTION, __('Message', 'waas-host'), 'waas-admin-emails', 'waas_cancellation_email_settings', [
             'type' => 'html-editor',
-            'hint_html' => esc_html__('Placeholders:', WAAS_HOST_TEXTDOMAIN) . ' ' . $placeholders
-                . ', <code>{{ suspend_date }}</code> ' . esc_html__('(the last day online),', WAAS_HOST_TEXTDOMAIN)
+            'hint_html' => esc_html__('Placeholders:', 'waas-host') . ' ' . $placeholders
+                . ', <code>{{ suspend_date }}</code> ' . esc_html__('(the last day online),', 'waas-host')
                 . ' <code>{{ deletion_grace_days }}</code>',
         ]);
 
         add_settings_section(
             'waas_suspended_email_settings',
-            __('Website taken offline', WAAS_HOST_TEXTDOMAIN),
-            fn () => print('<p>' . esc_html__('Sent when a subscription ends (a refund, the end of a cancelled plan\'s paid period, or expiry) and the website goes offline.', WAAS_HOST_TEXTDOMAIN) . '</p>'),
+            __('Website taken offline', 'waas-host'),
+            fn () => print('<p>' . esc_html__('Sent when a subscription ends (a refund, the end of a cancelled plan\'s paid period, or expiry) and the website goes offline.', 'waas-host') . '</p>'),
             'waas-admin-emails'
         );
 
-        $this->add_field(self::SHOULD_SEND_SUSPENDED_EMAIL_OPTION, __('Send', WAAS_HOST_TEXTDOMAIN), 'waas-admin-emails', 'waas_suspended_email_settings', [
+        $this->add_field(self::SHOULD_SEND_SUSPENDED_EMAIL_OPTION, __('Send', 'waas-host'), 'waas-admin-emails', 'waas_suspended_email_settings', [
             'type' => 'checkbox',
-            'label' => __('Email the customer when their website is taken offline', WAAS_HOST_TEXTDOMAIN),
+            'label' => __('Email the customer when their website is taken offline', 'waas-host'),
         ]);
-        $this->add_field(self::SUSPENDED_EMAIL_SUBJECT_OPTION, __('Subject', WAAS_HOST_TEXTDOMAIN), 'waas-admin-emails', 'waas_suspended_email_settings', [
+        $this->add_field(self::SUSPENDED_EMAIL_SUBJECT_OPTION, __('Subject', 'waas-host'), 'waas-admin-emails', 'waas_suspended_email_settings', [
             'type' => 'text',
             'class_name' => 'large-text',
         ]);
-        $this->add_field(self::SUSPENDED_EMAIL_BODY_OPTION, __('Message', WAAS_HOST_TEXTDOMAIN), 'waas-admin-emails', 'waas_suspended_email_settings', [
+        $this->add_field(self::SUSPENDED_EMAIL_BODY_OPTION, __('Message', 'waas-host'), 'waas-admin-emails', 'waas_suspended_email_settings', [
             'type' => 'html-editor',
-            'hint_html' => esc_html__('Placeholders:', WAAS_HOST_TEXTDOMAIN) . ' ' . $placeholders
-                . ', <code>{{ delete_date }}</code> ' . esc_html__('(when the website is deleted),', WAAS_HOST_TEXTDOMAIN)
+            'hint_html' => esc_html__('Placeholders:', 'waas-host') . ' ' . $placeholders
+                . ', <code>{{ delete_date }}</code> ' . esc_html__('(when the website is deleted),', 'waas-host')
                 . ' <code>{{ deletion_grace_days }}</code>',
         ]);
     }
@@ -448,7 +450,7 @@ class AdminSettings
                 foreach ($attributes as $att => $att_value) {
                     $html .= sprintf(' %s="%s"', $att, esc_attr((string) $att_value));
                 }
-                echo '<input' . $html . ($disabled ? ' disabled' : '') . ' />';
+                echo '<input' . $html . ($disabled ? ' disabled' : '') . ' />'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- every attribute value is esc_attr() above.
                 if (!empty($args['suffix'])) {
                     echo ' ' . esc_html($args['suffix']);
                 }
@@ -545,7 +547,7 @@ class AdminSettings
     public function waas_could_not_connect_to_api_notice_error()
     {
         echo '<div class="notice notice-error"><p>'
-            . esc_html__('Couldn\'t connect to the WaaS API. Check the API URL, key and secret on the Connection tab.', WAAS_HOST_TEXTDOMAIN)
+            . esc_html__('Couldn\'t connect to the WaaS API. Check the API URL, key and secret on the Connection tab.', 'waas-host')
             . '</p></div>';
     }
 

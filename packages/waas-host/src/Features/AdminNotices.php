@@ -22,6 +22,7 @@ class AdminNotices
     /** The customer's domain page leaves out any DNS record whose setting is empty. */
     public static function show_dns_settings_missing_notice()
     {
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- which admin page is open.
         $page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
         if (!in_array($page, static::PLUGIN_PAGES, true) || !current_user_can('manage_options')) {
             return;
@@ -40,8 +41,12 @@ class AdminNotices
 
         $settings_url = AdminSettings::url('stores');
         echo '<div class="notice notice-warning"><p>'
-            . esc_html('Custom domain DNS settings missing: ' . implode(', ', $missing) . '. Customers get no DNS instructions for these on their domain page; with neither set, they are told to contact support. ')
-            . '<a href="' . esc_url($settings_url) . '">' . esc_html('Set them in Settings > Websites') . '</a>.</p></div>';
+            . esc_html(sprintf(
+                /* translators: %s: the missing settings, such as "A records, CNAME target" */
+                __('Custom domain DNS settings missing: %s. Customers get no DNS instructions for these on their domain page; with neither set, they are told to contact support.', 'waas-host'),
+                implode(', ', $missing)
+            )) . ' '
+            . '<a href="' . esc_url($settings_url) . '">' . esc_html__('Set them in Settings > Websites', 'waas-host') . '</a>.</p></div>';
     }
 
     public static function show_refresh_roles_failed_notice()

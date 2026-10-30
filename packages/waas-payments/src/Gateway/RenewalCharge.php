@@ -204,6 +204,7 @@ class RenewalCharge
         $reason = (string) ($found->data['reason'] ?? '') ?: (string) $found->message;
         $this->log($order, __('Authorize.Net renewal charge failed', 'waas-payments'), sprintf('%s (transaction %s)', $reason, $found->transactionId), 'error');
 
+        /* translators: %s: why the charge failed */
         return new \WP_Error('charge_failed', sprintf(__('Authorize.Net did not complete the charge: %s', 'waas-payments'), $reason));
     }
 
@@ -229,6 +230,7 @@ class RenewalCharge
             $transaction->meta = $meta;
             $transaction->vendor_charge_id = $result->transactionId;
             $transaction->save();
+            /* translators: %s: Authorize.Net transaction ID */
             $this->log($order, __('Authorize.Net renewal charge held for review', 'waas-payments'), sprintf(__('Approve or decline transaction %s in Authorize.Net.', 'waas-payments'), $result->transactionId), 'warning');
             return 'processing';
         }
@@ -250,6 +252,7 @@ class RenewalCharge
         $sandbox = $this->gateway->settings->isSandbox();
         if ($card['env'] !== '' && $card['env'] !== ($sandbox ? 'sandbox' : 'production')) {
             return new \WP_Error('environment_mismatch', sprintf(
+                /* translators: 1: mode the card was saved in (live or sandbox), 2: mode the store uses */
                 __('The saved card was saved in Authorize.Net %1$s mode, but the store is set to %2$s mode.', 'waas-payments'),
                 $card['env'],
                 $sandbox ? 'sandbox' : 'production'

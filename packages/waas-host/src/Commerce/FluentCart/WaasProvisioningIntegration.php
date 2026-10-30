@@ -48,11 +48,11 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
 
     public function __construct(ProvisioningApi $provisioning_api, FluentCartStore $store)
     {
-        parent::__construct(__('WaaS Provisioning', WAAS_HOST_TEXTDOMAIN), self::KEY, 20);
+        parent::__construct(__('WaaS Provisioning', 'waas-host'), self::KEY, 20);
 
         $this->provisioning_api = $provisioning_api;
         $this->store = $store;
-        $this->description = __('Create a website for the customer when they subscribe to this product. When the subscription ends, the website is backed up and taken offline, then deleted after the grace period set in the WaaS settings. Or set Product type to Email pack to sell extra emails for a website.', WAAS_HOST_TEXTDOMAIN);
+        $this->description = __('Create a website for the customer when they subscribe to this product. When the subscription ends, the website is backed up and taken offline, then deleted after the grace period set in the WaaS settings. Or set Product type to Email pack to sell extra emails for a website.', 'waas-host');
         $this->disableGlobalSettings = true;
     }
 
@@ -71,7 +71,7 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
     {
         return [
             'enabled' => 'yes',
-            'name' => __('Website plan', WAAS_HOST_TEXTDOMAIN),
+            'name' => __('Website plan', 'waas-host'),
             'product_type' => self::PRODUCT_TYPE_PLAN,
             'emails_per_pack' => '',
             'role' => '',
@@ -101,70 +101,70 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
         $fields = [
             [
                 'key' => 'name',
-                'label' => __('Feed Title', WAAS_HOST_TEXTDOMAIN),
+                'label' => __('Feed Title', 'waas-host'),
                 'required' => true,
                 'component' => 'text',
-                'placeholder' => __('Website plan', WAAS_HOST_TEXTDOMAIN),
+                'placeholder' => __('Website plan', 'waas-host'),
             ],
             [
                 'key' => 'product_type',
-                'label' => __('Product type', WAAS_HOST_TEXTDOMAIN),
+                'label' => __('Product type', 'waas-host'),
                 'component' => 'select',
                 'is_multiple' => false,
                 'required' => false,
                 'options' => [
-                    self::PRODUCT_TYPE_PLAN => __('Website plan', WAAS_HOST_TEXTDOMAIN),
-                    self::PRODUCT_TYPE_EMAIL_PACK => __('Email pack', WAAS_HOST_TEXTDOMAIN),
+                    self::PRODUCT_TYPE_PLAN => __('Website plan', 'waas-host'),
+                    self::PRODUCT_TYPE_EMAIL_PACK => __('Email pack', 'waas-host'),
                 ],
-                'inline_tip' => __('A website plan is a subscription that creates a website. An email pack is a one-time product that adds emails to one of the customer\'s websites; the emails never expire and are used once the plan\'s monthly emails run out. For an email pack, only "Emails per pack" below applies.', WAAS_HOST_TEXTDOMAIN),
+                'inline_tip' => __('A website plan is a subscription that creates a website. An email pack is a one-time product that adds emails to one of the customer\'s websites; the emails never expire and are used once the plan\'s monthly emails run out. For an email pack, only "Emails per pack" below applies.', 'waas-host'),
             ],
             [
                 'key' => 'emails_per_pack',
-                'label' => __('Emails per pack', WAAS_HOST_TEXTDOMAIN),
+                'label' => __('Emails per pack', 'waas-host'),
                 'component' => 'number',
                 'required' => false,
                 'dependency' => ['depends_on' => 'product_type', 'operator' => '=', 'value' => self::PRODUCT_TYPE_EMAIL_PACK],
-                'inline_tip' => __('Email packs only: how many emails one pack adds. Buying several adds this many times the quantity.', WAAS_HOST_TEXTDOMAIN),
+                'inline_tip' => __('Email packs only: how many emails one pack adds. Buying several adds this many times the quantity.', 'waas-host'),
             ],
             [
                 'key' => 'role',
-                'label' => __('Role', WAAS_HOST_TEXTDOMAIN),
+                'label' => __('Role', 'waas-host'),
                 'component' => 'select',
                 'is_multiple' => false,
                 'required' => false,
                 'options' => $roles,
                 'inline_tip' => sprintf(
                     /* translators: %s: link that reloads the roles from the provisioning API */
-                    __('Decides which plugins the website gets. Missing a role? %s', WAAS_HOST_TEXTDOMAIN),
-                    '<a href="' . esc_url(RolesController::get_refresh_url()) . '">' . __('Refresh roles', WAAS_HOST_TEXTDOMAIN) . '</a>'
+                    __('Decides which plugins the website gets. Missing a role? %s', 'waas-host'),
+                    '<a href="' . esc_url(RolesController::get_refresh_url()) . '">' . __('Refresh roles', 'waas-host') . '</a>'
                 ),
             ],
             [
                 'key' => 'group_name',
-                'label' => __('Snapshot group', WAAS_HOST_TEXTDOMAIN),
+                'label' => __('Snapshot group', 'waas-host'),
                 'component' => 'select',
                 'is_multiple' => false,
                 'required' => false,
                 'options' => $groups,
-                'inline_tip' => __('The website starts as a copy of this snapshot group. Leave empty for the default.', WAAS_HOST_TEXTDOMAIN),
+                'inline_tip' => __('The website starts as a copy of this snapshot group. Leave empty for the default.', 'waas-host'),
             ],
             [
                 'key' => 'size',
-                'label' => __('Size', WAAS_HOST_TEXTDOMAIN),
+                'label' => __('Size', 'waas-host'),
                 'component' => 'select',
                 'is_multiple' => false,
                 'required' => false,
                 'options' => [
-                    'small' => __('Small: 1 CPU, 512 MB memory, 5 GB storage, 5,000 emails a month', WAAS_HOST_TEXTDOMAIN),
-                    'medium' => __('Medium: 2 CPUs, 512 MB memory, 10 GB storage, 20,000 emails a month', WAAS_HOST_TEXTDOMAIN),
-                    'large' => __('Large: 4 CPUs, 768 MB memory, 25 GB storage, 50,000 emails a month', WAAS_HOST_TEXTDOMAIN),
+                    'small' => __('Small: 1 CPU, 512 MB memory, 5 GB storage, 5,000 emails a month', 'waas-host'),
+                    'medium' => __('Medium: 2 CPUs, 512 MB memory, 10 GB storage, 20,000 emails a month', 'waas-host'),
+                    'large' => __('Large: 4 CPUs, 768 MB memory, 25 GB storage, 50,000 emails a month', 'waas-host'),
                 ],
-                'inline_tip' => __('How much computing power, storage and email the website gets. Leave empty for Small.', WAAS_HOST_TEXTDOMAIN),
+                'inline_tip' => __('How much computing power, storage and email the website gets. Leave empty for Small.', 'waas-host'),
             ],
             [
                 'key' => 'watch_on_access_revoke',
                 'component' => 'yes-no-checkbox',
-                'checkbox_label' => __('Take the website offline on refund or when subscription access expires', WAAS_HOST_TEXTDOMAIN),
+                'checkbox_label' => __('Take the website offline on refund or when subscription access expires', 'waas-host'),
             ],
             $this->actionFields(),
         ];
@@ -172,7 +172,7 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
         return [
             'fields' => $fields,
             'button_require_list' => false,
-            'integration_title' => __('WaaS Provisioning', WAAS_HOST_TEXTDOMAIN),
+            'integration_title' => __('WaaS Provisioning', 'waas-host'),
         ];
     }
 
@@ -228,14 +228,14 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
             $is_active = in_array($this->store->get_subscription_status($subscription_id), FluentCartStore::ACTIVE_STATUSES, true);
             // Feeds run in the background, so a cancel can be handled after the reactivation that followed it.
             if (!$is_revoke && $is_active) {
-                $order->addLog(__('Website kept', WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s): the subscription is active again', $subscription_id, $trigger), 'info', 'WaaS');
+                $order->addLog(__('Website kept', 'waas-host'), sprintf('Subscription #%d (%s): the subscription is active again', $subscription_id, $trigger), 'info', 'WaaS');
                 return;
             }
             // A refund (revoke) leaves the subscription active, so refunding the order that bought it counts. A
             // renewal order refunded or cancelled while the subscription carries on doesn't: the customer keeps the
             // plan, as on WooCommerce, where only the parent order's refund ends the subscription.
             if ($is_revoke && $is_active && ($order->type ?? '') === 'renewal') {
-                $order->addLog(__('Website kept', WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s): a renewal order, and the subscription is still active', $subscription_id, $trigger), 'info', 'WaaS');
+                $order->addLog(__('Website kept', 'waas-host'), sprintf('Subscription #%d (%s): a renewal order, and the subscription is still active', $subscription_id, $trigger), 'info', 'WaaS');
                 return;
             }
             // A customer's or admin's cancel keeps the website until the end of the period they paid for. A refund or
@@ -243,19 +243,19 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
             $paid_through = (!$is_revoke && $trigger === 'subscription_canceled') ? $this->store->get_paid_through($subscription_id) : 0;
             if ($paid_through > time()) {
                 WaasEventNotes::fire($this->store, $order, $subscription_id, 'waas_subscription_canceled_until', [$paid_through],
-                    __('Website stays online until the paid period ends', WAAS_HOST_TEXTDOMAIN),
+                    __('Website stays online until the paid period ends', 'waas-host'),
                     sprintf('Subscription #%d (%s): until %s UTC', $subscription_id, $trigger, gmdate('Y-m-d H:i', $paid_through))
                 );
                 return;
             }
             WaasEventNotes::fire($this->store, $order, $subscription_id, 'waas_subscription_expired', [],
-                __('Website suspended', WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s)', $subscription_id, $trigger));
+                __('Website suspended', 'waas-host'), sprintf('Subscription #%d (%s)', $subscription_id, $trigger));
             return;
         }
 
         if (in_array($trigger, self::CREATE_TRIGGERS, true)) {
             WaasEventNotes::fire($this->store, $order, $subscription_id, 'waas_subscription_created', [$order],
-                __('Website requested', WAAS_HOST_TEXTDOMAIN), sprintf('Subscription #%d (%s)', $subscription_id, $trigger));
+                __('Website requested', 'waas-host'), sprintf('Subscription #%d (%s)', $subscription_id, $trigger));
         }
     }
 }

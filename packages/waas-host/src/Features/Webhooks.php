@@ -143,7 +143,7 @@ class Webhooks
         ];
 
         try {
-            $created = $this->provisioningApi->create_webhook_endpoint($url, self::EVENT_TYPES, (string) __('WaaS Host storefront', WAAS_HOST_TEXTDOMAIN));
+            $created = $this->provisioningApi->create_webhook_endpoint($url, self::EVENT_TYPES, (string) __('WaaS Host storefront', 'waas-host'));
             $id = is_object($created) ? (string) ($created->id ?? '') : '';
             $secret = is_object($created) ? (string) ($created->secret ?? '') : '';
             if ($id === '' || strpos($secret, 'whsec_') !== 0) {
@@ -193,7 +193,7 @@ class Webhooks
     public function handle_register_request(): void
     {
         if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You are not allowed to do this.', WAAS_HOST_TEXTDOMAIN), 403);
+            wp_die(esc_html__('You are not allowed to do this.', 'waas-host'), 403);
         }
         check_admin_referer(self::REGISTER_ACTION);
 
@@ -207,7 +207,7 @@ class Webhooks
     {
         add_settings_section(
             'waas_webhooks',
-            __('Webhooks', WAAS_HOST_TEXTDOMAIN),
+            __('Webhooks', 'waas-host'),
             [$this, 'render_status'],
             'waas-admin'
         );
@@ -217,25 +217,25 @@ class Webhooks
     public function render_status(): void
     {
         if (!$this->configService->check_credentials()) {
-            echo '<p>' . esc_html__('Once the API is connected, the API tells this storefront when a website is ready.', WAAS_HOST_TEXTDOMAIN) . '</p>';
+            echo '<p>' . esc_html__('Once the API is connected, the API tells this storefront when a website is ready.', 'waas-host') . '</p>';
             return;
         }
 
         $stored = self::stored();
         if (self::is_registered()) {
-            echo '<p>' . esc_html__('Registered. The API tells this storefront when a website is ready, and websites being set up are also checked every minute.', WAAS_HOST_TEXTDOMAIN) . '</p>';
+            echo '<p>' . esc_html__('Registered. The API tells this storefront when a website is ready, and websites being set up are also checked every minute.', 'waas-host') . '</p>';
             echo '<p><code>' . esc_html($stored['url']) . '</code></p>';
             echo '<p class="description">' . esc_html($stored['last_event_at']
                 /* translators: %s: date and time */
-                ? sprintf(__('Last event received %s.', WAAS_HOST_TEXTDOMAIN), wp_date('Y-m-d H:i', $stored['last_event_at']))
-                : __('No events received yet.', WAAS_HOST_TEXTDOMAIN)) . '</p>';
-            $label = __('Register again', WAAS_HOST_TEXTDOMAIN);
+                ? sprintf(__('Last event received %s.', 'waas-host'), wp_date('Y-m-d H:i', $stored['last_event_at']))
+                : __('No events received yet.', 'waas-host')) . '</p>';
+            $label = __('Register again', 'waas-host');
         } else {
-            $reason = $stored['error'] !== '' ? $stored['error'] : __('Not tried yet.', WAAS_HOST_TEXTDOMAIN);
+            $reason = $stored['error'] !== '' ? $stored['error'] : __('Not tried yet.', 'waas-host');
             /* translators: %s: why the API refused the endpoint */
-            echo '<p>' . esc_html(sprintf(__('Not registered: %s', WAAS_HOST_TEXTDOMAIN), $reason)) . '</p>';
-            echo '<p class="description">' . esc_html__('Websites being set up are checked every five seconds instead. The API only calls https:// addresses it can reach from the internet.', WAAS_HOST_TEXTDOMAIN) . '</p>';
-            $label = __('Register', WAAS_HOST_TEXTDOMAIN);
+            echo '<p>' . esc_html(sprintf(__('Not registered: %s', 'waas-host'), $reason)) . '</p>';
+            echo '<p class="description">' . esc_html__('Websites being set up are checked every five seconds instead. The API only calls https:// addresses it can reach from the internet.', 'waas-host') . '</p>';
+            $label = __('Register', 'waas-host');
         }
 
         echo '<p><a class="button" href="' . esc_url(self::register_url()) . '">' . esc_html($label) . '</a></p>';
@@ -281,7 +281,7 @@ class Webhooks
 
         echo '<div class="notice notice-error"><p><strong>' . esc_html(sprintf(
             /* translators: %d: number of websites */
-            _n('The provisioning API could not finish a change to %d website.', 'The provisioning API could not finish a change to %d websites.', count($failures), WAAS_HOST_TEXTDOMAIN),
+            _n('The provisioning API could not finish a change to %d website.', 'The provisioning API could not finish a change to %d websites.', count($failures), 'waas-host'),
             count($failures)
         )) . '</strong></p><ul>';
         foreach ($failures as $subscription_id => $failure) {
@@ -294,7 +294,7 @@ class Webhooks
                 $subscription_id,
                 $failure['action'] ?? '',
                 wp_date('Y-m-d H:i', (int) ($failure['at'] ?? 0))
-            )) . ' <a href="' . esc_url($dismiss_url) . '">' . esc_html__('Dismiss', WAAS_HOST_TEXTDOMAIN) . '</a></li>';
+            )) . ' <a href="' . esc_url($dismiss_url) . '">' . esc_html__('Dismiss', 'waas-host') . '</a></li>';
         }
         echo '</ul></div>';
     }
@@ -303,7 +303,7 @@ class Webhooks
     {
         $subscription_id = isset($_GET['subscription_id']) ? sanitize_text_field(wp_unslash($_GET['subscription_id'])) : '';
         if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You are not allowed to do this.', WAAS_HOST_TEXTDOMAIN), 403);
+            wp_die(esc_html__('You are not allowed to do this.', 'waas-host'), 403);
         }
         check_admin_referer(self::DISMISS_FAILURE_ACTION . '_' . $subscription_id);
 

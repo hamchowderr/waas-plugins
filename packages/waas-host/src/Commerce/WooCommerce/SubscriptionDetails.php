@@ -38,15 +38,15 @@ final class SubscriptionDetails
         $suspend_at = $state === Tenant::READY ? (int) $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_SUSPEND_AT_META) : 0;
         if ($suspend_at) {
             /* translators: %s: date */
-            $status = sprintf(__('Active until %s', WAAS_HOST_TEXTDOMAIN), Notifications::format_date($suspend_at));
+            $status = sprintf(__('Active until %s', 'waas-host'), Notifications::format_date($suspend_at));
         }
         $username = SingleLoginService::get_formatted_username($subscription_id);
         ?>
-        <p class="waas-tenant-status"><?php esc_html_e('Website status:', WAAS_HOST_TEXTDOMAIN); ?> <?php echo esc_html($status); ?></p>
+        <p class="waas-tenant-status"><?php esc_html_e('Website status:', 'waas-host'); ?> <?php echo esc_html($status); ?></p>
         <?php if ($suspend_at) { ?>
             <p class="waas-tenant-suspend-at"><?php echo esc_html(sprintf(
                 /* translators: %d: number of days */
-                __('Your subscription is cancelled. Your website stays online until then; after that it is taken offline, and deleted %d days later.', WAAS_HOST_TEXTDOMAIN),
+                __('Your subscription is cancelled. Your website stays online until then; after that it is taken offline, and deleted %d days later.', 'waas-host'),
                 TenantsSubscriptionManager::get_deletion_grace_days()
             )); ?></p>
         <?php }
@@ -58,7 +58,10 @@ final class SubscriptionDetails
         } ?>
         <p>
             <a href="<?php echo esc_url(SingleLoginService::get_login_link($subscription_id)); ?>" target="_blank" rel="noopener" class="waas-single-login-button">
-                <?php echo esc_html(sprintf(__('Login as: %s', WAAS_HOST_TEXTDOMAIN), $username)); ?>
+                <?php
+                /* translators: %s: the store user's name */
+                echo esc_html(sprintf(__('Login as: %s', 'waas-host'), $username));
+                ?>
                 <span class="dashicons dashicons-admin-network"></span>
             </a>
         </p>

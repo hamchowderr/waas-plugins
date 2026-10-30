@@ -4,6 +4,8 @@ namespace AnyPressExport;
 
 defined('ABSPATH') || exit;
 
+// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- messages go out only through wp_send_json_error(), which JSON-encodes them.
+
 /**
  * The plugin in WordPress: the Tools → Move to AnyPress page, the requests its page makes to move the
  * site step by step, and the WP-CLI command. The export's state is the `anypress_export_state` option.
@@ -32,7 +34,27 @@ final class Plugin
 
     public static function menu(): void
     {
-        add_management_page(__('Move to AnyPress', 'anypress-export'), __('Move to AnyPress', 'anypress-export'), 'manage_options', self::PAGE, [self::class, 'page']);
+        $hook = add_management_page(__('Move to AnyPress', 'anypress-export'), __('Move to AnyPress', 'anypress-export'), 'manage_options', self::PAGE, [self::class, 'page']);
+        if ($hook) {
+            add_action('load-' . $hook, function () {
+                add_action('admin_enqueue_scripts', [self::class, 'enqueue']);
+            });
+        }
+    }
+
+    /** The page's script, only on this page, with its strings translatable and its starting state. */
+    public static function enqueue(): void
+    {
+        $file = dirname(__DIR__) . '/anypress-export.php';
+        wp_enqueue_script('anypress-export', plugins_url('assets/export.js', $file), ['wp-i18n'], ANYPRESS_EXPORT_VERSION, true);
+        wp_set_script_translations('anypress-export', 'anypress-export');
+        $state = get_option(self::OPTION);
+        $config = [
+            'ajax' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce(self::NONCE),
+            'progress' => is_array($state) ? Exporter::progress($state) + ['store' => $state['store'] ?? []] : null,
+        ];
+        wp_add_inline_script('anypress-export', 'window.anypressExport = ' . wp_json_encode($config) . ';', 'before');
     }
 
     /** What waas.json tells AnyPress about this site. */
@@ -70,8 +92,8 @@ final class Plugin
      */
     public static function begin(string $pasted): array
     {
-        if (is_multisite()) throw new \RuntimeException('Multisite networks cannot be moved to AnyPress yet.');
-        if (!function_exists('deflate_init')) throw new \RuntimeException('This server cannot compress files (the zlib extension for PHP is missing). Ask your host to turn it on.');
+        if (is_multisite()) throw new \RuntimeException(__('Multisite networks cannot be moved to AnyPress yet.', 'anypress-export'));
+        if (!function_exists('deflate_init')) throw new \RuntimeException(__('This server cannot compress files (the zlib extension for PHP is missing). Ask your host to turn it on.', 'anypress-export'));
         $old = get_option(self::OPTION);
         if (is_array($old) && !empty($old['work'])) Exporter::remove($old['work']);
         $code = self::code($pasted);
@@ -93,7 +115,7 @@ final class Plugin
 
     private static function guard(): void
     {
-        if (!current_user_can('manage_options')) wp_send_json_error(['error' => 'Only an administrator can move this site.'], 403);
+        if (!current_user_can('manage_options')) wp_send_json_error(['error' => __('Only an administrator can move this site.', 'anypress-export')], 403);
         check_ajax_referer(self::NONCE);
     }
 
@@ -111,7 +133,8 @@ final class Plugin
     {
         self::guard();
         try {
-            self::answer(self::begin((string) wp_unslash($_POST['code'] ?? '')));
+            // The nonce is checked in guard().
+            self::answer(self::begin(sanitize_textarea_field(wp_unslash($_POST['code'] ?? '')))); // phpcs:ignore WordPress.Security.NonceVerification.Missing
         } catch (\Throwable $e) {
             self::fail($e);
         }
@@ -121,11 +144,13 @@ final class Plugin
     {
         self::guard();
         $state = get_option(self::OPTION);
-        if (!is_array($state)) wp_send_json_error(['error' => 'No move in progress. Paste your import code to start.'], 400);
+        if (!is_array($state)) wp_send_json_error(['error' => __('No move in progress. Paste your import code to start.', 'anypress-export')], 400);
         // One step at a time: a second tab or a retried request waits for this one.
         if (get_transient(self::LOCK)) self::answer($state);
         set_transient(self::LOCK, 1, 120);
-        @set_time_limit(0);
+        if (function_exists('set_time_limit')) {
+            set_time_limit(0); // phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- a long export step, run in small time slices.
+        }
         ignore_user_abort(true);
         $max = (int) ini_get('max_execution_time');
         $seconds = $max > 0 ? max(5, min(20, $max / 2)) : 20;
@@ -143,7 +168,7 @@ final class Plugin
     {
         self::guard();
         $state = get_option(self::OPTION);
-        if (!is_array($state)) wp_send_json_error(['error' => 'No move in progress.'], 400);
+        if (!is_array($state)) wp_send_json_error(['error' => __('No move in progress.', 'anypress-export')], 400);
         try {
             wp_send_json_success((new Api(self::code($state['code'])))->status());
         } catch (\Throwable $e) {
@@ -163,13 +188,6 @@ final class Plugin
 
     public static function page(): void
     {
-        $state = get_option(self::OPTION);
-        $progress = is_array($state) ? Exporter::progress($state) + ['store' => $state['store'] ?? []] : null;
-        $config = [
-            'ajax' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce(self::NONCE),
-            'progress' => $progress,
-        ];
         ?>
         <div class="wrap" id="anypress-export">
             <h1><?php esc_html_e('Move to AnyPress', 'anypress-export'); ?></h1>
@@ -192,78 +210,6 @@ final class Plugin
 
             <div data-field="error" class="notice notice-error inline" hidden style="max-width:640px"><p></p></div>
         </div>
-        <script>
-        (function () {
-            var config = <?php echo wp_json_encode($config); ?>;
-            var root = document.getElementById('anypress-export');
-            var $ = function (sel) { return root.querySelector(sel); };
-            var view = function (name) {
-                $('[data-view="start"]').hidden = name !== 'start';
-                $('[data-view="progress"]').hidden = name !== 'progress';
-            };
-            var error = function (text) {
-                var box = $('[data-field="error"]');
-                box.hidden = !text;
-                box.querySelector('p').textContent = text || '';
-            };
-            var request = function (action, data) {
-                var body = new URLSearchParams(Object.assign({ action: 'anypress_export_' + action, _ajax_nonce: config.nonce }, data || {}));
-                return fetch(config.ajax, { method: 'POST', credentials: 'same-origin', body: body }).then(function (res) {
-                    return res.json().catch(function () { return { success: false, data: { error: 'The server stopped answering (HTTP ' + res.status + '). Reload this page to carry on.' } }; });
-                }).then(function (json) {
-                    if (!json.success) throw new Error((json.data && json.data.error) || 'Something went wrong.');
-                    return json.data;
-                });
-            };
-            var show = function (p) {
-                view('progress');
-                var store = p.store || {};
-                $('[data-field="store"]').textContent = store.domain ? 'Moving to ' + store.domain + (store.size ? ' (' + store.size + ')' : '') : '';
-                $('[data-field="bar"]').style.width = p.percent + '%';
-                $('[data-field="message"]').textContent = p.message;
-            };
-            var poll = function () {
-                request('status').then(function (s) {
-                    if (s.status === 'done') {
-                        show({ percent: 100, message: 'Done. Your site is on AnyPress: ' + s.url, store: s.store });
-                        $('[data-field="hint"]').textContent = 'Check it there, then connect your domain on AnyPress. You can deactivate and delete this plugin now.';
-                        $('[data-action="cancel"]').hidden = true;
-                        return;
-                    }
-                    if (s.status === 'failed') {
-                        error('AnyPress could not set up your site. Contact AnyPress support; your site here is unchanged.');
-                        return;
-                    }
-                    setTimeout(poll, 10000);
-                }).catch(function (e) { error(e.message); setTimeout(poll, 30000); });
-            };
-            var step = function () {
-                request('step').then(function (p) {
-                    show(p);
-                    if (p.step === 'moving') {
-                        $('[data-field="hint"]').textContent = 'The upload is done. You can close this page; AnyPress carries on without it.';
-                        poll();
-                    } else {
-                        setTimeout(step, 300);
-                    }
-                }).catch(function (e) { error(e.message + ' Reload this page to try again from where it stopped.'); });
-            };
-            $('[data-action="begin"]').addEventListener('click', function () {
-                error('');
-                request('begin', { code: $('#anypress-export-code').value }).then(function (p) { show(p); step(); }).catch(function (e) { error(e.message); });
-            });
-            $('[data-action="cancel"]').addEventListener('click', function () {
-                if (!confirm('Stop moving this site? What was packed so far is deleted.')) return;
-                request('cancel').then(function () { error(''); view('start'); });
-            });
-            if (config.progress) {
-                show(config.progress);
-                if (config.progress.step === 'moving') poll(); else step();
-            } else {
-                view('start');
-            }
-        })();
-        </script>
         <?php
     }
 }

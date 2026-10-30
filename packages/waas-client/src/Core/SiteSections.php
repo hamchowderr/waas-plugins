@@ -74,7 +74,7 @@ class SiteSections
 
     private static function text(array $block): string
     {
-        $text = strip_tags((string) ($block['innerHTML'] ?? ''));
+        $text = wp_strip_all_tags((string) ($block['innerHTML'] ?? ''));
         foreach ($block['innerBlocks'] ?? [] as $inner) {
             $text .= ' ' . self::text($inner);
         }

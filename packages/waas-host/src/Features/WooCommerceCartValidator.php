@@ -58,6 +58,6 @@ class WooCommerceCartValidator
 
     private static function message(): string
     {
-        return __('Cannot proceed to checkout with an Add-on but no base product. Please add a base product to your cart.', WAAS_HOST_TEXTDOMAIN);
+        return __('Cannot proceed to checkout with an Add-on but no base product. Please add a base product to your cart.', 'waas-host');
     }
 }

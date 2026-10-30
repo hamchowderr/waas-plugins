@@ -23,7 +23,7 @@ class ConnectPage
 
     public function add_page()
     {
-        add_submenu_page('', __('Connect an AI app', WAAS_CLIENT_TEXTDOMAIN), '', 'manage_options', self::PAGE, [$this, 'render']);
+        add_submenu_page('', __('Connect an AI app', 'waas-client'), '', 'manage_options', self::PAGE, [$this, 'render']);
     }
 
     /** The link from the API, checked, from the query string or the form. */
@@ -34,43 +34,44 @@ class ConnectPage
 
     public function render()
     {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- the link is signed by the API with this website's key; link() checks the signature.
         $link = $this->link($_GET);
 ?>
         <div class="wrap">
-            <h1><?php esc_html_e('Connect an AI app', WAAS_CLIENT_TEXTDOMAIN); ?></h1>
+            <h1><?php esc_html_e('Connect an AI app', 'waas-client'); ?></h1>
             <?php if (!$link) : ?>
-                <div class="notice notice-error inline"><p><?php esc_html_e('This link is not valid or has expired. Go back to the app and connect again.', WAAS_CLIENT_TEXTDOMAIN); ?></p></div>
+                <div class="notice notice-error inline"><p><?php esc_html_e('This link is not valid or has expired. Go back to the app and connect again.', 'waas-client'); ?></p></div>
             <?php else : ?>
                 <p style="font-size:15px">
                     <?php echo wp_kses(sprintf(
                         /* translators: %s: the AI app's name */
-                        __('<strong>%s</strong> wants to work on this website.', WAAS_CLIENT_TEXTDOMAIN),
+                        __('<strong>%s</strong> wants to work on this website.', 'waas-client'),
                         esc_html($link['app'])
                     ), ['strong' => []]); ?>
                 </p>
                 <p><?php $link['write'] === '1'
-                    ? esc_html_e('It will be able to read and change this website\'s pages, design, header, footer and menus, and add images. Every page change is saved as a revision you can go back to.', WAAS_CLIENT_TEXTDOMAIN)
-                    : esc_html_e('It will be able to read this website\'s pages, design, header, footer and menus.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
-                <p><?php esc_html_e('It cannot install or change plugins or themes, change settings, or see orders, customers or other people\'s accounts.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                    ? esc_html_e('It will be able to read and change this website\'s pages, design, header, footer and menus, and add images. Every page change is saved as a revision you can go back to.', 'waas-client')
+                    : esc_html_e('It will be able to read this website\'s pages, design, header, footer and menus.', 'waas-client'); ?></p>
+                <p><?php esc_html_e('It cannot install or change plugins or themes, change settings, or see orders, customers or other people\'s accounts.', 'waas-client'); ?></p>
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <input type="hidden" name="action" value="<?php echo esc_attr(self::ACTION); ?>">
                     <?php wp_nonce_field(self::ACTION); ?>
                     <?php foreach (array_merge(ConnectLink::FIELDS, ['s']) as $field) : ?>
-                        <input type="hidden" name="<?php echo esc_attr($field); ?>" value="<?php echo esc_attr(wp_unslash($_GET[$field])); ?>">
+                        <input type="hidden" name="<?php echo esc_attr($field); ?>" value="<?php echo esc_attr(sanitize_text_field(wp_unslash($_GET[$field] ?? ''))); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- the signed link's own fields, checked above. ?>">
                     <?php endforeach; ?>
                     <?php if ($link['write'] === '1') : ?>
-                        <p><label><input type="checkbox" name="allow_write" value="1" checked> <?php esc_html_e('Allow it to make changes, not only look', WAAS_CLIENT_TEXTDOMAIN); ?></label></p>
+                        <p><label><input type="checkbox" name="allow_write" value="1" checked> <?php esc_html_e('Allow it to make changes, not only look', 'waas-client'); ?></label></p>
                     <?php endif; ?>
                     <p class="description">
                         <?php echo esc_html(sprintf(
                             /* translators: %s: where the app sends you back to, such as claude.ai */
-                            __('Afterwards you go back to %s.', WAAS_CLIENT_TEXTDOMAIN),
+                            __('Afterwards you go back to %s.', 'waas-client'),
                             $link['to']
                         )); ?>
                     </p>
                     <p class="submit">
-                        <button type="submit" name="answer" value="allow" class="button button-primary"><?php esc_html_e('Allow', WAAS_CLIENT_TEXTDOMAIN); ?></button>
-                        <button type="submit" name="answer" value="deny" class="button"><?php esc_html_e('Cancel', WAAS_CLIENT_TEXTDOMAIN); ?></button>
+                        <button type="submit" name="answer" value="allow" class="button button-primary"><?php esc_html_e('Allow', 'waas-client'); ?></button>
+                        <button type="submit" name="answer" value="deny" class="button"><?php esc_html_e('Cancel', 'waas-client'); ?></button>
                     </p>
                 </form>
             <?php endif; ?>
@@ -81,19 +82,19 @@ class ConnectPage
     public function answer()
     {
         if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('Only this website\'s administrators can connect an AI app.', WAAS_CLIENT_TEXTDOMAIN), '', ['response' => 403]);
+            wp_die(esc_html__('Only this website\'s administrators can connect an AI app.', 'waas-client'), '', ['response' => 403]);
         }
         check_admin_referer(self::ACTION);
         $link = $this->link($_POST);
         if (!$link) {
-            wp_die(esc_html__('This link is not valid or has expired. Go back to the app and connect again.', WAAS_CLIENT_TEXTDOMAIN), '', ['response' => 400]);
+            wp_die(esc_html__('This link is not valid or has expired. Go back to the app and connect again.', 'waas-client'), '', ['response' => 400]);
         }
         $answer = 'deny';
-        if (($_POST['answer'] ?? '') === 'allow') {
+        if (sanitize_key(wp_unslash($_POST['answer'] ?? '')) === 'allow') {
             $answer = $link['write'] === '1' && !empty($_POST['allow_write']) ? 'allow' : 'allow-read';
         }
         // The answer URL is the API's, signed into the link with this website's key, so this is not an open redirect.
-        wp_redirect(ConnectLink::answer_url(SignedRequest::key(), $link, $answer));
+        wp_redirect(ConnectLink::answer_url(SignedRequest::key(), $link, $answer)); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
         exit;
     }
 }

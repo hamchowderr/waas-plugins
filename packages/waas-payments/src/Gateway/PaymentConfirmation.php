@@ -68,7 +68,7 @@ class PaymentConfirmation
             $result = $this->confirm(
                 $transaction,
                 sanitize_text_field(wp_unslash($_POST['data_descriptor'] ?? '')),
-                trim(wp_unslash((string) ($_POST['data_value'] ?? ''))),
+                trim(wp_unslash((string) ($_POST['data_value'] ?? ''))), // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
                 sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'] ?? ''))
             );
         } finally {
@@ -220,6 +220,7 @@ class PaymentConfirmation
         fluent_cart_add_log(
             __('Authorize.Net payment captured', 'waas-payments'),
             $result->transactionId
+                /* translators: %s: Authorize.Net transaction ID */
                 ? sprintf(__('Authorize.Net transaction %s', 'waas-payments'), $result->transactionId)
                 : __('Card saved at Authorize.Net; nothing was charged.', 'waas-payments'),
             'info',
@@ -278,6 +279,7 @@ class PaymentConfirmation
             $replaced = SavedCard::store($subscription, $result, $sandbox);
             $subscription->addLog(
                 __('Card saved for renewals', 'waas-payments'),
+                /* translators: 1: card brand, 2: last four digits */
                 sprintf(__('%1$s ending in %2$s will be charged automatically on each renewal date.', 'waas-payments'), $result->data['card_brand'] ?? '', $result->data['card_last4'] ?? ''),
                 'info'
             );
@@ -296,6 +298,7 @@ class PaymentConfirmation
             // A renewal paid with a card that couldn't be saved: renewals keep using the saved one.
             $subscription->addLog(
                 __('New card not saved', 'waas-payments'),
+                /* translators: %s: why Authorize.Net did not save the card */
                 sprintf(__('The payment went through, but Authorize.Net did not save the card (%s). Renewals still use the card saved before.', 'waas-payments'), $reason),
                 'warning'
             );
@@ -306,6 +309,7 @@ class PaymentConfirmation
         // invoices for the customer to pay instead.
         SystemChargeService::demoteToManual(
             $subscription,
+            /* translators: %s: why Authorize.Net did not save the card */
             sprintf(__('Authorize.Net did not save the card for automatic renewals (%s).', 'waas-payments'), $reason)
         );
     }

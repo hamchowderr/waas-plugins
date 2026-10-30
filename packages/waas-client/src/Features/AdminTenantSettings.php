@@ -33,7 +33,7 @@ class AdminTenantSettings
 
     public function add_settings_link($links)
     {
-        array_unshift($links, '<a href="' . esc_url(admin_url('admin.php?page=' . self::PAGE)) . '">' . esc_html__('Settings', WAAS_CLIENT_TEXTDOMAIN) . '</a>');
+        array_unshift($links, '<a href="' . esc_url(admin_url('admin.php?page=' . self::PAGE)) . '">' . esc_html__('Settings', 'waas-client') . '</a>');
 
         return $links;
     }
@@ -41,8 +41,8 @@ class AdminTenantSettings
     public function add_waas_admin_page()
     {
         add_menu_page(
-            __('WaaS Client', WAAS_CLIENT_TEXTDOMAIN),
-            __('WaaS Client', WAAS_CLIENT_TEXTDOMAIN),
+            __('WaaS Client', 'waas-client'),
+            __('WaaS Client', 'waas-client'),
             'manage_options',
             self::PAGE,
             [$this, 'render_waas_admin_tenant_page'],
@@ -52,8 +52,8 @@ class AdminTenantSettings
 
         add_submenu_page(
             self::PAGE,
-            __('WaaS Client settings', WAAS_CLIENT_TEXTDOMAIN),
-            __('Settings', WAAS_CLIENT_TEXTDOMAIN),
+            __('WaaS Client settings', 'waas-client'),
+            __('Settings', 'waas-client'),
             'manage_options',
             self::PAGE,
             [$this, 'render_waas_admin_tenant_page']
@@ -73,7 +73,7 @@ class AdminTenantSettings
     public function test_storefront_connection()
     {
         if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You are not allowed to do this.', WAAS_CLIENT_TEXTDOMAIN), 403);
+            wp_die(esc_html__('You are not allowed to do this.', 'waas-client'), 403);
         }
         check_admin_referer(self::TEST_ACTION);
 
@@ -91,43 +91,44 @@ class AdminTenantSettings
         $last_ping = StorefrontStatus::last(StorefrontStatus::PING_OPTION);
 
         echo '<div class="wrap waas-client-admin">';
-        echo '<h1>' . esc_html__('WaaS Client settings', WAAS_CLIENT_TEXTDOMAIN) . '</h1>';
+        echo '<h1>' . esc_html__('WaaS Client settings', 'waas-client') . '</h1>';
         settings_errors();
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- a flag this page sets on itself after the test, for the notice.
         if (isset($_GET['waas-tested']) && $last_test !== null) {
             StorefrontStatus::render_notice($last_test);
         }
 
-        echo '<h2>' . esc_html__('Status', WAAS_CLIENT_TEXTDOMAIN) . '</h2>';
+        echo '<h2>' . esc_html__('Status', 'waas-client') . '</h2>';
         echo '<table class="form-table waas-status-table" role="presentation"><tbody>';
 
-        echo '<tr><th scope="row">' . esc_html__('Storefront URL', WAAS_CLIENT_TEXTDOMAIN) . '</th><td>';
+        echo '<tr><th scope="row">' . esc_html__('Storefront URL', 'waas-client') . '</th><td>';
         if ($host_url === '') {
             echo '<span class="waas-status waas-status-error"><span class="dashicons dashicons-dismiss" aria-hidden="true"></span> '
-                . esc_html__('Not set. Plan role changes cannot reach a storefront until you add it below.', WAAS_CLIENT_TEXTDOMAIN) . '</span>';
+                . esc_html__('Not set. Plan role changes cannot reach a storefront until you add it below.', 'waas-client') . '</span>';
         } else {
             echo '<span class="waas-status waas-status-success"><span class="dashicons dashicons-yes-alt" aria-hidden="true"></span> '
-                . esc_html__('Set:', WAAS_CLIENT_TEXTDOMAIN) . '</span> <a href="' . esc_url($host_url) . '" target="_blank" rel="noopener"><code>' . esc_html($host_url) . '</code></a>';
+                . esc_html__('Set:', 'waas-client') . '</span> <a href="' . esc_url($host_url) . '" target="_blank" rel="noopener"><code>' . esc_html($host_url) . '</code></a>';
         }
         echo '</td></tr>';
 
-        echo '<tr><th scope="row">' . esc_html__('Connection', WAAS_CLIENT_TEXTDOMAIN) . '</th><td>';
-        echo '<p>' . StorefrontStatus::describe($last_test, __('Not tested yet.', WAAS_CLIENT_TEXTDOMAIN)) . '</p>'; // describe() escapes.
+        echo '<tr><th scope="row">' . esc_html__('Connection', 'waas-client') . '</th><td>';
+        echo '<p>' . StorefrontStatus::describe($last_test, __('Not tested yet.', 'waas-client')) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- describe() escapes.
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="waas-inline-form">';
         wp_nonce_field(self::TEST_ACTION);
         echo '<input type="hidden" name="action" value="' . esc_attr(self::TEST_ACTION) . '">';
-        submit_button(__('Test connection', WAAS_CLIENT_TEXTDOMAIN), 'secondary', 'submit', false, $host_url === '' ? ['disabled' => 'disabled'] : []);
+        submit_button(__('Test connection', 'waas-client'), 'secondary', 'submit', false, $host_url === '' ? ['disabled' => 'disabled'] : []);
         echo '</form>';
-        echo '<p class="description">' . esc_html__('Checks that the storefront answers and has WaaS Host active. It does not change or reload anything.', WAAS_CLIENT_TEXTDOMAIN) . '</p>';
+        echo '<p class="description">' . esc_html__('Checks that the storefront answers and has WaaS Host active. It does not change or reload anything.', 'waas-client') . '</p>';
         echo '</td></tr>';
 
-        echo '<tr><th scope="row">' . esc_html__('Last plan role update', WAAS_CLIENT_TEXTDOMAIN) . '</th><td>';
-        echo '<p>' . StorefrontStatus::describe($last_ping, __('Not sent yet. The storefront is told each time you add a role or save the plan roles.', WAAS_CLIENT_TEXTDOMAIN)) . '</p>'; // describe() escapes.
+        echo '<tr><th scope="row">' . esc_html__('Last plan role update', 'waas-client') . '</th><td>';
+        echo '<p>' . StorefrontStatus::describe($last_ping, __('Not sent yet. The storefront is told each time you add a role or save the plan roles.', 'waas-client')) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- describe() escapes.
         echo '</td></tr>';
 
-        echo '<tr><th scope="row">' . esc_html__('Where the storefront gets roles', WAAS_CLIENT_TEXTDOMAIN) . '</th><td>';
-        echo '<p>' . esc_html__('The storefront always loads plan roles from the template version labelled Production in WaaS, not from whichever website sent the update. Changes you make here reach the storefront once this website\'s version is labelled Production and deployed.', WAAS_CLIENT_TEXTDOMAIN) . '</p>';
+        echo '<tr><th scope="row">' . esc_html__('Where the storefront gets roles', 'waas-client') . '</th><td>';
+        echo '<p>' . esc_html__('The storefront always loads plan roles from the template version labelled Production in WaaS, not from whichever website sent the update. Changes you make here reach the storefront once this website\'s version is labelled Production and deployed.', 'waas-client') . '</p>';
         /* translators: %s: this website's address */
-        echo '<p class="description">' . sprintf(esc_html__('This website: %s', WAAS_CLIENT_TEXTDOMAIN), '<code>' . esc_html(home_url()) . '</code>') . '</p>';
+        echo '<p class="description">' . sprintf(esc_html__('This website: %s', 'waas-client'), '<code>' . esc_html(home_url()) . '</code>') . '</p>';
         echo '</td></tr>';
 
         echo '</tbody></table>';
@@ -143,8 +144,8 @@ class AdminTenantSettings
     {
         add_settings_section(
             'waas_admin_tenant_settings',
-            __('Template website', WAAS_CLIENT_TEXTDOMAIN),
-            fn () => print('<p>' . esc_html__('This is a template website: customer websites are created as copies of it. Set up its plan roles under WaaS Client > Plan roles; each website gets the plugins of its plan\'s role.', WAAS_CLIENT_TEXTDOMAIN) . '</p>'),
+            __('Template website', 'waas-client'),
+            fn () => print('<p>' . esc_html__('This is a template website: customer websites are created as copies of it. Set up its plan roles under WaaS Client > Plan roles; each website gets the plugins of its plan\'s role.', 'waas-client') . '</p>'),
             self::PAGE
         );
 
@@ -153,7 +154,7 @@ class AdminTenantSettings
         ]);
         add_settings_field(
             'waas_host_website_url',
-            __('Storefront URL', WAAS_CLIENT_TEXTDOMAIN),
+            __('Storefront URL', 'waas-client'),
             [$this, 'render_settings_field'],
             self::PAGE,
             'waas_admin_tenant_settings',
@@ -162,7 +163,7 @@ class AdminTenantSettings
                 'label_for' => 'waas_host_website_url',
                 'type' => 'text',
                 'placeholder' => 'https://shop.example.com',
-                'hint' => __('The storefront (with WaaS Host) that sells websites made from this template. When you change the plan roles, the storefront is told to reload them.', WAAS_CLIENT_TEXTDOMAIN),
+                'hint' => __('The storefront (with WaaS Host) that sells websites made from this template. When you change the plan roles, the storefront is told to reload them.', 'waas-client'),
             ]
         );
     }

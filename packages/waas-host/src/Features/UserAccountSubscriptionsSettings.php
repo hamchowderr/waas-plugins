@@ -45,16 +45,19 @@ class UserAccountSubscriptionsSettings
         $base_domain_name = $commerce->get_subscription_meta($subscription_id, Tenant::BASE_DOMAIN_NAME_META);
 
         $current = (string) ($domain_name ?: $base_domain_name);
-        $domain_name = esc_attr($current);
         $nonce_field = wp_nonce_field(self::DOMAIN_NONCE_ACTION . $subscription_id, self::DOMAIN_NONCE_FIELD, true, false);
 
         AccountStyles::print_once();
         echo '<details class="waas-acct-panel"' . ($this->domain_error !== '' ? ' open' : '') . '>';
-        echo '<summary>' . esc_html('Use your own domain') . ($current !== '' ? ' <small>' . esc_html('Now: ' . $current) . '</small>' : '') . '</summary>';
+        echo '<summary>' . esc_html__('Use your own domain', 'waas-host') . ($current !== '' ? ' <small>' . esc_html(sprintf(
+            /* translators: %s: the website's current address */
+            __('Now: %s', 'waas-host'),
+            $current
+        )) . '</small>' : '') . '</summary>';
         echo '<div class="waas-acct-panel-body">';
         $has_records = $this->config->get_dns_a_records() || $this->config->get_dns_cname_target() !== '';
         if ($has_records) {
-            echo '<p class="waas-acct-step"><b>1.</b> ' . esc_html('Add these records where you bought your domain (look for its DNS settings).') . '</p>';
+            echo '<p class="waas-acct-step"><b>1.</b> ' . esc_html__('Add these records where you bought your domain (look for its DNS settings).', 'waas-host') . '</p>';
         }
         $this->render_dns_instructions();
         $custom_domain = (string) $commerce->get_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META);
@@ -62,18 +65,18 @@ class UserAccountSubscriptionsSettings
             $this->render_connect_button($subscription_id, $custom_domain, 'website');
         }
         if ($has_records) {
-            echo '<p class="waas-acct-step"><b>2.</b> ' . esc_html('Then type the domain here. New records can take up to an hour to work; if it says they are missing, try again later.') . '</p>';
+            echo '<p class="waas-acct-step"><b>2.</b> ' . esc_html__('Then type the domain here. New records can take up to an hour to work; if it says they are missing, try again later.', 'waas-host') . '</p>';
         }
         if ($this->domain_error !== '') {
             echo '<p class="woocommerce-error waas-acct-error">' . esc_html($this->domain_error) . '</p>';
         }
-        echo "<form method='post' action='' class='waas-acct-form'>
-                $nonce_field
-                <label for='domain_name'>Your domain
-                    <input type='text' placeholder='example.com' class='input-text' name='domain_name' id='domain_name' value='$domain_name'>
-                </label>
-                <button class='button waas-acct-btn is-primary fct-btn fct-btn-primary' type='submit'>Use this domain</button>
-               </form>";
+        echo '<form method="post" action="" class="waas-acct-form">'
+            . $nonce_field // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_nonce_field() markup.
+            . '<label for="domain_name">' . esc_html__('Your domain', 'waas-host')
+            . ' <input type="text" placeholder="example.com" class="input-text" name="domain_name" id="domain_name" value="' . esc_attr($current) . '">'
+            . '</label>'
+            . '<button class="button waas-acct-btn is-primary fct-btn fct-btn-primary" type="submit">' . esc_html__('Use this domain', 'waas-host') . '</button>'
+            . '</form>';
         echo '</div></details>';
 
         $this->render_mail_sender($subscription_id);
@@ -100,11 +103,15 @@ class UserAccountSubscriptionsSettings
 
         $nonce_field = wp_nonce_field(self::MAIL_NONCE_ACTION . $subscription_id, self::MAIL_NONCE_FIELD, true, false);
         $status = $mail_domain ? (string) ($mail_domain->status ?? 'pending') : '';
-        $labels = ['pending' => 'Waiting for DNS records', 'verified' => 'Sending', 'removing' => 'Being removed'];
+        $labels = [
+            'pending' => __('Waiting for DNS records', 'waas-host'),
+            'verified' => __('Sending', 'waas-host'),
+            'removing' => __('Being removed', 'waas-host'),
+        ];
 
         AccountStyles::print_once();
         echo '<details class="waas-acct-panel"' . ($this->mail_error !== '' || $status === 'pending' ? ' open' : '') . '>';
-        echo '<summary>' . esc_html('Send email from your own domain')
+        echo '<summary>' . esc_html__('Send email from your own domain', 'waas-host')
             . ($mail_domain ? ' <small>' . esc_html($labels[$status] ?? $labels['pending']) . '</small>' : '') . '</summary>';
         echo '<div class="waas-acct-panel-body">';
         if ($this->mail_error !== '') {
@@ -118,32 +125,35 @@ class UserAccountSubscriptionsSettings
     private function render_mail_sender_body($subscription_id, $mail_domain, string $status, string $nonce_field): void
     {
         if (!$mail_domain) {
-            echo '<p>Your store sends its email (receipts, password resets) from our address. '
-                . 'Add your own domain to send it from no-reply at that domain instead.</p>';
-            echo "<form method='post' action='' class='waas-acct-form'>
-                $nonce_field
-                <label for='mail_domain_name'>Sending domain
-                    <input type='text' placeholder='example.com' class='input-text' name='mail_domain_name' id='mail_domain_name' value=''>
-                </label>
-                <button class='button waas-acct-btn is-primary fct-btn fct-btn-primary' type='submit'>Use this domain</button>
-               </form>";
+            echo '<p>' . esc_html__('Your store sends its email (receipts, password resets) from our address. Add your own domain to send it from no-reply at that domain instead.', 'waas-host') . '</p>';
+            echo '<form method="post" action="" class="waas-acct-form">'
+                . $nonce_field // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_nonce_field() markup.
+                . '<label for="mail_domain_name">' . esc_html__('Sending domain', 'waas-host')
+                . ' <input type="text" placeholder="example.com" class="input-text" name="mail_domain_name" id="mail_domain_name" value="">'
+                . '</label>'
+                . '<button class="button waas-acct-btn is-primary fct-btn fct-btn-primary" type="submit">' . esc_html__('Use this domain', 'waas-host') . '</button>'
+                . '</form>';
             return;
         }
 
-        echo '<p>Sends from <b>' . esc_html('no-reply@' . $mail_domain->domainName) . '</b></p>';
+        echo '<p>' . wp_kses(sprintf(
+            /* translators: %s: the address the store's email comes from */
+            __('Sends from %s', 'waas-host'),
+            '<b>' . esc_html('no-reply@' . $mail_domain->domainName) . '</b>'
+        ), ['b' => []]) . '</p>';
 
         if ($status === 'removing') {
-            echo '<p>' . esc_html('Your store goes back to sending from our address within 10 minutes.') . '</p>';
+            echo '<p>' . esc_html__('Your store goes back to sending from our address within 10 minutes.', 'waas-host') . '</p>';
             return;
         }
         if ($status === 'pending') {
-            echo '<p>Add these records where you bought your domain (in its DNS settings). They are checked every 10 minutes and your store '
-                . 'switches over on its own once they are found. Until then it sends from our address.</p>';
+            echo '<p>' . esc_html__('Add these records where you bought your domain (in its DNS settings). They are checked every 10 minutes and your store switches over on its own once they are found. Until then it sends from our address.', 'waas-host') . '</p>';
             $this->render_connect_button($subscription_id, (string) $mail_domain->domainName, 'email');
         }
         $records = $mail_domain->records ?? null;
         if (is_array($records) && $records) {
-            echo '<table class="waas-mail-records"><thead><tr><th>Type</th><th>Name</th><th>Value</th><th>Priority</th></tr></thead><tbody>';
+            echo '<table class="waas-mail-records"><thead><tr><th>' . esc_html__('Type', 'waas-host') . '</th><th>' . esc_html__('Name', 'waas-host') . '</th><th>'
+                . esc_html__('Value', 'waas-host') . '</th><th>' . esc_html__('Priority', 'waas-host') . '</th></tr></thead><tbody>';
             foreach ($records as $record) {
                 echo '<tr><td>' . esc_html((string) ($record->type ?? '')) . '</td>'
                     . '<td><code>' . esc_html((string) ($record->name ?? '')) . '</code></td>'
@@ -152,13 +162,13 @@ class UserAccountSubscriptionsSettings
             }
             echo '</tbody></table>';
         } else {
-            echo '<p>' . esc_html('The DNS records could not be loaded right now. Reload the page to try again.') . '</p>';
+            echo '<p>' . esc_html__('The DNS records could not be loaded right now. Reload the page to try again.', 'waas-host') . '</p>';
         }
-        echo "<form method='post' action='' class='waas-acct-form'>
-                $nonce_field
-                <input type='hidden' name='mail_domain_remove' value='1'>
-                <button class='button waas-acct-btn fct-btn fct-btn-secondary' type='submit'>Stop using this domain</button>
-               </form>";
+        echo '<form method="post" action="" class="waas-acct-form">'
+            . $nonce_field // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_nonce_field() markup.
+            . '<input type="hidden" name="mail_domain_remove" value="1">'
+            . '<button class="button waas-acct-btn fct-btn fct-btn-secondary" type="submit">' . esc_html__('Stop using this domain', 'waas-host') . '</button>'
+            . '</form>';
     }
 
     /**
@@ -183,14 +193,18 @@ class UserAccountSubscriptionsSettings
             return;
         }
         if ($link['conflict'] !== null) {
-            echo '<p class="waas-dns-conflict"><strong>' . esc_html('One-click setup is off for this domain.') . '</strong> '
+            echo '<p class="waas-dns-conflict"><strong>' . esc_html__('One-click setup is off for this domain.', 'waas-host') . '</strong> '
                 . esc_html($link['conflict']) . '</p>';
             return;
         }
-        $provider = $link['dns_provider'] !== '' ? $link['dns_provider'] : 'your DNS host';
+        $provider = $link['dns_provider'] !== '' ? $link['dns_provider'] : __('your DNS host', 'waas-host');
         echo '<p><a class="button" href="' . esc_url($link['url']) . '" target="_blank" rel="noopener">'
-            . esc_html('Connect automatically at ' . $provider) . '</a> '
-            . esc_html('or add the records by hand.') . '</p>';
+            . esc_html(sprintf(
+                /* translators: %s: the domain's DNS host, such as Cloudflare */
+                __('Connect automatically at %s', 'waas-host'),
+                $provider
+            )) . '</a> '
+            . esc_html__('or add the records by hand.', 'waas-host') . '</p>';
     }
 
     /** Adds or removes the store's sending domain from the form above; only its owner may. */
@@ -221,7 +235,7 @@ class UserAccountSubscriptionsSettings
                 $this->website_settings->remove_email_sender($subscription_id);
                 return;
             }
-            $this->website_settings->set_email_sender($subscription_id, wp_unslash($_POST['mail_domain_name']));
+            $this->website_settings->set_email_sender($subscription_id, sanitize_text_field(wp_unslash($_POST['mail_domain_name'])));
         } catch (WebsiteSettingsError $e) {
             $this->mail_error = $e->getMessage();
         }
@@ -234,21 +248,21 @@ class UserAccountSubscriptionsSettings
         $cname_target = $this->config->get_dns_cname_target();
         if (!$a_records && $cname_target === '') {
             echo '<div class="waas-ip-instructions"><p>'
-                . esc_html('Custom domains are not set up on this store yet. Please contact support to connect your domain.')
+                . esc_html__('Custom domains are not set up on this store yet. Please contact support to connect your domain.', 'waas-host')
                 . '</p></div>';
             return;
         }
 
         echo '<div class="waas-ip-instructions">';
         if ($a_records) {
-            echo '<p class="waas-acct-note">' . esc_html('For a domain like example.com, add an A record for each of these:') . '</p><div class="waas-acct-records">';
+            echo '<p class="waas-acct-note">' . esc_html__('For a domain like example.com, add an A record for each of these:', 'waas-host') . '</p><div class="waas-acct-records">';
             foreach ($a_records as $ip) {
                 echo '<div class="waas-acct-record"><b>A</b><code>' . esc_html($ip) . '</code></div>';
             }
             echo '</div>';
         }
         if ($cname_target !== '') {
-            echo '<p class="waas-acct-note">' . esc_html('For one like shop.example.com, add a CNAME record:') . '</p>'
+            echo '<p class="waas-acct-note">' . esc_html__('For one like shop.example.com, add a CNAME record:', 'waas-host') . '</p>'
                 . '<div class="waas-acct-records"><div class="waas-acct-record"><b>CNAME</b><code>' . esc_html($cname_target) . '</code></div></div>';
         }
         echo '</div>';
@@ -273,7 +287,7 @@ class UserAccountSubscriptionsSettings
         }
 
         try {
-            $this->website_settings->change_address($subscription_id, wp_unslash($_POST['domain_name']));
+            $this->website_settings->change_address($subscription_id, sanitize_text_field(wp_unslash($_POST['domain_name'])));
         } catch (WebsiteSettingsError $e) {
             // The form has only ever shown input errors; a failed API call leaves the address as it was.
             if ($e->is_invalid_input()) {

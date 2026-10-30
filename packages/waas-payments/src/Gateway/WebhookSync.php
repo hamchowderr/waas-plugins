@@ -116,6 +116,7 @@ class WebhookSync
 
         if ($transaction->status !== Status::TRANSACTION_SUCCEEDED) {
             self::log($transaction, __('Authorize.Net charge not completed', 'waas-payments'), sprintf(
+                /* translators: 1: Authorize.Net transaction ID, 2: its status */
                 __('Authorize.Net transaction %1$s is %2$s. The order stays unpaid.', 'waas-payments'),
                 $found->transactionId,
                 $status
@@ -140,6 +141,7 @@ class WebhookSync
                     // The checkout was paid by another charge, e.g. the customer tried again
                     // after this one went unanswered or was held.
                     self::log($transaction, __('Second Authorize.Net charge for this order', 'waas-payments'), sprintf(
+                        /* translators: 1: the second transaction ID, 2: the transaction that paid the order */
                         __('Authorize.Net transaction %1$s also charged this order, which was already paid by transaction %2$s. Refund or void one of them in Authorize.Net if the customer was charged twice.', 'waas-payments'),
                         $found->transactionId,
                         $transaction->vendor_charge_id
@@ -162,6 +164,7 @@ class WebhookSync
             (new StatusHelper($transaction->order))->syncOrderStatuses($transaction);
 
             self::log($transaction, __('Authorize.Net payment confirmed by webhook', 'waas-payments'), sprintf(
+                /* translators: %s: Authorize.Net transaction ID */
                 __('Authorize.Net reported transaction %s as approved after the payment was left unconfirmed.', 'waas-payments'),
                 $found->transactionId
             ), 'info');
@@ -242,6 +245,7 @@ class WebhookSync
 
         if (!empty($refund->wasRecentlyCreated)) {
             self::log($charge, __('Authorize.Net refund recorded', 'waas-payments'), sprintf(
+                /* translators: 1: why the refund was made, 2: transaction ID, 3: amount */
                 __('%1$s: transaction %2$s, %3$s.', 'waas-payments'),
                 $reason,
                 $refundId,

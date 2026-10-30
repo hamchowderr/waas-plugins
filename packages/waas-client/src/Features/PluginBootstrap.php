@@ -120,7 +120,7 @@ class PluginBootstrap
         unset($actions['deactivate']);
 
         return array_merge($actions, [
-            'waas_active' => is_plugin_active( $plugin_file ) ? __('Activated by the WaaS Client', WAAS_CLIENT_TEXTDOMAIN) : __('Deactivated by the WaaS Client', WAAS_CLIENT_TEXTDOMAIN),
+            'waas_active' => is_plugin_active( $plugin_file ) ? __('Activated by the WaaS Client', 'waas-client') : __('Deactivated by the WaaS Client', 'waas-client'),
         ]);
     }
 }

@@ -298,7 +298,7 @@ class FluentCartVolumeDiscount
         return $this->store->make_coupon([
             'code' => $tier['code'],
             /* translators: %s: percent off */
-            'title' => sprintf(__('Volume discount (%s%%)', WAAS_HOST_TEXTDOMAIN), $tier['percent']),
+            'title' => sprintf(__('Volume discount (%s%%)', 'waas-host'), $tier['percent']),
             'status' => 'active',
             'type' => 'percentage',
             'amount' => $tier['percent'],

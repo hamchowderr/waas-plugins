@@ -69,7 +69,7 @@ class HttpService
         $response = wp_remote_post($this->base_uri . $uri, [
             'method' => 'POST',
             'headers' => $this->get_api_header(),
-            'body' => json_encode($data),
+            'body' => wp_json_encode($data),
             'timeout' => 20,
         ]);
 
@@ -85,7 +85,7 @@ class HttpService
         $response = wp_remote_post($this->base_uri . $uri, [
             'method' => 'PUT',
             'headers' => $this->get_api_header(),
-            'body' => json_encode($data),
+            'body' => wp_json_encode($data),
             'timeout' => 20,
         ]);
 
@@ -111,6 +111,7 @@ class HttpService
     private function ensureSuccessStatusCode($response)
     {
         if (is_wp_error($response)) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not printed here; every place that shows the message escapes it.
             throw new Exception("Failed: " . $response->get_error_message());
         }
 
@@ -119,6 +120,7 @@ class HttpService
         // Only accept truly successful status codes 
         if ($response_code < 200 || $response_code > 299) {
             $response_body = wp_remote_retrieve_body($response);
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not printed here; every place that shows the message escapes it.
             throw new Exception("Failed: " . $response_code . " - " . $response_body);
         }
     }
