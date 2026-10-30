@@ -23,11 +23,10 @@
       "step": "installTheme",
       "themeData": {
         "resource": "url",
-        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/7a088d2f805ebd29ad96cbecf0bd300c01fc3520/scripts/playground/preview-zips/anypress.zip"
+        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/main/scripts/playground/preview-zips/anypress.zip"
       },
       "options": {
-        "activate": true,
-        "targetFolderName": "anypress"
+        "activate": true
       }
     },
     {

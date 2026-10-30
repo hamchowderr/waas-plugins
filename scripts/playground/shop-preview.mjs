@@ -6,7 +6,7 @@
 //
 // ANYPRESS_THEME=<folder> uses a local AnyPress theme instead of the release the shop pins.
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -15,7 +15,8 @@ import { runCLI } from '@wp-playground/cli';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DESIGN = resolve(HERE, '../test-storefront/remote/design');
 const THEME = process.env.ANYPRESS_THEME ? resolve(process.env.ANYPRESS_THEME) : null;
-const THEME_ZIP = 'https://github.com/hamchowderr/anypress-theme/releases/download/v0.6.0/anypress.zip';
+// The AnyPress theme from preview-zips (kept at the latest release), like every blueprint here.
+const THEME_ZIP = resolve(HERE, 'preview-zips/anypress.zip');
 const SHOTS = process.argv.includes('--shots');
 const PORT = Number(process.env.PLAYGROUND_PORT || 9420);
 
@@ -30,7 +31,7 @@ const cli = await runCLI({
             { step: 'defineWpConfigConsts', consts: { WP_DEBUG: true, WP_DEBUG_LOG: '/tmp/debug.log', WP_DEBUG_DISPLAY: false } },
             THEME
                 ? { step: 'activateTheme', themeFolderName: 'anypress' }
-                : { step: 'installTheme', themeData: { resource: 'url', url: THEME_ZIP }, options: { activate: true } },
+                : { step: 'installTheme', themeData: { resource: 'literal', name: 'anypress.zip', contents: readFileSync(THEME_ZIP) }, options: { activate: true } },
             { step: 'installPlugin', pluginData: { resource: 'wordpress.org/plugins', slug: 'fluent-cart' }, options: { activate: true } },
             { step: 'installPlugin', pluginData: { resource: 'wordpress.org/plugins', slug: 'betterdocs' }, options: { activate: true } },
             { step: 'mkdir', path: '/wordpress/wp-content/mu-plugins' },

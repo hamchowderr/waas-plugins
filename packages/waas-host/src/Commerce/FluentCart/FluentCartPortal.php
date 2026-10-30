@@ -40,6 +40,7 @@ class FluentCartPortal
         add_filter('fluent_cart/customer_portal/subscription_data', [$this, 'add_subscription_actions'], 10, 2);
         add_filter('waas_choose_website_name_url', [$this, 'website_page_url']);
         add_filter('waas_website_page_url', [$this, 'website_page_url']);
+        add_filter('waas_account_page_url', fn () => $this->store->get_portal_url(self::ENDPOINT));
         // FluentCart puts custom tabs just before Profile; this runs after that and moves ours up.
         add_filter('fluent_cart/global_customer_menu_items', [$this, 'move_menu_item_after_dashboard'], 20);
         // Before FluentCart's own content (priority 10), so the notice sits above the page.
@@ -168,6 +169,10 @@ class FluentCartPortal
             return;
         }
 
+        // Removed websites last, so the first (highlighted) card is one the owner can use.
+        usort($websites, fn ($a, $b) => (int) ($this->adapter->get_subscription_meta($a, Tenant::TENANT_STATE) === Tenant::DELETED)
+            <=> (int) ($this->adapter->get_subscription_meta($b, Tenant::TENANT_STATE) === Tenant::DELETED));
+
         AccountStyles::print_once();
         echo '<div class="waas-acct">';
         foreach ($websites as $subscription_id) {
@@ -188,7 +193,8 @@ class FluentCartPortal
         echo '<section class="waas-acct-site waas-website">';
         echo '<span class="waas-acct-status is-' . esc_attr($tone) . '"><i aria-hidden="true"></i>'
             . '<span class="screen-reader-text">' . esc_html__('Status:', 'waas-host') . ' </span>' . esc_html($label) . '</span>';
-        echo '<h3>' . esc_html((string) ($domain ?: __('Your website', 'waas-host'))) . '</h3>';
+        // A long address breaks after a dot on a phone, not in the middle of a word.
+        echo '<h3>' . ($domain ? implode('.<wbr>', array_map('esc_html', explode('.', (string) $domain))) : esc_html__('Your website', 'waas-host')) . '</h3>';
         if ($domain && $status === Tenant::READY) {
             echo '<a class="waas-acct-visit" target="_blank" rel="noopener" href="' . esc_url('https://' . $domain) . '">'
                 . esc_html__('Visit your website', 'waas-host') . ' &#8599;</a>';
@@ -257,6 +263,8 @@ class FluentCartPortal
                 return ['attention', Tenant::customer_status_label($status), ''];
             case Tenant::SUSPENDED:
                 return ['off', __('Offline', 'waas-host'), __('Your website is offline. Manage your plan to bring it back, or write to us if you are not sure why.', 'waas-host')];
+            case Tenant::DELETED:
+                return ['off', __('Removed', 'waas-host'), __('This website was removed. Write to us if you want it back: we keep a backup for 90 days.', 'waas-host')];
             default:
                 return ['busy', Tenant::customer_status_label($status), ''];
         }

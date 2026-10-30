@@ -203,12 +203,15 @@ class TenantStatusService
         }
 
         $live = [];
+        $deleted = [];
         foreach ($commerce->find_subscriptions_by_meta(Tenant::TENANT_STATE, []) as $subscription_id => $state) {
             if ($state === Tenant::READY || $state === Tenant::SUSPENDED) {
                 $live[] = $subscription_id;
+            } elseif ($state === Tenant::DELETED) {
+                $deleted[] = $subscription_id;
             }
         }
-        if (!$live) {
+        if (!$live && !$deleted) {
             return;
         }
 
@@ -218,18 +221,90 @@ class TenantStatusService
             return;
         }
 
+        $known = [];
         $domains = [];
         foreach ($tenants as $tenant) {
             $tenant = (object) $tenant;
-            if (!empty($tenant->externalId) && !empty($tenant->domainName)) {
+            if (empty($tenant->externalId)) {
+                continue;
+            }
+            $known[(string) $tenant->externalId] = $tenant;
+            if (!empty($tenant->domainName)) {
                 $domains[(string) $tenant->externalId] = strtolower((string) $tenant->domainName);
             }
         }
 
         foreach ($live as $subscription_id) {
             $external_id = (string) $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META);
+            // A store deleted outside this storefront (the dashboard, the API). An empty list is more likely
+            // another storefront's key than every store gone, so it marks nothing.
+            if ($known && $external_id !== '' && !isset($known[$external_id])) {
+                (new Tenant($subscription_id))->update_status(Tenant::DELETED);
+                continue;
+            }
             self::apply_domain($commerce, $subscription_id, $domains[$external_id] ?? '');
         }
+
+        foreach ($deleted as $subscription_id) {
+            $external_id = (string) $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META);
+            if (isset($known[$external_id]) && self::is_up($known[$external_id])) {
+                $this->bring_back($subscription_id);
+            }
+        }
+    }
+
+    /**
+     * The API says the store was deleted: shown as removed once the API no longer has it. A store that is still
+     * there (restored since, or the event is old) is left as it is.
+     */
+    public function forget_if_gone($subscription_id): void
+    {
+        $commerce = Commerce::adapter();
+        if ($commerce === null) {
+            return;
+        }
+        if ((string) $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_STATE) === Tenant::DELETED) {
+            return;
+        }
+
+        try {
+            $tenant = $this->provisioningApi->get_tenant_safe($commerce->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META));
+        } catch (\Exception $e) {
+            return;
+        }
+        if ($tenant === null) {
+            (new Tenant($subscription_id))->update_status(Tenant::DELETED);
+        }
+    }
+
+    /** A store restored outside this storefront, while the subscription still shows it removed: on to Ready. */
+    public function bring_back_if_restored($subscription_id): void
+    {
+        $commerce = Commerce::adapter();
+        if ($commerce === null || (string) $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_STATE) !== Tenant::DELETED) {
+            return;
+        }
+
+        try {
+            $tenant = $this->provisioningApi->get_tenant_safe($commerce->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META));
+        } catch (\Exception $e) {
+            return;
+        }
+        if ($tenant !== null && self::is_up($tenant)) {
+            $this->bring_back($subscription_id);
+        }
+    }
+
+    /** Done and not suspended: a store that is being removed (statusCode 3) never comes back this way. */
+    private static function is_up(object $tenant): bool
+    {
+        return ($tenant->statusCode ?? null) === 1 && empty($tenant->isSuspended);
+    }
+
+    private function bring_back($subscription_id): void
+    {
+        (new Tenant($subscription_id))->update_status(Tenant::PROVISIONING);
+        $this->process_subscription($subscription_id);
     }
 
     /**

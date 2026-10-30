@@ -7,8 +7,6 @@ use WaaSHost\Core\ConfigService;
 class AdminNotices
 {
     const REFRESH_ROLES_FAILED_NOTICE = 'refresh_roles_failed_notice';
-    /** The plugin's own admin pages, the only places the DNS settings warning shows. */
-    const PLUGIN_PAGES = ['waas-admin', 'waas-admin-settings'];
 
     private static ConfigService $config;
 
@@ -16,37 +14,6 @@ class AdminNotices
     {
         static::$config = $config;
         add_action('admin_notices', [__CLASS__, 'show_refresh_roles_failed_notice']);
-        add_action('admin_notices', [__CLASS__, 'show_dns_settings_missing_notice']);
-    }
-
-    /** The customer's domain page leaves out any DNS record whose setting is empty. */
-    public static function show_dns_settings_missing_notice()
-    {
-// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- which admin page is open.
-        $page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
-        if (!in_array($page, static::PLUGIN_PAGES, true) || !current_user_can('manage_options')) {
-            return;
-        }
-
-        $missing = [];
-        if (!static::$config->get_dns_a_records()) {
-            $missing[] = 'A record IPs';
-        }
-        if (static::$config->get_dns_cname_target() === '') {
-            $missing[] = 'CNAME target';
-        }
-        if (!$missing) {
-            return;
-        }
-
-        $settings_url = AdminSettings::url('stores');
-        echo '<div class="notice notice-warning"><p>'
-            . esc_html(sprintf(
-                /* translators: %s: the missing settings, such as "A records, CNAME target" */
-                __('Custom domain DNS settings missing: %s. Customers get no DNS instructions for these on their domain page; with neither set, they are told to contact support.', 'waas-host'),
-                implode(', ', $missing)
-            )) . ' '
-            . '<a href="' . esc_url($settings_url) . '">' . esc_html__('Set them in Settings > Websites', 'waas-host') . '</a>.</p></div>';
     }
 
     public static function show_refresh_roles_failed_notice()

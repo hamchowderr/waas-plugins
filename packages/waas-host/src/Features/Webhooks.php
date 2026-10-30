@@ -22,7 +22,7 @@ class Webhooks
 {
     public const OPTION = 'waas_host_webhook';
     /** The events the receiver acts on. The rest are left to the poll, or don't concern the storefront. */
-    public const EVENT_TYPES = ['tenant.ready', 'tenant.restored', 'tenant.domains_changed', 'tenant.failed'];
+    public const EVENT_TYPES = ['tenant.ready', 'tenant.restored', 'tenant.deleted', 'tenant.domains_changed', 'tenant.failed'];
     public const ROUTE = '/webhook';
     public const CHECK_HOOK = 'waas_check_webhook_endpoint';
     public const REGISTER_ACTION = 'waas_register_webhook';
@@ -49,13 +49,19 @@ class Webhooks
         add_action('waas_tenant_ready', [self::class, 'clear_tenant_failure']);
     }
 
+    /** The events an endpoint is registered for, as stored with it. */
+    private static function events(): string
+    {
+        return implode(',', self::EVENT_TYPES);
+    }
+
     /** The receiver's address, as the API is to call it. */
     public static function endpoint_url(): string
     {
         return (string) apply_filters('waas_webhook_url', rest_url(PluginBootstrap::API_V1_NAMESPACE . self::ROUTE));
     }
 
-    /** @return array{id: string, url: string, api: string, secret: string, registered_at: int, error: string, checked_at: int, last_event_at: int} */
+    /** @return array{id: string, url: string, api: string, events: string, secret: string, registered_at: int, error: string, checked_at: int, last_event_at: int} */
     public static function stored(): array
     {
         $stored = get_option(self::OPTION, []);
@@ -65,6 +71,7 @@ class Webhooks
             'id' => (string) ($stored['id'] ?? ''),
             'url' => (string) ($stored['url'] ?? ''),
             'api' => (string) ($stored['api'] ?? ''),
+            'events' => (string) ($stored['events'] ?? ''),
             'secret' => (string) ($stored['secret'] ?? ''),
             'registered_at' => (int) ($stored['registered_at'] ?? 0),
             'error' => (string) ($stored['error'] ?? ''),
@@ -111,7 +118,9 @@ class Webhooks
         $api = (string) $this->configService->get_api_base_url();
         $stored = self::stored();
 
-        if (!$force && $stored['id'] !== '' && $stored['url'] === $url && $stored['api'] === $api && self::secret() !== '') {
+        // An endpoint registered by an older version, for fewer events, is replaced too.
+        if (!$force && $stored['id'] !== '' && $stored['url'] === $url && $stored['api'] === $api && $stored['events'] === self::events()
+            && self::secret() !== '') {
             return $stored;
         }
 
@@ -135,6 +144,7 @@ class Webhooks
             'id' => '',
             'url' => $url,
             'api' => $api,
+            'events' => self::events(),
             'secret' => '',
             'registered_at' => 0,
             'error' => '',
@@ -205,6 +215,10 @@ class Webhooks
 
     public function add_settings_section(): void
     {
+        // A ready-made storefront only sees this when it needs a hand; the Overview shows live updates as on.
+        if (AdminSettings::is_ready_made() && self::is_registered()) {
+            return;
+        }
         add_settings_section(
             'waas_webhooks',
             __('Webhooks', 'waas-host'),
@@ -238,7 +252,7 @@ class Webhooks
             $label = __('Register', 'waas-host');
         }
 
-        echo '<p><a class="button" href="' . esc_url(self::register_url()) . '">' . esc_html($label) . '</a></p>';
+        echo '<p><a class="ap-btn is-sm" href="' . esc_url(self::register_url()) . '">' . esc_html($label) . '</a></p>';
     }
 
     /**
@@ -270,7 +284,8 @@ class Webhooks
     public function show_tenant_failures_notice(): void
     {
         $commerce = Commerce::adapter();
-        if ($commerce === null || !current_user_can('manage_options')) {
+        // The AnyPress Overview lists these in place.
+        if ($commerce === null || !current_user_can('manage_options') || AdminHome::is_plugin_page()) {
             return;
         }
 

@@ -89,7 +89,7 @@ jobs:
         run: composer test -- --group mock
 
   playground:
-    # WaaS Client on real WordPress (WordPress Playground: WordPress and PHP in Node, no Docker) with the Ollie
+    # WaaS Client on real WordPress (WordPress Playground: WordPress and PHP in Node, no Docker) with the AnyPress
     # theme and the store template's starter pages, calling the AnyPress connector's site-editing routes.
     name: waas-client on WordPress Playground
     runs-on: ubuntu-latest

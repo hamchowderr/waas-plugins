@@ -34,7 +34,7 @@ class ConfigServiceTest extends TestCase
         $this->options['waas_api_base_url'] = '';
         $this->options['waas_region'] = 'eu1';
 
-        $this->assertFalse((new ConfigService())->get_api_base_url());
+        $this->assertSame(ConfigService::ANYPRESS_API_URL, (new ConfigService())->get_api_base_url());
     }
 
     public function test_waas_constants_win_and_wpcs_constants_still_work(): void
@@ -50,9 +50,9 @@ class ConfigServiceTest extends TestCase
         $this->assertNull(ConfigService::constant('CONFIG_TEST_NEITHER'));
     }
 
-    public function test_false_without_a_base_url(): void
+    public function test_the_anypress_api_without_a_base_url(): void
     {
-        $this->assertFalse((new ConfigService())->get_api_base_url());
+        $this->assertSame('https://api.anypress.io', (new ConfigService())->get_api_base_url());
     }
 
     public function test_filter_can_change_base_url(): void
@@ -63,10 +63,17 @@ class ConfigServiceTest extends TestCase
         $this->assertSame('http://localhost:4111', (new ConfigService())->get_api_base_url());
     }
 
-    public function test_credentials_incomplete_without_base_url(): void
+    public function test_a_key_and_secret_alone_connect_to_the_anypress_api(): void
     {
         $this->options['waas_api_key'] = 'key';
         $this->options['waas_api_secret'] = 'secret';
+
+        $this->assertTrue((new ConfigService())->check_credentials());
+    }
+
+    public function test_credentials_incomplete_without_a_secret(): void
+    {
+        $this->options['waas_api_key'] = 'key';
 
         $this->assertFalse((new ConfigService())->check_credentials());
     }
@@ -158,5 +165,36 @@ class ConfigServiceTest extends TestCase
 
         $this->assertSame(['198.51.100.1', '198.51.100.2'], $config->get_dns_a_records());
         $this->assertSame('edge.from-constant.example', $config->get_dns_cname_target());
+    }
+
+    private function assistant(): string
+    {
+        Functions\when('wp_parse_url')->alias(fn ($url, $part) => parse_url($url, $part));
+        Functions\when('esc_url_raw')->returnArg();
+        return (new ConfigService())->get_assistant_url();
+    }
+
+    public function test_a_storefront_on_the_anypress_api_offers_its_assistant_without_a_setting(): void
+    {
+        $this->options['waas_api_base_url'] = 'https://api.anypress.io';
+
+        $this->assertSame(ConfigService::ANYPRESS_ASSISTANT_URL, $this->assistant());
+    }
+
+    public function test_clearing_the_setting_hides_the_assistant(): void
+    {
+        $this->options['waas_api_base_url'] = 'https://api.anypress.io';
+        $this->options['waas_assistant_url'] = '';
+
+        $this->assertSame('', $this->assistant());
+    }
+
+    public function test_another_api_gets_no_assistant_unless_one_is_set(): void
+    {
+        $this->options['waas_api_base_url'] = 'https://api.example.com';
+        $this->assertSame('', $this->assistant());
+
+        $this->options['waas_assistant_url'] = 'https://assistant.example.com/';
+        $this->assertSame('https://assistant.example.com', $this->assistant());
     }
 }

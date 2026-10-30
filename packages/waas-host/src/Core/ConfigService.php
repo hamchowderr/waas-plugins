@@ -43,22 +43,38 @@ class ConfigService
      * Base URL of the provisioning API, without a trailing slash: the WAAS_API_BASE_URL constant
      * or the base URL setting. False when neither is set.
      */
+    /** The AnyPress API: where a storefront connects unless WAAS_API_BASE_URL or the setting names another. */
+    public const ANYPRESS_API_URL = 'https://api.anypress.io';
+
     public function get_api_base_url()
     {
-        $value = self::has_constant('API_BASE_URL') ? self::constant('API_BASE_URL') : get_option('waas_api_base_url');
+        // An empty setting means the AnyPress API, so a key and secret alone connect.
+        $value = self::has_constant('API_BASE_URL') ? self::constant('API_BASE_URL') : (get_option('waas_api_base_url') ?: self::ANYPRESS_API_URL);
         $value = apply_filters('waas_settings_api_base_url', $value);
         return empty($value) ? false : untrailingslashit($value);
     }
 
+    /** AnyPress's own website assistant, and the API addresses it signs owners in with. */
+    public const ANYPRESS_ASSISTANT_URL = 'https://assistant.anypress.io';
+    private const ANYPRESS_API_HOSTS = ['api.anypress.io', 'waas-api.otakusolutions.io'];
+
     /**
      * The website assistant's address (WAAS_ASSISTANT_URL or the setting), without a trailing slash.
+     * A storefront on the AnyPress API offers AnyPress's assistant until the setting is saved empty.
      * Empty when the storefront doesn't offer it.
      */
     public function get_assistant_url(): string
     {
-        $value = self::has_constant('ASSISTANT_URL') ? self::constant('ASSISTANT_URL') : get_option('waas_assistant_url', '');
+        $value = self::has_constant('ASSISTANT_URL') ? self::constant('ASSISTANT_URL') : get_option('waas_assistant_url', $this->default_assistant_url());
         $value = (string) apply_filters('waas_settings_assistant_url', $value);
         return $value === '' ? '' : untrailingslashit(esc_url_raw($value));
+    }
+
+    /** AnyPress's assistant for a storefront on the AnyPress API, '' for any other API (it can't sign in there). */
+    public function default_assistant_url(): string
+    {
+        $host = wp_parse_url((string) $this->get_api_base_url(), PHP_URL_HOST);
+        return in_array($host, self::ANYPRESS_API_HOSTS, true) ? self::ANYPRESS_ASSISTANT_URL : '';
     }
 
     /**
