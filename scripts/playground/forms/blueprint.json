@@ -1,0 +1,92 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "meta": {
+    "title": "Forms switch test site",
+    "author": "Otaku Solutions",
+    "description": "Contact Form 7 with Flamingo, WPForms Lite, Ninja Forms and Fluent Forms, at the versions the site-moving tests used, plus WaaS Client (mounted from this checkout by forms.mjs). Outgoing email is logged to an option instead of sent. WP-CLI comes from its official build (wp-cli/builds) at /tmp/wp-cli.phar."
+  },
+  "landingPage": "/wp-admin/admin.php?page=fluent_forms",
+  "preferredVersions": {
+    "php": "8.3",
+    "wp": "latest"
+  },
+  "features": {
+    "networking": true
+  },
+  "steps": [
+    {
+      "step": "writeFile",
+      "path": "/tmp/wp-cli.phar",
+      "data": {
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar"
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/contact-form-7.6.2.4.1.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/flamingo.2.6.4.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/wpforms-lite.2.0.3.1.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/ninja-forms.3.15.7.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/fluentform.6.2.16.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "activatePlugin",
+      "pluginPath": "waas-client/index.php"
+    },
+    {
+      "step": "writeFile",
+      "path": "/wordpress/wp-content/mu-plugins/forms-test-mail.php",
+      "data": "<?php\n// Test only: log each email to an option instead of sending it.\nadd_filter('pre_wp_mail', function ($sent, $atts) {\n    $log = get_option('forms_test_mail', []);\n    $log[] = ['to' => $atts['to'], 'subject' => $atts['subject'], 'headers' => $atts['headers'], 'message' => $atts['message']];\n    update_option('forms_test_mail', $log, false);\n    return true;\n}, 10, 2);\n"
+    },
+    {
+      "step": "setSiteOptions",
+      "options": {
+        "blogname": "Forms switch test",
+        "permalink_structure": "/%postname%/"
+      }
+    }
+  ]
+}

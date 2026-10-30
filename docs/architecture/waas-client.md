@@ -11,7 +11,7 @@ The same plugin behaves differently depending on one environment variable, the "
 ```mermaid
 flowchart TB
   LOAD["index.php loads"] --> AJAX{"admin-ajax request?"}
-  AJAX -->|"yes"| NONE["Do nothing"]
+  AJAX -->|"yes"| NONE["Only ConditionalConfirmations<br/>(forms are sent through admin-ajax)"]
   AJAX -->|"no"| ALWAYS["Always on<br/>RolesManager, PluginBootstrap,<br/>SingleSignOnController"]
   ALWAYS --> FLAG{"Is-tenant env var<br/>equals true?"}
   FLAG -->|"no: template or local site"| TPL["Admin pages<br/>AdminTenantSettings: storefront URL, Test connection<br/>AdminRolesSettings: Plan roles editor"]
@@ -113,6 +113,32 @@ sequenceDiagram
 ```
 
 Sources: `src/Features/StorefrontStatus.php`, `src/Core/HttpService.php`, `waas-host/src/Api/RolesController.php`.
+
+## Moving forms to Fluent Forms
+
+A website moved into AnyPress often has its forms in Contact Form 7, WPForms (Lite) or Ninja Forms. The forms switch moves them to Fluent Forms and switches the pages over. Run it with WP-CLI as an administrator, with Fluent Forms and the old form plugins active:
+
+```sh
+wp waas forms switch --user=admin --dry-run   # what would be converted, dropped and switched; changes nothing
+wp waas forms switch --user=admin             # do it
+wp waas forms switch --user=admin --undo      # put the old shortcodes and blocks back
+```
+
+Add `--format=json` for the report as JSON. The same is available as two abilities: `anypress/check-forms` (the dry run, read-only) and `anypress/switch-forms` (with `{"undo": true}` to undo). Both need an administrator.
+
+What it does, in order:
+
+1. **Converts each form** with Fluent Forms' own importer (Fluent Forms → Tools → Migrator), and fixes what that importer gets wrong:
+   - Contact Form 7: the emails are built from the form's Mail and Mail (2) (recipient, sender, subject, body, Reply-To, Cc, Bcc, with the mail tags turned into Fluent Forms smart codes), the thank-you message from its "sent" message, and the malformed notification rows the importer writes are deleted. Placeholders stay placeholders and a date field stays a date.
+   - WPForms: the confirmation that applies to every submission is the main one, and a conditional one (such as a redirect for one answer) stays conditional. Free Fluent Forms stores conditional confirmations but only Fluent Forms Pro runs them, so WaaS Client runs them for the converted forms while Pro is off (`src/Forms/ConditionalConfirmations.php`).
+   - Ninja Forms: each email keeps its own Reply-To, and the date format is converted (`MM/DD/YYYY` becomes `m/d/Y`).
+   - Entries (Contact Form 7 through Flamingo, Ninja Forms, WPForms Pro) keep the date each was sent and their order; Contact Form 7 entries also keep the visitor's IP address and page. All Flamingo messages are read, not only the first 10.
+2. **Reports** every dropped field of each form by name and type, with the reason (most need Fluent Forms Pro), and anything else that didn't come across: show/hide rules on fields, email attachments, mail tags with no Fluent Forms equivalent, entries past Fluent Forms' limit of 1,000 per form.
+3. **Switches the pages over**: the old shortcodes (`[contact-form-7]`, `[contact-form]`, `[wpforms]`, `[ninja_form]`, `[ninja_forms]`) and blocks become `[fluentform id="…"]` and the Fluent Forms block, in posts, pages, templates, template parts, synced patterns and Text, Custom HTML and block widgets. Each changed post keeps a revision. Forms inside a page builder's own layout (Elementor, Beaver Builder) are listed in the report, not changed.
+
+Running it again changes nothing that was already done: converted forms are skipped, entries are only brought into a Fluent Forms form that has none, and pages already switched have nothing left to swap. The old plugins and their forms are never changed, deactivated or deleted, so they keep working until the owner turns them off. Undo puts back the exact old content of each page or widget that wasn't edited since, and swaps the forms back in one that was; the Fluent Forms forms and their entries stay.
+
+The id map and each changed page's original content are kept in the `waas_client_forms_switch` option (not autoloaded). Sources: `src/Forms/FormsSwitch.php`, `src/Forms/Migrators/`, `src/Forms/PageSwitcher.php`, `src/Forms/FormsCommand.php`, `src/Forms/FormsAbilities.php`. Tested end to end by `scripts/playground/forms.mjs` (`npm run forms`).
 
 ## Updates
 

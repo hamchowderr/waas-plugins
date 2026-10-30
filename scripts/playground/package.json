@@ -10,7 +10,8 @@
     "smoke": "node smoke.mjs",
     "serve": "node smoke.mjs --serve",
     "export": "node export.mjs",
-    "shop": "node shop-preview.mjs"
+    "shop": "node shop-preview.mjs",
+    "forms": "node forms.mjs"
   },
   "dependencies": {
     "@wp-playground/cli": "3.1.59"
