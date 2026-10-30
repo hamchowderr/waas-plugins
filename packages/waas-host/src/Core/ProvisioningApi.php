@@ -201,6 +201,17 @@ class ProvisioningApi
         return $this->httpService->post('/v1/tenants/backups?externalId=' . $external_id, []);
     }
 
+    /**
+     * Signs the store's owner in to an app (the website assistant) for this one website: the API answers
+     * with the app's sign-in address and a code, which the app finishes with its PKCE verifier.
+     * @param array{clientId: string, redirectUri: string, codeChallenge: string, state?: string} $params
+     */
+    public function site_sign_in($external_id, array $params): string
+    {
+        $answer = $this->httpService->post('/v1/tenants/site/sign-in?externalId=' . rawurlencode((string) $external_id), $params);
+        return (string) ($answer->redirectUrl ?? '');
+    }
+
     /** The tenant's backups, newest first, also after the tenant was deleted. */
     public function get_tenant_backups($external_id): array
     {

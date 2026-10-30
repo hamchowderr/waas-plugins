@@ -149,6 +149,9 @@ class AdminSettings
         register_setting('waas-admin', 'waas_api_secret', [
             'sanitize_callback' => 'sanitize_text_field'
         ]);
+        register_setting('waas-admin', 'waas_assistant_url', [
+            'sanitize_callback' => 'esc_url_raw'
+        ]);
 
         register_setting('waas-admin-stores', 'waas_root_domain', [
             'sanitize_callback' => 'sanitize_text_field'
@@ -257,6 +260,13 @@ class AdminSettings
             'class_name' => 'regular-text code',
             'constant' => 'API_SECRET',
             'hint' => self::constant_hint('API_SECRET', __('Saving checks the connection and registers this storefront for the API\'s webhooks.', 'waas-host')),
+        ]);
+        $this->add_field('waas_assistant_url', __('Website assistant', 'waas-host'), 'waas-admin', 'api_credentials', [
+            'type' => 'url',
+            'class_name' => 'regular-text code',
+            'placeholder' => 'https://assistant.example.com',
+            'constant' => 'ASSISTANT_URL',
+            'hint' => self::constant_hint('ASSISTANT_URL', __('The website assistant\'s address. When set, each ready website on the customer\'s account page gets an "Ask the website assistant" button that opens it already signed in. Leave empty to hide the button.', 'waas-host')),
         ]);
 
         // Stores
