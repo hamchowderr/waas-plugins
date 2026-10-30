@@ -43,9 +43,13 @@ class ConfigService
      * Base URL of the provisioning API, without a trailing slash: the WAAS_API_BASE_URL constant
      * or the base URL setting. False when neither is set.
      */
+    /** The AnyPress API: where a storefront connects unless WAAS_API_BASE_URL or the setting names another. */
+    public const ANYPRESS_API_URL = 'https://api.anypress.io';
+
     public function get_api_base_url()
     {
-        $value = self::has_constant('API_BASE_URL') ? self::constant('API_BASE_URL') : get_option('waas_api_base_url');
+        // An empty setting means the AnyPress API, so a key and secret alone connect.
+        $value = self::has_constant('API_BASE_URL') ? self::constant('API_BASE_URL') : (get_option('waas_api_base_url') ?: self::ANYPRESS_API_URL);
         $value = apply_filters('waas_settings_api_base_url', $value);
         return empty($value) ? false : untrailingslashit($value);
     }
