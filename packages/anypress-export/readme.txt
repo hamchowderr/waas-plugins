@@ -4,7 +4,7 @@ Tags: migration, move site, export, backup, anypress
 Requires at least: 5.6
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -27,9 +27,12 @@ The plugin sends this site's database and its `wp-content` folder (plugins, them
 
 == Changelog ==
 
-= 1.0.2 =
+= 1.0.3 =
 * The export page's script is a separate file and its text can be translated.
 * Messages are translatable; code follows the WordPress coding and Plugin Check rules.
+
+= 1.0.2 =
+* Fix: the Cancel button hides once the move is done.
 
 = 1.0.1 =
 * Fix: percent signs in the database are kept as they are.
