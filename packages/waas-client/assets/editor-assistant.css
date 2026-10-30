@@ -1,13 +1,14 @@
-/* The Assistant panel beside the editor: wider than WordPress's settings sidebar, with the chat filling it. */
+/* The Assistant panel beside the editor: wider than WordPress's settings sidebar, with the chat filling it.
+   PluginSidebar puts its class on the panel inside the sidebar, so the sidebar is found by what it holds. */
 @media (min-width: 782px) {
 	.interface-interface-skeleton__sidebar:has(.waas-editor-assistant),
 	.interface-complementary-area__fill:has(.waas-editor-assistant),
-	.interface-complementary-area.waas-editor-assistant {
+	.interface-complementary-area:has(.waas-editor-assistant) {
 		width: 380px !important;
 	}
 }
 /* The chat scrolls inside its frame; the panel itself never does. */
-.interface-complementary-area.waas-editor-assistant {
+.interface-complementary-area:has(.waas-editor-assistant) {
 	overflow: hidden;
 }
 .waas-editor-assistant__frame {
@@ -16,4 +17,11 @@
 	height: calc(100vh - var(--wp-admin--admin-bar--height, 0px) - 150px);
 	min-height: 420px;
 	border: 0;
+}
+/* On a phone the panel fills the screen: the editor's notices go to the top, off the chat's message box. */
+@media (max-width: 781px) {
+	body:has(.waas-editor-assistant) .components-editor-notices__snackbar {
+		top: 64px;
+		bottom: auto;
+	}
 }

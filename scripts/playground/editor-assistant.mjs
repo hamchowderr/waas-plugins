@@ -137,7 +137,7 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
     }
     await canvas.locator('h2', { hasText: 'Fresh bread' }).click();
     if (label === 'phone') {
-        await page.getByRole('button', { name: 'Options' }).click();
+        await page.getByRole('region', { name: 'Editor top bar' }).getByRole('button', { name: 'Options' }).click();
         await page.locator('.components-dropdown-menu__menu [role^=menuitem]', { hasText: /^Assistant$/ }).click();
         await page.locator('iframe.waas-editor-assistant__frame').waitFor({ timeout: 10_000 });
     }
@@ -161,7 +161,7 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
     check(saved.text.includes('Fresh bread') && !saved.text.includes('dawn'), `${label}: nothing is saved until the owner saves`);
     const wide = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
     check(!wide, `${label}: no sideways scroll`);
-    const panel = await page.locator('.interface-complementary-area.waas-editor-assistant').evaluate((el) => ({
+    const panel = await page.locator('.interface-complementary-area:has(.waas-editor-assistant)').evaluate((el) => ({
         width: el.getBoundingClientRect().width,
         scrolls: el.scrollHeight > el.clientHeight + 1,
     }));
