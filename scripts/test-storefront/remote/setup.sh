@@ -97,7 +97,7 @@ case "${1:-}" in
     $WP theme activate anypress
     rm -rf /tmp/design && mkdir -p /tmp/design
     curl -fsSL "https://codeload.github.com/hamchowderr/waas-plugins/tar.gz/${DESIGN_REF:-main}" \
-      | tar -xz -C /tmp/design --strip-components=4 --wildcards '*/scripts/test-storefront/remote/design'
+      | tar -xz -C /tmp/design --strip-components=5 --wildcards '*/scripts/test-storefront/remote/design'
     mkdir -p /var/www/html/wp-content/mu-plugins && cp /tmp/design/anypress-shop.php /var/www/html/wp-content/mu-plugins/
     chown 33:33 /var/www/html/wp-content/mu-plugins/anypress-shop.php
     $WP eval-file /tmp/design/design.php --user=admin

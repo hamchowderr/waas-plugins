@@ -189,3 +189,18 @@ body .anypress-docs .betterdocs-category-grid-inner-wrapper>.betterdocs-single-c
 .anypress-buy .fct-product-buttons-wrap>*{flex:1 1 0}
 .anypress-buy .fct-product-buttons-wrap a,.anypress-buy .fct-product-buttons-wrap button{text-transform:none}
 .anypress-buy .fct-product-buttons-wrap .fluent-cart-add-to-cart-button{flex:0 0 auto;display:flex;align-items:center;justify-content:center;white-space:nowrap;padding:.9em 1.4em;border-radius:10px;border:1.5px solid var(--wp--preset--color--main);background:var(--wp--preset--color--base);color:var(--wp--preset--color--main);font-weight:700;font-size:var(--wp--preset--font-size--base);line-height:1.2;max-height:none;box-shadow:none}
+
+/* Help pages: BetterDocs' FAQ in the same look as "Questions people ask". */
+body .anypress-docs .betterdocs-faq-wrapper{max-width:46rem;margin-inline:auto}
+body .anypress-docs .betterdocs-faq-section-title,body .anypress-docs .betterdocs-faq-wrapper>h2{font-family:inherit!important;font-weight:800!important;color:var(--wp--preset--color--main)!important;font-size:var(--wp--preset--font-size--x-large)!important;text-align:center}
+body .anypress-docs .betterdocs-faq-title-tag{font-family:inherit!important;font-weight:800!important;color:var(--wp--preset--color--main)!important;font-size:var(--wp--preset--font-size--medium)!important}
+body .anypress-docs .betterdocs-faq-list>li{margin:0!important}
+body .anypress-docs .betterdocs-faq-group{background:transparent!important;border:0!important;border-bottom:1px solid var(--wp--preset--color--main)!important;border-radius:0!important;box-shadow:none!important}
+body .anypress-docs .betterdocs-faq-list>li:first-child .betterdocs-faq-group{border-top:1px solid var(--wp--preset--color--main)!important}
+body .anypress-docs .betterdocs-faq-post{background:transparent!important;padding:1rem 0!important}
+body .anypress-docs .betterdocs-faq-post-name{font-family:inherit!important;font-weight:700!important;color:var(--wp--preset--color--main)!important;font-size:var(--wp--preset--font-size--medium)!important}
+body .anypress-docs .betterdocs-faq-post svg g{stroke:var(--wp--preset--color--main)}
+body .anypress-docs .betterdocs-faq-main-content{background:transparent!important;padding:0 0 1rem!important;color:var(--wp--preset--color--secondary)}
+
+/* Account, signed out: room between the note and its button. */
+.anypress-sign-in__new p:last-child{margin-top:1.25rem}
