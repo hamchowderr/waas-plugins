@@ -34,7 +34,7 @@ class ConfigServiceTest extends TestCase
         $this->options['waas_api_base_url'] = '';
         $this->options['waas_region'] = 'eu1';
 
-        $this->assertFalse((new ConfigService())->get_api_base_url());
+        $this->assertSame(ConfigService::ANYPRESS_API_URL, (new ConfigService())->get_api_base_url());
     }
 
     public function test_waas_constants_win_and_wpcs_constants_still_work(): void
@@ -50,9 +50,9 @@ class ConfigServiceTest extends TestCase
         $this->assertNull(ConfigService::constant('CONFIG_TEST_NEITHER'));
     }
 
-    public function test_false_without_a_base_url(): void
+    public function test_the_anypress_api_without_a_base_url(): void
     {
-        $this->assertFalse((new ConfigService())->get_api_base_url());
+        $this->assertSame('https://api.anypress.io', (new ConfigService())->get_api_base_url());
     }
 
     public function test_filter_can_change_base_url(): void
@@ -63,10 +63,17 @@ class ConfigServiceTest extends TestCase
         $this->assertSame('http://localhost:4111', (new ConfigService())->get_api_base_url());
     }
 
-    public function test_credentials_incomplete_without_base_url(): void
+    public function test_a_key_and_secret_alone_connect_to_the_anypress_api(): void
     {
         $this->options['waas_api_key'] = 'key';
         $this->options['waas_api_secret'] = 'secret';
+
+        $this->assertTrue((new ConfigService())->check_credentials());
+    }
+
+    public function test_credentials_incomplete_without_a_secret(): void
+    {
+        $this->options['waas_api_key'] = 'key';
 
         $this->assertFalse((new ConfigService())->check_credentials());
     }

@@ -422,7 +422,9 @@ class AdminSettings
         // A storefront connected through wp-config has no key fields on the page, and options.php would blank them.
         if (!self::is_ready_made()) {
             register_setting('waas-admin', 'waas_api_base_url', [
-                'sanitize_callback' => 'esc_url_raw'
+                'sanitize_callback' => 'esc_url_raw',
+                // Shown filled in; ConfigService::get_api_base_url() also reads an empty value as the AnyPress API.
+                'default' => ConfigService::ANYPRESS_API_URL,
             ]);
             register_setting('waas-admin', 'waas_api_key', [
                 'sanitize_callback' => 'sanitize_text_field'
@@ -516,7 +518,7 @@ class AdminSettings
                 'class_name' => 'regular-text code',
                 'placeholder' => 'https://api.anypress.io',
                 'constant' => 'API_BASE_URL',
-                'hint' => self::constant_hint('API_BASE_URL', __('https://api.anypress.io, unless you run your own AnyPress API.', 'waas-host')),
+                'hint' => self::constant_hint('API_BASE_URL', __('Leave it as https://api.anypress.io unless you run your own AnyPress API.', 'waas-host')),
             ]);
             $this->add_field('waas_api_key', __('API key', 'waas-host'), 'waas-admin', 'api_credentials', [
                 'type' => 'text',
