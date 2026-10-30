@@ -1,0 +1,321 @@
+{
+ "types": [
+  {
+   "id": "website",
+   "slug": "website",
+   "name": "Website & blog",
+   "short": "Website",
+   "drawing": "website",
+   "image": "website.jpg",
+   "pitch": "Tell people who you are and help them find you.",
+   "headline": "A website that brings people to you.",
+   "inBox": [
+    "Your website or blog",
+    "Help getting found on Google",
+    "Contact and sign-up forms",
+    "A newsletter list"
+   ],
+   "features": [
+    [
+     "Found on Google",
+     "Your pages are set up so search engines can find them, without you touching a setting."
+    ],
+    [
+     "Forms that reach you",
+     "Contact and quote forms land in your inbox, and add people to your list."
+    ],
+    [
+     "Your own newsletter list",
+     "Collect email addresses on your own site and send updates, without paying a mailing app per contact."
+    ],
+    [
+     "Easy to edit",
+     "Write and lay out pages in WordPress, opened with one click from your account."
+    ]
+   ],
+   "idealFor": [
+    "Local businesses",
+    "Blogs and publications",
+    "Portfolios",
+    "Chambers and associations",
+    "Niche content sites"
+   ],
+   "example": {
+    "name": "Juniper Street Bakery",
+    "what": "A neighbourhood bakery with its menu, opening hours and cake orders.",
+    "url": "https://t-c54f40af.stores.anypress.site/"
+   }
+  },
+  {
+   "id": "bookings",
+   "slug": "bookings",
+   "name": "Bookings",
+   "short": "Bookings",
+   "drawing": "bookings",
+   "image": "bookings.jpg",
+   "pitch": "Let clients pick a time and pay when they book.",
+   "headline": "Get booked and paid while you work.",
+   "inBox": [
+    "Your website",
+    "An online booking calendar",
+    "Payment when they book",
+    "Reminder emails"
+   ],
+   "features": [
+    [
+     "Your calendar, online",
+     "Clients see the times you're free and pick one. No more emailing back and forth."
+    ],
+    [
+     "Paid up front",
+     "Take payment when they book, so a no-show doesn't cost you."
+    ],
+    [
+     "Reminders send themselves",
+     "Confirmation and reminder emails go out from your own address."
+    ],
+    [
+     "Every client remembered",
+     "Each booking keeps the client's details, ready for follow-ups and offers."
+    ]
+   ],
+   "idealFor": [
+    "Coaches and consultants",
+    "Studios and classes",
+    "Salons and therapists",
+    "Event hosts",
+    "Franchise locations"
+   ],
+   "example": {
+    "name": "Still Water Yoga",
+    "what": "A yoga studio where students pick a class and book a spot.",
+    "url": "https://t-9687c2a7.stores.anypress.site/"
+   }
+  },
+  {
+   "id": "store",
+   "slug": "online-store",
+   "name": "Online store",
+   "short": "Store",
+   "drawing": "store",
+   "image": "store.jpg",
+   "pitch": "Sell products, downloads and subscriptions, and keep every sale.",
+   "headline": "Sell anything, and keep every sale.",
+   "inBox": [
+    "Your shop",
+    "Card payments",
+    "Your customer list and emails",
+    "A way for others to earn by sending you sales"
+   ],
+   "features": [
+    [
+     "Take card payments",
+     "Sell products, downloads, subscriptions and gift codes, with card payments built in."
+    ],
+    [
+     "No cut of your sales",
+     "One monthly price for the site. The card company's fee is the only one on an order."
+    ],
+    [
+     "Know your customers",
+     "Every buyer lands in your customer list, ready for emails, offers and a newsletter."
+    ],
+    [
+     "Partners who sell for you",
+     "Let others earn money for sending you sales, when you're ready."
+    ]
+   ],
+   "idealFor": [
+    "Product brands",
+    "Subscription boxes",
+    "Digital downloads",
+    "Supplements and wellness",
+    "Niche online shops"
+   ],
+   "example": {
+    "name": "Fern & Clay Ceramics",
+    "what": "A pottery studio selling handmade mugs, bowls and vases.",
+    "url": "https://t-34df1b8c.stores.anypress.site/"
+   }
+  },
+  {
+   "id": "community",
+   "slug": "community",
+   "name": "Community & courses",
+   "short": "Community",
+   "drawing": "courses",
+   "image": "courses.jpg",
+   "pitch": "A members' area with courses, discussions and paid access.",
+   "headline": "Your members, your courses, your site.",
+   "inBox": [
+    "Your website",
+    "A members' area with discussions",
+    "Online courses",
+    "Paid memberships"
+   ],
+   "features": [
+    [
+     "A space of your own",
+     "Members get a feed, groups and profiles on your domain, not someone else's app."
+    ],
+    [
+     "Courses built in",
+     "Lessons and progress tracking, in the same place your members already talk."
+    ],
+    [
+     "Paid access",
+     "Sell memberships and courses, as a one-off or every month."
+    ],
+    [
+     "Keep in touch",
+     "Welcome emails and announcements reach every member."
+    ]
+   ],
+   "idealFor": [
+    "Course creators",
+    "Coaches with programs",
+    "Associations and chambers",
+    "Membership clubs",
+    "Educators"
+   ],
+   "example": {
+    "name": "Brightside Guitar School",
+    "what": "Online guitar courses with a members' practice room.",
+    "url": "https://t-de81a042.stores.anypress.site/"
+   }
+  },
+  {
+   "id": "everything",
+   "slug": "everything",
+   "name": "Everything",
+   "short": "Everything",
+   "drawing": "everything",
+   "image": "everything.jpg",
+   "pitch": "Shop, bookings, members, courses and a help desk on one site.",
+   "headline": "One site that runs the whole operation.",
+   "inBox": [
+    "Everything in the other four",
+    "A help desk for customer questions",
+    "One list of every customer",
+    "Room to grow"
+   ],
+   "features": [
+    [
+     "Every tool, one place",
+     "Shop, bookings, members, courses and a help desk, all on one site with one login."
+    ],
+    [
+     "One record per customer",
+     "Someone who buys, books a call and joins your community is one customer, not three."
+    ],
+    [
+     "Answer questions in one place",
+     "Customers get a help page, and you get one inbox for every question."
+    ],
+    [
+     "Grows with you",
+     "Start selling, add memberships later, open bookings next month. It's already there."
+    ]
+   ],
+   "idealFor": [
+    "Chambers and associations",
+    "Franchises and multi-location brands",
+    "Education businesses",
+    "Agencies' biggest clients",
+    "Anyone outgrowing five apps"
+   ],
+   "example": {
+    "name": "Riverbend Business Alliance",
+    "what": "A local business group with memberships, events and a members' forum.",
+    "url": "https://t-d6478888.stores.anypress.site/"
+   }
+  }
+ ],
+ "sizes": [
+  {
+   "id": "small",
+   "name": "Small",
+   "cpu": "1 CPU",
+   "memory": "512 MB",
+   "storage": "5 GB",
+   "emails": "5,000",
+   "for": "Starting out"
+  },
+  {
+   "id": "medium",
+   "name": "Medium",
+   "cpu": "2 CPUs",
+   "memory": "512 MB",
+   "storage": "10 GB",
+   "emails": "20,000",
+   "for": "Growing traffic and sales"
+  },
+  {
+   "id": "large",
+   "name": "Large",
+   "cpu": "4 CPUs",
+   "memory": "768 MB",
+   "storage": "25 GB",
+   "emails": "50,000",
+   "for": "Busy sites and big lists"
+  }
+ ],
+ "included": [
+  [
+   "backup",
+   "Nightly backups",
+   "We save a copy of your site every night, and keep daily copies for 7 days and weekly copies for 4 weeks."
+  ],
+  [
+   "domain",
+   "A free address, or your own",
+   "Start on a free address ending in anypress.site with a secure connection. Switch to your own domain whenever you like."
+  ],
+  [
+   "lock",
+   "Updates done for you",
+   "WordPress, its plugins and the server are kept up to date for you."
+  ],
+  [
+   "email",
+   "Emails that arrive",
+   "Order, account and booking emails always send. Newsletters come with a monthly allowance."
+  ],
+  [
+   "lifebuoy",
+   "A person to ask",
+   "Email support@anypress.io and a person who knows your site writes back."
+  ],
+  [
+   "thirty",
+   "30-day money-back guarantee",
+   "Your first payment for a new plan is covered. Not for you? Email us within 30 days."
+  ]
+ ],
+ "faq": [
+  [
+   "How soon is my site ready?",
+   "A new site is usually ready a few minutes after you pay. We email you when it is. If it's been more than an hour, email support@anypress.io and we'll look right away."
+  ],
+  [
+   "Can I change my plan or size later?",
+   "Yes. Email support@anypress.io with your site name and what you'd like, and we'll switch it for you. The new price starts from your next renewal."
+  ],
+  [
+   "Can I use my own domain?",
+   "Yes. Every site starts on a free address ending in anypress.site. When you're ready, your account page shows the records to add where your domain is managed, and the secure connection is set up for you."
+  ],
+  [
+   "What happens if I send more emails than my size allows?",
+   "Order, account and booking emails always send. Past your monthly allowance, newsletters and email sequences pause until next month, or you can add an email pack to keep them going."
+  ],
+  [
+   "Is it real WordPress?",
+   "Yes. Every site is its own WordPress, with its own database. You edit it in WordPress, opened with one click from your account."
+  ],
+  [
+   "How do I cancel or get a refund?",
+   "Cancel from your account: your site stays online until the end of the period you've paid for. Your first payment for a new plan is covered by our 30-day money-back guarantee; email support@anypress.io to ask for it."
+  ]
+ ]
+}

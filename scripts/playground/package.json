@@ -9,7 +9,8 @@
   "scripts": {
     "smoke": "node smoke.mjs",
     "serve": "node smoke.mjs --serve",
-    "export": "node export.mjs"
+    "export": "node export.mjs",
+    "shop": "node shop-preview.mjs"
   },
   "dependencies": {
     "@wp-playground/cli": "3.1.59"

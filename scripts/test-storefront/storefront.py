@@ -5,6 +5,7 @@
     storefront.py [--cart woo] create            # project, service, variables (password generated, never printed)
     storefront.py [--cart woo] push              # build the plugins and copy them into the service
     storefront.py [--cart woo] setup [steps]     # bootstrap, install, plugins, configure, pages, product, payments, cron
+    storefront.py --cart shop setup design       # the shop's look: AnyPress theme, pages and templates (remote/design)
     storefront.py setup payments --mode gateway  # FluentCart's subscription mode: store (default) or gateway
     storefront.py [--cart woo] run '<command>'   # one shell command in the wordpress container, as root
     storefront.py [--cart woo] remove            # delete the service with its volumes, then the project if empty
@@ -53,7 +54,7 @@ CARTS = {
         # No waas-payments: Stripe is FluentCart's own gateway, connected by the owner in wp-admin. No payments step.
         'compose': 'compose-shop.yml', 'remote': ['remote'], 'packages': ['waas-host'],
         'secrets': {}, 'description': 'AnyPress storefront (shop.anypress.io)', 'session_key': False,
-        'steps': ['bootstrap', 'install', 'plugins', 'configure', 'pages', 'product', 'cron'],
+        'steps': ['bootstrap', 'install', 'plugins', 'configure', 'pages', 'product', 'design', 'cron'],
     },
     'woo': {
         'service': 'storefront-woo-test', 'domain': 'storefront-woo-test.191.101.15.236.sslip.io',
@@ -221,7 +222,8 @@ def build():
     files = []
     for entry in CART['remote']:
         path = os.path.join(HERE, entry)
-        files += [os.path.join(path, f) for f in sorted(os.listdir(path))] if os.path.isdir(path) else [path]
+        # Files only: remote/design (the shop's look, with fonts and pictures) is fetched from GitHub by its own step.
+        files += [os.path.join(path, f) for f in sorted(os.listdir(path)) if os.path.isfile(os.path.join(path, f))] if os.path.isdir(path) else [path]
     subprocess.run(['cp'] + files + [pkg], check=True)
     archive = os.path.join(out, 'pkg.txz')
     subprocess.run(['tar', '-cJf', archive, '-C', pkg, '.'], check=True)

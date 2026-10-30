@@ -1,0 +1,142 @@
+/* The shop in the anypress.io look. Saved as the site's Additional CSS (Styles), so it can be changed in the Site Editor. */
+
+/* Buttons lift onto an amber base; outline buttons are paper with an ink line. */
+.wp-element-button,.wp-block-button__link{transition:transform .15s ease,box-shadow .15s ease}
+.wp-element-button:hover,.wp-block-button__link:hover{transform:translateY(-2px);box-shadow:0 4px 0 0 var(--wp--preset--color--amber,#ffb338)}
+.wp-block-button.is-style-outline>.wp-block-button__link{background:var(--wp--preset--color--base);color:var(--wp--preset--color--main);border:1.5px solid var(--wp--preset--color--main)}
+:where(a,button,input,select,summary,textarea):focus-visible{outline:3px solid var(--wp--preset--color--main);outline-offset:2px;box-shadow:0 0 0 6px var(--wp--preset--color--primary-alt)}
+@media (prefers-reduced-motion:reduce){.wp-element-button,.wp-block-button__link{transition:none}.wp-element-button:hover,.wp-block-button__link:hover{transform:none}}
+
+/* Header: honey announcement, then a white bar with a hairline. */
+.anypress-announce p{margin:0;font-weight:600}
+.anypress-header{border-bottom:1px solid var(--wp--preset--color--border-light)}
+.anypress-header .wp-block-navigation{font-weight:600}
+.anypress-header .wp-block-navigation a{color:var(--wp--preset--color--main)}
+.anypress-header .wp-block-navigation a:hover{color:var(--wp--preset--color--primary)}
+.anypress-header .wp-block-button__link{padding:.6em 1.1em}
+.anypress-cart-link{margin:0;font-weight:600}
+.anypress-cart-link a{color:var(--wp--preset--color--main);text-decoration:none}
+.anypress-logo{margin:0}
+@media (max-width:781px){.anypress-header .wp-block-buttons,.anypress-cart-link{display:none}}
+
+/* Type: big, tight headings; a honey highlight. */
+h1.wp-block-heading{letter-spacing:-.03em;line-height:1}
+mark.has-inline-color{padding:0 .12em;border-radius:.12em;color:inherit}
+.is-style-hand{margin-bottom:-.4em}
+.has-text-align-center.is-style-hand{margin-inline:auto}
+.anypress-tilt img{transform:rotate(.7deg)}
+@media (prefers-reduced-motion:no-preference){.anypress-tilt img{transition:transform .3s ease}.anypress-tilt:hover img{transform:rotate(0)}}
+.anypress-inline-ticks{display:flex;flex-wrap:wrap;gap:.25em 1.4em;font-size:var(--wp--preset--font-size--small);color:var(--wp--preset--color--secondary)}
+
+/* Cards: the drawings sit on the line; prices are big. */
+.is-style-card-line .wp-block-buttons,.is-style-sketch .wp-block-buttons,.is-style-sketch-rose .wp-block-buttons{margin-top:auto}
+.is-style-card-line .wp-block-button,.is-style-sketch .wp-block-button{width:100%}
+.is-style-card-line .wp-block-button__link,.is-style-sketch .wp-block-button__link{width:100%}
+.anypress-from{margin:0;font-size:var(--wp--preset--font-size--small)}
+.anypress-from strong{font-size:1.5em}
+.anypress-size-name{margin:0;font-weight:800;font-size:var(--wp--preset--font-size--medium)}
+.anypress-price{margin:0}
+.anypress-price strong{font-size:var(--wp--preset--font-size--x-large);font-weight:800;letter-spacing:-.03em;line-height:1}
+.anypress-specs{font-size:var(--wp--preset--font-size--small);color:var(--wp--preset--color--secondary);padding-top:.6em;border-top:1px solid var(--wp--preset--color--border-light)}
+.anypress-specs li{margin-block:.2em}
+.wp-block-group.is-style-sketch,.wp-block-group.is-style-sketch-rose{background:var(--wp--preset--color--base)}
+
+/* Plans page: chips that jump to each kind. */
+.anypress-chips{gap:.5rem}
+.anypress-chip{margin:0}
+.anypress-chip a{display:inline-block;padding:.45em 1em;border:1.5px solid var(--wp--preset--color--main);border-radius:999px;color:var(--wp--preset--color--main);text-decoration:none;font-weight:700;background:var(--wp--preset--color--base)}
+.anypress-chip a:hover{background:var(--wp--preset--color--primary-alt)}
+[id]{scroll-margin-top:7rem}
+
+/* Questions: lines between, a plus that turns. */
+.anypress-faq .wp-block-details{border-top:1.5px solid var(--wp--preset--color--main);padding:1rem 0;margin:0}
+.anypress-faq .wp-block-details:last-child{border-bottom:1.5px solid var(--wp--preset--color--main)}
+.anypress-faq summary{font-weight:800;font-size:var(--wp--preset--font-size--medium);cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:1rem;min-height:2.75rem;align-items:center}
+.anypress-faq summary::-webkit-details-marker{display:none}
+.anypress-faq summary::after{content:"+";font-size:1.6em;line-height:1;transition:transform .2s ease}
+.anypress-faq details[open] summary::after{transform:rotate(45deg)}
+.anypress-faq details p{color:var(--wp--preset--color--secondary);margin-top:.5rem}
+
+/* Plan page: breadcrumb, size switcher, the buy box. */
+.anypress-crumbs{display:flex;gap:.6em;font-size:var(--wp--preset--font-size--small);margin-bottom:var(--wp--preset--spacing--medium)}
+.anypress-crumbs a{color:var(--wp--preset--color--secondary)}
+.anypress-gallery{padding:var(--wp--preset--spacing--small);overflow:hidden}
+.anypress-buy>*{margin-block:0}
+.anypress-buy>*+*{margin-top:1rem}
+.anypress-sizes{display:flex;flex-direction:column;gap:.5rem}
+.anypress-sizes__label{font-weight:700;font-size:var(--wp--preset--font-size--small)}
+.anypress-sizes ul{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;list-style:none;margin:0;padding:0}
+.anypress-sizes a{display:flex;flex-direction:column;gap:.1em;padding:.7em .8em;border:1.5px solid var(--wp--preset--color--border-light);border-radius:12px;color:var(--wp--preset--color--main);text-decoration:none;background:var(--wp--preset--color--base);height:100%}
+.anypress-sizes a span{font-size:var(--wp--preset--font-size--x-small);color:var(--wp--preset--color--secondary)}
+.anypress-sizes a:hover{border-color:var(--wp--preset--color--main)}
+.anypress-sizes a[aria-current]{border-color:var(--wp--preset--color--main);box-shadow:4px 4px 0 var(--wp--preset--color--primary-alt)}
+
+/* FluentCart: its buttons, fields and boxes in the same look. */
+body{--fct-btn-bg-color:var(--wp--preset--color--main);--fct-btn-border-color:var(--wp--preset--color--main);--fct-btn-text-color:var(--wp--preset--color--base);--fct-btn-hover-bg-color:var(--wp--preset--color--main);--fct-btn-hover-text-color:var(--wp--preset--color--base);--fct-primary-color:var(--wp--preset--color--main);--fct-border-color:var(--wp--preset--color--border-light);--fct-border-radius:12px}
+.anypress-store-page{font-size:var(--wp--preset--font-size--small)}
+
+/* The plan page's buy box: Monthly | Yearly as one switch, the price large, one wide button. */
+.anypress-buy .fct_buy_section{display:flex;flex-direction:column;gap:1rem}
+.anypress-buy .fct-product-tab-nav{display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:4px;border:1.5px solid var(--wp--preset--color--main);border-radius:999px;position:relative;width:min(100%,18rem)}
+.anypress-buy .fct-product-tab-nav .tab-active-bar{display:none}
+.anypress-buy .fct-product-tab-nav-item{padding:.45em 1em;border-radius:999px;text-align:center;font-weight:700;cursor:pointer;color:var(--wp--preset--color--main)}
+.anypress-buy .fct-product-tab-nav-item.active{background:var(--wp--preset--color--main);color:var(--wp--preset--color--base)}
+.anypress-buy .fct-product-tab-content{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.anypress-buy .fct-product-payment-type{font-size:var(--wp--preset--font-size--large);font-weight:800;letter-spacing:-.02em;color:var(--wp--preset--color--main)}
+.anypress-buy .fct-product-buttons-wrap{display:flex}
+.anypress-buy a.fluent-cart-direct-checkout-button,.anypress-buy a.fluent-cart-direct-checkout-button:hover{display:flex;width:100%;max-height:none;padding:.9em 1.4em;border-radius:10px;background:var(--wp--preset--color--main);box-shadow:none;color:var(--wp--preset--color--base);font-weight:700;font-size:var(--wp--preset--font-size--base);line-height:1.2;border:1.5px solid var(--wp--preset--color--main);transition:transform .15s ease,box-shadow .15s ease}
+.anypress-buy a.fluent-cart-direct-checkout-button:hover{transform:translateY(-2px);box-shadow:0 4px 0 0 var(--wp--preset--color--amber,#ffb338)}
+.anypress-buy .fct-product-card-excerpt{color:var(--wp--preset--color--secondary);font-size:var(--wp--preset--font-size--base)}
+.anypress-buy .wp-block-list{font-size:var(--wp--preset--font-size--small)}
+.anypress-gallery img{border-radius:12px}
+.anypress-cart-link{font-size:var(--wp--preset--font-size--small)}
+
+/* Account, signed out: the sign-in form beside a note for new buyers. */
+.anypress-sign-in{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:var(--wp--preset--spacing--large);align-items:start}
+.anypress-sign-in__form{border:1.5px solid var(--wp--preset--color--main);border-radius:18px;box-shadow:8px 8px 0 var(--wp--preset--color--primary-alt);padding:var(--wp--preset--spacing--medium);background:var(--wp--preset--color--base)}
+.anypress-sign-in h2{margin:0 0 .3em;font-size:var(--wp--preset--font-size--large)}
+.anypress-sign-in__new{padding:var(--wp--preset--spacing--medium);border-radius:16px;background:var(--wp--preset--color--tertiary)}
+.anypress-sign-in__new h3{margin-top:0;font-size:var(--wp--preset--font-size--medium)}
+.anypress-sign-in form p{display:flex;flex-direction:column;gap:.35em;margin:0 0 1rem}
+.anypress-sign-in form .login-remember{flex-direction:row}
+.anypress-sign-in label{font-weight:700}
+.anypress-sign-in input[type=text],.anypress-sign-in input[type=password]{font:inherit;padding:.75em .9em;border:1.5px solid var(--wp--preset--color--border-light);border-radius:10px;width:100%;box-sizing:border-box}
+.anypress-sign-in input[type=text]:focus,.anypress-sign-in input[type=password]:focus{border-color:var(--wp--preset--color--main);outline:none;box-shadow:0 0 0 4px var(--wp--preset--color--primary-alt)}
+.anypress-sign-in input[type=submit]{font:inherit;font-weight:700;padding:.85em 1.4em;border-radius:10px;border:1.5px solid var(--wp--preset--color--main);background:var(--wp--preset--color--main);color:var(--wp--preset--color--base);cursor:pointer;width:100%}
+.anypress-sign-in__lost{font-size:var(--wp--preset--font-size--small);margin:0}
+@media (max-width:781px){.anypress-sign-in{grid-template-columns:1fr}}
+
+/* Checkout and cart: FluentCart's form in the shop's type, fields with the soft line, the summary as a sketch panel. */
+.fct_checkout,.fct_checkout *,.fct-cart-page,.fct-cart-page *,.fct-customer-root-container,.fct-customer-root-container *{font-family:inherit}
+.fct_checkout input,.fct_checkout select,.fct_checkout textarea{font-size:var(--wp--preset--font-size--small)}
+.fct_checkout .fct_checkout_input_group{border-radius:12px;border-color:var(--wp--preset--color--border-light)}
+.fct_checkout h3,.fct_checkout h4,.fct_checkout .fct_checkout_form_section>label{font-weight:800}
+.fct_checkout .fct_summary{border:1.5px solid var(--wp--preset--color--main);border-radius:18px;box-shadow:8px 8px 0 var(--wp--preset--color--primary-alt);background:var(--wp--preset--color--base)}
+.fct_place_order_btn,.fct_checkout button[type=submit]{background:var(--wp--preset--color--main)!important;background-image:none!important;border-color:var(--wp--preset--color--main)!important;box-shadow:none!important;border-radius:10px!important;font-weight:700!important;font-size:var(--wp--preset--font-size--base)!important;min-height:3.2rem}
+.fct_place_order_btn:hover{box-shadow:0 4px 0 0 var(--wp--preset--color--amber,#ffb338)!important}
+
+/* Help pages (BetterDocs): cards with the soft line, accent icons, the search in the shop's look. */
+.betterdocs-category-grid-inner-wrapper .betterdocs-single-category-wrapper{border:1px solid var(--wp--preset--color--border-light)!important;border-radius:16px!important;box-shadow:none!important;background:var(--wp--preset--color--base)!important}
+.betterdocs-category-grid-inner-wrapper .betterdocs-single-category-wrapper:hover{border-color:var(--wp--preset--color--main)!important;box-shadow:6px 6px 0 var(--wp--preset--color--primary-alt)!important}
+[class*=betterdocs] .betterdocs-category-title,[class*=betterdocs] .betterdocs-category-title a{font-family:inherit;font-weight:800;color:var(--wp--preset--color--main)}
+[class*=betterdocs] .betterdocs-articles-list a{color:var(--wp--preset--color--main)}
+[class*=betterdocs] .betterdocs-articles-list a:hover{color:var(--wp--preset--color--primary)}
+[class*=betterdocs] .betterdocs-category-items-counts span{background:var(--wp--preset--color--primary-alt)!important;color:var(--wp--preset--color--main)!important}
+[class*=betterdocs-searchbox],.betterdocs-search-form-wrapper{background:var(--wp--preset--color--tertiary)!important;border-radius:18px}
+.betterdocs-search-modal-layout-1 .search-bar,[class*=betterdocs] .betterdocs-searchform{border:1.5px solid var(--wp--preset--color--main)!important;border-radius:999px!important}
+[class*=betterdocs] .betterdocs-faq-title,[class*=betterdocs] h1,[class*=betterdocs] h2{font-family:inherit;font-weight:800;color:var(--wp--preset--color--main)}
+body .anypress-docs .betterdocs-category-grid-inner-wrapper{gap:var(--wp--preset--spacing--medium)}
+body .anypress-docs .betterdocs-single-category-wrapper .betterdocs-single-category-inner{border:1px solid var(--wp--preset--color--border-light);border-radius:16px;box-shadow:none;overflow:hidden}
+body .anypress-docs .betterdocs-single-category-wrapper:hover .betterdocs-single-category-inner{border-color:var(--wp--preset--color--main);box-shadow:6px 6px 0 var(--wp--preset--color--primary-alt)}
+body .anypress-docs .betterdocs-category-header .betterdocs-category-header-inner{border-bottom:1px solid var(--wp--preset--color--border-light)!important}
+body .anypress-docs .betterdocs-category-title,body .anypress-docs .betterdocs-category-title a{color:var(--wp--preset--color--main)!important;font-weight:800;font-size:var(--wp--preset--font-size--medium)!important}
+body .anypress-docs .betterdocs-category-items-counts{background:var(--wp--preset--color--primary-alt)!important}
+body .anypress-docs .betterdocs-category-items-counts span{color:var(--wp--preset--color--main)!important}
+body .anypress-docs .betterdocs-articles-list li a{color:var(--wp--preset--color--main)!important;font-size:var(--wp--preset--font-size--small)!important}
+body .anypress-docs .betterdocs-articles-list li a:hover{color:var(--wp--preset--color--primary)!important}
+body .anypress-docs a.betterdocs-category-link-btn{color:var(--wp--preset--color--main)!important;border:1.5px solid var(--wp--preset--color--main)!important;border-radius:999px!important}
+body .betterdocs-search-form-wrapper,body .betterdocs-searchbox-wrapper{background:transparent!important;margin:0!important;padding:0!important}
+body [class*=betterdocs-searchbox] .betterdocs-searchform,body .betterdocs-search-modal-layout-1 .search-bar{border:1.5px solid var(--wp--preset--color--main)!important;border-radius:999px!important;box-shadow:6px 6px 0 var(--wp--preset--color--primary-alt)!important;background:var(--wp--preset--color--base)!important}
+.anypress-store-page{overflow-x:clip}
+body .betterdocs-search-form-wrapper,body .betterdocs-searchbox-wrapper,body [class*=betterdocs-searchbox]{margin-inline:auto!important;max-width:100%}
+@media (max-width:600px){.fct_checkout .fct_summary,.anypress-sign-in__form,.wp-block-group.is-style-sketch,.wp-block-group.is-style-sketch-rose{box-shadow:4px 4px 0 var(--wp--preset--color--primary-alt)}}
