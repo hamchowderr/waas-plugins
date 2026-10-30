@@ -241,6 +241,40 @@ class WebhookReceiverTest extends TestCase
         $this->assertSame(Tenant::READY, $this->cart->meta[900][Tenant::TENANT_STATE]);
     }
 
+    public function test_deleted_shows_the_website_removed_once_the_api_no_longer_has_it(): void
+    {
+        $this->store(Tenant::READY);
+        $this->api->expects('get_tenant_safe')->with('ext-900')->andReturn(null);
+
+        $response = $this->receiver->handle($this->request('tenant.deleted', ['tenant' => ['externalId' => 'ext-900']]));
+
+        $this->assertTrue($response->get_data()['handled']);
+        $this->assertSame(Tenant::DELETED, $this->cart->meta[900][Tenant::TENANT_STATE]);
+        $this->assertSame(Tenant::READY, $this->cart->meta[901][Tenant::TENANT_STATE]);
+    }
+
+    public function test_deleted_for_a_store_the_api_still_has_changes_nothing(): void
+    {
+        $this->store(Tenant::READY);
+        $this->api->expects('get_tenant_safe')->with('ext-900')->andReturn((object) ['statusCode' => 1]);
+
+        $this->receiver->handle($this->request('tenant.deleted', ['tenant' => ['externalId' => 'ext-900']]));
+
+        $this->assertSame(Tenant::READY, $this->cart->meta[900][Tenant::TENANT_STATE]);
+    }
+
+    public function test_restored_brings_a_removed_website_back_to_ready(): void
+    {
+        $this->store(Tenant::DELETED);
+        $this->api->allows('get_tenant_safe')->with('ext-900')->andReturn((object) ['statusCode' => 1, 'isSuspended' => false, 'domainName' => 'apex.sites.example']);
+        Functions\expect('wp_remote_head')->once()->andReturn(['response' => ['code' => 200]]);
+        Actions\expectDone('waas_tenant_ready')->once()->with(900, 'ext-900', 'apex.sites.example');
+
+        $this->receiver->handle($this->request('tenant.restored', ['tenant' => ['externalId' => 'ext-900']]));
+
+        $this->assertSame(Tenant::READY, $this->cart->meta[900][Tenant::TENANT_STATE]);
+    }
+
     public function test_domains_changed_copies_the_apis_address_not_the_payloads(): void
     {
         $this->store(Tenant::READY, 'old.example.com');

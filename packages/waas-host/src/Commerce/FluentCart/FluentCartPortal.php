@@ -257,6 +257,8 @@ class FluentCartPortal
                 return ['attention', Tenant::customer_status_label($status), ''];
             case Tenant::SUSPENDED:
                 return ['off', __('Offline', 'waas-host'), __('Your website is offline. Manage your plan to bring it back, or write to us if you are not sure why.', 'waas-host')];
+            case Tenant::DELETED:
+                return ['off', __('Removed', 'waas-host'), __('This website was removed. Write to us if you want it back: we keep a backup for 90 days.', 'waas-host')];
             default:
                 return ['busy', Tenant::customer_status_label($status), ''];
         }
