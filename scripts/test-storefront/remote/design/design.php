@@ -402,10 +402,10 @@ function ap_included( $data, $section = 'tint' ) {
 	foreach ( $data['included'] as list( $drawing, $title, $body ) ) {
 		$tiles[] = ap_group(
 			ap_img( ap_asset( "$drawing.svg" ), '', '84px' ) . "\n\n" . ap_h( ap_e( $title ), 3, array( 'fontSize' => 'medium' ) ) . "\n\n" . ap_p( ap_e( $body ), array( 'textColor' => 'secondary' ) ),
-			array( 'style' => array( 'spacing' => array( 'blockGap' => 'var:preset|spacing|small' ) ), 'layout' => array( 'type' => 'flex', 'orientation' => 'vertical' ) )
+			array( 'className' => 'anypress-centered', 'style' => array( 'spacing' => array( 'blockGap' => 'var:preset|spacing|small' ) ), 'layout' => array( 'type' => 'flex', 'orientation' => 'vertical' ) )
 		);
 	}
-	return ap_band( ap_head( 'Looked after for you', 'Every plan includes', 'Whatever kind of site and size you pick, these come with it.' ) . "\n\n" . ap_grid( $tiles, '17rem', 'large' ), $section, 'included' );
+	return ap_band( ap_head( 'Looked after for you', 'Every plan includes', 'Whatever kind of site and size you pick, these come with it.' ) . "\n\n" . ap_grid( $tiles, '17rem', 'large', 3, 'anypress-included' ), $section, 'included' );
 }
 
 /** The sizes side by side. With $type_id, the price row and links are that kind's; the current size is marked. */
@@ -461,7 +461,7 @@ function ap_help_band() {
 		ap_columns(
 			array(
 				array( ap_p( ap_e( 'Not sure which to pick?' ), array( 'className' => 'is-style-hand' ) ) . "\n\n" . ap_h( ap_e( 'Ask a person. We answer every email.' ), 2, array( 'fontSize' => 'x-large' ) ) . "\n\n" . ap_p( ap_e( 'Tell us what your business does and we’ll tell you which plan and size fit. No sales call, just a reply.' ) ), '62%' ),
-				array( ap_buttons( array( array( 'Email support@anypress.io', $ap_mailto ), array( 'Read the help pages', home_url( '/docs/' ), 'outline' ) ) ), '38%' ),
+				array( ap_buttons( array( array( 'Email support@anypress.io', $ap_mailto ), array( 'Read the help pages', home_url( '/docs/' ), 'outline' ) ) ), '38%', 'anypress-help-actions' ),
 			),
 			array( 'verticalAlignment' => 'center' )
 		),
@@ -502,7 +502,7 @@ foreach ( $ap_data['types'] as $ap_type ) {
 		. ap_buttons( array( array( 'See plans', get_permalink( $ap_plans_page ) . '#' . $ap_type['id'] ) ) ),
 		'card-line',
 		'small',
-		'anypress-type-card'
+		'anypress-type-card anypress-centered'
 	);
 }
 $ap_steps = array();
@@ -515,7 +515,7 @@ foreach (
 ) {
 	$ap_steps[] = ap_group(
 		ap_img( ap_asset( "$ap_d.svg" ), '', '120px' ) . "\n\n" . ap_p( ap_e( "Step $ap_n" ), array( 'className' => 'is-style-hand' ) ) . "\n\n" . ap_h( ap_e( $ap_t ), 3, array( 'fontSize' => 'medium' ) ) . "\n\n" . ap_p( ap_e( $ap_b ), array( 'textColor' => 'secondary' ) ),
-		array( 'style' => array( 'spacing' => array( 'blockGap' => 'var:preset|spacing|small' ) ), 'layout' => array( 'type' => 'flex', 'orientation' => 'vertical' ) )
+		array( 'className' => 'anypress-centered', 'style' => array( 'spacing' => array( 'blockGap' => 'var:preset|spacing|small' ) ), 'layout' => array( 'type' => 'flex', 'orientation' => 'vertical' ) )
 	);
 }
 $ap_home = ap_band(
@@ -540,7 +540,7 @@ $ap_home = ap_band(
 ) . "\n\n"
 . ap_band( ap_head( 'Start here', 'What are you making?', 'Five kinds of website, each set up with the tools it needs. Every one is real WordPress you can change later.', 'types' ) . "\n\n" . ap_grid( $ap_type_cards, '12rem', 'small', 5, 'anypress-type-grid' ), 'tint', 'types-band', 'xx-large', 'xx-large', array( 'layout' => array( 'type' => 'constrained', 'contentSize' => '80rem' ) ) ) . "\n\n"
 . ap_band( ap_head( 'Three sizes', 'Every size, side by side', 'All sizes have the same features. Bigger sizes have more power, storage and newsletter emails for busier sites.', 'sizes' ) . "\n\n" . ap_sizes_table( $ap_data, $ap_plans ) . "\n\n" . ap_p( ap_e( 'Paying yearly? You get two months free on every size.' ), array( 'align' => 'center', 'textColor' => 'secondary' ) ) ) . "\n\n"
-. ap_band( ap_head( 'How it works', 'From checkout to your own site in minutes' ) . "\n\n" . ap_grid( $ap_steps, '16rem', 'large' ), 'brand-soft', 'how' ) . "\n\n"
+. ap_band( ap_head( 'How it works', 'From checkout to your own site in minutes' ) . "\n\n" . ap_grid( $ap_steps, '16rem', 'large', 3, 'anypress-steps' ), 'brand-soft', 'how' ) . "\n\n"
 . ap_included( $ap_data, '' ) . "\n\n"
 . ap_faq( $ap_data, null, 'tint' ) . "\n\n"
 . ap_help_band();
@@ -565,7 +565,9 @@ foreach ( $ap_data['types'] as $ap_i => $ap_type ) {
 			. ap_p( ap_e( 'or ' . ap_money( $ap_plan['yearly'] ) . ' a year, two months free' ), array( 'textColor' => 'secondary', 'fontSize' => 'small' ) ) . "\n\n"
 			. ap_list( array( ap_e( $ap_size['cpu'] . ', ' . $ap_size['memory'] . ' memory' ), ap_e( $ap_size['storage'] . ' storage' ), ap_e( $ap_size['emails'] . ' newsletter emails a month' ) ), 'is-style-no-bullets anypress-specs' ) . "\n\n"
 			. ap_buttons( array( array( 'Choose ' . $ap_size['name'], $ap_plan['url'] ) ) ),
-			'small' === $ap_size['id'] ? 'sketch' : 'card-line'
+			'small' === $ap_size['id'] ? 'sketch' : 'card-line',
+			'medium',
+			'anypress-size-card anypress-centered'
 		);
 	}
 	$ap_plan_sections[] = ap_band(
@@ -579,7 +581,7 @@ foreach ( $ap_data['types'] as $ap_i => $ap_type ) {
 					. ap_p( 'See one working: <a href="' . esc_url( $ap_type['example']['url'] ) . '">' . ap_e( $ap_type['example']['name'] ) . '</a>, ' . ap_e( lcfirst( $ap_type['example']['what'] ) ), array( 'textColor' => 'secondary', 'fontSize' => 'small' ) ),
 					'36%',
 				),
-				array( ap_grid( $ap_size_cards, '11rem', 'medium' ), '64%' ),
+				array( ap_grid( $ap_size_cards, '10rem', 'medium', 3, 'anypress-size-grid' ), '64%' ),
 			),
 			array( 'style' => array( 'spacing' => array( 'blockGap' => array( 'left' => 'var:preset|spacing|x-large' ) ) ) )
 		),
@@ -692,10 +694,10 @@ foreach ( $ap_data['types'] as $ap_type ) {
 		}
 		$ap_features = array();
 		foreach ( $ap_type['features'] as list( $ap_t, $ap_b ) ) {
-			$ap_features[] = ap_card( ap_h( ap_e( $ap_t ), 3, array( 'fontSize' => 'medium' ) ) . "\n\n" . ap_p( ap_e( $ap_b ), array( 'textColor' => 'secondary' ) ) );
+			$ap_features[] = ap_card( ap_h( ap_e( $ap_t ), 3, array( 'fontSize' => 'medium' ) ) . "\n\n" . ap_p( ap_e( $ap_b ), array( 'textColor' => 'secondary' ) ), 'card-line', 'medium', 'anypress-centered' );
 		}
 		$ap_content = ap_band(
-			ap_head( 'What you get', $ap_type['headline'], $ap_type['pitch'] ) . "\n\n" . ap_grid( $ap_features, '15rem' ) . "\n\n"
+			ap_head( 'What you get', $ap_type['headline'], $ap_type['pitch'] ) . "\n\n" . ap_grid( $ap_features, '13rem', 'medium', 4, 'anypress-features' ) . "\n\n"
 			. ap_p( 'Made for ' . ap_e( implode( ', ', array_map( 'lcfirst', array_slice( $ap_type['idealFor'], 0, -1 ) ) ) . ' and ' . lcfirst( end( $ap_type['idealFor'] ) ) ) . '. See one working: <a href="' . esc_url( $ap_type['example']['url'] ) . '">' . ap_e( $ap_type['example']['name'] ) . '</a>.', array( 'align' => 'center', 'textColor' => 'secondary' ) ),
 			'',
 			'what'
@@ -876,7 +878,7 @@ $ap_buy_column = ap_p( ap_e( 'Ready a few minutes after you pay' ), array( 'clas
 	. '<!-- wp:fluent-cart/excerpt /-->' . "\n\n"
 	. ap_shortcode( '[anypress_sizes]' ) . "\n\n"
 	. '<!-- wp:fluent-cart/buy-section {"inside_product_info":"yes"} /-->' . "\n\n"
-	. ap_list( array( 'Pay yearly and get two months free', '30-day money-back guarantee', 'Cancel any time from your account', 'A free anypress.site address, or your own domain', 'Secure card checkout' ) );
+	. ap_shortcode( '[anypress_promises]' );
 $ap_single     = '<!-- wp:template-part {"slug":"header","tagName":"header"} /-->' . "\n\n"
 	. '<!-- wp:group {"tagName":"main","align":"full","style":{"spacing":{"margin":{"top":"0"}}},"layout":{"type":"constrained"}} -->' . "\n"
 	. '<main class="wp-block-group alignfull" style="margin-top:0">'

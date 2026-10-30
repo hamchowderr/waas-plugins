@@ -132,13 +132,31 @@ add_shortcode(
 );
 
 /**
- * The Shortcode block wraps its output in a paragraph, which breaks the switcher's list. These two render bare.
+ * The promises under the Buy button. A plan's are about the subscription; anything else (the email pack) gets its own.
+ */
+add_shortcode(
+	'anypress_promises',
+	static function () {
+		$plan  = ! empty( anypress_shop_sibling_sizes()['sizes'] );
+		$items = $plan
+			? array( __( 'Pay yearly and get two months free', 'anypress-shop' ), __( '30-day money-back guarantee', 'anypress-shop' ), __( 'Cancel any time from your account', 'anypress-shop' ), __( 'A free anypress.site address, or your own domain', 'anypress-shop' ), __( 'Secure card checkout', 'anypress-shop' ) )
+			: array( __( 'A one-time payment, not a subscription', 'anypress-shop' ), __( 'Added to your website right after you pay', 'anypress-shop' ), __( 'Pack emails never expire', 'anypress-shop' ), __( 'Secure card checkout', 'anypress-shop' ) );
+		$lis   = '';
+		foreach ( $items as $item ) {
+			$lis .= "<!-- wp:list-item -->\n<li>" . esc_html( $item ) . "</li>\n<!-- /wp:list-item -->\n";
+		}
+		return do_blocks( "<!-- wp:list {\"className\":\"is-style-ticks\"} -->\n<ul class=\"wp-block-list is-style-ticks\">$lis</ul>\n<!-- /wp:list -->" );
+	}
+);
+
+/**
+ * The Shortcode block wraps its output in a paragraph, which breaks the switcher's list. These render bare.
  */
 add_filter(
 	'render_block_core/shortcode',
 	static function ( $html, $block ) {
 		$code = trim( $block['innerHTML'] ?? '' );
-		return in_array( $code, array( '[anypress_sizes]', '[anypress_crumbs]' ), true ) ? do_shortcode( $code ) : $html;
+		return in_array( $code, array( '[anypress_sizes]', '[anypress_crumbs]', '[anypress_promises]' ), true ) ? do_shortcode( $code ) : $html;
 	},
 	10,
 	2
@@ -172,6 +190,26 @@ add_filter(
 add_filter(
 	'pre_do_shortcode_tag',
 	static fn( $out, $tag ) => ( 'fluent_cart_customer_profile' === $tag && ! is_user_logged_in() ) ? anypress_shop_sign_in() : $out,
+	10,
+	2
+);
+
+/**
+ * The empty cart says where to go next, and the buttons read like the rest of the shop.
+ */
+add_filter(
+	'gettext_fluent-cart',
+	static function ( $text, $original ) {
+		if ( 'Your cart is empty.' === $original ) {
+			return __( 'Your cart is empty. Pick a plan and it will show up here.', 'anypress-shop' );
+		}
+		$words = array(
+			'Continue Shopping' => __( 'See the plans', 'anypress-shop' ),
+			'Add To Cart'       => __( 'Add to cart', 'anypress-shop' ),
+			'Buy Now'           => __( 'Buy now', 'anypress-shop' ),
+		);
+		return $words[ $original ] ?? $text;
+	},
 	10,
 	2
 );

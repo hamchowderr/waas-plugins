@@ -66,7 +66,7 @@ mark.has-inline-color{padding:0 .12em;border-radius:.12em;color:inherit}
 .anypress-sizes{display:flex;flex-direction:column;gap:.5rem}
 .anypress-sizes__label{font-weight:700;font-size:var(--wp--preset--font-size--small)}
 .anypress-sizes ul{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;list-style:none;margin:0;padding:0}
-.anypress-sizes a{display:flex;flex-direction:column;gap:.1em;padding:.7em .8em;border:1.5px solid var(--wp--preset--color--border-light);border-radius:12px;color:var(--wp--preset--color--main);text-decoration:none;background:var(--wp--preset--color--base);height:100%}
+.anypress-sizes a{box-sizing:border-box;display:flex;flex-direction:column;gap:.1em;padding:.7em .8em;border:1.5px solid var(--wp--preset--color--border-light);border-radius:12px;color:var(--wp--preset--color--main);text-decoration:none;background:var(--wp--preset--color--base);height:100%}
 .anypress-sizes a span{font-size:var(--wp--preset--font-size--x-small);color:var(--wp--preset--color--secondary)}
 .anypress-sizes a:hover{border-color:var(--wp--preset--color--main)}
 .anypress-sizes a[aria-current]{border-color:var(--wp--preset--color--main);box-shadow:4px 4px 0 var(--wp--preset--color--primary-alt)}
@@ -141,18 +141,51 @@ body [class*=betterdocs-searchbox] .betterdocs-searchform,body .betterdocs-searc
 body .betterdocs-search-form-wrapper,body .betterdocs-searchbox-wrapper,body [class*=betterdocs-searchbox]{margin-inline:auto!important;max-width:100%}
 @media (max-width:600px){.fct_checkout .fct_summary,.anypress-sign-in__form,.wp-block-group.is-style-sketch,.wp-block-group.is-style-sketch-rose{box-shadow:4px 4px 0 var(--wp--preset--color--primary-alt)}}
 
-/* "What are you making?": the five cards line up row by row (drawing, name, pitch, list, price, button), so prices and buttons sit level. */
-.anypress-type-grid > .anypress-type-card {
-	display: grid;
-	grid-template-rows: subgrid;
-	grid-row: span 6;
-	align-content: start;
-}
-.anypress-type-grid > .anypress-type-card > .anypress-from {
-	align-self: end;
-}
+/* Cards and tiles in a row: everything centred, and each part (picture, name, text, list, price, button) lines up with the
+   same part in the cards beside it. */
+.anypress-centered{text-align:center}
+.anypress-centered.is-layout-flex{align-items:center}
+.anypress-centered>.wp-block-image,.anypress-centered>figure{margin-inline:auto}
+.anypress-centered .wp-block-image img{margin-inline:auto}
+.anypress-centered>.wp-block-list{text-align:start;width:fit-content;max-width:100%;margin-inline:auto}
+.anypress-centered>.wp-block-buttons{justify-content:center}
+.anypress-type-grid>.anypress-type-card,.anypress-steps>.wp-block-group,.anypress-included>.wp-block-group,.anypress-features>.wp-block-group,.anypress-size-grid>.wp-block-group{display:grid;grid-template-rows:subgrid;grid-template-columns:minmax(0,1fr);justify-items:center;align-content:start}
+.anypress-type-grid>.anypress-type-card{grid-row:span 6}
+.anypress-steps>.wp-block-group{grid-row:span 4;row-gap:var(--wp--preset--spacing--small)}
+.anypress-included>.wp-block-group{grid-row:span 3;row-gap:var(--wp--preset--spacing--small)}
+.anypress-features>.wp-block-group{grid-row:span 2}
+.anypress-size-grid>.wp-block-group{grid-row:span 5}
+.anypress-steps>*>.wp-block-image,.anypress-included>*>.wp-block-image,.anypress-type-grid>*>.wp-block-image{align-self:end}
+.anypress-type-grid>.anypress-type-card,.anypress-steps>.wp-block-group,.anypress-included>.wp-block-group,.anypress-features>.wp-block-group,.anypress-size-grid>.wp-block-group{align-items:start}
+.anypress-type-grid>*>.anypress-from,.anypress-size-grid>*>.wp-block-buttons{align-self:end}
+.anypress-type-grid>*>.wp-block-buttons,.anypress-size-grid>*>.wp-block-buttons{justify-self:stretch}
+.anypress-type-grid .wp-block-button,.anypress-size-grid .wp-block-button{width:100%}
+.anypress-type-grid .wp-block-button__link,.anypress-size-grid .wp-block-button__link{width:100%;white-space:nowrap}
+.anypress-size-grid .anypress-price{white-space:nowrap}
+.anypress-size-grid .wp-block-button__link{padding-inline:.5em;font-size:var(--wp--preset--font-size--small)}
+.anypress-size-grid .anypress-price strong{font-size:clamp(1.7rem,2.4vw,2.2rem)}
+.anypress-size-grid .anypress-specs{justify-self:stretch;width:auto;text-align:center}
 
-/* The checkout's three promises: same size, centred as a row. */
-.anypress-trust > * {
-	margin: 0;
-}
+/* The help band: two buttons of the same width, stacked, centred against the text. */
+.wp-block-columns.are-vertically-aligned-center>.wp-block-column{align-self:center}
+.anypress-help-actions .wp-block-buttons{flex-direction:column;align-items:stretch;width:fit-content;margin-inline:auto}
+.anypress-help-actions .wp-block-button__link{width:100%}
+
+/* The checkout's three promises: same size, one row. */
+.anypress-trust>*{margin:0}
+
+/* Empty cart: a clear message and a way back to the plans. */
+.fluent-cart-cart-empty-content-text{font-size:var(--wp--preset--font-size--medium);color:var(--wp--preset--color--main);display:flex;flex-direction:column;align-items:center;gap:1rem;text-align:center}
+.fluent-cart-cart-empty-content-text .continue-shopping-link{display:inline-block;padding:.75em 1.5em;border-radius:10px;background:var(--wp--preset--color--main);color:var(--wp--preset--color--base)!important;text-decoration:none;font-weight:700}
+
+/* Help pages: the topic cards keep one size; a last, lonely card sits in the middle. */
+body .anypress-docs .betterdocs-category-grid-inner-wrapper{display:flex!important;flex-wrap:wrap;justify-content:center}
+body .anypress-docs .betterdocs-category-grid-inner-wrapper>.betterdocs-single-category-wrapper{flex:0 1 calc((100% - var(--wp--preset--spacing--medium)) / 2)!important;width:auto!important;max-width:none!important;margin:0!important}
+@media (max-width:781px){body .anypress-docs .betterdocs-category-grid-inner-wrapper>.betterdocs-single-category-wrapper{flex-basis:100%!important}}
+
+
+/* Buy now and Add to cart side by side at the same height; Add to cart is the quieter one. */
+.anypress-buy .fct-product-buttons-wrap{display:flex;gap:.6rem;align-items:stretch}
+.anypress-buy .fct-product-buttons-wrap>*{flex:1 1 0}
+.anypress-buy .fct-product-buttons-wrap a,.anypress-buy .fct-product-buttons-wrap button{text-transform:none}
+.anypress-buy .fct-product-buttons-wrap .fluent-cart-add-to-cart-button{flex:0 0 auto;display:flex;align-items:center;justify-content:center;white-space:nowrap;padding:.9em 1.4em;border-radius:10px;border:1.5px solid var(--wp--preset--color--main);background:var(--wp--preset--color--base);color:var(--wp--preset--color--main);font-weight:700;font-size:var(--wp--preset--font-size--base);line-height:1.2;max-height:none;box-shadow:none}
