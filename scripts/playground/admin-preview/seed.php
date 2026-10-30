@@ -1,6 +1,8 @@
 <?php
 // Test only: a storefront that sells websites, for previewing the AnyPress admin pages. Connected (the API calls are
-// answered here, so nothing leaves Playground), with sample customers and websites in every state.
+// answered here, so nothing leaves Playground), with its plans loaded and sample customers and websites in every
+// state. With WAAS_API_KEY and WAAS_API_SECRET in wp-config it is a ready-made storefront, which makes its website
+// plans in FluentCart on the first wp-admin page view.
 add_filter('pre_http_request', function ($pre, $args, $url) {
     if (strpos($url, 'https://api.anypress.io/') !== 0) {
         return $pre;
@@ -23,7 +25,12 @@ add_action('init', function () {
     update_option('waas_dns_a_records', ['203.0.113.10']);
     update_option('waas_dns_cname_target', 'stores.anypress.site');
     update_option(\WaaSHost\Core\ProvisioningApi::CAN_REACH_API_OPTION_NAME, true);
-    update_option(\WaaSHost\Features\PluginBootstrap::ROLES_WP_OPTION, ['website' => ['name' => 'Website'], 'store' => ['name' => 'Store']]);
+    // The AnyPress store template's roles (templates/anypress-store/roles.json), as "Load plans" stores them.
+    $roles = [];
+    foreach (['website' => 'Website', 'bookings' => 'Bookings', 'online-store' => 'Online store', 'community' => 'Community & courses', 'everything' => 'Everything', 'store' => 'Everything (before site types)'] as $slug => $title) {
+        $roles[$slug] = (object) ['title' => $title, 'plugins' => []];
+    }
+    update_option(\WaaSHost\Features\PluginBootstrap::ROLES_WP_OPTION, (object) $roles);
     update_option(\WaaSHost\Features\Webhooks::OPTION, ['id' => 'wh_preview', 'secret' => 'preview', 'url' => home_url('/wp-json/waas-host/v1/webhook'), 'last_event_at' => time() - 240, 'error' => '']);
     update_option('waas_volume_discount_enabled', 'on');
 

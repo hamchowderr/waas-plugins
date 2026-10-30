@@ -36,6 +36,9 @@ class AdminHome
     public function check_api_creds($checklist_items)
     {
         $checklist_items['api_credentials']['is_done'] = $this->config_service->check_credentials();
+        if (ConfigService::has_constant('API_KEY') && ConfigService::has_constant('API_SECRET')) {
+            $checklist_items['api_credentials']['description'] = __('Connected for you when this storefront was made.', 'waas-host');
+        }
         return $checklist_items;
     }
 
@@ -192,9 +195,9 @@ class AdminHome
                 "is_done" => false,
             ],
             "create_woo_waas_product" => [
-                "label" => __('Create your first website plan', 'waas-host'),
+                "label" => __('Create your website plans', 'waas-host'),
                 "description" => defined('FLUENTCART_VERSION')
-                    ? __('A subscription product with the "WaaS Provisioning" integration. Buying it creates the customer\'s website.', 'waas-host')
+                    ? __('Each plan is a FluentCart subscription product. Buying one creates the customer\'s website.', 'waas-host')
                     : __('A subscription product marked "WaaS product". Buying it creates the customer\'s website.', 'waas-host'),
                 "action_label" => __('Add a plan', 'waas-host'),
                 "action_url" => self::new_plan_product_url(),
@@ -226,7 +229,11 @@ class AdminHome
                 <?php if ($account_url !== '') : ?>
                     <a class="ap-btn" href="<?php echo esc_url($account_url); ?>"><?php esc_html_e('View account page', 'waas-host'); ?></a>
                 <?php endif; ?>
-                <a class="ap-btn is-ink" href="<?php echo esc_url(self::new_plan_product_url()); ?>"><?php esc_html_e('Add a website plan', 'waas-host'); ?></a>
+                <?php
+                // The cart can make the plans for the seller, or open them once they exist (FluentCartStarterPlans).
+                [$plan_label, $plan_url] = (array) apply_filters('waas_plan_button', [__('Add a website plan', 'waas-host'), self::new_plan_product_url()]) + ['', ''];
+                ?>
+                <a class="ap-btn is-ink" href="<?php echo esc_url($plan_url); ?>"><?php echo esc_html($plan_label); ?></a>
             </div>
         </div>
         <nav class="ap-tabs" aria-label="<?php esc_attr_e('AnyPress pages', 'waas-host'); ?>">
@@ -410,6 +417,18 @@ class AdminHome
         <div class="wrap ap-admin">
             <?php self::render_header(__('Overview', 'waas-host'), $this->config_service); ?>
             <hr class="wp-header-end">
+            <?php
+            // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only shows the outcome of "Create my plans", which checked its own nonce.
+            if (isset($_GET['plans_made'])) :
+                $plans_made = absint(wp_unslash($_GET['plans_made'])); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+                ?>
+                <div class="ap-banner <?php echo $plans_made ? 'is-ok' : 'is-warn'; ?>" role="status"><span><?php
+                    echo esc_html($plans_made
+                        /* translators: %d: number of plans made */
+                        ? sprintf(_n('Made %d website plan. It is on sale on your storefront now; change its price or picture in FluentCart.', 'Made %d website plans. They are on sale on your storefront now; change any price or picture in FluentCart.', $plans_made, 'waas-host'), $plans_made)
+                        : __('No plans were made. Load your plans first, or check that every plan already has a product.', 'waas-host'));
+                ?></span></div>
+            <?php endif; ?>
 
             <?php if ($done < $total) : ?>
                 <section class="ap-card ap-setup">

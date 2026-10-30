@@ -21,7 +21,18 @@
       "step": "installPlugin",
       "pluginData": {
         "resource": "url",
-        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/27efa5e1657d6c2d7cbaf162fd1ddf7fc03a9261/scripts/playground/preview-zips/waas-host.zip"
+        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/SHA/scripts/playground/preview-zips/fluent-toolkit.zip"
+      },
+      "options": {
+        "activate": true,
+        "targetFolderName": "fluent-toolkit"
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/SHA/scripts/playground/preview-zips/waas-host.zip"
       },
       "options": {
         "activate": true,
@@ -33,12 +44,12 @@
       "path": "/wordpress/wp-content/mu-plugins/waas-admin-preview.php",
       "data": {
         "resource": "url",
-        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/27efa5e1657d6c2d7cbaf162fd1ddf7fc03a9261/scripts/playground/admin-preview/seed.php"
+        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/SHA/scripts/playground/admin-preview/seed.php"
       }
     },
     {
       "step": "runPHP",
-      "code": "<?php\n// Loading WordPress once runs the seed (mu-plugin, on init), so the first page shows the sample websites.\nrequire '/wordpress/wp-load.php';",
+      "code": "<?php\n// Loading WordPress once runs the seed (mu-plugin, on init), so the first page shows the sample websites.\nrequire '/wordpress/wp-load.php';\n// FluentKit's one dashboard for the Fluent plugins, as AnyPress storefronts have it.\nupdate_option('_fluent_kit_settings', array_merge((array) get_option('_fluent_kit_settings', []), ['uinified_ui' => 'yes', 'merge_admin_menus' => 'yes']));",
       "progress": {
         "caption": "Adding the sample websites"
       }
@@ -46,7 +57,12 @@
   ],
   "meta": {
     "title": "WaaS Host: the AnyPress admin pages",
-    "description": "A storefront selling websites, connected and with sample customers and websites in every state, signed in as its admin.",
+    "description": "A ready-made storefront selling websites: connected by AnyPress, its website plans made in FluentCart on first sign-in, sample customers and websites in every state, FluentKit's unified layout on.",
     "author": "hamchowderr"
+  },
+  "constants": {
+    "WAAS_API_BASE_URL": "https://api.anypress.io",
+    "WAAS_API_KEY": "ak_live_7f3c9a21",
+    "WAAS_API_SECRET": "preview-secret"
   }
 }

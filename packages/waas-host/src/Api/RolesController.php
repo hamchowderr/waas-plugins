@@ -59,7 +59,13 @@ class RolesController
 
     public function update_tenant_roles_list()
     {
-        $production_version = $this->provisioningApi->get_production_version();
+        self::load($this->provisioningApi);
+    }
+
+    /** Reads the roles from the production version's roles.json and stores them. Throws when they can't be read. */
+    public static function load(ProvisioningApi $provisioningApi): void
+    {
+        $production_version = $provisioningApi->get_production_version();
 
         $production_version_domain_name = $production_version->domain;
         if (strpos($production_version_domain_name, 'http') !== 0) {
