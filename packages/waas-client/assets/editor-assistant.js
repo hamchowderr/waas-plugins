@@ -207,10 +207,23 @@
 		},
 	} );
 
-	// The admin bar's Assistant button opens the editor with the panel open.
+	// The admin bar's Assistant button opens the editor with the panel open. Once the editor is ready: on a phone
+	// WordPress closes its sidebars while it loads, so the panel is opened after that, and again if it was closed.
 	if ( new URLSearchParams( window.location.search ).get( config.openParam ) === '1' ) {
-		wp.domReady( function () {
-			dispatch( 'core/interface' ).enableComplementaryArea( 'core', NAME + '/' + SIDEBAR );
+		const area = NAME + '/' + SIDEBAR;
+		const open = function () {
+			if ( select( 'core/interface' ).getActiveComplementaryArea( 'core' ) !== area ) {
+				dispatch( 'core/interface' ).enableComplementaryArea( 'core', area );
+			}
+		};
+		const stop = subscribe( function () {
+			const editor = select( 'core/editor' );
+			if ( editor.__unstableIsEditorReady && ! editor.__unstableIsEditorReady() ) {
+				return;
+			}
+			stop();
+			setTimeout( open, 0 );
+			setTimeout( open, 800 );
 		} );
 	}
 } )( window.wp, window.waasEditorAssistant );

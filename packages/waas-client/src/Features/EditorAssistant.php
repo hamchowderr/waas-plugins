@@ -64,7 +64,7 @@ class EditorAssistant
         wp_enqueue_script(
             'waas-editor-assistant',
             $base . 'assets/editor-assistant.js',
-            ['wp-plugins', 'wp-editor', 'wp-element', 'wp-data', 'wp-blocks', 'wp-api-fetch', 'wp-notices', 'wp-i18n', 'wp-dom-ready'],
+            ['wp-plugins', 'wp-editor', 'wp-element', 'wp-data', 'wp-blocks', 'wp-api-fetch', 'wp-notices', 'wp-i18n'],
             WAAS_CLIENT_VERSION,
             true
         );

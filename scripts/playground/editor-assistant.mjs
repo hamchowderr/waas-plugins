@@ -131,14 +131,19 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
     // Select the heading in the page, then the chat hears it as the selected block.
     const canvas = page.frameLocator('iframe[name="editor-canvas"]');
     if (label === 'phone') {
-        // On a phone the panel covers the page: close it to pick the block, then open it again from the toolbar.
-        await page.getByRole('button', { name: 'Close Settings' }).or(page.locator('.interface-complementary-area-header button[aria-label^="Close"]')).first().click().catch(() => {});
+        // On a phone the panel covers the page: close it to pick the block, then open it again from Options, where
+        // WordPress lists plugin panels at that width.
+        await page.locator('.interface-complementary-area-header button[aria-label^="Close"]').first().click();
     }
     await canvas.locator('h2', { hasText: 'Fresh bread' }).click();
-    if (label === 'phone') await page.getByRole('button', { name: 'Assistant' }).first().click();
+    if (label === 'phone') {
+        await page.getByRole('button', { name: 'Options' }).click();
+        await page.locator('.components-dropdown-menu__menu [role^=menuitem]', { hasText: /^Assistant$/ }).click();
+        await page.locator('iframe.waas-editor-assistant__frame').waitFor({ timeout: 10_000 });
+    }
     const chatFrame = page.frames().find((f) => f.url().startsWith(CHAT)) ?? null;
     let selected = null;
-    for (let i = 0; i < 40 && !selected; i++) {
+    for (let i = 0; i < 120 && !selected; i++) {
         const views = (await page.frames().find((f) => f.url().startsWith(CHAT))?.evaluate(() => window.views)) ?? [];
         selected = views.map((v) => v.selected).filter(Boolean).find((b) => b.name === 'core/heading') ?? null;
         if (!selected) await page.waitForTimeout(250);
@@ -156,6 +161,12 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
     check(saved.text.includes('Fresh bread') && !saved.text.includes('dawn'), `${label}: nothing is saved until the owner saves`);
     const wide = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
     check(!wide, `${label}: no sideways scroll`);
+    const panel = await page.locator('.interface-complementary-area.waas-editor-assistant').evaluate((el) => ({
+        width: el.getBoundingClientRect().width,
+        scrolls: el.scrollHeight > el.clientHeight + 1,
+    }));
+    check(label === 'phone' ? panel.width >= width - 1 : panel.width >= 370, `${label}: the panel is ${Math.round(panel.width)}px wide`);
+    check(!panel.scrolls, `${label}: only the chat scrolls, not the panel around it`);
     await page.screenshot({ path: `${OUT}/editor-${label}.png` });
 
     await notice.getByRole('button', { name: 'Undo' }).click();
