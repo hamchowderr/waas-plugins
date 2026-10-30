@@ -1,7 +1,8 @@
 // Smoke test of WaaS Client on WordPress Playground (WordPress and PHP running inside Node: no Docker, no
 // database server). Boots WordPress with WaaS Client from this checkout, the Ollie theme and the store
 // template's starter pages, then calls the site-editing routes the AnyPress connector uses (signed with a
-// throwaway site key) and the same actions as WordPress abilities, and checks the answers.
+// throwaway site key), the same actions as WordPress abilities, and the "AnyPress website" MCP server once the
+// owner switch turns on the MCP Adapter, and checks the answers.
 //
 //   cd scripts/playground && npm ci
 //   npm run smoke             # run the checks, exit 1 on a failure
@@ -29,6 +30,8 @@ const PHP = process.env.PLAYGROUND_PHP || '8.3';
 const PORT = Number(process.env.PLAYGROUND_PORT || 9400);
 const SERVE = process.argv.includes('--serve');
 const OLLIE = 'https://downloads.wordpress.org/theme/ollie.1.6.5.zip';
+// WordPress's MCP Adapter, as the store template ships it: installed, off until the owner turns it on.
+const MCP_ADAPTER = 'https://downloads.wordpress.org/plugin/mcp-adapter.0.7.1.zip';
 const STARTER_PAGES_URL =
     'https://raw.githubusercontent.com/hamchowderr/waas-provisioning-api/main/templates/anypress-store/mu-plugins/anypress-patterns.php';
 // A throwaway key for this test site only; real stores get theirs from the API as WAAS_SITE_KEY.
@@ -53,6 +56,7 @@ const blueprint = {
     steps: [
         { step: 'installTheme', themeData: { resource: 'url', url: OLLIE }, options: { activate: true } },
         { step: 'activatePlugin', pluginPath: 'waas-client/index.php' },
+        { step: 'installPlugin', pluginData: { resource: 'url', url: MCP_ADAPTER }, options: { activate: false } },
         { step: 'writeFile', path: '/wordpress/wp-content/mu-plugins/anypress-patterns.php', data: starterPages },
         {
             // Stores get the site key as an environment variable on their container; here a must-use plugin sets it.
@@ -322,6 +326,105 @@ await check('abilities: styles, patterns and header', async () => {
     expect(patterns.status === 200 && patterns.data.length >= 4, `find-patterns: HTTP ${patterns.status}`);
     const header = await ability('anypress/get-site-part', { area: 'header' });
     expectStatus(header, 200);
+});
+
+/**
+ * One MCP request (JSON-RPC over the adapter's HTTP transport) to the "AnyPress website" server. 2025-11-25 is the
+ * session handshake (initialize, then Mcp-Session-Id); 2026-07-28 is stateless and mirrors the method and tool name
+ * in headers.
+ */
+let mcpSession;
+async function mcp(method, params = {}, { as = 'admin', version = '2025-11-25' } = {}) {
+    const headers = { 'content-type': 'application/json', accept: 'application/json, text/event-stream' };
+    if (as) headers['x-test-user'] = `${USER_TOKEN}:${as}`;
+    if (version === '2026-07-28') {
+        headers['mcp-protocol-version'] = version;
+        headers['mcp-method'] = method;
+        if (params.name) headers['mcp-name'] = params.name;
+        params = {
+            ...params,
+            _meta: {
+                'io.modelcontextprotocol/protocolVersion': version,
+                'io.modelcontextprotocol/clientCapabilities': {},
+                'io.modelcontextprotocol/clientInfo': { name: 'smoke', version: '1' },
+            },
+        };
+    } else if (method !== 'initialize' && mcpSession) {
+        headers['mcp-session-id'] = mcpSession;
+        headers['mcp-protocol-version'] = version;
+    }
+    const res = await fetch(`${base}/wp-json/mcp/anypress`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ jsonrpc: '2.0', id: Math.floor(Math.random() * 1e6), method, params }),
+    });
+    const session = res.headers.get('mcp-session-id');
+    const text = await res.text();
+    let data;
+    try {
+        data = JSON.parse(text);
+    } catch {
+        data = text;
+    }
+    return { status: res.status, data, session };
+}
+const INIT = { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'smoke', version: '1' } };
+
+/** The tools listed, the get-site tool among them, and get-site's answer. */
+async function mcpTools(version) {
+    const list = await mcp('tools/list', {}, { version });
+    expectStatus(list, 200);
+    const tools = list.data.result?.tools ?? [];
+    expect(tools.length === abilities.size && abilities.size > 0, `${tools.length} tools for ${abilities.size} abilities`);
+    const getSite = tools.find((tool) => /get-site$/.test(tool.name));
+    expect(getSite, `no get-site tool in ${tools.map((tool) => tool.name).join(', ')}`);
+    expect(getSite.annotations?.readOnlyHint === true, `get-site annotations ${JSON.stringify(getSite.annotations)}`);
+    const call = await mcp('tools/call', { name: getSite.name, arguments: {} }, { version });
+    expectStatus(call, 200);
+    expect(!call.data.result?.isError && JSON.stringify(call.data.result).includes('Playground Store'), `get-site: ${JSON.stringify(call.data).slice(0, 300)}`);
+}
+
+await check('MCP: no server while the owner has it off', async () => {
+    const res = await mcp('initialize', {});
+    expectStatus(res, 404);
+});
+
+await check('MCP: the owner turns it on from Your plan', async () => {
+    // What the Turn on button posts: the McpServer::save handler, as an administrator with a valid nonce.
+    const out = await cli.playground.run({
+        code: `<?php
+require '/wordpress/wp-load.php';
+require_once ABSPATH . 'wp-admin/includes/plugin.php';
+wp_set_current_user(1);
+$_POST = $_REQUEST = ['mcp' => 'on', '_wpnonce' => wp_create_nonce('waas_client_mcp')];
+add_filter('wp_redirect', function () { echo json_encode(['on' => get_option('waas_client_mcp'), 'active' => is_plugin_active('mcp-adapter/mcp-adapter.php')]); return false; });
+(new WaaSClient\\Features\\McpServer())->save();
+`,
+    });
+    const state = JSON.parse(out.text.slice(out.text.indexOf('{')));
+    expect(state.on === '1' && state.active === true, `after Turn on: ${out.text.slice(0, 200)}`);
+});
+
+await check('MCP: refused when signed out, or without edit_pages', async () => {
+    const out = await mcp('initialize', INIT, { as: null });
+    expect(out.status === 401 || out.status === 403, `signed out: HTTP ${out.status}`);
+    const contributor = await mcp('initialize', INIT, { as: 'contributor' });
+    expect(contributor.status === 401 || contributor.status === 403, `contributor: HTTP ${contributor.status}`);
+});
+
+await check('MCP 2025-11-25: initialize, every site ability is a tool, get-site runs', async () => {
+    const init = await mcp('initialize', INIT);
+    expectStatus(init, 200);
+    expect(init.data.result?.serverInfo?.name === 'AnyPress website', `serverInfo ${JSON.stringify(init.data).slice(0, 300)}`);
+    mcpSession = init.session;
+    await mcpTools('2025-11-25');
+});
+
+await check('MCP 2026-07-28: discover, every site ability is a tool, get-site runs', async () => {
+    const discover = await mcp('server/discover', {}, { version: '2026-07-28' });
+    expectStatus(discover, 200);
+    expect(JSON.stringify(discover.data.result ?? {}).includes('AnyPress website'), `discover ${JSON.stringify(discover.data).slice(0, 300)}`);
+    await mcpTools('2026-07-28');
 });
 
 const failed = results.filter(([ok]) => !ok).length;

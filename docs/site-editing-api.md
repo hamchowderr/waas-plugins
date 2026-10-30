@@ -76,3 +76,11 @@ The same actions are registered as WordPress abilities (the Abilities API in Wor
 | `anypress/add-image` | Copy an image from a public https link into the media library |
 
 Each ability sets all three hints (`readonly`, `destructive`, `idempotent`). Changes that WordPress keeps a revision of are marked not destructive, since they can be undone; `remove-page-section` is marked destructive. They show in the abilities REST API (`/wp-json/wp-abilities/v1/abilities?category=anypress`) and, with `meta.mcp.public`, to MCP clients through WordPress's MCP Adapter plugin when a site has it.
+
+## Over MCP
+
+Stores come with WordPress's [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin installed but off. The store owner turns it on or off on **Dashboard > Your plan > AI apps (MCP)** (`Features\McpServer`); the plan keeps the adapter on while the switch is on, and off otherwise.
+
+While it is on, the store has an MCP server called "AnyPress website" at `/wp-json/mcp/anypress`, with one tool for each ability above. It speaks MCP 2025-11-25 (initialize, then a session) and 2026-07-28 (stateless). An app signs in with a WordPress username and an [application password](https://developer.wordpress.org/rest-api/reference/application-passwords/) the owner makes in their profile, and only users who can `edit_pages` get in; each tool then checks that user's own capabilities, as above. Revoking the application password stops that app.
+
+The adapter's own default server (`/wp-json/mcp/mcp-adapter-default-server`) is also there, with its three discover, describe and run tools.

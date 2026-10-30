@@ -133,7 +133,7 @@ WaaS Host has a REST API for the signed-in customer's websites (`waas-host/v1/ac
 
 ## Site editing API
 
-WaaS Client lets the AnyPress connector edit a store's design and content (`waas-client/v1/site`): pages and their sections, the theme's patterns, colours and fonts, the header and footer, menus, revisions and images. Only the AnyPress API can call it, with requests signed by the store's own site key. The same actions are also WordPress abilities (category `anypress`) for a signed-in user with the right capabilities, so WordPress's MCP Adapter and AI agents on the site can use them. How: [docs/site-editing-api.md](docs/site-editing-api.md).
+WaaS Client lets the AnyPress connector edit a store's design and content (`waas-client/v1/site`): pages and their sections, the theme's patterns, colours and fonts, the header and footer, menus, revisions and images. Only the AnyPress API can call it, with requests signed by the store's own site key. The same actions are also WordPress abilities (category `anypress`) for a signed-in user with the right capabilities, so WordPress's MCP Adapter and AI agents on the site can use them. Stores come with the MCP Adapter installed but off; the owner can turn on an "AnyPress website" MCP server from the Your plan page. How: [docs/site-editing-api.md](docs/site-editing-api.md).
 
 ## Updates
 
