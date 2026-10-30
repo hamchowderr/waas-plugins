@@ -16,11 +16,18 @@ final class Plugin
     const LOCK = 'anypress_export_lock';
     const NONCE = 'anypress_export';
     const PAGE = 'anypress-export';
+    const CRON = 'anypress_export_cleanup';
+    /** Work folders untouched this long are removed: an import code only lasts 7 days. */
+    const MAX_AGE = 7 * 86400;
 
     public static function boot(string $file): void
     {
+        register_activation_hook($file, [self::class, 'schedule']);
+        register_deactivation_hook($file, [self::class, 'deactivate']);
+        add_action(self::CRON, [self::class, 'cleanup']);
+        add_action('admin_init', [self::class, 'schedule']);
         add_action('admin_menu', [self::class, 'menu']);
-        foreach (['begin', 'step', 'status', 'cancel'] as $action) {
+        foreach (['preflight', 'begin', 'step', 'status', 'cancel'] as $action) {
             add_action("wp_ajax_anypress_export_$action", [self::class, "ajax_$action"]);
         }
         add_filter('plugin_action_links_' . plugin_basename($file), function ($links) {
@@ -57,10 +64,36 @@ final class Plugin
         wp_add_inline_script('anypress-export', 'window.anypressExport = ' . wp_json_encode($config) . ';', 'before');
     }
 
+    /** Runs the daily clean-up of abandoned work folders. */
+    public static function schedule(): void
+    {
+        if (!wp_next_scheduled(self::CRON)) wp_schedule_event(time() + 3600, 'daily', self::CRON);
+    }
+
+    /** Removes work folders nobody has touched for 7 days, and forgets an export whose folder is gone. */
+    public static function cleanup(): void
+    {
+        Exporter::cleanup(wp_upload_dir(null, false)['basedir'], self::MAX_AGE);
+        $state = get_option(self::OPTION);
+        if (is_array($state) && ($state['step'] ?? '') !== 'moving' && !empty($state['work']) && !is_dir($state['work'])) {
+            delete_option(self::OPTION);
+        }
+    }
+
+    /** On deactivation: stop the clean-up and remove every work folder now, so no copy of the database stays behind. */
+    public static function deactivate(): void
+    {
+        wp_clear_scheduled_hook(self::CRON);
+        Exporter::cleanup(wp_upload_dir(null, false)['basedir'], 0);
+        delete_option(self::OPTION);
+        delete_transient(self::LOCK);
+    }
+
     /** What waas.json tells AnyPress about this site. */
     public static function siteInfo(): array
     {
         global $wpdb;
+        $layout = Preflight::layout(self::layout());
         return [
             'home' => home_url(),
             'siteurl' => site_url(),
@@ -69,9 +102,96 @@ final class Plugin
             'phpVersion' => PHP_VERSION,
             'tablePrefix' => $wpdb->prefix,
             'multisite' => is_multisite(),
+            'dbCharset' => (string) $wpdb->charset,
             'exportedBy' => 'anypress-export ' . ANYPRESS_EXPORT_VERSION,
             'exportedAt' => gmdate('c'),
+        ] + array_intersect_key($layout, ['contentUrl' => true, 'siteUrl' => true]) + [
+            'preflight' => self::preflight(false),
         ];
+    }
+
+    /** Where the site keeps its files and answers. */
+    private static function layout(): array
+    {
+        $uploads = wp_upload_dir(null, false);
+        return [
+            'home' => home_url(),
+            'siteurl' => site_url(),
+            'contentDir' => WP_CONTENT_DIR,
+            'contentUrl' => content_url(),
+            'uploadsDir' => (string) $uploads['basedir'],
+            'uploadsConstant' => defined('UPLOADS') ? (string) UPLOADS : null,
+            'uploadPath' => (string) get_option('upload_path'),
+        ];
+    }
+
+    /**
+     * The preflight checks. Without `$scan`, only what WordPress knows at once (the export adds the
+     * database and file checks in its first steps); with it, also the database and a look through
+     * wp-content for up to `$seconds`, for the page to show before anything starts.
+     */
+    public static function preflight(bool $scan, float $seconds = 8): array
+    {
+        global $wpdb;
+        $layout = Preflight::layout(self::layout());
+        $active = (array) get_option('active_plugins', []);
+        if (!function_exists('get_plugins')) require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        $installed = get_plugins();
+        $plugins = [];
+        foreach ($active as $file) {
+            $plugins[] = ['file' => (string) $file, 'name' => (string) ($installed[$file]['Name'] ?? $file), 'version' => (string) ($installed[$file]['Version'] ?? '')];
+        }
+        $extensions = get_loaded_extensions();
+        sort($extensions);
+        $report = [
+            'checkedAt' => gmdate('c'),
+            'blockers' => array_merge(Preflight::requirements(is_multisite(), function_exists('deflate_init'), function_exists('curl_init')), $layout['blockers']),
+            'warnings' => $layout['warnings'],
+            'tablePrefix' => $wpdb->prefix,
+            'php' => ['version' => PHP_VERSION, 'extensions' => $extensions],
+            'wordPressVersion' => get_bloginfo('version'),
+            'plugins' => $plugins,
+            'configConstants' => Preflight::configConstants(self::configSource()),
+            'actionScheduler' => self::actionScheduler(),
+        ] + Preflight::recognise($active);
+        if (!$scan) return $report;
+
+        $report = Preflight::database(new WpdbDatabase($wpdb)) + $report;
+        $uploads = (string) wp_upload_dir(null, false)['basedir'];
+        $work = glob(rtrim($uploads, '/') . '/anypress-export-*', GLOB_ONLYDIR) ?: [];
+        $report['files'] = Preflight::files(FileList::build(WP_CONTENT_DIR, null, $work, microtime(true) + $seconds));
+        $free = function_exists('disk_free_space') ? @disk_free_space(is_dir($uploads) ? $uploads : WP_CONTENT_DIR) : false;
+        $report['disk'] = ['free' => $free === false ? null : (int) $free, 'need' => Preflight::diskNeed((int) $report['files']['uploadsBytes'], (int) $report['databaseBytes'])];
+        $report['notes'] = Preflight::notes($report);
+        return $report;
+    }
+
+    /** wp-config.php's source, found where WordPress looks for it; empty when it can't be read. */
+    private static function configSource(): string
+    {
+        $file = ABSPATH . 'wp-config.php';
+        if (!@is_file($file)) {
+            $file = dirname(ABSPATH) . '/wp-config.php';
+            if (!@is_file($file) || @is_file(dirname(ABSPATH) . '/wp-settings.php')) return '';
+        }
+        return (string) @file_get_contents($file);
+    }
+
+    /** Action Scheduler's (WooCommerce and others) waiting and overdue tasks; null without it. */
+    private static function actionScheduler(): ?array
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'actionscheduler_actions';
+        $suppressed = $wpdb->suppress_errors(true);
+        try {
+            if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($table))) !== $table) return null;
+            return [
+                'pending' => (int) $wpdb->get_var("SELECT COUNT(*) FROM `$table` WHERE status = 'pending'"),
+                'pastDue' => (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `$table` WHERE status = 'pending' AND scheduled_date_gmt < %s", gmdate('Y-m-d H:i:s'))),
+            ];
+        } finally {
+            $wpdb->suppress_errors($suppressed);
+        }
     }
 
     public static function exporter(): Exporter
@@ -92,21 +212,21 @@ final class Plugin
      */
     public static function begin(string $pasted): array
     {
-        if (is_multisite()) throw new \RuntimeException(__('Multisite networks cannot be moved to AnyPress yet.', 'anypress-export'));
-        if (!function_exists('deflate_init')) throw new \RuntimeException(__('This server cannot compress files (the zlib extension for PHP is missing). Ask your host to turn it on.', 'anypress-export'));
+        $site = self::siteInfo();
+        if ($site['preflight']['blockers']) throw new \RuntimeException($site['preflight']['blockers'][0]);
         $old = get_option(self::OPTION);
         if (is_array($old) && !empty($old['work'])) Exporter::remove($old['work']);
         $code = self::code($pasted);
         $uploads = wp_upload_dir(null, false);
-        $state = self::exporter()->begin($code, new Api($code), $uploads['basedir'], self::siteInfo());
+        $state = self::exporter()->begin($code, new Api($code), $uploads['basedir'], $site);
         update_option(self::OPTION, $state, false);
         return $state;
     }
 
     /** Runs the export for up to `$seconds` and saves where it got to. */
-    public static function step(array $state, float $seconds): array
+    public static function step(array $state, float $seconds, ?callable $heartbeat = null): array
     {
-        $state = self::exporter()->run($state, new Api(self::code($state['code'])), $seconds);
+        $state = self::exporter()->run($state, new Api(self::code($state['code'])), $seconds, $heartbeat);
         update_option(self::OPTION, $state, false);
         return $state;
     }
@@ -155,11 +275,25 @@ final class Plugin
         $max = (int) ini_get('max_execution_time');
         $seconds = $max > 0 ? max(5, min(20, $max / 2)) : 20;
         try {
-            $state = self::step($state, $seconds);
+            // A long upload keeps the lock, so a reload waits for it instead of starting a second upload.
+            $state = self::step($state, $seconds, function () {
+                set_transient(self::LOCK, 1, 120);
+            });
             delete_transient(self::LOCK);
             self::answer($state);
         } catch (\Throwable $e) {
             delete_transient(self::LOCK);
+            self::fail($e);
+        }
+    }
+
+    public static function ajax_preflight(): void
+    {
+        self::guard();
+        try {
+            $report = self::preflight(true);
+            wp_send_json_success(['notes' => $report['notes'], 'blocked' => (bool) $report['blockers']]);
+        } catch (\Throwable $e) {
             self::fail($e);
         }
     }
@@ -209,6 +343,8 @@ final class Plugin
             </div>
 
             <div data-field="error" class="notice notice-error inline" hidden style="max-width:640px"><p></p></div>
+
+            <div data-field="notes" style="max-width:640px" hidden></div>
         </div>
         <?php
     }

@@ -44,7 +44,9 @@ final class TarGz
     public function close(): void
     {
         $this->emit('', ZLIB_FINISH);
+        $flushed = fflush($this->out);
         fclose($this->out);
+        if (!$flushed) throw new \RuntimeException(__('Could not write the export archive. Is the disk full? Free up space on this server, then cancel and start again.', 'anypress-export'));
         $this->out = null;
         $this->deflate = null;
     }
@@ -66,25 +68,34 @@ final class TarGz
 
     /**
      * Adds `$path` as `$name`, or carries on with it from `$offset` (the bytes already written), until
-     * `$deadline` (microtime). Returns the new offset, or null once the file is complete. The size is
-     * fixed when the header is written: a file that shrinks meanwhile is padded with zeros, one that
-     * grows is cut, so the tar stays valid.
+     * `$deadline` (microtime). Returns the new offset, or null once the file is done. A file that is gone
+     * or unreadable when it comes up is left out (nothing is written, and `$entry['skipped']` says so).
+     * The size is fixed when the header is written: a file that shrinks or disappears after that is
+     * padded with zeros and one that grows is cut, so the tar stays valid; `$entry['changed']` says so.
      *
-     * @param array{size?: int} $entry the size the header gave, kept between calls
+     * @param array{size?: int, skipped?: bool, changed?: bool} $entry what the header gave, kept between calls
      */
     public function addFile(string $path, string $name, int $offset, float $deadline, array &$entry): ?int
     {
+        $in = is_file($path) ? @fopen($path, 'rb') : false;
         if ($offset === 0) {
-            $size = (int) @filesize($path);
+            if (!$in) {
+                $entry = ['skipped' => true];
+                return null;
+            }
+            $stat = fstat($in);
+            $size = (int) ($stat['size'] ?? 0);
             $entry = ['size' => $size];
-            $this->header($name, $size, (int) @filemtime($path));
+            $this->header($name, $size, (int) ($stat['mtime'] ?? 0));
         }
         $size = (int) ($entry['size'] ?? 0);
-        $in = @fopen($path, 'rb');
         if ($in && $offset > 0) fseek($in, $offset);
         while ($offset < $size) {
             $chunk = $in ? (string) fread($in, min(self::READ, $size - $offset)) : '';
-            if ($chunk === '') $chunk = str_repeat("\0", min(self::READ, $size - $offset));
+            if ($chunk === '') {
+                $chunk = str_repeat("\0", min(self::READ, $size - $offset));
+                $entry['changed'] = true;
+            }
             $this->emit($chunk);
             $offset += strlen($chunk);
             if ($offset < $size && microtime(true) > $deadline) {
@@ -151,8 +162,9 @@ final class TarGz
     {
         $compressed = deflate_add($this->deflate, $data, $flush);
         if ($compressed === false) throw new \RuntimeException(__('Compressing the export failed.', 'anypress-export'));
-        if ($compressed !== '' && fwrite($this->out, $compressed) === false) {
-            throw new \RuntimeException(__('Could not write the export archive. Is the disk full?', 'anypress-export'));
+        // A short write (fewer bytes than asked, as on a nearly full disk) would leave a corrupt archive.
+        if ($compressed !== '' && fwrite($this->out, $compressed) !== strlen($compressed)) {
+            throw new \RuntimeException(__('Could not write the export archive. Is the disk full? Free up space on this server, then cancel and start again.', 'anypress-export'));
         }
     }
 }

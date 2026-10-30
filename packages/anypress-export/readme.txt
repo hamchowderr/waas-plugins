@@ -4,7 +4,7 @@ Tags: migration, move site, export, backup, anypress
 Requires at least: 5.6
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.3
+Stable tag: 1.1.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -14,18 +14,26 @@ Moves this WordPress site to AnyPress: paste the import code AnyPress gave you a
 
 1. On AnyPress, choose Move a site in. It shows an import code starting with AP1.
 2. Install and activate this plugin on the site you are moving.
-3. Open Tools > Move to AnyPress, paste the code and choose Send this site to AnyPress. Keep the page open until the upload finishes; if it closes, open it again and it carries on where it stopped.
+3. Open Tools > Move to AnyPress. It checks your site first and lists anything to know: what would stop the move, what stays behind, licence keys to add again, and what to check afterwards. Paste the code and choose Send this site to AnyPress. Keep the page open until the upload finishes; if it closes, open it again and it carries on where it stopped.
 4. AnyPress sets the store up. Check the site on its new address, then point your domain at it.
 
-Nothing on this site is changed or deleted. The export is built in a folder under the uploads folder that the web can't open, and removed once it is uploaded or when you cancel.
+Nothing on this site is changed or deleted. The export is built in a folder under the uploads folder that the web can't open, and removed once it is uploaded, when you cancel, when you deactivate the plugin, or after 7 days if a move is left unfinished.
 
-From WP-CLI: `wp anypress-export send <code>` and `wp anypress-export status --wait`.
+From WP-CLI: `wp anypress-export send <code>` and `wp anypress-export status --wait`. Best for sites over about 1 GB.
 
 = What it sends, and where =
 
 The plugin sends this site's database and its `wp-content` folder (plugins, themes, must-use plugins, uploads, languages; caches and backup archives are left out) to the AnyPress address inside the import code you paste, and nowhere else. Nothing is sent until you paste a code and start. AnyPress: https://anypress.io
 
 == Changelog ==
+
+= 1.1.0 =
+* A site check before you start, on the page and in the export: what would stop the move, too little disk space, tables and linked folders that stay behind, licence keys in wp-config.php to add again (names only), cache and mail plugins, overdue scheduled tasks.
+* Safer database export: batches sized by bytes, statements of about 1 MB at most, rows read in key order, the right character set, generated columns left out, map columns kept.
+* Each table's row count goes with the export.
+* Large sites: listing files carries on across requests, an expired upload link is renewed, and a reload during the upload waits for it.
+* A full disk stops the export with a clear message; files deleted while packing are listed instead of sent empty.
+* Unfinished exports are removed after 7 days and when the plugin is deactivated.
 
 = 1.0.3 =
 * The export page's script is a separate file and its text can be translated.

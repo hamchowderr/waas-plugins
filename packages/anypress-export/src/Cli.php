@@ -26,9 +26,19 @@ final class Cli
     {
         try {
             $state = Plugin::begin($args[0]);
+            $noted = false;
             while ($state['step'] !== 'moving') {
                 $state = Plugin::step($state, 3600);
-                \WP_CLI::log(Exporter::progress($state)['message']);
+                $progress = Exporter::progress($state);
+                \WP_CLI::log($progress['message']);
+                if (!$noted && !in_array($state['step'], ['preflight', 'files'], true)) {
+                    $noted = true;
+                    foreach ($progress['notes'] as $group) {
+                        \WP_CLI::log('');
+                        \WP_CLI::log($group['title'] . ':' . (isset($group['text']) ? ' ' . $group['text'] : ''));
+                        foreach ($group['items'] as $item) \WP_CLI::log('  - ' . $item);
+                    }
+                }
             }
         } catch (\Throwable $e) {
             \WP_CLI::error($e->getMessage());
