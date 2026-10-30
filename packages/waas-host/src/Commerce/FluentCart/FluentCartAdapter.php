@@ -64,6 +64,7 @@ class FluentCartAdapter implements CommerceAdapter
         new FluentCartPortal($this, $store, $domain_settings, $email_packs);
 
         add_filter('waas_getting_started_checklist', [$this, 'mark_plan_product_checklist_item'], 20);
+        (new FluentCartStarterPlans($provisioning_api, $store))->register();
     }
 
     public function is_plan_product($product_id): bool
@@ -172,6 +173,12 @@ class FluentCartAdapter implements CommerceAdapter
     public function get_subscription_url($subscription_id): string
     {
         return $this->store->get_subscription_url($subscription_id);
+    }
+
+    /** The subscription in FluentCart's admin, linked from the AnyPress Overview. */
+    public function get_admin_subscription_url($subscription_id): string
+    {
+        return $this->store->get_admin_subscription_url($subscription_id);
     }
 
     public function is_subscription_active($subscription_id): bool

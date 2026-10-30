@@ -42,11 +42,14 @@ class Notifications
 
         $recipient = apply_filters('waas_suspended_email_recipient', Commerce::require_adapter()->get_customer_email($subscription_id), $subscription_id);
         $replaceables = self::get_suspended_replaceables($subscription_id, $recipient, (int) $delete_at);
-        $subject = self::do_replacements(apply_filters('waas_suspended_email_subject', self::get_default_suspended_subject(), $subscription_id), $replaceables);
-        $body = self::do_replacements(apply_filters('waas_suspended_email_body', self::get_default_suspended_body(), $subscription_id, $recipient), $replaceables);
+        $email = self::render_email(
+            apply_filters('waas_suspended_email_subject', self::get_default_suspended_subject(), $subscription_id),
+            apply_filters('waas_suspended_email_body', self::get_default_suspended_body(), $subscription_id, $recipient),
+            $replaceables
+        );
         $headers = apply_filters('waas_suspended_email_headers', self::headers(), $subscription_id);
 
-        wp_mail($recipient, $subject, self::wrap_html($body, $subject), $headers);
+        wp_mail($recipient, $email['subject'], $email['body'], $headers);
     }
 
     public static function get_default_suspended_subject()
@@ -79,11 +82,14 @@ class Notifications
 
         $recipient = apply_filters('waas_suspend_scheduled_email_recipient', Commerce::require_adapter()->get_customer_email($subscription_id), $subscription_id);
         $replaceables = self::get_suspend_scheduled_replaceables($subscription_id, $recipient, (int) $suspend_at);
-        $subject = self::do_replacements(apply_filters('waas_notification_settings_suspend_scheduled_email_subject', self::get_default_suspend_scheduled_subject(), $subscription_id), $replaceables);
-        $body = self::do_replacements(apply_filters('waas_notification_settings_suspend_scheduled_email_body', self::get_default_suspend_scheduled_body(), $subscription_id, $recipient), $replaceables);
+        $email = self::render_email(
+            apply_filters('waas_notification_settings_suspend_scheduled_email_subject', self::get_default_suspend_scheduled_subject(), $subscription_id),
+            apply_filters('waas_notification_settings_suspend_scheduled_email_body', self::get_default_suspend_scheduled_body(), $subscription_id, $recipient),
+            $replaceables
+        );
         $headers = apply_filters('waas_suspend_scheduled_email_headers', self::headers(), $subscription_id);
 
-        wp_mail($recipient, $subject, self::wrap_html($body, $subject), $headers);
+        wp_mail($recipient, $email['subject'], $email['body'], $headers);
     }
 
     public static function get_default_suspend_scheduled_subject()
@@ -123,30 +129,19 @@ class Notifications
         }
 
         $recipient = apply_filters('waas_tenant_ready_email_recipient', Commerce::require_adapter()->get_customer_email($subscription_id), $subscription_id);
-        $subject = self::get_ready_email_subject($subscription_id, $recipient);
+        $email = self::render_email(
+            apply_filters('waas_tenant_ready_email_subject', self::get_default_tenant_ready_subject(), $subscription_id),
+            apply_filters('waas_tenant_ready_email_body', self::get_default_tenant_ready_body(), $subscription_id, $recipient),
+            self::get_replaceables($subscription_id, $recipient)
+        );
         $headers = apply_filters('waas_tenant_ready_email_headers', self::headers(), $subscription_id);
-        $body = self::get_ready_email_body($subscription_id, $recipient);
 
-        wp_mail($recipient, $subject, self::wrap_html($body, $subject), $headers);
-    }
-
-    private static function get_ready_email_subject($subscription_id, $recipient)
-    {
-        $unfiltered_subject = apply_filters('waas_tenant_ready_email_subject', self::get_default_tenant_ready_subject(), $subscription_id);
-        $replaceables = self::get_replaceables($subscription_id, $recipient);
-        return self::do_replacements($unfiltered_subject, $replaceables);
+        wp_mail($recipient, $email['subject'], $email['body'], $headers);
     }
 
     public static function get_default_tenant_ready_subject()
     {
         return __('Your website is ready', 'waas-host');
-    }
-
-    private static function get_ready_email_body($subscription_id, $recipient)
-    {
-        $unfiltered_body = apply_filters('waas_tenant_ready_email_body', self::get_default_tenant_ready_body(), $subscription_id, $recipient);
-        $replaceables = self::get_replaceables($subscription_id, $recipient);
-        return self::do_replacements($unfiltered_body, $replaceables);
     }
 
     public static function get_default_tenant_ready_body()
@@ -288,6 +283,42 @@ class Notifications
             "storefront_url" => get_site_url(),
             "storefront_subscription_details_url" => $subscription_details_url,
         ], $subscription_id, $recipient);
+    }
+
+    /**
+     * The one place an email's subject and body become what is sent: placeholders filled in, the body put in the
+     * storefront's layout (wrap_html()), then passed through `waas_email_html`. The settings preview and test send use it too, so they show
+     * exactly what customers get.
+     *
+     * @return array{subject: string, body: string}
+     */
+    public static function render_email(string $subject, string $body, array $replaceables): array
+    {
+        $subject = (string) self::do_replacements($subject, $replaceables);
+        $body = (string) self::do_replacements($body, $replaceables);
+
+        return [
+            'subject' => $subject,
+            'body' => (string) apply_filters('waas_email_html', self::wrap_html($body, $subject), $subject),
+        ];
+    }
+
+    /** Made-up values for every placeholder, for the settings preview and test send. */
+    public static function sample_replaceables(): array
+    {
+        $site = get_site_url();
+
+        return [
+            'tenant_domain' => 'https://janes-bakery.example.com',
+            'tenant_one_click_login_url' => $site,
+            'tenant_one_click_login_url_expires_after' => '',
+            'storefront_name' => get_bloginfo('name'),
+            'storefront_url' => $site,
+            'storefront_subscription_details_url' => $site,
+            'suspend_date' => self::format_date(time() + 30 * DAY_IN_SECONDS),
+            'delete_date' => self::format_date(time() + TenantsSubscriptionManager::get_deletion_grace_days() * DAY_IN_SECONDS),
+            'deletion_grace_days' => (string) TenantsSubscriptionManager::get_deletion_grace_days(),
+        ];
     }
 
     public static function do_replacements($text, $replaceables)

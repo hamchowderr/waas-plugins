@@ -442,6 +442,14 @@ class FluentCartStore
         return $subscription ? (string) $subscription->getViewUrl('customer') : '';
     }
 
+    /** The subscription in FluentCart's admin. */
+    public function get_admin_subscription_url($subscription_id): string
+    {
+        $subscription = $this->find_subscription($subscription_id);
+
+        return $subscription ? (string) $subscription->getViewUrl('admin') : '';
+    }
+
     /**
      * Subscription ids of the FluentCart customer for a WordPress user: linked by user id, or by
      * email when FluentCart did not link them (it doesn't when the email already had an account).

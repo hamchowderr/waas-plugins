@@ -140,6 +140,36 @@ class NotificationsTest extends TestCase
         $this->assertSame([], $this->capture_suspended_mail(gmmktime(12, 0, 0, 11, 14, 2026)));
     }
 
+    public function test_render_email_fills_placeholders_and_passes_the_body_through_the_html_filter(): void
+    {
+        Filters\expectApplied('waas_email_html')
+            ->once()
+            ->with('<html><p>Hi from Storefront</p></html>', 'Ready at https://a.example')
+            ->andReturn('<html><p>Filtered</p></html>');
+
+        $email = Notifications::render_email('Ready at {{ tenant_domain }}', '<html><p>Hi from {{storefront_name}}</p></html>', [
+            'tenant_domain' => 'https://a.example',
+            'storefront_name' => 'Storefront',
+        ]);
+
+        $this->assertSame(['subject' => 'Ready at https://a.example', 'body' => '<html><p>Filtered</p></html>'], $email);
+    }
+
+    public function test_sample_values_cover_every_placeholder_the_settings_offer(): void
+    {
+        Functions\when('get_option')->justReturn('');
+        Functions\when('wp_date')->alias(fn ($format, $timestamp) => gmdate('F j, Y', $timestamp));
+        if (!defined('DAY_IN_SECONDS')) {
+            define('DAY_IN_SECONDS', 86400);
+        }
+
+        $sample = Notifications::sample_replaceables();
+
+        foreach (['tenant_domain', 'tenant_one_click_login_url', 'storefront_name', 'storefront_url', 'storefront_subscription_details_url', 'suspend_date', 'delete_date', 'deletion_grace_days'] as $key) {
+            $this->assertNotSame('', $sample[$key] ?? '', $key);
+        }
+    }
+
     public function test_the_email_is_sent_in_the_storefront_layout_with_its_subject_as_the_heading(): void
     {
         $sent = $this->capture_mail();

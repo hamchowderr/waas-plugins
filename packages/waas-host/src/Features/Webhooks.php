@@ -215,6 +215,10 @@ class Webhooks
 
     public function add_settings_section(): void
     {
+        // A ready-made storefront only sees this when it needs a hand; the Overview shows live updates as on.
+        if (AdminSettings::is_ready_made() && self::is_registered()) {
+            return;
+        }
         add_settings_section(
             'waas_webhooks',
             __('Webhooks', 'waas-host'),
@@ -248,7 +252,7 @@ class Webhooks
             $label = __('Register', 'waas-host');
         }
 
-        echo '<p><a class="button" href="' . esc_url(self::register_url()) . '">' . esc_html($label) . '</a></p>';
+        echo '<p><a class="ap-btn is-sm" href="' . esc_url(self::register_url()) . '">' . esc_html($label) . '</a></p>';
     }
 
     /**
@@ -280,7 +284,8 @@ class Webhooks
     public function show_tenant_failures_notice(): void
     {
         $commerce = Commerce::adapter();
-        if ($commerce === null || !current_user_can('manage_options')) {
+        // The AnyPress Overview lists these in place.
+        if ($commerce === null || !current_user_can('manage_options') || AdminHome::is_plugin_page()) {
             return;
         }
 

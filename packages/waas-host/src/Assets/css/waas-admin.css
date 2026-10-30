@@ -1,0 +1,258 @@
+/* AnyPress admin pages (Overview and Settings): warm paper, ink buttons, one accent. Scoped to .ap-admin. */
+@font-face {
+    font-family: "Hanken Grotesk";
+    src: url("../../../assets/fonts/hanken-grotesk-latin.woff2") format("woff2");
+    font-weight: 100 900;
+    font-display: swap;
+}
+
+.ap-admin {
+    --ap-ink: #141414;
+    --ap-ink-soft: #5f5a55;
+    --ap-paper: #ffffff;
+    --ap-paper-2: #faf8f5;
+    --ap-line: #e9e4de;
+    --ap-hair: #f1ede8;
+    --ap-amber: #ffb338;
+    --ap-orange: #ff7a2a;
+    --ap-rose: #ee2f5e;
+    --ap-accent: #c8264d;
+    --ap-ok: #17703d;
+    --ap-ok-bg: #e7f4ec;
+    --ap-warn: #7a5200;
+    --ap-warn-bg: #fff4dc;
+    --ap-bad: #b0203f;
+    --ap-bad-bg: #fde9ee;
+    --ap-info-bg: #f3efe9;
+    --ap-r-btn: 10px;
+    --ap-r-card: 16px;
+    --ap-r-tile: 12px;
+    font-family: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--ap-ink);
+    font-size: 14px;
+    line-height: 1.55;
+    max-width: 1180px;
+    margin-right: 20px;
+}
+
+.ap-admin *,
+.ap-admin *::before,
+.ap-admin *::after { box-sizing: border-box; }
+.ap-admin [hidden] { display: none !important; }
+.ap-admin h1,
+.ap-admin h2,
+.ap-admin h3 { color: var(--ap-ink); letter-spacing: -0.015em; margin: 0; padding: 0; text-wrap: balance; }
+.ap-admin p { margin: 0; }
+.ap-admin a { color: var(--ap-accent); }
+.ap-admin :focus-visible { outline: 2px solid var(--ap-accent); outline-offset: 2px; box-shadow: none; }
+.ap-admin .ap-muted { color: var(--ap-ink-soft); font-size: 13.5px; }
+
+/* Header */
+.ap-top { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; margin: 14px 0 18px; }
+.ap-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.ap-title img { width: 36px; height: 36px; flex: none; }
+.ap-title h1 { font-size: 24px; font-weight: 800; line-height: 1.2; }
+.ap-title p { color: var(--ap-ink-soft); font-size: 13.5px; overflow-wrap: anywhere; }
+.ap-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* Buttons, also on WordPress's submit_button() */
+.ap-admin .ap-btn,
+.ap-admin .ap-btn.button,
+.ap-admin .ap-btn.button-primary {
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.3;
+    min-height: 0;
+    border-radius: var(--ap-r-btn);
+    padding: 9px 15px;
+    border: 1px solid var(--ap-line);
+    background: var(--ap-paper);
+    color: var(--ap-ink);
+    cursor: pointer;
+    white-space: nowrap;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: none;
+    text-shadow: none;
+}
+.ap-admin .ap-btn:hover { border-color: #d6cfc6; background: var(--ap-paper-2); color: var(--ap-ink); }
+.ap-admin .ap-btn.is-ink,
+.ap-admin .ap-btn.is-ink:hover { background: var(--ap-ink); border-color: var(--ap-ink); color: #fff; }
+.ap-admin .ap-btn.is-ink:hover { background: #2b2926; }
+.ap-admin .ap-btn.is-sm { padding: 6px 11px; font-size: 13px; }
+.ap-admin .ap-btn[disabled] { opacity: .55; cursor: default; }
+
+/* Tabs */
+/* The line under the tabs is an inset shadow, not a border the active tab overlaps, so nothing spills out of the
+   box and Windows never shows a scrollbar beside two short tabs. */
+.ap-tabs { display: flex; gap: 4px; box-shadow: inset 0 -1px 0 var(--ap-line); margin-bottom: 22px; overflow: hidden; }
+.ap-tabs a { font-size: 14.5px; font-weight: 600; color: var(--ap-ink-soft); text-decoration: none; padding: 10px 12px; border-bottom: 2px solid transparent; white-space: nowrap; }
+.ap-tabs a:hover { color: var(--ap-ink); }
+.ap-tabs a[aria-current="page"] { color: var(--ap-ink); border-bottom-color: var(--ap-accent); }
+
+/* Cards and layout */
+.ap-card { background: var(--ap-paper); border: 1px solid var(--ap-line); border-radius: var(--ap-r-card); padding: 20px 22px; min-width: 0; }
+.ap-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.ap-card-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
+.ap-setup { margin-bottom: 18px; }
+.ap-columns { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.ap-stack { display: grid; gap: 18px; min-width: 0; }
+.ap-empty { color: var(--ap-ink-soft); padding: 14px 0 4px; }
+
+/* Setup steps */
+.ap-progress { height: 8px; border-radius: 999px; background: var(--ap-hair); overflow: hidden; margin: 12px 0 4px; }
+.ap-progress i { display: block; height: 100%; background: linear-gradient(90deg, var(--ap-amber), var(--ap-orange), var(--ap-rose)); }
+.ap-steps { list-style: none; margin: 10px 0 0; padding: 0; display: grid; }
+.ap-steps li { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 13px 0; margin: 0; border-top: 1px solid var(--ap-hair); }
+.ap-steps li p { color: var(--ap-ink-soft); font-size: 13.5px; }
+.ap-steps li.is-done strong { color: var(--ap-ink-soft); font-weight: 600; }
+.ap-dot { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--ap-line); display: grid; place-items: center; font-size: 12px; font-weight: 800; }
+.is-done .ap-dot { background: var(--ap-ok); border-color: var(--ap-ok); color: #fff; }
+
+/* Count tiles */
+.ap-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.ap-tile { background: var(--ap-paper); border: 1px solid var(--ap-line); border-radius: var(--ap-r-tile); padding: 14px 16px; display: grid; gap: 2px; align-content: start; }
+.ap-tile b { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.ap-tile span { font-size: 13.5px; color: var(--ap-ink-soft); }
+.ap-tile.is-alert b { color: var(--ap-bad); }
+
+/* Status pills */
+.ap-pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; border-radius: 999px; padding: 2px 10px; white-space: nowrap; background: var(--ap-info-bg); color: var(--ap-ink-soft); }
+.ap-pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.ap-pill.is-ok { background: var(--ap-ok-bg); color: var(--ap-ok); }
+.ap-pill.is-warn { background: var(--ap-warn-bg); color: var(--ap-warn); }
+.ap-pill.is-bad { background: var(--ap-bad-bg); color: var(--ap-bad); }
+
+/* Needs attention */
+.ap-attn { display: grid; gap: 10px; margin-top: 12px; }
+.ap-attn-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; background: var(--ap-bad-bg); border-radius: var(--ap-r-tile); padding: 12px 14px; }
+.ap-attn-item p { color: var(--ap-ink-soft); font-size: 13.5px; }
+
+/* Recent website orders */
+.ap-list { width: 100%; border-collapse: collapse; margin-top: 10px; }
+.ap-list th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ap-ink-soft); font-weight: 600; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--ap-line); }
+.ap-list td { padding: 11px 10px; border-bottom: 1px solid var(--ap-hair); vertical-align: middle; }
+.ap-list tr:last-child td { border-bottom: 0; }
+.ap-list td small { display: block; color: var(--ap-ink-soft); font-size: 12px; font-weight: 400; overflow-wrap: anywhere; }
+.ap-list .ap-c-site { font-weight: 600; }
+.ap-list .ap-c-act { text-align: right; }
+.ap-list .ap-c-act .ap-btns { justify-content: flex-end; flex-wrap: nowrap; }
+
+/* Connection health */
+.ap-health-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 11px 0; border-top: 1px solid var(--ap-hair); }
+.ap-health h2 + .ap-health-row { border-top: 0; }
+.ap-health-row small { display: block; color: var(--ap-ink-soft); font-size: 13px; overflow-wrap: anywhere; }
+
+/* Settings */
+.ap-settings { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 24px; align-items: start; }
+.ap-setnav { display: grid; gap: 2px; position: sticky; top: 46px; }
+.ap-setnav a { font-size: 14px; font-weight: 600; color: var(--ap-ink-soft); text-decoration: none; padding: 8px 12px; border-radius: var(--ap-r-btn); white-space: nowrap; }
+.ap-setnav a:hover { color: var(--ap-ink); }
+.ap-setnav a[aria-current="page"] { background: var(--ap-paper); color: var(--ap-ink); box-shadow: inset 0 0 0 1px var(--ap-line); }
+.ap-setcard h2 { font-size: 17px; margin: 0 0 4px; }
+.ap-setcard .ap-form > h2:not(:first-of-type) { margin-top: 26px; }
+.ap-setcard .ap-form > p { color: var(--ap-ink-soft); max-width: 70ch; }
+.ap-setcard .form-table { margin: 6px 0 0; }
+.ap-setcard .form-table th { font-weight: 600; font-size: 14px; color: var(--ap-ink); padding: 16px 16px 16px 0; width: 220px; }
+.ap-setcard .form-table td { padding: 14px 0; }
+.ap-setcard .form-table tr + tr { border-top: 1px solid var(--ap-hair); }
+.ap-setcard .description { color: var(--ap-ink-soft); font-size: 13px; max-width: 64ch; }
+.ap-setcard .description code { font-size: 12px; white-space: nowrap; }
+.ap-admin input[type="text"],
+.ap-admin input[type="url"],
+.ap-admin input[type="password"],
+.ap-admin input[type="number"],
+.ap-admin select,
+.ap-admin textarea { border: 1px solid var(--ap-line); border-radius: var(--ap-r-btn); padding: 7px 11px; background: var(--ap-paper); color: var(--ap-ink); box-shadow: none; max-width: 100%; }
+.ap-admin select { height: auto; min-height: 38px; line-height: 1.4; padding: 7px 30px 7px 11px; }
+.ap-admin input:focus,
+.ap-admin select:focus,
+.ap-admin textarea:focus { border-color: var(--ap-ink); box-shadow: 0 0 0 1px var(--ap-ink); outline: 0; }
+.ap-admin input[disabled] { background: var(--ap-paper-2); color: var(--ap-ink-soft); }
+.ap-save { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--ap-line); }
+.ap-save .ap-muted { margin-right: auto; }
+.ap-save .submit { margin: 0; padding: 0; }
+.ap-banner { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; border-radius: var(--ap-r-tile); padding: 12px 14px; margin-bottom: 16px; }
+.ap-banner.is-ok { background: var(--ap-ok-bg); }
+.ap-banner.is-warn { background: var(--ap-warn-bg); }
+.ap-banner.is-bad { background: var(--ap-bad-bg); }
+.ap-tiers { border-collapse: separate; border-spacing: 0; margin-top: 10px; border: 1px solid var(--ap-line); border-radius: var(--ap-r-tile); overflow: hidden; min-width: 240px; }
+.ap-setcard .form-table .ap-tiers th,
+.ap-setcard .form-table .ap-tiers td { width: auto; padding: 7px 18px; text-align: left; font-size: 13.5px; line-height: 1.4; display: table-cell; }
+.ap-setcard .form-table .ap-tiers th { background: var(--ap-paper-2); font-weight: 600; color: var(--ap-ink-soft); }
+.ap-setcard .form-table .ap-tiers td { border-top: 1px solid var(--ap-hair); font-variant-numeric: tabular-nums; }
+.ap-setcard .form-table .ap-tiers tr + tr { border-top: 0; }
+.ap-setcard .ap-tiers + .description { margin-top: 10px; }
+
+/* Emails */
+.ap-emails { display: grid; margin-top: 8px; }
+.ap-email { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 14px 0; border-top: 1px solid var(--ap-hair); }
+.ap-email:first-child { border-top: 0; }
+.ap-email .ap-pill { justify-self: start; }
+.ap-email p { color: var(--ap-ink-soft); font-size: 13.5px; }
+.ap-email .ap-subject { color: var(--ap-ink); font-size: 13px; margin-top: 2px; overflow-wrap: anywhere; }
+.ap-field { display: grid; gap: 6px; padding: 12px 0; }
+.ap-field > label,
+.ap-label { font-weight: 600; font-size: 14px; }
+.ap-switch { display: flex; gap: 10px; align-items: center; cursor: pointer; font-weight: 600; }
+.ap-admin .ap-switch input[type="checkbox"] { appearance: none; -webkit-appearance: none; flex: none; width: 38px; height: 22px; border-radius: 999px; border: 0; background: var(--ap-line); position: relative; cursor: pointer; margin: 0; box-shadow: none; transition: background .15s; }
+.ap-admin .ap-switch input[type="checkbox"]::before { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; margin: 0; border-radius: 50%; background: #fff; transition: left .15s; }
+.ap-admin .ap-switch input[type="checkbox"]:checked { background: var(--ap-ok); }
+.ap-admin .ap-switch input[type="checkbox"]:checked::before { left: 19px; content: ""; }
+.ap-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+.ap-admin #ap-email-body { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.5; width: 100%; min-height: 380px; resize: vertical; }
+.ap-tokens { display: flex; flex-wrap: wrap; gap: 6px; }
+.ap-token { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; border: 1px dashed #d6cfc6; border-radius: 8px; padding: 3px 8px; background: var(--ap-paper-2); color: var(--ap-ink); cursor: pointer; }
+.ap-token:hover { border-style: solid; }
+.ap-preview { border: 1px solid var(--ap-line); border-radius: var(--ap-r-tile); background: var(--ap-paper-2); overflow: hidden; display: grid; }
+.ap-preview-subject { padding: 10px 14px; border-bottom: 1px solid var(--ap-line); font-weight: 700; background: var(--ap-paper); overflow-wrap: anywhere; }
+.ap-preview iframe { width: 100%; height: 420px; border: 0; background: #fff; display: block; }
+
+/* WordPress's own notices keep their look but line up with the cards. */
+.ap-admin > .notice,
+.ap-admin > .updated,
+.ap-admin > .error { margin: 0 0 16px; border-radius: 8px; }
+
+@media (max-width: 1100px) {
+    .ap-columns { grid-template-columns: minmax(0, 1fr); }
+    .ap-editor { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 860px) {
+    .ap-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ap-settings { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+    .ap-setnav { position: static; display: flex; flex-wrap: wrap; gap: 6px; }
+    .ap-setnav a { border: 1px solid var(--ap-line); padding: 6px 12px; }
+    .ap-setnav a[aria-current="page"] { background: var(--ap-ink); color: #fff; border-color: var(--ap-ink); box-shadow: none; }
+}
+
+@media (max-width: 782px) {
+    /* Room under the last card for FluentKit's phone menu, which sits over the bottom of the screen. */
+    .ap-admin { margin-right: 10px; padding-bottom: 72px; }
+    .ap-card { padding: 16px; }
+    .ap-title h1 { font-size: 21px; }
+    .ap-top .ap-btns { width: 100%; }
+    .ap-steps li { grid-template-columns: 28px minmax(0, 1fr); }
+    .ap-steps li .ap-btn { grid-column: 2; justify-self: start; }
+    .ap-attn-item { grid-template-columns: minmax(0, 1fr); }
+    .ap-list thead { display: none; }
+    .ap-list,
+    .ap-list tbody { display: block; }
+    .ap-list tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 12px 0; border-bottom: 1px solid var(--ap-hair); }
+    .ap-list tr:last-child { border-bottom: 0; }
+    .ap-list td { padding: 0; border: 0; }
+    .ap-list .ap-c-site { grid-column: 1; }
+    .ap-list .ap-c-cust { grid-column: 1; color: var(--ap-ink-soft); font-size: 13px; }
+    .ap-list .ap-c-status { grid-column: 2; grid-row: 1; justify-self: end; align-self: start; }
+    .ap-list .ap-c-act { grid-column: 2; grid-row: 2; justify-self: end; }
+    .ap-email { grid-template-columns: 52px minmax(0, 1fr); align-items: start; }
+    .ap-email .ap-btn { grid-column: 2; justify-self: start; }
+    .ap-setcard .form-table th { width: auto; padding: 14px 0 4px; }
+    .ap-setcard .form-table td { padding: 0 0 14px; }
+    .ap-setcard .form-table tr + tr { border-top: 0; }
+    .ap-save { justify-content: stretch; }
+    .ap-save .ap-muted { width: 100%; }
+}

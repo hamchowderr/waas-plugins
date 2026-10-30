@@ -40,6 +40,7 @@ class FluentCartPortal
         add_filter('fluent_cart/customer_portal/subscription_data', [$this, 'add_subscription_actions'], 10, 2);
         add_filter('waas_choose_website_name_url', [$this, 'website_page_url']);
         add_filter('waas_website_page_url', [$this, 'website_page_url']);
+        add_filter('waas_account_page_url', fn () => $this->store->get_portal_url(self::ENDPOINT));
         // FluentCart puts custom tabs just before Profile; this runs after that and moves ours up.
         add_filter('fluent_cart/global_customer_menu_items', [$this, 'move_menu_item_after_dashboard'], 20);
         // Before FluentCart's own content (priority 10), so the notice sits above the page.

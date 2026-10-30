@@ -8,3 +8,5 @@ whole repositories.
 - `anypress.zip`: AnyPress theme, anypress-theme `e022c74`
 - `anypress-blocks.zip`: AnyPress Blocks, anypress-blocks `85d20c0`
 - `waas-client.zip`: WaaS Client, this repository's `main`
+- `waas-host.zip`: WaaS Host, built from `packages/waas-host` without tests (Composer autoloader only), for `admin-preview/blueprint.json`
+- `fluent-toolkit.zip`: FluentKit 2.1.4, the copy the AnyPress store template ships (`waas-provisioning-api/templates/anypress-store/plugins`, same checksum)
