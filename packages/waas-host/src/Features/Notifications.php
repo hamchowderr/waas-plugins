@@ -207,7 +207,9 @@ class Notifications
         $line = '#e9e4de';
         $paper = '#faf8f5';
         $font = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif";
-        $accent = (string) apply_filters('waas_email_accent', 'linear-gradient(90deg,#ffc75a,#ff7a2a,#ee2f5e,#d21fa4)');
+        // A coloured strip along the card's top: none by default, so a seller's emails carry only their own brand.
+        // A CSS colour or gradient, e.g. the AnyPress shop's 'linear-gradient(90deg,#ffc75a,#ff7a2a,#ee2f5e,#d21fa4)'.
+        $accent = (string) apply_filters('waas_email_accent', '');
         $logo = self::logo_url();
         $support = self::support_email();
 
@@ -244,7 +246,8 @@ class Notifications
             . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">'
             . '<tr><td style="padding:0 4px 20px">' . $head . '</td></tr>'
             . '<tr><td style="background:#ffffff;border:1px solid ' . $line . ';border-radius:12px;overflow:hidden">'
-            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td height="4" style="height:4px;line-height:4px;font-size:0;background:#ff7a2a;background-image:' . esc_attr($accent) . '">&nbsp;</td></tr>'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">'
+            . ($accent !== '' ? '<tr><td height="4" style="height:4px;line-height:4px;font-size:0;background:' . esc_attr($accent) . '">&nbsp;</td></tr>' : '')
             . '<tr><td style="padding:32px 32px 16px">'
             . '<h1 style="margin:0 0 16px;font-size:24px;line-height:30px;font-weight:700;letter-spacing:-0.01em;color:' . $ink . '">' . esc_html($title) . '</h1>'
             . $content

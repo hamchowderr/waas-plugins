@@ -151,6 +151,7 @@ class NotificationsTest extends TestCase
         $this->assertStringContainsString('Or paste this link into your browser:', $body);
         $this->assertStringContainsString('>Storefront</span>', $body);
         $this->assertStringNotContainsString('waas-button', $body);
+        $this->assertStringNotContainsString('height:4px', $body, 'no coloured strip unless the storefront asks for one');
         $this->assertStringContainsString('Questions? Just reply to this email.', $body);
         $this->assertSame(['Content-Type: text/html; charset=UTF-8'], $sent[0]['headers']);
     }
@@ -204,5 +205,13 @@ class NotificationsTest extends TestCase
         $this->assertTrue(Notifications::is_old_default_body(str_replace("\n", "\r\n", $old)));
         $this->assertFalse(Notifications::is_old_default_body(Notifications::get_default_suspended_body()));
         $this->assertFalse(Notifications::is_old_default_body('<p>My own words</p>'));
+    }
+
+    public function test_a_storefront_can_add_its_own_coloured_strip(): void
+    {
+        \Brain\Monkey\Filters\expectApplied('waas_email_accent')->andReturn('#0a7d55');
+        Functions\when('get_option')->justReturn('');
+
+        $this->assertStringContainsString('height:4px;line-height:4px;font-size:0;background:#0a7d55', Notifications::wrap_html('<p>Hi</p>', 'Hello'));
     }
 }
