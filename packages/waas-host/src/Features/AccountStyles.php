@@ -94,7 +94,7 @@ class AccountStyles
 .waas-acct-notice{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;border:1.5px solid #141414;border-radius:16px;box-shadow:5px 5px 0 #ffc75a;padding:16px 20px;margin-bottom:18px;background:#fff;font-size:15px}
 .waas-acct-notice p{margin:0;flex:1 1 260px;overflow-wrap:anywhere}
 .waas-acct-notice .waas-acct-actions{margin-top:0}
-@media (max-width:600px){.waas-acct-panel>summary small{flex-basis:100%;padding-left:32px}.waas-acct-site{padding:18px 16px}.waas-acct-panel-body{padding-left:0}.waas-acct-actions>*,.waas-acct-form>.waas-acct-btn{flex:1 1 100%;text-align:center}.waas-acct table.waas-mail-records{display:block;overflow-x:auto}}
+@media (max-width:600px){.waas-acct-panel>summary small{flex-basis:100%;padding-left:32px}.waas-acct-site{padding:18px 16px}.waas-acct-panel-body{padding-left:0}.waas-acct-actions>*,.waas-acct-form>.waas-acct-btn{flex:1 1 100%;text-align:center}.waas-acct .waas-choose-website-name>.waas-acct-btn{display:flex;width:100%}.waas-acct table.waas-mail-records{display:block;overflow-x:auto}}
 CSS;
     }
 }
