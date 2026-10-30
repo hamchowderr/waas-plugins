@@ -21,7 +21,7 @@
       "step": "installPlugin",
       "pluginData": {
         "resource": "url",
-        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/6215901a15aa00423f08c5e5b3125d169ec3a615/scripts/playground/preview-zips/fluent-toolkit.zip"
+        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/1ee7753fff26a7dade5e19c92fc10b5ff7e80f8a/scripts/playground/preview-zips/fluent-toolkit.zip"
       },
       "options": {
         "activate": true,
@@ -32,7 +32,7 @@
       "step": "installPlugin",
       "pluginData": {
         "resource": "url",
-        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/6215901a15aa00423f08c5e5b3125d169ec3a615/scripts/playground/preview-zips/waas-host.zip"
+        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/1ee7753fff26a7dade5e19c92fc10b5ff7e80f8a/scripts/playground/preview-zips/waas-host.zip"
       },
       "options": {
         "activate": true,
@@ -44,7 +44,7 @@
       "path": "/wordpress/wp-content/mu-plugins/waas-admin-preview.php",
       "data": {
         "resource": "url",
-        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/6215901a15aa00423f08c5e5b3125d169ec3a615/scripts/playground/admin-preview/seed.php"
+        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/1ee7753fff26a7dade5e19c92fc10b5ff7e80f8a/scripts/playground/admin-preview/seed.php"
       }
     },
     {
