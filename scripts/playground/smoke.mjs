@@ -1,5 +1,5 @@
 // Smoke test of WaaS Client on WordPress Playground (WordPress and PHP running inside Node: no Docker, no
-// database server). Boots WordPress with WaaS Client from this checkout, the Ollie theme and the store
+// database server). Boots WordPress with WaaS Client from this checkout, the AnyPress theme and the store
 // template's starter pages, then calls the site-editing routes the AnyPress connector uses (signed with a
 // throwaway site key), the same actions as WordPress abilities, and the "AnyPress website" MCP server once the
 // owner switch turns on the MCP Adapter, and checks the answers.
@@ -29,7 +29,8 @@ const WP = process.env.PLAYGROUND_WP || '7.1.3';
 const PHP = process.env.PLAYGROUND_PHP || '8.3';
 const PORT = Number(process.env.PLAYGROUND_PORT || 9400);
 const SERVE = process.argv.includes('--serve');
-const OLLIE = 'https://downloads.wordpress.org/theme/ollie.1.6.5.zip';
+// The AnyPress theme, as new stores get it (the preview zip, kept at the latest release).
+const THEME = resolve(ROOT, 'scripts/playground/preview-zips/anypress.zip');
 // WordPress's MCP Adapter, as the store template ships it: installed, off until the owner turns it on.
 const MCP_ADAPTER = 'https://downloads.wordpress.org/plugin/mcp-adapter.0.7.1.zip';
 const STARTER_PAGES_URL =
@@ -54,7 +55,7 @@ const blueprint = {
     // signature alone is enough.
     login: SERVE,
     steps: [
-        { step: 'installTheme', themeData: { resource: 'url', url: OLLIE }, options: { activate: true } },
+        { step: 'installTheme', themeData: { resource: 'literal', name: 'anypress.zip', contents: readFileSync(THEME) }, options: { activate: true } },
         { step: 'activatePlugin', pluginPath: 'waas-client/index.php' },
         { step: 'installPlugin', pluginData: { resource: 'url', url: MCP_ADAPTER }, options: { activate: false } },
         { step: 'writeFile', path: '/wordpress/wp-content/mu-plugins/anypress-patterns.php', data: starterPages },
@@ -201,11 +202,9 @@ await check('site: name and theme', async () => {
     const res = await site('GET', '');
     expectStatus(res, 200);
     expect(res.data.name === 'Playground Store', `name ${res.data.name}`);
-    expect(res.data.theme === 'Ollie', `theme ${res.data.theme}`);
+    expect(res.data.theme === 'AnyPress', `theme ${res.data.theme}`);
 });
 
-// The Ollie promotion patterns were hidden by anypress-patterns.php until new stores moved to the AnyPress theme
-// (waas-provisioning-api #163), which dropped that code; stores no longer run Ollie, so nothing hides them now.
 await check('patterns: starter pages are listed', async () => {
     const res = await site('GET', '/patterns?category=anypress/pages');
     expectStatus(res, 200);
@@ -255,7 +254,7 @@ await check('revisions: the first edit can be undone', async () => {
     expect(!page.data.content.includes('Hello from Playground'), 'restore did not put the old content back');
 });
 
-await check('styles: read Ollie palette, change the background', async () => {
+await check('styles: read the theme palette, change the background', async () => {
     const before = await site('GET', '/styles');
     expectStatus(before, 200);
     expect(Object.keys(before.data.palette).length > 0, 'no palette');
