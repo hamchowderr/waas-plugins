@@ -65,6 +65,18 @@ class RolesController
     /** Reads the roles from the production version's roles.json and stores them. Throws when they can't be read. */
     public static function load(ProvisioningApi $provisioningApi): void
     {
+        // The API reads them from the version's saved code: its site is stopped once it is built. An API from
+        // before that route answers 404, so the version's site is tried next.
+        try {
+            $roles = $provisioningApi->get_production_roles();
+            if (is_object($roles) || (is_array($roles) && $roles)) {
+                update_option(PluginBootstrap::ROLES_WP_OPTION, $roles);
+                return;
+            }
+        } catch (\Exception $error) {
+            // Falls through to the version's site.
+        }
+
         $production_version = $provisioningApi->get_production_version();
 
         $production_version_domain_name = $production_version->domain;

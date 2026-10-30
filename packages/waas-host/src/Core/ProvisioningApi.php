@@ -65,6 +65,17 @@ class ProvisioningApi
     /**
      * @throws \Exception
      */
+    /**
+     * The production version's site types (its roles.json), from the API (2026-10 and later). The version's own
+     * site is stopped once it is built, so this is the route that works; older APIs answer 404.
+     *
+     * @throws \Exception
+     */
+    public function get_production_roles()
+    {
+        return $this->httpService->get('/v1/versions/production/roles');
+    }
+
     public function get_production_version()
     {
         $versions = $this->httpService->get('/v1/versions');

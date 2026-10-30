@@ -99,8 +99,21 @@ class RolesControllerTest extends TestCase
         $this->assertSame('signed', RolesController::get_refresh_url());
     }
 
+    public function test_roles_come_from_the_api_when_it_has_them(): void
+    {
+        $roles = (object) ['basic' => (object) ['title' => 'Basic', 'plugins' => []]];
+        $this->api->expects('get_production_roles')->andReturn($roles);
+        $this->api->shouldNotReceive('get_production_version');
+        Functions\expect('wp_remote_get')->never();
+        Functions\expect('update_option')->once()->with(\WaaSHost\Features\PluginBootstrap::ROLES_WP_OPTION, $roles);
+
+        RolesController::load($this->api);
+    }
+
     private function expectRolesFetched(): void
     {
+        // An API from before the roles route: 404, so the version's site is read.
+        $this->api->expects('get_production_roles')->andThrow(new \Exception('Not Found', 404));
         $this->api->expects('get_production_version')
             ->andReturn((object) ['domain' => 'template.example.com']);
         Functions\when('trailingslashit')->alias(fn ($url) => rtrim($url, '/') . '/');
