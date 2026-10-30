@@ -128,7 +128,8 @@ class AdminHome
             $apps = [];
         }
 
-        $icon = self::menu_icon();
+        // A file, not the menu's data URI: FluentKit prints the icon through esc_url(), which drops data: links.
+        $icon = plugins_url('assets/images/anypress-icon.svg', dirname(__DIR__, 2) . '/index.php');
         $apps[self::SLUG] = [
             'disabled' => !current_user_can('manage_options'),
             'title' => __('AnyPress', 'waas-host'),
@@ -142,7 +143,8 @@ class AdminHome
             'dashboard_url' => admin_url('admin.php?page=' . self::SLUG),
         ];
         // FluentKit puts its sidebar on the pages whose slug is an app; Settings is a second page of the same app.
-        $apps[AdminSettings::SLUG] = ['disabled' => true, 'title' => __('AnyPress', 'waas-host'), 'hide_on_menu' => true, 'parent_slug' => self::SLUG];
+        // FluentKit reads the open page's own entry for the page title and the phone menu, so it repeats the app's.
+        $apps[AdminSettings::SLUG] = $apps[self::SLUG] + ['hide_on_menu' => true, 'parent_slug' => self::SLUG];
 
         return $apps;
     }
