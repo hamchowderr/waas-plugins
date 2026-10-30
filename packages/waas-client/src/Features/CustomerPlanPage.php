@@ -110,6 +110,8 @@ class CustomerPlanPage
                 <?php endif; ?>
             <?php endforeach; ?>
 
+            <?php McpServer::render_section(); ?>
+
             <?php if ($storefront !== '') : ?>
                 <p><?php
                     /* translators: %s: link to the storefront */
