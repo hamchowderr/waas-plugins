@@ -22,11 +22,8 @@
     {
       "step": "installTheme",
       "themeData": {
-        "resource": "git:directory",
-        "url": "https://github.com/hamchowderr/anypress-theme",
-        "ref": "120b7c97e828983baf31f92ccdaee2d4c5b9672c",
-        "refType": "commit",
-        "path": "/"
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/7a088d2f805ebd29ad96cbecf0bd300c01fc3520/scripts/playground/preview-zips/anypress.zip"
       },
       "options": {
         "activate": true,
@@ -36,11 +33,8 @@
     {
       "step": "installPlugin",
       "pluginData": {
-        "resource": "git:directory",
-        "url": "https://github.com/hamchowderr/anypress-blocks",
-        "ref": "a0a788dca32ce2075b32f8f2078003b08625ef30",
-        "refType": "commit",
-        "path": "/"
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/7a088d2f805ebd29ad96cbecf0bd300c01fc3520/scripts/playground/preview-zips/anypress-blocks.zip"
       },
       "options": {
         "activate": true,
@@ -60,11 +54,8 @@
     {
       "step": "installPlugin",
       "pluginData": {
-        "resource": "git:directory",
-        "url": "https://github.com/hamchowderr/waas-plugins",
-        "ref": "6cdd12b62cfd4f4be74ef272c9b17c25abff4862",
-        "refType": "commit",
-        "path": "/packages/waas-client"
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/7a088d2f805ebd29ad96cbecf0bd300c01fc3520/scripts/playground/preview-zips/waas-client.zip"
       },
       "options": {
         "activate": false,
