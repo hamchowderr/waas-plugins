@@ -227,7 +227,7 @@ final class Plugin
                     if (s.status === 'done') {
                         show({ percent: 100, message: 'Done. Your site is on AnyPress: ' + s.url, store: s.store });
                         $('[data-field="hint"]').textContent = 'Check it there, then connect your domain on AnyPress. You can deactivate and delete this plugin now.';
-                        $('[data-action="cancel"]').hidden = true;
+                        $('[data-action="cancel"]').parentNode.hidden = true; // the button's own hidden loses to .button's display
                         return;
                     }
                     if (s.status === 'failed') {
