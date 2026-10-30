@@ -360,20 +360,24 @@ function ap_columns( $cols, $attrs = array() ) {
 	return '<!-- wp:columns' . ap_attrs( $attrs ) . " -->\n<div class=\"$classes\">" . implode( "\n\n", $out ) . "</div>\n<!-- /wp:columns -->";
 }
 /** A grid of items that wraps by itself, at least $min wide each. */
-function ap_grid( $items, $min = '14rem', $gap = 'medium' ) {
+function ap_grid( $items, $min = '14rem', $gap = 'medium', $cols = 0, $class = '' ) {
+	// With a column count the grid keeps that many even columns on wide screens and wraps below the minimum width.
 	return ap_group(
 		implode( "\n\n", $items ),
-		array(
-			'style'  => array( 'spacing' => array( 'blockGap' => "var:preset|spacing|$gap" ) ),
-			'layout' => array( 'type' => 'grid', 'minimumColumnWidth' => $min ),
+		array_filter(
+			array(
+				'className' => $class,
+				'style'     => array( 'spacing' => array( 'blockGap' => "var:preset|spacing|$gap" ) ),
+				'layout'    => array_filter( array( 'type' => 'grid', 'columnCount' => $cols, 'minimumColumnWidth' => $min ) ),
+			)
 		)
 	);
 }
-function ap_card( $inner, $style = 'card-line', $pad = 'medium' ) {
+function ap_card( $inner, $style = 'card-line', $pad = 'medium', $class = '' ) {
 	return ap_group(
 		$inner,
 		array(
-			'className' => "is-style-$style",
+			'className' => trim( "is-style-$style $class" ),
 			'style'     => array( 'spacing' => array( 'padding' => ap_pad( $pad, $pad, $pad, $pad ), 'blockGap' => 'var:preset|spacing|small' ) ),
 			'layout'    => array( 'type' => 'flex', 'orientation' => 'vertical', 'justifyContent' => 'stretch' ),
 		)
@@ -497,7 +501,8 @@ foreach ( $ap_data['types'] as $ap_type ) {
 		. ap_p( $ap_small ? 'From <strong>' . ap_money( $ap_small['monthly'] ) . '</strong>/month' : '', array( 'className' => 'anypress-from' ) ) . "\n\n"
 		. ap_buttons( array( array( 'See plans', get_permalink( $ap_plans_page ) . '#' . $ap_type['id'] ) ) ),
 		'card-line',
-		'small'
+		'small',
+		'anypress-type-card'
 	);
 }
 $ap_steps = array();
@@ -533,7 +538,7 @@ $ap_home = ap_band(
 	'x-large',
 	'xx-large'
 ) . "\n\n"
-. ap_band( ap_head( 'Start here', 'What are you making?', 'Five kinds of website, each set up with the tools it needs. Every one is real WordPress you can change later.', 'types' ) . "\n\n" . ap_grid( $ap_type_cards, '12.5rem', 'small' ), 'tint', 'types-band', 'xx-large', 'xx-large', array( 'layout' => array( 'type' => 'constrained', 'contentSize' => '80rem' ) ) ) . "\n\n"
+. ap_band( ap_head( 'Start here', 'What are you making?', 'Five kinds of website, each set up with the tools it needs. Every one is real WordPress you can change later.', 'types' ) . "\n\n" . ap_grid( $ap_type_cards, '12rem', 'small', 5, 'anypress-type-grid' ), 'tint', 'types-band', 'xx-large', 'xx-large', array( 'layout' => array( 'type' => 'constrained', 'contentSize' => '80rem' ) ) ) . "\n\n"
 . ap_band( ap_head( 'Three sizes', 'Every size, side by side', 'All sizes have the same features. Bigger sizes have more power, storage and newsletter emails for busier sites.', 'sizes' ) . "\n\n" . ap_sizes_table( $ap_data, $ap_plans ) . "\n\n" . ap_p( ap_e( 'Paying yearly? You get two months free on every size.' ), array( 'align' => 'center', 'textColor' => 'secondary' ) ) ) . "\n\n"
 . ap_band( ap_head( 'How it works', 'From checkout to your own site in minutes' ) . "\n\n" . ap_grid( $ap_steps, '16rem', 'large' ), 'brand-soft', 'how' ) . "\n\n"
 . ap_included( $ap_data, '' ) . "\n\n"
@@ -657,11 +662,14 @@ function ap_wrap_store_page( $id, $title, $lead, $after = '', $template = 'page-
 $ap_trust = ap_band(
 	ap_grid(
 		array(
-			ap_list( array( '<strong>30-day money-back guarantee</strong> on your first payment' ) ),
+			ap_list( array( '<strong>30-day money-back guarantee</strong>' ) ),
 			ap_list( array( '<strong>Cancel any time</strong> from your account' ) ),
-			ap_list( array( '<strong>Ready in minutes</strong>, and we email you the link' ) ),
+			ap_list( array( '<strong>Ready in minutes</strong> after you pay' ) ),
 		),
-		'15rem'
+		'15rem',
+		'medium',
+		3,
+		'anypress-trust'
 	),
 	'tint',
 	'',

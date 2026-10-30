@@ -140,3 +140,19 @@ body [class*=betterdocs-searchbox] .betterdocs-searchform,body .betterdocs-searc
 .anypress-store-page{overflow-x:clip}
 body .betterdocs-search-form-wrapper,body .betterdocs-searchbox-wrapper,body [class*=betterdocs-searchbox]{margin-inline:auto!important;max-width:100%}
 @media (max-width:600px){.fct_checkout .fct_summary,.anypress-sign-in__form,.wp-block-group.is-style-sketch,.wp-block-group.is-style-sketch-rose{box-shadow:4px 4px 0 var(--wp--preset--color--primary-alt)}}
+
+/* "What are you making?": the five cards line up row by row (drawing, name, pitch, list, price, button), so prices and buttons sit level. */
+.anypress-type-grid > .anypress-type-card {
+	display: grid;
+	grid-template-rows: subgrid;
+	grid-row: span 6;
+	align-content: start;
+}
+.anypress-type-grid > .anypress-type-card > .anypress-from {
+	align-self: end;
+}
+
+/* The checkout's three promises: same size, centred as a row. */
+.anypress-trust > * {
+	margin: 0;
+}
