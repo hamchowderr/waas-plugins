@@ -65,14 +65,16 @@ class AdminSettings
      */
     public static function tabs(): array
     {
-        return [
+        $managed = self::is_ready_made();
+
+        return array_filter([
             'connection' => [__('Connection', 'waas-host'), 'waas-admin'],
-            'addresses' => [__('Website addresses', 'waas-host'), 'waas-admin-addresses'],
-            'access' => [__('Customer access', 'waas-host'), 'waas-admin-access'],
+            'addresses' => $managed ? null : [__('Website addresses', 'waas-host'), 'waas-admin-addresses'],
+            'access' => $managed ? null : [__('Customer access', 'waas-host'), 'waas-admin-access'],
             'cancellations' => [__('Cancellations', 'waas-host'), 'waas-admin-cancellations'],
             'discount' => [__('Volume discount', 'waas-host'), 'waas-admin-discount'],
             'emails' => [__('Emails', 'waas-host'), ''],
-        ];
+        ]);
     }
 
     public static function current_tab(): string
@@ -151,8 +153,11 @@ class AdminSettings
         );
     }
 
-    /** The storefront was made by AnyPress: its API address, key and secret are in wp-config, set for the seller. */
-    private static function is_connected_by_constants(): bool
+    /**
+     * The storefront was made by AnyPress: its API address, key and secret are in wp-config, set for the seller. AnyPress
+     * also sets its website addresses, customer access and assistant, so those aren't shown as settings.
+     */
+    public static function is_ready_made(): bool
     {
         return ConfigService::has_constant('API_KEY') && ConfigService::has_constant('API_SECRET');
     }
@@ -186,13 +191,16 @@ class AdminSettings
 
         if ($tab === 'emails') {
             $this->render_emails();
+        } elseif ($tab === 'connection' && self::is_ready_made()) {
+            $this->render_managed_settings();
+            do_settings_sections('waas-admin');
         } else {
             $group = self::tabs()[$tab][1];
             echo '<form method="post" action="options.php" class="ap-form">';
             settings_fields($group);
             do_settings_sections($group);
             echo '<div class="ap-save">';
-            if ($tab === 'connection' && !self::is_connected_by_constants()) {
+            if ($tab === 'connection') {
                 echo '<span class="ap-muted">' . esc_html__('Saving checks the connection and turns on live updates.', 'waas-host') . '</span>';
                 submit_button(__('Save and connect', 'waas-host'), 'primary ap-btn is-ink', 'submit', false);
             } else {
@@ -229,16 +237,41 @@ class AdminSettings
             echo '<div class="ap-banner is-warn"><span><strong>' . esc_html__('Not connected yet.', 'waas-host') . '</strong> '
                 . esc_html__('Paste the API key and secret from the API keys page of your AnyPress dashboard, then save.', 'waas-host') . '</span></div>';
         } elseif ($reachable) {
-            echo '<div class="ap-banner is-ok"><span><strong>' . esc_html(self::is_connected_by_constants() ? __('Connected by AnyPress.', 'waas-host') : __('Connected to the AnyPress API.', 'waas-host')) . '</strong> '
-                . esc_html(self::is_connected_by_constants()
+            echo '<div class="ap-banner is-ok"><span><strong>' . esc_html(self::is_ready_made() ? __('Connected by AnyPress.', 'waas-host') : __('Connected to the AnyPress API.', 'waas-host')) . '</strong> '
+                . esc_html(self::is_ready_made()
                     ? __('This storefront\'s key was set up for you when it was made, so there is nothing to fill in.', 'waas-host')
                     : __('This storefront can create websites.', 'waas-host')) . '</span>' . $test . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $test is escaped above.
         } else {
             echo '<div class="ap-banner is-bad"><span><strong>' . esc_html__('Can\'t connect to the AnyPress API.', 'waas-host') . '</strong> '
-                . esc_html(self::is_connected_by_constants()
+                . esc_html(self::is_ready_made()
                     ? __('The key is set in wp-config.php. Contact support@anypress.io if this keeps happening.', 'waas-host')
                     : __('Check the API address, key and secret below.', 'waas-host')) . '</span>' . $test . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $test is escaped above.
         }
+    }
+
+    /** A ready-made storefront's Connection section: what AnyPress set up for it, to read, not to change. */
+    private function render_managed_settings(): void
+    {
+        $root_domain = (string) get_option('waas_root_domain', '');
+        $assistant = $this->configService->get_assistant_url();
+        $rows = [
+            [__('Website addresses', 'waas-host'), $root_domain !== '' ? sprintf(
+                /* translators: %s: a website domain, such as anypress.site */
+                __('New websites are made at name.%s', 'waas-host'),
+                $root_domain
+            ) : __('Set by AnyPress', 'waas-host')],
+            [__('Custom domains', 'waas-host'), $this->configService->get_dns_a_records()
+                ? __('Customers get the DNS records for their own domain on their account page.', 'waas-host')
+                : __('Not ready yet: customers are asked to contact you to connect their own domain.', 'waas-host')],
+            [__('Customer access', 'waas-host'), __('Each website gets the plugins of its plan.', 'waas-host')],
+            [__('Website assistant', 'waas-host'), $assistant !== '' ? __('On: each ready website has an "Ask the website assistant" button.', 'waas-host') : __('Off', 'waas-host')],
+        ];
+
+        echo '<div class="ap-health"><h2>' . esc_html__('Set up by AnyPress', 'waas-host') . '</h2>';
+        foreach ($rows as [$label, $detail]) {
+            echo '<div class="ap-health-row"><div>' . esc_html($label) . '<small>' . esc_html($detail) . '</small></div><div></div></div>';
+        }
+        echo '</div>';
     }
 
     /** The Emails section: the list, or one email's editor with a live preview. */
@@ -387,7 +420,7 @@ class AdminSettings
     public function register_waas_admin_settings()
     {
         // A storefront connected through wp-config has no key fields on the page, and options.php would blank them.
-        if (!self::is_connected_by_constants()) {
+        if (!self::is_ready_made()) {
             register_setting('waas-admin', 'waas_api_base_url', [
                 'sanitize_callback' => 'esc_url_raw'
             ]);
@@ -398,28 +431,31 @@ class AdminSettings
                 'sanitize_callback' => 'sanitize_text_field'
             ]);
         }
-        // Shown filled in, so saving this page keeps the assistant on unless the field is cleared.
-        register_setting('waas-admin', 'waas_assistant_url', [
-            'sanitize_callback' => 'esc_url_raw',
-            'default' => (new ConfigService())->default_assistant_url(),
-        ]);
+        // AnyPress sets these for a ready-made storefront; they aren't on its settings page, so they can't be posted.
+        if (!self::is_ready_made()) {
+            // Shown filled in, so saving this page keeps the assistant on unless the field is cleared.
+            register_setting('waas-admin', 'waas_assistant_url', [
+                'sanitize_callback' => 'esc_url_raw',
+                'default' => (new ConfigService())->default_assistant_url(),
+            ]);
 
-        register_setting('waas-admin-addresses', 'waas_root_domain', [
-            'sanitize_callback' => 'sanitize_text_field'
-        ]);
-        register_setting('waas-admin-addresses', 'waas_dns_a_records', [
-            'sanitize_callback' => [ConfigService::class, 'sanitize_ip_list']
-        ]);
-        register_setting('waas-admin-addresses', 'waas_dns_cname_target', [
-            'sanitize_callback' => [ConfigService::class, 'sanitize_hostname']
-        ]);
-        register_setting('waas-admin-access', Tenant::DEFAULT_USER_ROLE, [
-            'default' => 'administrator',
-            'sanitize_callback' => [$this, 'sanitize_user_role']
-        ]);
-        register_setting('waas-admin-access', self::SHOULD_REMOVE_ADMINISTRATOR_PLUGIN_CAPABILITIES_OPTION, [
-            'default' => 'on'
-        ]);
+            register_setting('waas-admin-addresses', 'waas_root_domain', [
+                'sanitize_callback' => 'sanitize_text_field'
+            ]);
+            register_setting('waas-admin-addresses', 'waas_dns_a_records', [
+                'sanitize_callback' => [ConfigService::class, 'sanitize_ip_list']
+            ]);
+            register_setting('waas-admin-addresses', 'waas_dns_cname_target', [
+                'sanitize_callback' => [ConfigService::class, 'sanitize_hostname']
+            ]);
+            register_setting('waas-admin-access', Tenant::DEFAULT_USER_ROLE, [
+                'default' => 'administrator',
+                'sanitize_callback' => [$this, 'sanitize_user_role']
+            ]);
+            register_setting('waas-admin-access', self::SHOULD_REMOVE_ADMINISTRATOR_PLUGIN_CAPABILITIES_OPTION, [
+                'default' => 'on'
+            ]);
+        }
         register_setting('waas-admin-cancellations', TenantsSubscriptionManager::DELETION_GRACE_DAYS_OPTION, [
             'default' => TenantsSubscriptionManager::DEFAULT_DELETION_GRACE_DAYS,
             'sanitize_callback' => fn ($value) => max(1, absint($value)),
@@ -465,15 +501,16 @@ class AdminSettings
 
     public function add_waas_admin_settings()
     {
-        // Connection
-        add_settings_section(
-            'api_credentials',
-            __('AnyPress API', 'waas-host'),
-            fn () => print(self::is_connected_by_constants() ? '' : '<p>' . esc_html__('This storefront creates, pauses and restores customer websites through the AnyPress API. Make a key for it on the API keys page of your AnyPress dashboard.', 'waas-host') . '</p>'),
-            'waas-admin'
-        );
+        // A ready-made storefront shows these as set by AnyPress instead (render_managed_settings()).
+        if (!self::is_ready_made()) {
+            // Connection
+            add_settings_section(
+                'api_credentials',
+                __('AnyPress API', 'waas-host'),
+                fn () => print('<p>' . esc_html__('This storefront creates, pauses and restores customer websites through the AnyPress API. Make a key for it on the API keys page of your AnyPress dashboard.', 'waas-host') . '</p>'),
+                'waas-admin'
+            );
 
-        if (!self::is_connected_by_constants()) {
             $this->add_field('waas_api_base_url', __('API address', 'waas-host'), 'waas-admin', 'api_credentials', [
                 'type' => 'url',
                 'class_name' => 'regular-text code',
@@ -493,61 +530,62 @@ class AdminSettings
                 'constant' => 'API_SECRET',
                 'hint' => self::constant_hint('API_SECRET', ''),
             ]);
+            $this->add_field('waas_assistant_url', __('Website assistant', 'waas-host'), 'waas-admin', 'api_credentials', [
+                'type' => 'url',
+                'class_name' => 'regular-text code',
+                'placeholder' => 'https://assistant.example.com',
+                'constant' => 'ASSISTANT_URL',
+                'hint' => self::constant_hint('ASSISTANT_URL', __('The website assistant\'s address. Each ready website on the customer\'s account page gets an "Ask the website assistant" button that opens it already signed in. On the AnyPress API this is AnyPress\'s own assistant; clear the field to hide the button.', 'waas-host')),
+            ]);
+
+            // Website addresses
+            add_settings_section(
+                'waas_host_settings',
+                __('Website addresses', 'waas-host'),
+                fn () => print('<p>' . esc_html__('Where new websites live, and the DNS records customers add to use their own domain.', 'waas-host') . '</p>'),
+                'waas-admin-addresses'
+            );
+
+            $this->add_field('waas_root_domain', __('Website domain', 'waas-host'), 'waas-admin-addresses', 'waas_host_settings', [
+                'type' => 'text',
+                'class_name' => 'regular-text code',
+                'placeholder' => 'sites.example.com',
+                'hint' => __('Each new website gets an address under this domain: with sites.example.com, a website named shop is at shop.sites.example.com.', 'waas-host'),
+            ]);
+            $this->add_field('waas_dns_a_records', __('IP address for custom domains', 'waas-host'), 'waas-admin-addresses', 'waas_host_settings', [
+                'type' => 'text',
+                'class_name' => 'regular-text code',
+                'placeholder' => '203.0.113.10',
+                'constant' => 'DNS_A_RECORDS',
+                'hint' => self::constant_hint('DNS_A_RECORDS', __('Customers add this as an A record for their own domain. Separate several with commas. Leave empty and the customer\'s domain page tells them to contact support.', 'waas-host')),
+            ]);
+            $this->add_field('waas_dns_cname_target', __('Address for www and other subdomains', 'waas-host'), 'waas-admin-addresses', 'waas_host_settings', [
+                'type' => 'text',
+                'class_name' => 'regular-text code',
+                'placeholder' => 'sites.example.com',
+                'constant' => 'DNS_CNAME_TARGET',
+                'hint' => self::constant_hint('DNS_CNAME_TARGET', __('Customers add this as a CNAME record for a subdomain such as www.', 'waas-host')),
+            ]);
+
+            // Customer access
+            add_settings_section(
+                'waas_store_access',
+                __('Customer access', 'waas-host'),
+                fn () => print('<p>' . esc_html__('What customers can do on their own website. Changes apply to websites created from now on.', 'waas-host') . '</p>'),
+                'waas-admin-access'
+            );
+
+            $this->add_field(Tenant::DEFAULT_USER_ROLE, __('Customer\'s role on their website', 'waas-host'), 'waas-admin-access', 'waas_store_access', [
+                'type' => 'role',
+                'hint' => __('The role the customer gets when they sign in to their website from their account page.', 'waas-host'),
+            ]);
+            $this->add_field(self::SHOULD_REMOVE_ADMINISTRATOR_PLUGIN_CAPABILITIES_OPTION, __('Plugins', 'waas-host'), 'waas-admin-access', 'waas_store_access', [
+                'type' => 'checkbox',
+                'label' => __('Plugins come from the plan only', 'waas-host'),
+                'hint' => __('Customers can\'t install, turn on or delete plugins. Websites that already exist keep what they have.', 'waas-host'),
+            ]);
+
         }
-        $this->add_field('waas_assistant_url', __('Website assistant', 'waas-host'), 'waas-admin', 'api_credentials', [
-            'type' => 'url',
-            'class_name' => 'regular-text code',
-            'placeholder' => 'https://assistant.example.com',
-            'constant' => 'ASSISTANT_URL',
-            'hint' => self::constant_hint('ASSISTANT_URL', __('The website assistant\'s address. Each ready website on the customer\'s account page gets an "Ask the website assistant" button that opens it already signed in. On the AnyPress API this is AnyPress\'s own assistant; clear the field to hide the button.', 'waas-host')),
-        ]);
-
-        // Website addresses
-        add_settings_section(
-            'waas_host_settings',
-            __('Website addresses', 'waas-host'),
-            fn () => print('<p>' . esc_html__('Where new websites live, and the DNS records customers add to use their own domain.', 'waas-host') . '</p>'),
-            'waas-admin-addresses'
-        );
-
-        $this->add_field('waas_root_domain', __('Website domain', 'waas-host'), 'waas-admin-addresses', 'waas_host_settings', [
-            'type' => 'text',
-            'class_name' => 'regular-text code',
-            'placeholder' => 'sites.example.com',
-            'hint' => __('Each new website gets an address under this domain: with sites.example.com, a website named shop is at shop.sites.example.com.', 'waas-host'),
-        ]);
-        $this->add_field('waas_dns_a_records', __('IP address for custom domains', 'waas-host'), 'waas-admin-addresses', 'waas_host_settings', [
-            'type' => 'text',
-            'class_name' => 'regular-text code',
-            'placeholder' => '203.0.113.10',
-            'constant' => 'DNS_A_RECORDS',
-            'hint' => self::constant_hint('DNS_A_RECORDS', __('Customers add this as an A record for their own domain. Separate several with commas. Leave empty and the customer\'s domain page tells them to contact support.', 'waas-host')),
-        ]);
-        $this->add_field('waas_dns_cname_target', __('Address for www and other subdomains', 'waas-host'), 'waas-admin-addresses', 'waas_host_settings', [
-            'type' => 'text',
-            'class_name' => 'regular-text code',
-            'placeholder' => 'sites.example.com',
-            'constant' => 'DNS_CNAME_TARGET',
-            'hint' => self::constant_hint('DNS_CNAME_TARGET', __('Customers add this as a CNAME record for a subdomain such as www.', 'waas-host')),
-        ]);
-
-        // Customer access
-        add_settings_section(
-            'waas_store_access',
-            __('Customer access', 'waas-host'),
-            fn () => print('<p>' . esc_html__('What customers can do on their own website. Changes apply to websites created from now on.', 'waas-host') . '</p>'),
-            'waas-admin-access'
-        );
-
-        $this->add_field(Tenant::DEFAULT_USER_ROLE, __('Customer\'s role on their website', 'waas-host'), 'waas-admin-access', 'waas_store_access', [
-            'type' => 'role',
-            'hint' => __('The role the customer gets when they sign in to their website from their account page.', 'waas-host'),
-        ]);
-        $this->add_field(self::SHOULD_REMOVE_ADMINISTRATOR_PLUGIN_CAPABILITIES_OPTION, __('Plugins', 'waas-host'), 'waas-admin-access', 'waas_store_access', [
-            'type' => 'checkbox',
-            'label' => __('Plugins come from the plan only', 'waas-host'),
-            'hint' => __('Customers can\'t install, turn on or delete plugins. Websites that already exist keep what they have.', 'waas-host'),
-        ]);
 
         // Cancellations
         add_settings_section(

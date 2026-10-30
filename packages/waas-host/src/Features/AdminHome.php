@@ -568,6 +568,10 @@ class AdminHome
         $roles = (array) get_option(PluginBootstrap::ROLES_WP_OPTION, []);
         $root_domain = (string) get_option('waas_root_domain', '');
         $dns_set = $this->config_service->get_dns_a_records() && $this->config_service->get_dns_cname_target() !== '';
+        // A ready-made storefront's addresses are AnyPress's to set, so it gets no button to a page it doesn't have.
+        $fix_addresses = AdminSettings::is_ready_made()
+            ? '<span class="ap-pill">' . esc_html__('Set by AnyPress', 'waas-host') . '</span>'
+            : '<a class="ap-btn is-sm" href="' . esc_url(AdminSettings::url('addresses')) . '">' . esc_html__('Set', 'waas-host') . '</a>';
 
         $rows = [];
         if (!$has_credentials) {
@@ -600,12 +604,12 @@ class AdminHome
         $rows[] = [
             __('Website addresses', 'waas-host'),
             $root_domain !== '' ? '*.' . $root_domain : __('Not set', 'waas-host'),
-            $root_domain !== '' ? '<span class="ap-pill is-ok">' . esc_html__('Set', 'waas-host') . '</span>' : '<a class="ap-btn is-sm" href="' . esc_url(AdminSettings::url('addresses')) . '">' . esc_html__('Set', 'waas-host') . '</a>',
+            $root_domain !== '' ? '<span class="ap-pill is-ok">' . esc_html__('Set', 'waas-host') . '</span>' : $fix_addresses,
         ];
         $rows[] = [
             __('Custom domains', 'waas-host'),
             $dns_set ? __('DNS records shown to customers', 'waas-host') : __('Customers get no DNS records to add', 'waas-host'),
-            $dns_set ? '<span class="ap-pill is-ok">' . esc_html__('Set', 'waas-host') . '</span>' : '<a class="ap-btn is-sm" href="' . esc_url(AdminSettings::url('addresses')) . '">' . esc_html__('Set', 'waas-host') . '</a>',
+            $dns_set ? '<span class="ap-pill is-ok">' . esc_html__('Set', 'waas-host') . '</span>' : $fix_addresses,
         ];
         $versions = 'WaaS Host ' . (defined('WAAS_HOST_VERSION') ? WAAS_HOST_VERSION : '');
         if (defined('WAAS_PAYMENTS_VERSION')) {

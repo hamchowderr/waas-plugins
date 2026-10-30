@@ -205,6 +205,10 @@ class Webhooks
 
     public function add_settings_section(): void
     {
+        // A ready-made storefront only sees this when it needs a hand; the Overview shows live updates as on.
+        if (AdminSettings::is_ready_made() && self::is_registered()) {
+            return;
+        }
         add_settings_section(
             'waas_webhooks',
             __('Webhooks', 'waas-host'),
