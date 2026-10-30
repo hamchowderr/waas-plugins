@@ -7,6 +7,7 @@ use WaaSHost\Features\AccountStyles;
 use WaaSHost\Features\NameConflicts;
 use WaaSHost\Features\Notifications;
 use WaaSHost\Features\TenantsSubscriptionManager;
+use WaaSHost\Api\AssistantSignIn;
 use WaaSHost\Features\SingleLoginService;
 use WaaSHost\Features\UserAccountSubscriptionsSettings;
 
@@ -204,6 +205,11 @@ class FluentCartPortal
         if ($status === Tenant::READY) {
             echo '<a class="waas-acct-btn is-primary fct-btn fct-btn-primary" target="_blank" rel="noopener" href="' . esc_url(SingleLoginService::get_login_link($subscription_id)) . '">'
                 . esc_html__('Log in to your website', 'waas-host') . '</a>';
+            $assistant = AssistantSignIn::link($subscription_id);
+            if ($assistant !== '') {
+                echo '<a class="waas-acct-btn fct-btn fct-btn-secondary" target="_blank" rel="noopener" href="' . esc_url($assistant) . '">'
+                    . esc_html__('Ask the website assistant', 'waas-host') . '</a>';
+            }
         }
         echo '<a class="waas-acct-btn fct-btn fct-btn-secondary" href="' . esc_url($this->adapter->get_subscription_url($subscription_id)) . '">'
             . esc_html__('Manage or cancel plan', 'waas-host') . '</a>';

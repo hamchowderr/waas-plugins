@@ -51,6 +51,17 @@ class ConfigService
     }
 
     /**
+     * The website assistant's address (WAAS_ASSISTANT_URL or the setting), without a trailing slash.
+     * Empty when the storefront doesn't offer it.
+     */
+    public function get_assistant_url(): string
+    {
+        $value = self::has_constant('ASSISTANT_URL') ? self::constant('ASSISTANT_URL') : get_option('waas_assistant_url', '');
+        $value = (string) apply_filters('waas_settings_assistant_url', $value);
+        return $value === '' ? '' : untrailingslashit(esc_url_raw($value));
+    }
+
+    /**
      * IPs customers point their domain's A records at. WAAS_DNS_A_RECORDS (constant,
      * a comma-separated string or an array) wins over the setting. Invalid IPs are dropped.
      * @return string[]

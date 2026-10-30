@@ -9,6 +9,7 @@ use WaaSHost\Api\AccountController;
 use WaaSHost\Api\AccountSignIn;
 use WaaSHost\Api\AccountTokens;
 use WaaSHost\Api\RolesController;
+use WaaSHost\Api\AssistantSignIn;
 use WaaSHost\Api\SingleLogin;
 use WaaSHost\Api\WebhookReceiver;
 use WaaSHost\Commerce\Commerce;
@@ -41,7 +42,7 @@ Plugin Name: WaaS Host
 Plugin URI: https://github.com/hamchowderr/waas-plugins
 Description: Sells WaaS stores from your storefront: creates, suspends and restores each customer's store through the WaaS provisioning API, with FluentCart or WooCommerce (and WooCommerce Subscriptions) for billing.
 Author: Otaku Solutions
-Version: 2.4.1
+Version: 2.5.0
 Author URI: https://otakusolutions.io
 Update URI: wpcs-waas-host
 Requires at least: 6.4
@@ -54,7 +55,7 @@ Text Domain: waas-host
 define( 'WAAS_HOST_SLUG', 'wpcs-waas-host' );
 define( 'WAAS_HOST_BASENAME', plugin_basename( __FILE__ ) );
 define( 'WAAS_HOST_UPDATE_URI', 'wpcs-waas-host' );
-define( 'WAAS_HOST_VERSION', '2.4.1' );
+define( 'WAAS_HOST_VERSION', '2.5.0' );
 define( 'WAAS_HOST_TEXTDOMAIN', 'waas-host' );
 
 // Settings and data saved under the old platform's names move to the waas_ names before anything reads them
@@ -65,6 +66,7 @@ $configService = new ConfigService();
 $http_service = new HttpService($configService);
 $provisioningApi = new ProvisioningApi($http_service);
 new RolesController($provisioningApi);
+new AssistantSignIn($configService, $provisioningApi);
 
 // Managers to list for Events
 
