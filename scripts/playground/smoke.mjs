@@ -285,7 +285,8 @@ await check('abilities: listed with all three safety hints', async () => {
     const list = await res.json();
     expect(res.status === 200 && Array.isArray(list), `HTTP ${res.status}: ${JSON.stringify(list).slice(0, 300)}`);
     for (const a of list) abilities.set(a.name, a);
-    expect(list.length === 18, `${list.length} abilities: ${list.map((a) => a.name).join(', ')}`);
+    // 18 site-editing abilities, plus check-forms and switch-forms (the forms switch, tested by forms.mjs).
+    expect(list.length === 20, `${list.length} abilities: ${list.map((a) => a.name).join(', ')}`);
     const unsure = list.filter((a) => ['readonly', 'destructive', 'idempotent'].some((k) => typeof a.meta?.annotations?.[k] !== 'boolean'));
     expect(!unsure.length, `missing hints: ${unsure.map((a) => a.name).join(', ')}`);
 });

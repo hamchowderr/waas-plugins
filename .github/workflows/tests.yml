@@ -147,3 +147,33 @@ jobs:
       - name: Export test
         working-directory: scripts/playground
         run: npm run export
+
+  playground-forms:
+    # The forms switch (wp waas forms switch and its abilities) on a WordPress Playground site with Contact Form 7,
+    # Flamingo, WPForms Lite, Ninja Forms and Fluent Forms: converts, fixes, switches the pages, runs again, undoes.
+    name: waas-client forms switch on WordPress Playground
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/waas-client
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: Forms switch test
+        working-directory: scripts/playground
+        run: npm run forms

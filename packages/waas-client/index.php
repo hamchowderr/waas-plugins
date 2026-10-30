@@ -12,7 +12,7 @@ Plugin Name: WaaS Client
 Plugin URI: https://github.com/hamchowderr/waas-plugins
 Description: Runs on each WaaS store: one-click login from the storefront, turns plugins on or off to match the store's plan (roles), and lets the AnyPress connector edit the site's design and content.
 Author: Otaku Solutions
-Version: 2.4.0
+Version: 2.5.0
 Author URI: https://otakusolutions.io
 Update URI: wpcs-waas-client
 Requires at least: 6.9
@@ -25,7 +25,7 @@ Text Domain: waas-client
 define( 'WAAS_CLIENT_SLUG', 'wpcs-waas-client' );
 define( 'WAAS_CLIENT_BASENAME', plugin_basename( __FILE__ ) );
 define( 'WAAS_CLIENT_UPDATE_URI', 'wpcs-waas-client' );
-define( 'WAAS_CLIENT_VERSION', '2.4.0' );
+define( 'WAAS_CLIENT_VERSION', '2.5.0' );
 define( 'WAAS_CLIENT_TEXTDOMAIN', 'waas-client' );
 
 use WaaSClient\Api\SingleSignOnController;
@@ -40,6 +40,14 @@ use WaaSClient\Features\AdminTenantSettings;
 use WaaSClient\Features\CustomerPlanPage;
 use WaaSClient\Features\ConnectPage;
 use WaaSClient\Features\McpServer;
+use WaaSClient\Forms\ConditionalConfirmations;
+use WaaSClient\Forms\FormsAbilities;
+use WaaSClient\Forms\FormsCommand;
+use WaaSClient\Forms\FormsSwitch;
+
+// A converted form's conditional confirmations while Fluent Forms Pro is off. Forms are sent through admin-ajax,
+// so this is set up on every request; it only does any work when a converted form is sent.
+new ConditionalConfirmations();
 
 if (!wp_doing_ajax()) {
     define("WAAS_PLUGIN_DIR_URI", plugin_dir_url(__FILE__));
@@ -66,6 +74,13 @@ if (!wp_doing_ajax()) {
     new ConnectPage();
     // The same abilities as an MCP server, through WordPress's MCP Adapter, while the owner has it on (Your plan page).
     new McpServer();
+
+    // Moving a site's forms to Fluent Forms (Contact Form 7, WPForms, Ninja Forms): `wp waas forms switch` and
+    // the check-forms and switch-forms abilities.
+    new FormsAbilities(new FormsSwitch());
+    if (defined('WP_CLI') && WP_CLI) {
+        \WP_CLI::add_command('waas forms', FormsCommand::class);
+    }
 
     // No self-update: a store's waas-client comes with its template version, and the store gets a
     // newer one by moving to a newer version (waas-hw4). Update URI keeps wordpress.org out.
