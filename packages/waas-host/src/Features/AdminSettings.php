@@ -79,7 +79,7 @@ class AdminSettings
     {
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- which settings tab to show.
         $tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : '';
-        // Links from before 2.6.0, when addresses, access, cancellations and the discount were one "Websites" tab.
+        // Links from before 2.7.0, when addresses, access, cancellations and the discount were one "Websites" tab.
         if ($tab === 'stores') {
             $tab = 'addresses';
         }
@@ -384,15 +384,18 @@ class AdminSettings
 
     public function register_waas_admin_settings()
     {
-        register_setting('waas-admin', 'waas_api_base_url', [
-            'sanitize_callback' => 'esc_url_raw'
-        ]);
-        register_setting('waas-admin', 'waas_api_key', [
-            'sanitize_callback' => 'sanitize_text_field'
-        ]);
-        register_setting('waas-admin', 'waas_api_secret', [
-            'sanitize_callback' => 'sanitize_text_field'
-        ]);
+        // A storefront connected through wp-config has no key fields on the page, and options.php would blank them.
+        if (!self::is_connected_by_constants()) {
+            register_setting('waas-admin', 'waas_api_base_url', [
+                'sanitize_callback' => 'esc_url_raw'
+            ]);
+            register_setting('waas-admin', 'waas_api_key', [
+                'sanitize_callback' => 'sanitize_text_field'
+            ]);
+            register_setting('waas-admin', 'waas_api_secret', [
+                'sanitize_callback' => 'sanitize_text_field'
+            ]);
+        }
         // Shown filled in, so saving this page keeps the assistant on unless the field is cleared.
         register_setting('waas-admin', 'waas_assistant_url', [
             'sanitize_callback' => 'esc_url_raw',
