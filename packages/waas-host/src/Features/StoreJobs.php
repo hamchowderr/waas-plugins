@@ -221,7 +221,8 @@ class StoreJobs
         }
 
         echo '<div class="notice notice-error"><p><strong>' . esc_html(sprintf(
-            _n('%d website could not be updated through the provisioning API.', '%d websites could not be updated through the provisioning API.', count($failed), WAAS_HOST_TEXTDOMAIN),
+            /* translators: %d: number of websites */
+            _n('%d website could not be updated through the provisioning API.', '%d websites could not be updated through the provisioning API.', count($failed), 'waas-host'),
             count($failed)
         )) . '</strong></p><ul>';
         foreach ($failed as $subscription_id => $failure) {
@@ -236,7 +237,7 @@ class StoreJobs
                 $failure['attempts'] ?? 0,
                 wp_date('Y-m-d H:i', (int) ($failure['at'] ?? 0)),
                 $failure['error'] ?? ''
-            )) . ' <a href="' . esc_url($retry_url) . '">' . esc_html__('Retry', WAAS_HOST_TEXTDOMAIN) . '</a></li>';
+            )) . ' <a href="' . esc_url($retry_url) . '">' . esc_html__('Retry', 'waas-host') . '</a></li>';
         }
         echo '</ul></div>';
     }
@@ -245,7 +246,7 @@ class StoreJobs
     {
         $subscription_id = isset($_GET['subscription_id']) ? sanitize_text_field(wp_unslash($_GET['subscription_id'])) : '';
         if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You are not allowed to do this.', WAAS_HOST_TEXTDOMAIN), 403);
+            wp_die(esc_html__('You are not allowed to do this.', 'waas-host'), 403);
         }
         check_admin_referer(self::RETRY_ACTION . '_' . $subscription_id);
 
@@ -291,9 +292,10 @@ class StoreJobs
     /** Once per failure: a failed store runs nothing more (so fails no more) until an admin retries it. */
     private function email_admin($subscription_id, string $op, int $attempts, string $error): void
     {
-        $subject = sprintf(__('[%s] A website could not be set up or updated', WAAS_HOST_TEXTDOMAIN), wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES));
+        /* translators: %s: this shop's name */
+        $subject = sprintf(__('[%s] A website could not be set up or updated', 'waas-host'), wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES));
         $message = sprintf(
-            __("The provisioning API kept failing for subscription #%1\$s.\n\nJob: %2\$s\nTries: %3\$d\nLast error: %4\$s\n\nThe customer sees \"Setup delayed\". Retry it from the notice in the WordPress admin once the API works again:\n%5\$s", WAAS_HOST_TEXTDOMAIN),
+            __("The provisioning API kept failing for subscription #%1\$s.\n\nJob: %2\$s\nTries: %3\$d\nLast error: %4\$s\n\nThe customer sees \"Setup delayed\". Retry it from the notice in the WordPress admin once the API works again:\n%5\$s", 'waas-host'),
             $subscription_id,
             $op,
             $attempts,

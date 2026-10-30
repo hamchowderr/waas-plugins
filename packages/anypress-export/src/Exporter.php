@@ -4,6 +4,9 @@ namespace AnyPressExport;
 
 defined('ABSPATH') || exit;
 
+// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- messages are not printed here; Plugin and Cli show them as JSON or CLI text.
+// phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fopen, WordPress.WP.AlternativeFunctions.file_system_operations_fclose, WordPress.WP.AlternativeFunctions.file_system_operations_fwrite, WordPress.WP.AlternativeFunctions.file_system_operations_fread, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir, WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- the export streams large files in chunks into its own temporary folder; WP_Filesystem has no streaming handles.
+
 /**
  * Moves this site to AnyPress in steps that each fit in a short request: dump the database, list
  * wp-content, pack both into a gzipped tar, upload it, and start the move. The state lives in an
@@ -38,7 +41,7 @@ final class Exporter
     {
         $upload = $api->upload();
         $work = rtrim($workBase, '/') . '/anypress-export-' . bin2hex(random_bytes(8));
-        if (!@mkdir($work, 0700, true)) throw new \RuntimeException('Could not create a work folder in the uploads folder.');
+        if (!@mkdir($work, 0700, true)) throw new \RuntimeException(__('Could not create a work folder in the uploads folder.', 'anypress-export'));
         file_put_contents("$work/index.php", "<?php\n// Silence is golden.\n");
         file_put_contents("$work/.htaccess", "Require all denied\nDeny from all\n");
         file_put_contents("$work/waas.json", (string) json_encode($site, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -88,7 +91,8 @@ final class Exporter
                     $size = (int) filesize($archive);
                     if ($size > $state['maxBytes']) {
                         throw new \RuntimeException(sprintf(
-                            'The export is %s, more than this AnyPress store holds (%s). Choose a larger size on AnyPress and start again.',
+                            /* translators: 1: size of the export, 2: size the AnyPress store holds */
+                            __('The export is %1$s, more than this AnyPress store holds (%2$s). Choose a larger size on AnyPress and start again.', 'anypress-export'),
                             self::size($size),
                             self::size($state['maxBytes'])
                         ));
@@ -207,7 +211,8 @@ final class Exporter
         $state['packedBytes'] = (int) filesize($archive);
         if ($state['packedBytes'] > $state['maxBytes']) {
             throw new \RuntimeException(sprintf(
-                'The export is already %s, more than this AnyPress store holds (%s). Choose a larger size on AnyPress and start again.',
+                /* translators: 1: size of the export so far, 2: size the AnyPress store holds */
+                __('The export is already %1$s, more than this AnyPress store holds (%2$s). Choose a larger size on AnyPress and start again.', 'anypress-export'),
                 self::size($state['packedBytes']),
                 self::size($state['maxBytes'])
             ));
@@ -222,19 +227,26 @@ final class Exporter
         switch ($step) {
             case 'database':
                 $tables = max(1, count($state['tables']));
-                return ['step' => $step, 'percent' => (int) (10 * $state['table'] / $tables), 'message' => sprintf('Exporting the database (table %d of %d)', min($state['table'] + 1, $tables), $tables)];
+                return ['step' => $step, 'percent' => (int) (10 * $state['table'] / $tables), 'message' => sprintf(
+                    /* translators: 1: table number, 2: number of tables */
+                    __('Exporting the database (table %1$d of %2$d)', 'anypress-export'),
+                    min($state['table'] + 1, $tables), $tables)];
             case 'files':
-                return ['step' => $step, 'percent' => 10, 'message' => 'Listing your files'];
+                return ['step' => $step, 'percent' => 10, 'message' => __('Listing your files', 'anypress-export')];
             case 'pack':
                 $done = $state['position'] > 0 ? $state['position'] : 0;
                 $total = max(1, (int) @filesize($state['work'] . '/files.txt'));
-                return ['step' => $step, 'percent' => 10 + (int) (60 * min(1, $done / $total)), 'message' => sprintf('Packing your files (%s so far)', self::size((int) $state['packedBytes']))];
+                return ['step' => $step, 'percent' => 10 + (int) (60 * min(1, $done / $total)), 'message' => sprintf(
+                    /* translators: %s: size packed so far, such as 120 MB */
+                    __('Packing your files (%s so far)', 'anypress-export'), self::size((int) $state['packedBytes']))];
             case 'upload':
-                return ['step' => $step, 'percent' => 75, 'message' => sprintf('Uploading %s to AnyPress', self::size((int) $state['packedBytes']))];
+                return ['step' => $step, 'percent' => 75, 'message' => sprintf(
+                    /* translators: %s: size of the export, such as 120 MB */
+                    __('Uploading %s to AnyPress', 'anypress-export'), self::size((int) $state['packedBytes']))];
             case 'start':
-                return ['step' => $step, 'percent' => 95, 'message' => 'Telling AnyPress to set up your site'];
+                return ['step' => $step, 'percent' => 95, 'message' => __('Telling AnyPress to set up your site', 'anypress-export')];
             default:
-                return ['step' => $step, 'percent' => 100, 'message' => 'AnyPress is setting up your site'];
+                return ['step' => $step, 'percent' => 100, 'message' => __('AnyPress is setting up your site', 'anypress-export')];
         }
     }
 
@@ -251,8 +263,8 @@ final class Exporter
         if ($dir === '' || !is_dir($dir) || strpos(basename($dir), 'anypress-export-') !== 0) return;
         $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
         foreach ($it as $file) {
-            $file->isDir() && !$file->isLink() ? @rmdir($file->getPathname()) : @unlink($file->getPathname());
+            $file->isDir() && !$file->isLink() ? rmdir($file->getPathname()) : wp_delete_file($file->getPathname());
         }
-        @rmdir($dir);
+        rmdir($dir);
     }
 }

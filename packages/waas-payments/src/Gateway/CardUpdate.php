@@ -47,6 +47,7 @@ class CardUpdate
 
     public function maybeRender(): void
     {
+        // phpcs:disable WordPress.Security.NonceVerification.Recommended -- a link to the page; ownedSubscription() only finds the signed-in customer's own subscription.
         if (empty($_GET[self::QUERY_VAR])) {
             return;
         }
@@ -57,6 +58,7 @@ class CardUpdate
         }
 
         $uuid = sanitize_text_field(wp_unslash($_GET[self::QUERY_VAR]));
+        // phpcs:enable WordPress.Security.NonceVerification.Recommended
         $subscription = self::ownedSubscription($uuid);
         $card = $subscription ? SavedCard::read($subscription) : null;
 
@@ -86,7 +88,7 @@ class CardUpdate
             $subscription,
             sanitize_text_field(wp_unslash($_POST['data_descriptor'] ?? '')),
             // The token is opaque and must reach Authorize.Net unmodified.
-            trim(wp_unslash((string) ($_POST['data_value'] ?? ''))),
+            trim(wp_unslash((string) ($_POST['data_value'] ?? ''))), // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
             get_current_user_id()
         );
 
@@ -144,6 +146,7 @@ class CardUpdate
 
         $subscription->addLog(
             __('Payment method updated', 'waas-payments'),
+            /* translators: 1: card brand, 2: last four digits */
             sprintf(__('The customer saved %1$s ending in %2$s for automatic renewal charges.', 'waas-payments'), $result->data['card_brand'] ?? '', $result->data['card_last4'] ?? ''),
             'info'
         );
@@ -164,6 +167,7 @@ class CardUpdate
             } elseif (($charge['status'] ?? '') === 'paid') {
                 $message .= ' ' . __('Your overdue renewal was charged to the new card.', 'waas-payments');
             } else {
+                /* translators: %s: why the charge failed */
                 $message .= ' ' . sprintf(__('Your overdue renewal was not charged: %s', 'waas-payments'), $charge['message'] ?? '');
             }
         }
@@ -247,7 +251,13 @@ class CardUpdate
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex">
     <title><?php esc_html_e('Update your card', 'waas-payments'); ?></title>
-    <link rel="stylesheet" href="<?php echo esc_url(WAAS_PAYMENTS_URL . 'assets/authorizenet-checkout.css?ver=' . WAAS_PAYMENTS_VERSION); ?>">
+    <?php
+    // A page of its own, without the theme or other plugins' scripts, but its files still go through WordPress's queues.
+    wp_register_style('waas-card-update', WAAS_PAYMENTS_URL . 'assets/authorizenet-checkout.css', [], WAAS_PAYMENTS_VERSION);
+    wp_register_script('waas-card-update', WAAS_PAYMENTS_URL . 'assets/authorizenet-card-update.js', [], WAAS_PAYMENTS_VERSION, true);
+    wp_add_inline_script('waas-card-update', 'window.waas_authorizenet_card_update = ' . wp_json_encode($config) . ';', 'before');
+    wp_print_styles('waas-card-update');
+    ?>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f6f8; color: #1c3141; margin: 0; }
         .waas-card-update { max-width: 460px; margin: 48px auto; padding: 0 16px; }
@@ -270,15 +280,17 @@ class CardUpdate
         </p>
         <?php if ($lastError !== '') : ?>
             <div class="waas-anet-error" role="alert">
-                <?php echo esc_html(sprintf(__('The last renewal charge failed: %s', 'waas-payments'), $lastError)); ?>
+                <?php
+                /* translators: %s: why the charge failed, from the payment gateway */
+                echo esc_html(sprintf(__('The last renewal charge failed: %s', 'waas-payments'), $lastError));
+                ?>
             </div>
         <?php endif; ?>
         <p class="waas-anet-info"><?php esc_html_e('Your card is entered on a secure Authorize.Net form. This site never sees your card number.', 'waas-payments'); ?></p>
         <div id="waas-card-update-box"></div>
     </section>
 </main>
-<script>window.waas_authorizenet_card_update = <?php echo wp_json_encode($config); ?>;</script>
-<script src="<?php echo esc_url(WAAS_PAYMENTS_URL . 'assets/authorizenet-card-update.js?ver=' . WAAS_PAYMENTS_VERSION); ?>"></script>
+<?php wp_print_scripts('waas-card-update'); ?>
 </body>
 </html>
         <?php

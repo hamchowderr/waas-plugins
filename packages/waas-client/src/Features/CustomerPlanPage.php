@@ -21,8 +21,8 @@ class CustomerPlanPage
     public function add_page()
     {
         add_dashboard_page(
-            __('Your plan', WAAS_CLIENT_TEXTDOMAIN),
-            __('Your plan', WAAS_CLIENT_TEXTDOMAIN),
+            __('Your plan', 'waas-client'),
+            __('Your plan', 'waas-client'),
             'manage_options',
             self::PAGE,
             [$this, 'render']
@@ -47,9 +47,9 @@ class CustomerPlanPage
 
         printf(
             '<div class="notice notice-info inline"><p>%s <a href="%s">%s</a></p></div>',
-            esc_html__('Plugins on this website are managed by your plan: they are turned on or off automatically.', WAAS_CLIENT_TEXTDOMAIN),
+            esc_html__('Plugins on this website are managed by your plan: they are turned on or off automatically.', 'waas-client'),
             esc_url(admin_url('index.php?page=' . self::PAGE)),
-            esc_html__('See your plan', WAAS_CLIENT_TEXTDOMAIN)
+            esc_html__('See your plan', 'waas-client')
         );
     }
 
@@ -65,21 +65,21 @@ class CustomerPlanPage
         $storefront = (string) get_option('waas_host_website_url', '');
 ?>
         <div class="wrap waas-client-admin">
-            <h1><?php esc_html_e('Your plan', WAAS_CLIENT_TEXTDOMAIN); ?></h1>
+            <h1><?php esc_html_e('Your plan', 'waas-client'); ?></h1>
 
             <?php if ($plan['matched']) : ?>
-                <p class="waas-lead"><?php esc_html_e('The plugins on this website are managed by your plan. The plan decides which plugins are on; they are turned on or off automatically, so changes on the Plugins screen do not last.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                <p class="waas-lead"><?php esc_html_e('The plugins on this website are managed by your plan. The plan decides which plugins are on; they are turned on or off automatically, so changes on the Plugins screen do not last.', 'waas-client'); ?></p>
             <?php elseif ($plan['missing']) : ?>
                 <div class="notice notice-warning inline"><p>
                     <?php echo esc_html(sprintf(
                         /* translators: %s: comma-separated role names */
-                        __('Your plan (%s) is not set up on this website yet, so its plugins are not being managed and nothing has been changed. Contact the team that sold you this website.', WAAS_CLIENT_TEXTDOMAIN),
+                        __('Your plan (%s) is not set up on this website yet, so its plugins are not being managed and nothing has been changed. Contact the team that sold you this website.', 'waas-client'),
                         implode(', ', $plan['missing'])
                     )); ?>
                 </p></div>
             <?php else : ?>
                 <div class="notice notice-warning inline"><p>
-                    <?php esc_html_e('This website has no plan role, so its plugins are not managed by a plan. If you think this is wrong, contact the team that sold you this website.', WAAS_CLIENT_TEXTDOMAIN); ?>
+                    <?php esc_html_e('This website has no plan role, so its plugins are not managed by a plan. If you think this is wrong, contact the team that sold you this website.', 'waas-client'); ?>
                 </p></div>
             <?php endif; ?>
 
@@ -89,13 +89,13 @@ class CustomerPlanPage
             ?>
                 <h2><?php echo esc_html($role['title'] ?? $role_slug); ?></h2>
                 <?php if (!$plugins) : ?>
-                    <p><?php esc_html_e('This plan turns on no extra plugins.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                    <p><?php esc_html_e('This plan turns on no extra plugins.', 'waas-client'); ?></p>
                 <?php else : ?>
                     <table class="widefat striped waas-plan-table">
                         <thead>
                             <tr>
-                                <th scope="col"><?php esc_html_e('Plugin included in your plan', WAAS_CLIENT_TEXTDOMAIN); ?></th>
-                                <th scope="col"><?php esc_html_e('Version', WAAS_CLIENT_TEXTDOMAIN); ?></th>
+                                <th scope="col"><?php esc_html_e('Plugin included in your plan', 'waas-client'); ?></th>
+                                <th scope="col"><?php esc_html_e('Version', 'waas-client'); ?></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -113,7 +113,7 @@ class CustomerPlanPage
             <?php if ($storefront !== '') : ?>
                 <p><?php
                     /* translators: %s: link to the storefront */
-                    printf(esc_html__('Need more plugins? You can change your plan at %s.', WAAS_CLIENT_TEXTDOMAIN), '<a href="' . esc_url($storefront) . '" target="_blank" rel="noopener">' . esc_html(preg_replace('#^https?://#', '', $storefront)) . '</a>');
+                    printf(esc_html__('Need more plugins? You can change your plan at %s.', 'waas-client'), '<a href="' . esc_url($storefront) . '" target="_blank" rel="noopener">' . esc_html(preg_replace('#^https?://#', '', $storefront)) . '</a>');
                 ?></p>
             <?php endif; ?>
         </div>

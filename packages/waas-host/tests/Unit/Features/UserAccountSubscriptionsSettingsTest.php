@@ -23,6 +23,9 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Functions\stubTranslationFunctions();
+        Functions\when('esc_url')->returnArg();
+        Functions\when('wp_kses')->returnArg();
         $this->api = Mockery::mock(ProvisioningApi::class);
         $this->settings = new UserAccountSubscriptionsSettings($this->api);
 
@@ -164,7 +167,7 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
         $html = ob_get_clean();
 
         $this->assertStringContainsString('name="waas_domain_nonce"', $html);
-        $this->assertStringContainsString("value='x&#039; onfocus=&#039;alert(1)'", $html);
+        $this->assertStringContainsString('value="x&#039; onfocus=&#039;alert(1)"', $html);
         $this->assertStringNotContainsString("onfocus='alert(1)'", $html);
     }
 
@@ -249,7 +252,7 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
         $html = $this->renderMailSender();
 
         $this->assertStringContainsString('<p class="woocommerce-error waas-acct-error">shop.anypress.io belongs to the platform; use a domain the store owns</p>', $html);
-        $this->assertStringContainsString("name='mail_domain_name'", $html);
+        $this->assertStringContainsString('name="mail_domain_name"', $html);
     }
 
     public function test_sending_domain_rejects_an_invalid_name(): void
@@ -284,7 +287,7 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
         $this->assertStringContainsString('Waiting for DNS records', $html);
         $this->assertStringContainsString('<code>p=&lt;abc&gt;</code>', $html);
         $this->assertStringContainsString('<td>10</td>', $html);
-        $this->assertStringContainsString("name='mail_domain_remove'", $html);
+        $this->assertStringContainsString('name="mail_domain_remove"', $html);
     }
 
     public function test_sending_domain_section_is_hidden_when_the_api_has_none_to_offer(): void

@@ -34,8 +34,8 @@ class AdminRolesSettings
     {
         add_submenu_page(
             AdminTenantSettings::PAGE,
-            __('Plan roles', WAAS_CLIENT_TEXTDOMAIN),
-            __('Plan roles', WAAS_CLIENT_TEXTDOMAIN),
+            __('Plan roles', 'waas-client'),
+            __('Plan roles', 'waas-client'),
             'manage_options',
             'waas-plugins-roles',
             [$this, 'render_roles_page'],
@@ -59,43 +59,45 @@ class AdminRolesSettings
         if ($validation_errors !== false) {
             delete_transient('add_role_validation_error' . $user_info->ID);
         }
+        // phpcs:disable WordPress.Security.NonceVerification.Recommended -- flags this page sets on itself after saving, for the notice.
         $saved = isset($_GET['waas-saved']);
         $added = isset($_GET['waas-added']);
+        // phpcs:enable WordPress.Security.NonceVerification.Recommended
         $last_ping = StorefrontStatus::last(StorefrontStatus::PING_OPTION);
         $health = self::check_roles($roles, $wp_plugins, fn ($plugin_file) => is_plugin_active($plugin_file));
 ?>
         <div class="wrap waas-client-admin">
-            <h1 class="wp-heading-inline"><?php esc_html_e('Plan roles', WAAS_CLIENT_TEXTDOMAIN); ?></h1>
+            <h1 class="wp-heading-inline"><?php esc_html_e('Plan roles', 'waas-client'); ?></h1>
             <hr class="wp-header-end">
 
             <?php if ($validation_errors !== false) : ?>
                 <div class="notice notice-error"><p><?php echo esc_html(implode(' ', (array) $validation_errors)); ?></p></div>
             <?php elseif ($saved || $added) : ?>
-                <div class="notice notice-success is-dismissible"><p><?php echo $saved ? esc_html__('Roles saved on this website.', WAAS_CLIENT_TEXTDOMAIN) : esc_html__('Role added on this website.', WAAS_CLIENT_TEXTDOMAIN); ?></p></div>
+                <div class="notice notice-success is-dismissible"><p><?php echo $saved ? esc_html__('Roles saved on this website.', 'waas-client') : esc_html__('Role added on this website.', 'waas-client'); ?></p></div>
                 <?php if ($last_ping !== null) {
                     StorefrontStatus::render_notice($last_ping);
                 } ?>
             <?php endif; ?>
 
             <p class="waas-lead">
-                <?php esc_html_e('A role is a set of plugins. Each plan product on the storefront picks a role, and websites on that plan get exactly those plugins turned on. Plugins left unticked are turned off on those websites.', WAAS_CLIENT_TEXTDOMAIN); ?>
+                <?php esc_html_e('A role is a set of plugins. Each plan product on the storefront picks a role, and websites on that plan get exactly those plugins turned on. Plugins left unticked are turned off on those websites.', 'waas-client'); ?>
             </p>
 
             <form action="<?php echo esc_url(admin_url('admin-post.php')); ?>" method="post" class="waas-add-role">
                 <?php wp_nonce_field('waas_add_new_role', 'add_new_role_nonce'); ?>
                 <input type="hidden" name="action" value="waas_add_new_role">
-                <label for="waas-new-role" class="screen-reader-text"><?php esc_html_e('New role name', WAAS_CLIENT_TEXTDOMAIN); ?></label>
-                <input id="waas-new-role" name="role" type="text" class="regular-text" placeholder="<?php esc_attr_e('New role name, for example Pro', WAAS_CLIENT_TEXTDOMAIN); ?>" />
-                <button type="submit" class="button"><?php esc_html_e('Add role', WAAS_CLIENT_TEXTDOMAIN); ?></button>
+                <label for="waas-new-role" class="screen-reader-text"><?php esc_html_e('New role name', 'waas-client'); ?></label>
+                <input id="waas-new-role" name="role" type="text" class="regular-text" placeholder="<?php esc_attr_e('New role name, for example Pro', 'waas-client'); ?>" />
+                <button type="submit" class="button"><?php esc_html_e('Add role', 'waas-client'); ?></button>
             </form>
 
             <?php if ($roles) : ?>
-                <h2><?php esc_html_e('Summary', WAAS_CLIENT_TEXTDOMAIN); ?></h2>
+                <h2><?php esc_html_e('Summary', 'waas-client'); ?></h2>
                 <table class="widefat striped waas-roles-summary">
                     <thead>
                         <tr>
-                            <th scope="col"><?php esc_html_e('Role', WAAS_CLIENT_TEXTDOMAIN); ?></th>
-                            <th scope="col"><?php esc_html_e('Plugins turned on', WAAS_CLIENT_TEXTDOMAIN); ?></th>
+                            <th scope="col"><?php esc_html_e('Role', 'waas-client'); ?></th>
+                            <th scope="col"><?php esc_html_e('Plugins turned on', 'waas-client'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -110,15 +112,15 @@ class AdminRolesSettings
                 <?php if ($health['unassigned']) : ?>
                     <p class="description"><?php echo esc_html(sprintf(
                         /* translators: %s: number of plugins */
-                        _n('%s plugin is in no role, so it is turned off on every customer website.', '%s plugins are in no role, so they are turned off on every customer website.', count($health['unassigned']), WAAS_CLIENT_TEXTDOMAIN),
+                        _n('%s plugin is in no role, so it is turned off on every customer website.', '%s plugins are in no role, so they are turned off on every customer website.', count($health['unassigned']), 'waas-client'),
                         number_format_i18n(count($health['unassigned']))
                     )); ?></p>
                 <?php endif; ?>
 
                 <?php if ($health['inactive']) : ?>
                     <div class="notice notice-warning inline">
-                        <p><strong><?php esc_html_e('Ticked in a role but not active on this template website', WAAS_CLIENT_TEXTDOMAIN); ?></strong></p>
-                        <p><?php esc_html_e('Customer websites on these roles will turn these plugins on without them having been set up or tested here. Activate them here first, or untick them.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                        <p><strong><?php esc_html_e('Ticked in a role but not active on this template website', 'waas-client'); ?></strong></p>
+                        <p><?php esc_html_e('Customer websites on these roles will turn these plugins on without them having been set up or tested here. Activate them here first, or untick them.', 'waas-client'); ?></p>
                         <ul class="waas-list">
                             <?php foreach ($health['inactive'] as $plugin_file => $role_names) : ?>
                                 <li><?php echo esc_html($wp_plugins[$plugin_file]['Name'] ?? $plugin_file); ?> <span class="description">(<?php echo esc_html(implode(', ', array_map(fn ($r) => $roles[$r]['title'] ?? $r, $role_names))); ?>)</span></li>
@@ -129,8 +131,8 @@ class AdminRolesSettings
 
                 <?php if ($health['missing']) : ?>
                     <div class="notice notice-warning inline">
-                        <p><strong><?php esc_html_e('Listed in a role but no longer installed', WAAS_CLIENT_TEXTDOMAIN); ?></strong></p>
-                        <p><?php esc_html_e('These plugins are still in a role but are not installed on this website, so they do not show in the table below. They are taken out of the roles the next time you save.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                        <p><strong><?php esc_html_e('Listed in a role but no longer installed', 'waas-client'); ?></strong></p>
+                        <p><?php esc_html_e('These plugins are still in a role but are not installed on this website, so they do not show in the table below. They are taken out of the roles the next time you save.', 'waas-client'); ?></p>
                         <ul class="waas-list">
                             <?php foreach ($health['missing'] as $plugin_file => $role_names) : ?>
                                 <li><code><?php echo esc_html($plugin_file); ?></code> <span class="description">(<?php echo esc_html(implode(', ', array_map(fn ($r) => $roles[$r]['title'] ?? $r, $role_names))); ?>)</span></li>
@@ -139,11 +141,11 @@ class AdminRolesSettings
                     </div>
                 <?php endif; ?>
 
-                <h2><?php esc_html_e('Plugins by role', WAAS_CLIENT_TEXTDOMAIN); ?></h2>
+                <h2><?php esc_html_e('Plugins by role', 'waas-client'); ?></h2>
             <?php endif; ?>
 
             <?php if (!$roles) : ?>
-                <p><?php esc_html_e('No roles yet. Add one above, then pick its plugins.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                <p><?php esc_html_e('No roles yet. Add one above, then pick its plugins.', 'waas-client'); ?></p>
             <?php else : ?>
                 <form action="<?php echo esc_url(admin_url('admin-post.php')); ?>" method="post" id="manage_plugins_roles">
                     <?php wp_nonce_field('save_roles', 'save_roles_nonce'); ?>
@@ -153,7 +155,7 @@ class AdminRolesSettings
                         <table class="widefat striped waas-roles-table">
                             <thead>
                                 <tr>
-                                    <th scope="col"><?php esc_html_e('Plugin', WAAS_CLIENT_TEXTDOMAIN); ?></th>
+                                    <th scope="col"><?php esc_html_e('Plugin', 'waas-client'); ?></th>
                                     <?php foreach ($roles as $role_name => $role_data) : ?>
                                         <th scope="col" class="waas-role-col">
                                             <strong><?php echo esc_html($role_data['title'] ?? $role_name); ?></strong>
@@ -168,7 +170,7 @@ class AdminRolesSettings
                                         <th scope="row">
                                             <?php echo esc_html($plugin['Name']); ?>
                                             <?php if (!is_plugin_active($plugin_name)) : ?>
-                                                <span class="waas-badge"><?php esc_html_e('Not active here', WAAS_CLIENT_TEXTDOMAIN); ?></span>
+                                                <span class="waas-badge"><?php esc_html_e('Not active here', 'waas-client'); ?></span>
                                             <?php endif; ?>
                                         </th>
                                         <?php foreach ($roles as $role_name => $role_data) : ?>
@@ -177,7 +179,7 @@ class AdminRolesSettings
                                                     name="roles[<?php echo esc_attr($role_name); ?>][<?php echo esc_attr($plugin_name); ?>]"
                                                     aria-label="<?php echo esc_attr(sprintf(
                                                         /* translators: 1: plugin name, 2: role name */
-                                                        __('%1$s in %2$s', WAAS_CLIENT_TEXTDOMAIN),
+                                                        __('%1$s in %2$s', 'waas-client'),
                                                         $plugin['Name'],
                                                         $role_data['title'] ?? $role_name
                                                     )); ?>"
@@ -189,12 +191,12 @@ class AdminRolesSettings
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <th scope="row"><?php esc_html_e('Delete role', WAAS_CLIENT_TEXTDOMAIN); ?></th>
+                                    <th scope="row"><?php esc_html_e('Delete role', 'waas-client'); ?></th>
                                     <?php foreach ($roles as $role_name => $role_data) : ?>
                                         <td class="waas-role-col">
                                             <label>
                                                 <input type="checkbox" name="delete_roles[<?php echo esc_attr($role_name); ?>]" value="1" />
-                                                <?php esc_html_e('Delete', WAAS_CLIENT_TEXTDOMAIN); ?>
+                                                <?php esc_html_e('Delete', 'waas-client'); ?>
                                             </label>
                                         </td>
                                     <?php endforeach; ?>
@@ -203,8 +205,8 @@ class AdminRolesSettings
                         </table>
                     </div>
 
-                    <p class="description"><?php esc_html_e('Deleting a role leaves existing websites as they are. Plan products that use it need a new role.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
-                    <?php submit_button(__('Save roles', WAAS_CLIENT_TEXTDOMAIN)); ?>
+                    <p class="description"><?php esc_html_e('Deleting a role leaves existing websites as they are. Plan products that use it need a new role.', 'waas-client'); ?></p>
+                    <?php submit_button(__('Save roles', 'waas-client')); ?>
                 </form>
             <?php endif; ?>
         </div>
@@ -224,21 +226,21 @@ class AdminRolesSettings
 
     public function add_new_role()
     {
-        if (!current_user_can('manage_options') || !wp_verify_nonce($_POST['add_new_role_nonce'] ?? '', 'waas_add_new_role')) {
-            wp_redirect(wp_get_referer());
+        if (!current_user_can('manage_options') || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['add_new_role_nonce'] ?? '')), 'waas_add_new_role')) {
+            wp_safe_redirect(wp_get_referer() ?: admin_url());
             return;
         }
 
         $this->ensure_roles_file_exists();
         $data = json_decode(file_get_contents(self::ROLES_FILE_PATH), true);
 
-        $new_role_name = sanitize_text_field($_POST['role']);
+        $new_role_name = sanitize_text_field(wp_unslash($_POST['role'] ?? ''));
 
         if (strlen($new_role_name) === 0) {
             // Add Error
             $user_info = wp_get_current_user();
-            set_transient('add_role_validation_error' . $user_info->ID, [__('Enter a name for the new role.', WAAS_CLIENT_TEXTDOMAIN)]);
-            wp_redirect(wp_get_referer());
+            set_transient('add_role_validation_error' . $user_info->ID, [__('Enter a name for the new role.', 'waas-client')]);
+            wp_safe_redirect(wp_get_referer() ?: admin_url());
             die();
         }
 
@@ -248,12 +250,12 @@ class AdminRolesSettings
             'plugins' => []
         ];
 
-        $encoded_data = json_encode($data);
+        $encoded_data = wp_json_encode($data);
         file_put_contents(self::ROLES_FILE_PATH, $encoded_data);
 
         $this->update_host_roles();
 
-        wp_redirect(add_query_arg('waas-added', '1', remove_query_arg('waas-saved', wp_get_referer())));
+        wp_safe_redirect(add_query_arg('waas-added', '1', remove_query_arg('waas-saved', wp_get_referer())));
     }
 
     /** Tells the storefront to reload the roles; the outcome is stored and shown after the redirect. */
@@ -305,8 +307,8 @@ class AdminRolesSettings
 
     public function save_roles()
     {
-        if (!current_user_can('manage_options') || !wp_verify_nonce($_POST['save_roles_nonce'] ?? '', 'save_roles')) {
-            wp_redirect(wp_get_referer());
+        if (!current_user_can('manage_options') || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['save_roles_nonce'] ?? '')), 'save_roles')) {
+            wp_safe_redirect(wp_get_referer() ?: admin_url());
             return;
         }
 
@@ -315,8 +317,9 @@ class AdminRolesSettings
         $data = (array) json_decode(file_get_contents(self::ROLES_FILE_PATH), true);
 
         // Only ticked boxes are posted: a role missing here has no plugins ticked.
-        $roles_plugins = (array) ($_POST['roles'] ?? []);
-        $deleted_roles = array_keys(array_filter((array) ($_POST['delete_roles'] ?? []), fn ($item) => $item === "1"));
+        // Plugin files (keys) are checked against the installed plugins below; values are only "on".
+        $roles_plugins = map_deep((array) wp_unslash($_POST['roles'] ?? []), 'sanitize_text_field');
+        $deleted_roles = array_keys(array_filter(map_deep((array) wp_unslash($_POST['delete_roles'] ?? []), 'sanitize_text_field'), fn ($item) => $item === "1"));
 
         foreach (array_keys($data) as $role_slug) {
             if (in_array($role_slug, $deleted_roles, true)) {
@@ -335,11 +338,11 @@ class AdminRolesSettings
             ];
         }
 
-        $encoded_data = json_encode((object) $data);
+        $encoded_data = wp_json_encode((object) $data);
         file_put_contents(self::ROLES_FILE_PATH, $encoded_data);
 
         $this->update_host_roles();
 
-        wp_redirect(add_query_arg('waas-saved', '1', wp_get_referer()));
+        wp_safe_redirect(add_query_arg('waas-saved', '1', wp_get_referer()));
     }
 }

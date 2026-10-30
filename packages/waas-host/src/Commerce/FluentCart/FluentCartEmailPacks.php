@@ -96,9 +96,9 @@ class FluentCartEmailPacks
         foreach ($packs as $pack) {
             $links[] = [
                 'label' => count($packs) === 1
-                    ? __('Buy more emails', WAAS_HOST_TEXTDOMAIN)
+                    ? __('Buy more emails', 'waas-host')
                     /* translators: %s: number of emails */
-                    : sprintf(__('Buy %s more emails', WAAS_HOST_TEXTDOMAIN), number_format_i18n($pack['emails'])),
+                    : sprintf(__('Buy %s more emails', 'waas-host'), number_format_i18n($pack['emails'])),
                 'url' => add_query_arg(self::QUERY_ARG, (int) $subscription_id, $pack['checkout_url']),
                 'emails' => $pack['emails'],
             ];
@@ -121,6 +121,7 @@ class FluentCartEmailPacks
      */
     public function remember_website(): void
     {
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- a link to the cart; resolve_website() only accepts a website that belongs to the paying customer.
         $cart_hash = isset($_GET['fct_cart_hash']) ? sanitize_text_field(wp_unslash($_GET['fct_cart_hash'])) : '';
         if ($cart_hash === '') {
             return;
@@ -131,6 +132,7 @@ class FluentCartEmailPacks
             return;
         }
 
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- see above.
         $subscription_id = isset($_GET[self::QUERY_ARG]) ? absint(wp_unslash($_GET[self::QUERY_ARG])) : 0;
         $this->store->set_cart_checkout_value($cart, self::CART_KEY, $subscription_id > 0 ? $subscription_id : null);
     }
@@ -212,7 +214,7 @@ class FluentCartEmailPacks
         $order_id = (int) $order->id;
         $website = $this->resolve_website($order);
         if (is_string($website)) {
-            $this->note($order, __('Emails not added', WAAS_HOST_TEXTDOMAIN), $website . ' No emails were added; add them to the right website by hand.', 'error');
+            $this->note($order, __('Emails not added', 'waas-host'), $website . ' No emails were added; add them to the right website by hand.', 'error');
             return;
         }
         [$subscription_id, $external_id] = $website;
@@ -233,7 +235,7 @@ class FluentCartEmailPacks
             $total = is_object($result) && isset($result->emailPacks) ? (int) $result->emailPacks : null;
             $done[$line['id']] = ['subscription_id' => $subscription_id, 'emails' => $line['emails'], 'at' => time()];
             $this->store->update_order_meta($order, self::ORDER_DONE_META, $done);
-            $this->note($order, __('Emails added', WAAS_HOST_TEXTDOMAIN), sprintf(
+            $this->note($order, __('Emails added', 'waas-host'), sprintf(
                 '%s emails added to %s (subscription #%d)%s. Reference %s',
                 number_format($line['emails']),
                 $domain,
@@ -333,7 +335,7 @@ class FluentCartEmailPacks
         if ($attempts <= count(StoreJobs::RETRY_DELAYS)) {
             $delay = StoreJobs::RETRY_DELAYS[$attempts - 1];
             $this->schedule_retry($order_id, time() + $delay);
-            $this->note($order, __('Emails not added yet', WAAS_HOST_TEXTDOMAIN), sprintf('The provisioning API failed: %s. Trying again in %d minutes.', $error, (int) ceil($delay / 60)), 'error');
+            $this->note($order, __('Emails not added yet', 'waas-host'), sprintf('The provisioning API failed: %s. Trying again in %d minutes.', $error, (int) ceil($delay / 60)), 'error');
             return;
         }
 
@@ -341,7 +343,7 @@ class FluentCartEmailPacks
         $failures = is_array($failures) ? $failures : [];
         $failures[$order_id] = ['error' => $error, 'attempts' => $attempts, 'at' => time()];
         update_option(self::FAILED_OPTION, $failures, false);
-        $this->note($order, __('Emails not added', WAAS_HOST_TEXTDOMAIN), sprintf('The provisioning API failed %d times: %s. Use Retry in the WordPress admin notice once the API works again.', $attempts, $error), 'error');
+        $this->note($order, __('Emails not added', 'waas-host'), sprintf('The provisioning API failed %d times: %s. Use Retry in the WordPress admin notice once the API works again.', $attempts, $error), 'error');
         do_action('waas_email_packs_failed', $order_id, $subscription_id, $error);
     }
 
@@ -377,7 +379,7 @@ class FluentCartEmailPacks
 
         echo '<div class="notice notice-error"><p><strong>' . esc_html(sprintf(
             /* translators: %d: number of orders */
-            _n('Emails bought in %d order could not be added to the website.', 'Emails bought in %d orders could not be added to the websites.', count($failures), WAAS_HOST_TEXTDOMAIN),
+            _n('Emails bought in %d order could not be added to the website.', 'Emails bought in %d orders could not be added to the websites.', count($failures), 'waas-host'),
             count($failures)
         )) . '</strong></p><ul>';
         foreach ($failures as $order_id => $failure) {
@@ -391,7 +393,7 @@ class FluentCartEmailPacks
                 $failure['attempts'] ?? 0,
                 wp_date('Y-m-d H:i', (int) ($failure['at'] ?? 0)),
                 $failure['error'] ?? ''
-            )) . ' <a href="' . esc_url($retry_url) . '">' . esc_html__('Retry', WAAS_HOST_TEXTDOMAIN) . '</a></li>';
+            )) . ' <a href="' . esc_url($retry_url) . '">' . esc_html__('Retry', 'waas-host') . '</a></li>';
         }
         echo '</ul></div>';
     }
@@ -400,7 +402,7 @@ class FluentCartEmailPacks
     {
         $order_id = isset($_GET['order_id']) ? absint(wp_unslash($_GET['order_id'])) : 0;
         if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You are not allowed to do this.', WAAS_HOST_TEXTDOMAIN), 403);
+            wp_die(esc_html__('You are not allowed to do this.', 'waas-host'), 403);
         }
         check_admin_referer(self::RETRY_ACTION . '_' . $order_id);
 

@@ -18,6 +18,10 @@ abstract class TestCase extends PHPUnitTestCase
     {
         parent::setUp();
         Monkey\setUp();
+        // WordPress's wp_delete_file() is unlink() behind a filter.
+        Monkey\Functions\when('wp_delete_file')->alias(function ($file) {
+            @unlink($file);
+        });
     }
 
     protected function tearDown(): void

@@ -4,6 +4,8 @@ namespace AnyPressExport;
 
 defined('ABSPATH') || exit;
 
+// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- messages are not printed here; Plugin and Cli show them as JSON or CLI text.
+
 /**
  * Writes the site's tables to database.sql a batch of rows at a time, so a large database is dumped
  * over several short requests. Binary columns are written as hex, everything else as escaped strings.
@@ -81,7 +83,7 @@ final class SqlDump
     private function write(string $text, bool $append = true): void
     {
         if (file_put_contents($this->file, $text, $append ? FILE_APPEND : 0) === false) {
-            throw new \RuntimeException('Could not write the database export. Is the disk full?');
+            throw new \RuntimeException(__('Could not write the database export. Is the disk full?', 'anypress-export'));
         }
     }
 }

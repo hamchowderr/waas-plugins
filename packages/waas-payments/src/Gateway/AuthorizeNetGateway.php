@@ -496,6 +496,7 @@ class AuthorizeNetGateway extends AbstractPaymentGateway
         return $result->success
             /* translators: %s: date and time */
             ? sprintf(__('Webhook registered with Authorize.Net on %s.', 'waas-payments'), gmdate('Y-m-d H:i') . ' UTC')
+            /* translators: %s: why the webhook could not be registered */
             : sprintf(__('Webhook not registered: %s', 'waas-payments'), $result->message);
     }
 

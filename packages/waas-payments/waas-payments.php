@@ -3,7 +3,7 @@
  * Plugin Name: WaaS Payments
  * Plugin URI: https://github.com/hamchowderr/waas-plugins
  * Description: Card payments for FluentCart through the store's payment gateway, including subscriptions charged automatically on renewal (FluentCart store-managed subscriptions). First gateway: Authorize.Net.
- * Version: 0.1.0
+ * Version: 0.2.0-beta.2
  * Author: Otaku Solutions
  * Author URI: https://otakusolutions.io
  * Update URI: waas-payments
@@ -11,12 +11,13 @@
  * Requires PHP: 7.4
  * Requires Plugins: fluent-cart
  * Text Domain: waas-payments
- * License: GPLv2 or later
+ * License: GPL-3.0-or-later
+ * License URI: https://www.gnu.org/licenses/gpl-3.0.html
  */
 
 defined('ABSPATH') || exit;
 
-define('WAAS_PAYMENTS_VERSION', '0.1.0');
+define('WAAS_PAYMENTS_VERSION', '0.2.0-beta.2');
 define('WAAS_PAYMENTS_URL', plugin_dir_url(__FILE__));
 define('WAAS_PAYMENTS_BASENAME', plugin_basename(__FILE__));
 

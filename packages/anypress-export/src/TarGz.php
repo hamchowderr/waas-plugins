@@ -4,6 +4,9 @@ namespace AnyPressExport;
 
 defined('ABSPATH') || exit;
 
+// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- messages are not printed here; Plugin and Cli show them as JSON or CLI text.
+// phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fopen, WordPress.WP.AlternativeFunctions.file_system_operations_fclose, WordPress.WP.AlternativeFunctions.file_system_operations_fwrite, WordPress.WP.AlternativeFunctions.file_system_operations_fread, WordPress.WP.AlternativeFunctions.file_system_operations_rmdir, WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- builds a .tar.gz in chunks; WP_Filesystem has no streaming handles.
+
 /**
  * Writes the export as a gzipped tar that grows over several requests. Each request appends one gzip
  * member to the file, and gzip readers treat members back to back as one stream, so the archive is
@@ -31,10 +34,10 @@ final class TarGz
     public function open(): void
     {
         $out = fopen($this->file, 'ab');
-        if (!$out) throw new \RuntimeException('Could not write the export archive.');
+        if (!$out) throw new \RuntimeException(__('Could not write the export archive.', 'anypress-export'));
         $this->out = $out;
         $this->deflate = deflate_init(ZLIB_ENCODING_GZIP, ['level' => 5]);
-        if (!$this->deflate) throw new \RuntimeException('This server cannot compress files (zlib).');
+        if (!$this->deflate) throw new \RuntimeException(__('This server cannot compress files (zlib).', 'anypress-export'));
     }
 
     /** Ends the gzip member. The archive is valid up to here; finish() makes it a complete tar. */
@@ -147,9 +150,9 @@ final class TarGz
     private function emit(string $data, int $flush = ZLIB_NO_FLUSH): void
     {
         $compressed = deflate_add($this->deflate, $data, $flush);
-        if ($compressed === false) throw new \RuntimeException('Compressing the export failed.');
+        if ($compressed === false) throw new \RuntimeException(__('Compressing the export failed.', 'anypress-export'));
         if ($compressed !== '' && fwrite($this->out, $compressed) === false) {
-            throw new \RuntimeException('Could not write the export archive. Is the disk full?');
+            throw new \RuntimeException(__('Could not write the export archive. Is the disk full?', 'anypress-export'));
         }
     }
 }

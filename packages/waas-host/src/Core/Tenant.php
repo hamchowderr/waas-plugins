@@ -81,11 +81,11 @@ class Tenant
     {
         switch ((string) $state) {
             case self::QUEUED:
-                return __('Setting up your website', WAAS_HOST_TEXTDOMAIN);
+                return __('Setting up your website', 'waas-host');
             case self::FAILED:
-                return __('Setup delayed — we\'re on it', WAAS_HOST_TEXTDOMAIN);
+                return __('Setup delayed — we\'re on it', 'waas-host');
             case self::NEEDS_NEW_NAME:
-                return __('Choose a new website name', WAAS_HOST_TEXTDOMAIN);
+                return __('Choose a new website name', 'waas-host');
             default:
                 return (string) $state;
         }

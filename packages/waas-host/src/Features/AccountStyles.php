@@ -10,6 +10,8 @@ namespace WaaSHost\Features;
  */
 class AccountStyles
 {
+    private const HANDLE = 'waas-account';
+
     private static bool $printed = false;
 
     public static function print_once(): void
@@ -19,9 +21,18 @@ class AccountStyles
         }
         self::$printed = true;
 
-        // AnyPress's own font, as on anypress.io and the dashboard.
-        echo '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700;800&display=swap">';
-        echo '<style id="waas-account-styles">' . self::css() . '</style>';
+        // Through WordPress's style queue, so caching and optimisation plugins see it. AnyPress's own font, as on
+        // anypress.io and the dashboard, comes with the plugin: visitors' browsers never call a font service.
+        wp_register_style(self::HANDLE, false, [], defined('WAAS_HOST_VERSION') ? WAAS_HOST_VERSION : null);
+        wp_add_inline_style(self::HANDLE, self::font_face() . self::css());
+        wp_print_styles(self::HANDLE);
+    }
+
+    private static function font_face(): string
+    {
+        $url = esc_url(plugins_url('assets/fonts/hanken-grotesk-latin.woff2', dirname(__DIR__, 2) . '/index.php'));
+
+        return "@font-face{font-family:\"Hanken Grotesk\";font-style:normal;font-weight:400 800;font-display:swap;src:url({$url}) format(\"woff2\")}";
     }
 
     /** For tests: print again on the next call. */

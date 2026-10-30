@@ -35,7 +35,7 @@ class Notifications
 
     public static function get_default_suspended_subject()
     {
-        return __('Your website is offline', WAAS_HOST_TEXTDOMAIN);
+        return __('Your website is offline', 'waas-host');
     }
 
     public static function get_default_suspended_body()
@@ -88,7 +88,7 @@ class Notifications
 
     public static function get_default_suspend_scheduled_subject()
     {
-        return __('Your website stays online until {{ suspend_date }}', WAAS_HOST_TEXTDOMAIN);
+        return __('Your website stays online until {{ suspend_date }}', 'waas-host');
     }
 
     public static function get_default_suspend_scheduled_body()
@@ -156,7 +156,7 @@ class Notifications
 
     public static function get_default_tenant_ready_subject()
     {
-        return __('Your website is ready', WAAS_HOST_TEXTDOMAIN);
+        return __('Your website is ready', 'waas-host');
     }
 
     private static function get_ready_email_body($subscription_id, $recipient)

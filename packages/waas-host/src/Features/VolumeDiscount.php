@@ -106,13 +106,13 @@ class VolumeDiscount
             $next = $tiers[$index + 1] ?? null;
             if ($next !== null && $next['sites'] - 1 > $tier['sites']) {
                 /* translators: 1: percent off, 2: fewest websites, 3: most websites */
-                $parts[] = sprintf(__('%1$s%% off at %2$d to %3$d websites', WAAS_HOST_TEXTDOMAIN), $percent, $tier['sites'], $next['sites'] - 1);
+                $parts[] = sprintf(__('%1$s%% off at %2$d to %3$d websites', 'waas-host'), $percent, $tier['sites'], $next['sites'] - 1);
             } elseif ($next !== null) {
                 /* translators: 1: percent off, 2: number of websites */
-                $parts[] = sprintf(__('%1$s%% off at %2$d websites', WAAS_HOST_TEXTDOMAIN), $percent, $tier['sites']);
+                $parts[] = sprintf(__('%1$s%% off at %2$d websites', 'waas-host'), $percent, $tier['sites']);
             } else {
                 /* translators: 1: percent off, 2: fewest websites */
-                $parts[] = sprintf(__('%1$s%% off at %2$d or more websites', WAAS_HOST_TEXTDOMAIN), $percent, $tier['sites']);
+                $parts[] = sprintf(__('%1$s%% off at %2$d or more websites', 'waas-host'), $percent, $tier['sites']);
             }
         }
 

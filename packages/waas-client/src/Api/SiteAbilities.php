@@ -29,8 +29,8 @@ class SiteAbilities
     public function register_category(): void
     {
         wp_register_ability_category(self::CATEGORY, [
-            'label' => __('Website design and content', WAAS_CLIENT_TEXTDOMAIN),
-            'description' => __('Read and change this website\'s pages, starter patterns, colours and fonts, header, footer, menus and images.', WAAS_CLIENT_TEXTDOMAIN),
+            'label' => __('Website design and content', 'waas-client'),
+            'description' => __('Read and change this website\'s pages, starter patterns, colours and fonts, header, footer, menus and images.', 'waas-client'),
         ]);
     }
 

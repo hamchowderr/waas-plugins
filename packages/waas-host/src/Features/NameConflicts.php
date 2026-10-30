@@ -139,23 +139,23 @@ class NameConflicts
     {
         switch ($code) {
             case 'ok':
-                return __('Thank you! We are setting up your website with its new name.', WAAS_HOST_TEXTDOMAIN);
+                return __('Thank you! We are setting up your website with its new name.', 'waas-host');
             case 'taken':
-                return __('Website name is already taken! Please use a different one.', WAAS_HOST_TEXTDOMAIN);
+                return __('Website name is already taken! Please use a different one.', 'waas-host');
             case 'invalid':
-                return __('Please use a website name of 1 to 63 letters, digits and dashes.', WAAS_HOST_TEXTDOMAIN);
+                return __('Please use a website name of 1 to 63 letters, digits and dashes.', 'waas-host');
             case 'invalid_domain':
-                return __('The resulting domain is not valid.', WAAS_HOST_TEXTDOMAIN);
+                return __('The resulting domain is not valid.', 'waas-host');
             case 'unavailable':
-                return __('We could not check the website name right now. Please try again in a minute.', WAAS_HOST_TEXTDOMAIN);
+                return __('We could not check the website name right now. Please try again in a minute.', 'waas-host');
             case 'not_active':
-                return __('This subscription is not active, so we can\'t set up its website. Once the subscription is active again, you can choose a name here.', WAAS_HOST_TEXTDOMAIN);
+                return __('This subscription is not active, so we can\'t set up its website. Once the subscription is active again, you can choose a name here.', 'waas-host');
             case 'not_needed':
-                return __('This website does not need a new name.', WAAS_HOST_TEXTDOMAIN);
+                return __('This website does not need a new name.', 'waas-host');
             case 'busy':
-                return __('A new name for this website is being saved right now. Please reload this page in a moment.', WAAS_HOST_TEXTDOMAIN);
+                return __('A new name for this website is being saved right now. Please reload this page in a moment.', 'waas-host');
             case 'expired':
-                return __('This page was open too long, so the name was not saved. Please enter it again.', WAAS_HOST_TEXTDOMAIN);
+                return __('This page was open too long, so the name was not saved. Please enter it again.', 'waas-host');
             default:
                 return '';
         }
@@ -257,6 +257,7 @@ class NameConflicts
             return;
         }
 
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended,WordPress.Security.ValidatedSanitizedInput.InputNotValidated -- a result code for display, set by redirect_with_result(); checked for presence above.
         $code = sanitize_key(wp_unslash($_GET[self::RESULT_ARG]));
         $message = self::result_message($code);
         if ($message === '') {
@@ -272,14 +273,14 @@ class NameConflicts
     {
         ?>
         <form class="waas-choose-website-name" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-            <p><?php esc_html_e('The website name you picked was taken by someone else just before we could set up your website. Choose another name and we will set it up right away.', WAAS_HOST_TEXTDOMAIN); ?></p>
+            <p><?php esc_html_e('The website name you picked was taken by someone else just before we could set up your website. Choose another name and we will set it up right away.', 'waas-host'); ?></p>
             <input type="hidden" name="action" value="<?php echo esc_attr(self::CHOOSE_ACTION); ?>" />
             <input type="hidden" name="subscription_id" value="<?php echo esc_attr((string) $subscription_id); ?>" />
             <?php wp_nonce_field(self::CHOOSE_ACTION . '_' . $subscription_id); ?>
-            <label><?php esc_html_e('New website name', WAAS_HOST_TEXTDOMAIN); ?>
+            <label><?php esc_html_e('New website name', 'waas-host'); ?>
                 <input type="text" name="website_name" required maxlength="63" />
             </label>
-            <button type="submit" class="button waas-acct-btn is-primary fct-btn fct-btn-primary"><?php esc_html_e('Use this name', WAAS_HOST_TEXTDOMAIN); ?></button>
+            <button type="submit" class="button waas-acct-btn is-primary fct-btn fct-btn-primary"><?php esc_html_e('Use this name', 'waas-host'); ?></button>
         </form>
         <?php
     }
@@ -298,10 +299,10 @@ class NameConflicts
         $commerce = Commerce::require_adapter();
         $user_id = get_current_user_id();
         if ($user_id === 0 || $commerce->get_customer_id($subscription_id) !== $user_id) {
-            wp_die(esc_html__('You are not allowed to do this.', WAAS_HOST_TEXTDOMAIN), 403);
+            wp_die(esc_html__('You are not allowed to do this.', 'waas-host'), 403);
         }
 
-        $code = $this->choose($subscription_id, isset($_POST['website_name']) ? (string) wp_unslash($_POST['website_name']) : '');
+        $code = $this->choose($subscription_id, isset($_POST['website_name']) ? sanitize_text_field(wp_unslash($_POST['website_name'])) : '');
 
         $this->redirect_with_result($subscription_id, $code);
     }
@@ -321,6 +322,7 @@ class NameConflicts
     /** @return int|string the posted subscription id ('' when there is none) */
     private static function posted_subscription_id()
     {
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- read to build the nonce action; the nonce is checked by the caller.
         $subscription_id = isset($_POST['subscription_id']) ? sanitize_text_field(wp_unslash($_POST['subscription_id'])) : '';
 
         return ctype_digit($subscription_id) ? (int) $subscription_id : $subscription_id;
@@ -357,7 +359,8 @@ class NameConflicts
         }
 
         echo '<div class="notice notice-warning"><p><strong>' . esc_html(sprintf(
-            _n('%d website is waiting for its customer to choose a new name.', '%d websites are waiting for their customers to choose a new name.', count($waiting), WAAS_HOST_TEXTDOMAIN),
+            /* translators: %d: number of websites */
+            _n('%d website is waiting for its customer to choose a new name.', '%d websites are waiting for their customers to choose a new name.', count($waiting), 'waas-host'),
             count($waiting)
         )) . '</strong></p><ul>';
         foreach ($waiting as $subscription_id => $conflict) {
@@ -388,9 +391,10 @@ class NameConflicts
 
     private function email_admin($subscription_id, string $name, string $error): void
     {
-        $subject = sprintf(__('[%s] A website name was taken; the customer has to choose a new one', WAAS_HOST_TEXTDOMAIN), wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES));
+        /* translators: %s: this shop's name */
+        $subject = sprintf(__('[%s] A website name was taken; the customer has to choose a new one', 'waas-host'), wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES));
         $message = sprintf(
-            __("The website name \"%1\$s\" for subscription #%2\$s was taken when the store was created (another store got it after the name was accepted: at checkout while the provisioning API could not be reached, or when the customer chose it).\n\nAPI answer: %3\$s\n\nThe customer has been emailed a link to choose a new name. Nothing else is needed unless they contact you.\n%4\$s", WAAS_HOST_TEXTDOMAIN),
+            __("The website name \"%1\$s\" for subscription #%2\$s was taken when the store was created (another store got it after the name was accepted: at checkout while the provisioning API could not be reached, or when the customer chose it).\n\nAPI answer: %3\$s\n\nThe customer has been emailed a link to choose a new name. Nothing else is needed unless they contact you.\n%4\$s", 'waas-host'),
             $name,
             $subscription_id,
             $error,
@@ -410,9 +414,10 @@ class NameConflicts
             return;
         }
 
-        $subject = sprintf(__('[%s] Please choose a new name for your website', WAAS_HOST_TEXTDOMAIN), wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES));
+        /* translators: %s: this shop's name */
+        $subject = sprintf(__('[%s] Please choose a new name for your website', 'waas-host'), wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES));
         $message = sprintf(
-            __("Thank you for your order. The website name \"%1\$s\" was taken by someone else just before we could set up your website.\n\nPlease choose another name here, and we will set up your website right away:\n%2\$s", WAAS_HOST_TEXTDOMAIN),
+            __("Thank you for your order. The website name \"%1\$s\" was taken by someone else just before we could set up your website.\n\nPlease choose another name here, and we will set up your website right away:\n%2\$s", 'waas-host'),
             $name,
             self::form_url($subscription_id)
         );

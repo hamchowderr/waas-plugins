@@ -125,7 +125,7 @@ class SingleSignOnController
 
     private function request_host(): string
     {
-        $host = isset($_SERVER['HTTP_HOST']) ? strtolower((string) $_SERVER['HTTP_HOST']) : '';
+        $host = isset($_SERVER['HTTP_HOST']) ? strtolower(sanitize_text_field(wp_unslash($_SERVER['HTTP_HOST']))) : '';
 
         return (string) preg_replace('/:\d+$/', '', $host);
     }

@@ -32,6 +32,10 @@ sed -E -i.bak \
   -e "s/(define\([[:space:]]*'[A-Z_]+_VERSION',[[:space:]]*')[^']*(')/\1$version\2/" \
   "$main"
 rm -f "$main.bak"
+# A wordpress.org-style readme.txt carries the same version as its Stable tag.
+if [ -f "$src/readme.txt" ]; then
+  sed -E -i.bak -e "s/^(Stable tag:[[:space:]]*).*/\1$version/" "$src/readme.txt" && rm -f "$src/readme.txt.bak"
+fi
 header=$(grep -E '^[[:space:]]*\*?[[:space:]]*Version:' "$main" | head -1 | sed -E 's/.*Version:[[:space:]]*//')
 constant=$(grep -oE "define\([[:space:]]*'[A-Z_]+_VERSION',[[:space:]]*'[^']*'" "$main" | head -1 | sed -E "s/.*'([^']*)'$/\1/")
 if [ "$header" != "$version" ] || [ "$constant" != "$version" ]; then

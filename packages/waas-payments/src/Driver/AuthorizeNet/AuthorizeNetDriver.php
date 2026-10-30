@@ -410,6 +410,7 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
         if (($response['messages']['resultCode'] ?? '') !== 'Ok') {
             $message = $response['messages']['message'][0] ?? [];
             return DriverResult::failure(
+                /* translators: %s: the error from Authorize.Net */
                 sprintf(__('Authorize.Net rejected the credentials: %s', 'waas-payments'), $message['text'] ?? __('unknown error', 'waas-payments')),
                 (string) ($message['code'] ?? '')
             );
@@ -625,6 +626,7 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
 
     private static function unreachable(\WP_Error $error): string
     {
+        /* translators: %s: the network error */
         return sprintf(__('Could not reach Authorize.Net: %s', 'waas-payments'), $error->get_error_message());
     }
 

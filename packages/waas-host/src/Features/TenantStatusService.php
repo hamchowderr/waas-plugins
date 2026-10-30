@@ -44,12 +44,12 @@ class TenantStatusService
     {
         $schedules['five_seconds'] = [
             'interval' => 5,
-            'display'  => esc_html__( 'Every Five Seconds' ),
+            'display'  => esc_html__( 'Every Five Seconds', 'waas-host' ),
         ];
 
         $schedules['every_minute'] = [
             'interval' => 60,
-            'display'  => esc_html__( 'Every Minute' ),
+            'display'  => esc_html__( 'Every Minute', 'waas-host' ),
         ];
 
         return $schedules;

@@ -105,7 +105,7 @@ class UserWcTenantsCheckout
 
         woocommerce_register_additional_checkout_field([
             'id' => self::FIELD_ID,
-            'label' => __('Website name', WAAS_HOST_TEXTDOMAIN),
+            'label' => __('Website name', 'waas-host'),
             'location' => 'order',
             'type' => 'text',
             'required' => ['cart' => ['properties' => ['extensions' => $needs_website_name]]],
@@ -137,7 +137,7 @@ class UserWcTenantsCheckout
     {
         if ($this->cart_needs_website_name()) {
             $fields['billing'][Tenant::WEBSITE_NAME_META] = [
-                'label' => __('Website name', WAAS_HOST_TEXTDOMAIN),
+                'label' => __('Website name', 'waas-host'),
                 'required' => true,
                 'priority' => 30,
                 'class' => apply_filters('waas_website_name_checkout_field_classes', ['form-row-wide']),
@@ -201,12 +201,12 @@ class UserWcTenantsCheckout
 
         $label = sanitize_title_with_dashes(remove_accents($website_name));
         if ($label === '' || strlen($label) > 63) {
-            return __('Please use a website name of 1 to 63 letters, digits and dashes.', WAAS_HOST_TEXTDOMAIN);
+            return __('Please use a website name of 1 to 63 letters, digits and dashes.', 'waas-host');
         }
         $domain_name = $label . '.' . $tenant_root_domain;
 
         if ($this->commerce->is_domain_taken($domain_name)) {
-            return __('Website name is already taken! Please use a different one.', WAAS_HOST_TEXTDOMAIN);
+            return __('Website name is already taken! Please use a different one.', 'waas-host');
         }
 
         try {
@@ -214,9 +214,9 @@ class UserWcTenantsCheckout
                 return null;
             }
 
-            return __('Website name is already taken! Please use a different one.', WAAS_HOST_TEXTDOMAIN);
+            return __('Website name is already taken! Please use a different one.', 'waas-host');
         } catch (InvalidDomainException $e) {
-            return __('The resulting domain is not valid.', WAAS_HOST_TEXTDOMAIN);
+            return __('The resulting domain is not valid.', 'waas-host');
         } catch (\Throwable $e) {
             // Fail open: take the order. The name passed the storefront's own duplicate check above; if the API
             // later finds it taken, the customer is asked for a new one (NameConflicts).

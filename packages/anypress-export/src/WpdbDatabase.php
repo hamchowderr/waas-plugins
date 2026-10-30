@@ -4,6 +4,9 @@ namespace AnyPressExport;
 
 defined('ABSPATH') || exit;
 
+// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- messages are not printed here; Plugin and Cli show them as JSON or CLI text.
+// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, PluginCheck.Security.DirectDB.UnescapedDBParameter -- an export reads every table as it is. Table names come from SHOW TABLES and are backtick-quoted by quote(); %i needs WordPress 6.2, and this plugin supports older sites being moved.
+
 /** The site's database, through WordPress's $wpdb. */
 final class WpdbDatabase implements Database
 {
@@ -30,7 +33,11 @@ final class WpdbDatabase implements Database
     public function createTable(string $table): string
     {
         $row = $this->wpdb->get_row('SHOW CREATE TABLE ' . self::quote($table), ARRAY_N);
-        if (!is_array($row) || !isset($row[1])) throw new \RuntimeException("Could not read the structure of $table.");
+        if (!is_array($row) || !isset($row[1])) throw new \RuntimeException(sprintf(
+            /* translators: %s: database table name */
+            __('Could not read the structure of %s.', 'anypress-export'),
+            $table
+        ));
         return $row[1];
     }
 
@@ -57,7 +64,12 @@ final class WpdbDatabase implements Database
     {
         $order = $orderBy ? ' ORDER BY ' . implode(', ', array_map([self::class, 'quote'], $orderBy)) : '';
         $rows = $this->wpdb->get_results(sprintf('SELECT * FROM %s%s LIMIT %d OFFSET %d', self::quote($table), $order, $limit, $offset), ARRAY_N);
-        if ($this->wpdb->last_error) throw new \RuntimeException("Could not read $table: " . $this->wpdb->last_error);
+        if ($this->wpdb->last_error) throw new \RuntimeException(sprintf(
+            /* translators: 1: database table name, 2: the database error */
+            __('Could not read %1$s: %2$s', 'anypress-export'),
+            $table,
+            $this->wpdb->last_error
+        ));
         return (array) $rows;
     }
 

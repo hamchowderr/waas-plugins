@@ -43,6 +43,7 @@ class AccountClients
         }
         foreach ($redirect_uris as $uri) {
             if (!self::is_valid_redirect_uri($uri)) {
+                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not printed here; every place that shows the message escapes it.
                 throw new InvalidArgumentException("Not an allowed redirect URI: $uri (use https, or http only for localhost, and no #fragment).");
             }
         }
@@ -93,7 +94,7 @@ class AccountClients
     /** https with a host and no fragment; http only for localhost, for development. */
     public static function is_valid_redirect_uri(string $uri): bool
     {
-        $parts = parse_url($uri);
+        $parts = wp_parse_url($uri);
         if (!is_array($parts) || empty($parts['host']) || isset($parts['fragment']) || isset($parts['user'])) {
             return false;
         }

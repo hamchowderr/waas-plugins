@@ -14,6 +14,7 @@ class EncryptionService
         ]);
         $details = $key_resource === false ? false : openssl_pkey_get_details($key_resource);
         if ($details === false || !openssl_pkey_export($key_resource, $private_key)) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not printed here; every place that shows the message escapes it.
             throw new \RuntimeException('Could not generate the store login key pair: ' . (string) openssl_error_string());
         }
         $public_key = $details['key'];

@@ -68,7 +68,7 @@ class SingleLogin
 
         $login_data = self::build_login_data(SingleLoginService::get_formatted_username($subscription_id), $domain, (int) $expiry_delay_in_seconds);
 
-        $token = EncryptionService::encrypt($private_key, json_encode($login_data));
+        $token = EncryptionService::encrypt($private_key, wp_json_encode($login_data));
         $token_encoded = urlencode(base64_encode($token));
 
         return 'https://' . $domain . "/wp-json/waas-client/v1/single_login/verify?token=" . $token_encoded;
@@ -99,10 +99,11 @@ class SingleLogin
         $subscription_id = $request->get_param('subscription_id');
         $login_link = self::get_login_link($subscription_id, self::PORTAL_TOKEN_LIFETIME);
         if ($login_link === '') {
-            wp_die(esc_html__('One-click login is not available for this website. Please contact support.'), 500);
+            wp_die(esc_html__('One-click login is not available for this website. Please contact support.', 'waas-host'), 500);
         }
 
-        wp_redirect($login_link);
+        // The store's own login link, on the store's host: not this site, so not wp_safe_redirect().
+        wp_redirect($login_link); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
         exit();
     }
 }

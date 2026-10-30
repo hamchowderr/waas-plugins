@@ -101,8 +101,8 @@ class RolesManager
         }
 ?>
             <div class="notice notice-error">
-                <p><strong><?php esc_html_e('WaaS Client: this website has no plan roles.', WAAS_CLIENT_TEXTDOMAIN); ?></strong></p>
-                <p><?php esc_html_e('Its template version has no roles set up, so no plugins are turned on or off for its plan. Set up roles on the template website under WaaS Client > Plan roles, then deploy that version.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                <p><strong><?php esc_html_e('WaaS Client: this website has no plan roles.', 'waas-client'); ?></strong></p>
+                <p><?php esc_html_e('Its template version has no roles set up, so no plugins are turned on or off for its plan. Set up roles on the template website under WaaS Client > Plan roles, then deploy that version.', 'waas-client'); ?></p>
             </div>
 <?php
     }
@@ -114,8 +114,8 @@ class RolesManager
         }
 ?>
             <div class="notice notice-error">
-                <p><strong><?php esc_html_e('WaaS Client: this website\'s plan roles could not be read.', WAAS_CLIENT_TEXTDOMAIN); ?></strong></p>
-                <p><?php esc_html_e('The roles file that came with its template version is damaged, so no plugins were turned on or off and the website stays as it was. Save the plan roles again on the template website and deploy that version.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                <p><strong><?php esc_html_e('WaaS Client: this website\'s plan roles could not be read.', 'waas-client'); ?></strong></p>
+                <p><?php esc_html_e('The roles file that came with its template version is damaged, so no plugins were turned on or off and the website stays as it was. Save the plan roles again on the template website and deploy that version.', 'waas-client'); ?></p>
             </div>
 <?php
     }
@@ -135,15 +135,15 @@ class RolesManager
             <div class="notice <?php echo $stopped ? 'notice-error' : 'notice-warning'; ?>">
                 <p><strong><?php echo esc_html(sprintf(
                     /* translators: %s: comma-separated role names */
-                    _n('WaaS Client: plan role "%s" was not found in this website\'s roles.', 'WaaS Client: plan roles "%s" were not found in this website\'s roles.', count($missing), WAAS_CLIENT_TEXTDOMAIN),
+                    _n('WaaS Client: plan role "%s" was not found in this website\'s roles.', 'WaaS Client: plan roles "%s" were not found in this website\'s roles.', count($missing), 'waas-client'),
                     implode('", "', $missing)
                 )); ?></strong></p>
                 <p><?php echo $stopped
-                    ? esc_html__('No plugins were turned on or off, so the website stays as it was. Add the role on the template website (WaaS Client > Plan roles) and deploy that version, or move this website to a plan whose role exists.', WAAS_CLIENT_TEXTDOMAIN)
-                    : esc_html__('Plugins were set from the plan\'s other roles only. Add the missing role on the template website and deploy that version.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                    ? esc_html__('No plugins were turned on or off, so the website stays as it was. Add the role on the template website (WaaS Client > Plan roles) and deploy that version, or move this website to a plan whose role exists.', 'waas-client')
+                    : esc_html__('Plugins were set from the plan\'s other roles only. Add the missing role on the template website and deploy that version.', 'waas-client'); ?></p>
                 <?php if ($available) : ?>
-                    <p><?php esc_html_e('Roles this website has:', WAAS_CLIENT_TEXTDOMAIN); ?>
-                        <?php echo implode(', ', array_map(fn ($key) => '<code>' . esc_html((string) $key) . '</code>', $available)); ?></p>
+                    <p><?php esc_html_e('Roles this website has:', 'waas-client'); ?>
+                        <?php echo implode(', ', array_map(fn ($key) => '<code>' . esc_html((string) $key) . '</code>', $available)); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- each key is esc_html() above. ?></p>
                 <?php endif; ?>
             </div>
 <?php
@@ -158,11 +158,11 @@ class RolesManager
             }
 ?>
             <div class="notice notice-error">
-                <p><strong><?php esc_html_e('WaaS Client: this website has no plan role.', WAAS_CLIENT_TEXTDOMAIN); ?></strong></p>
-                <p><?php esc_html_e('This happens when a website is created by hand instead of through a purchase, so no plugins are turned on or off for it.', WAAS_CLIENT_TEXTDOMAIN); ?></p>
+                <p><strong><?php esc_html_e('WaaS Client: this website has no plan role.', 'waas-client'); ?></strong></p>
+                <p><?php esc_html_e('This happens when a website is created by hand instead of through a purchase, so no plugins are turned on or off for it.', 'waas-client'); ?></p>
                 <p><?php
                     /* translators: %s: a PHP constant name */
-                    echo esc_html(sprintf(__('To try a role, define the PHP constant %s on this website with one or more of these roles, separated by commas:', WAAS_CLIENT_TEXTDOMAIN), PluginBootstrap::TENANT_ROLES_CONSTANT));
+                    echo esc_html(sprintf(__('To try a role, define the PHP constant %s on this website with one or more of these roles, separated by commas:', 'waas-client'), PluginBootstrap::TENANT_ROLES_CONSTANT));
                 ?></p>
                 <ul>
                     <?php foreach (array_keys((array) $roles) as $key) : ?>

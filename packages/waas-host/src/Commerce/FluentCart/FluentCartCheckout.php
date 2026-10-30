@@ -53,7 +53,7 @@ class FluentCartCheckout
             return $fields;
         }
 
-        $label = __('Website name', WAAS_HOST_TEXTDOMAIN);
+        $label = __('Website name', 'waas-host');
         $fields[self::FIELD] = [
             'id' => self::FIELD,
             'name' => self::FIELD,
@@ -77,7 +77,7 @@ class FluentCartCheckout
 
         $website_name = trim(sanitize_text_field((string) ($args['data'][self::FIELD] ?? '')));
         if ($website_name === '') {
-            $errors[self::FIELD]['required'] = __('Please enter a name for your website.', WAAS_HOST_TEXTDOMAIN);
+            $errors[self::FIELD]['required'] = __('Please enter a name for your website.', 'waas-host');
             return $errors;
         }
 
@@ -88,22 +88,22 @@ class FluentCartCheckout
 
         $slug = sanitize_title_with_dashes(remove_accents($website_name));
         if ($slug === '') {
-            $errors[self::FIELD]['invalid'] = __('Please use letters or numbers in the website name.', WAAS_HOST_TEXTDOMAIN);
+            $errors[self::FIELD]['invalid'] = __('Please use letters or numbers in the website name.', 'waas-host');
             return $errors;
         }
 
         $domain_name = $slug . '.' . $root_domain;
         if ($this->adapter->is_domain_taken($domain_name)) {
-            $errors[self::FIELD]['taken'] = __('Website name is already taken! Please use a different one.', WAAS_HOST_TEXTDOMAIN);
+            $errors[self::FIELD]['taken'] = __('Website name is already taken! Please use a different one.', 'waas-host');
             return $errors;
         }
 
         try {
             if (!$this->provisioning_api->domain_available($domain_name)) {
-                $errors[self::FIELD]['taken'] = __('Website name is already taken! Please use a different one.', WAAS_HOST_TEXTDOMAIN);
+                $errors[self::FIELD]['taken'] = __('Website name is already taken! Please use a different one.', 'waas-host');
             }
         } catch (InvalidDomainException $e) {
-            $errors[self::FIELD]['invalid'] = __('The resulting domain is not valid.', WAAS_HOST_TEXTDOMAIN);
+            $errors[self::FIELD]['invalid'] = __('The resulting domain is not valid.', 'waas-host');
         } catch (\Exception $e) {
             // Fail open: take the order (no store here has the name). If the API later finds it taken, the customer
             // is asked for a new one (NameConflicts).

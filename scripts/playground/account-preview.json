@@ -19,8 +19,8 @@
       "pluginData": {
         "resource": "git:directory",
         "url": "https://github.com/hamchowderr/waas-plugins",
-        "ref": "claude/project-thread-d7ycqr",
-        "refType": "branch",
+        "ref": "ad35f8d6a89497bd02d2027fad36b505728cf7e7",
+        "refType": "commit",
         "path": "packages/waas-host"
       },
       "options": {

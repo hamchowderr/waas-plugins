@@ -14,6 +14,7 @@ class AdminNoticesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Functions\stubTranslationFunctions();
         $this->options = [];
         Functions\when('get_option')->alias(fn ($name, $default = false) => $this->options[$name] ?? $default);
         Functions\when('current_user_can')->justReturn(true);
