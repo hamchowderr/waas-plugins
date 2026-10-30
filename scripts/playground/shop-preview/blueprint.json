@@ -1,0 +1,109 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "meta": {
+    "title": "AnyPress shop: the new design",
+    "author": "hamchowderr",
+    "description": "A copy of shop.anypress.io on the AnyPress theme with its new design: home, plans, plan pages, checkout, account and help pages, with the shop's plans and prices."
+  },
+  "landingPage": "/",
+  "preferredVersions": {
+    "php": "8.3",
+    "wp": "latest"
+  },
+  "features": {
+    "networking": true
+  },
+  "steps": [
+    {
+      "step": "installTheme",
+      "themeData": {
+        "resource": "git:directory",
+        "url": "https://github.com/hamchowderr/anypress-theme",
+        "ref": "v0.5.0",
+        "refType": "tag",
+        "path": "/"
+      },
+      "options": {
+        "activate": true,
+        "targetFolderName": "anypress"
+      },
+      "progress": {
+        "caption": "Installing the AnyPress theme"
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "wordpress.org/plugins",
+        "slug": "fluent-cart"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "wordpress.org/plugins",
+        "slug": "betterdocs"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "mkdir",
+      "path": "/wordpress/wp-content/anypress-design"
+    },
+    {
+      "step": "writeFiles",
+      "writeToPath": "/wordpress/wp-content/anypress-design",
+      "filesTree": {
+        "resource": "git:directory",
+        "url": "https://github.com/hamchowderr/waas-plugins",
+        "ref": "7d762fe35f372568b423b67f2f6de8ab47f6ec57",
+        "refType": "commit",
+        "path": "scripts/test-storefront/remote/design"
+      },
+      "progress": {
+        "caption": "Fetching the shop's design"
+      }
+    },
+    {
+      "step": "mkdir",
+      "path": "/wordpress/wp-content/anypress-preview"
+    },
+    {
+      "step": "writeFiles",
+      "writeToPath": "/wordpress/wp-content/anypress-preview",
+      "filesTree": {
+        "resource": "git:directory",
+        "url": "https://github.com/hamchowderr/waas-plugins",
+        "ref": "7d762fe35f372568b423b67f2f6de8ab47f6ec57",
+        "refType": "commit",
+        "path": "scripts/playground/shop-preview"
+      }
+    },
+    {
+      "step": "mkdir",
+      "path": "/wordpress/wp-content/mu-plugins"
+    },
+    {
+      "step": "cp",
+      "fromPath": "/wordpress/wp-content/anypress-design/anypress-shop.php",
+      "toPath": "/wordpress/wp-content/mu-plugins/anypress-shop.php"
+    },
+    {
+      "step": "cp",
+      "fromPath": "/wordpress/wp-content/anypress-preview/sqlite-json.php",
+      "toPath": "/wordpress/wp-content/mu-plugins/0-sqlite-json.php"
+    },
+    {
+      "step": "runPHP",
+      "code": "<?php require '/wordpress/wp-load.php'; $design = '/wordpress/wp-content/anypress-design'; require '/wordpress/wp-content/anypress-preview/seed.php';",
+      "progress": {
+        "caption": "Adding the plans and building the pages"
+      }
+    }
+  ]
+}
