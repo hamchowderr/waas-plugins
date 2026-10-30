@@ -1,7 +1,8 @@
 #!/bin/sh
 # Storefront setup steps, run by Coolify scheduled tasks as root in the wordpress container.
 #   sh /opt/wpcli/x/setup.sh <step> [payments mode: store|gateway]
-# Steps, in order: bootstrap install plugins configure pages product payments cron (check any time; crm on the shop).
+# Steps, in order: bootstrap install plugins configure pages product payments cron (check any time; crm and design on
+# the shop).
 set -eu
 X=/opt/wpcli/x
 WP="sh $X/wp"
@@ -82,6 +83,26 @@ case "${1:-}" in
     # The AnyPress API's CRM_SECRET, so its approvals can tag sellers and resellers (POST /wp-json/anypress/v1/offering).
     if [ -n "${CRM_SECRET:-}" ]; then $WP option update anypress_crm_secret "$CRM_SECRET" --autoload=no; fi
     $WP cron event list --hook=anypress_crm_daily --fields=hook,next_run_relative ;;
+  design)
+    # The shop's look (shop only): the AnyPress theme at the release the store template pins, then remote/design from
+    # GitHub at DESIGN_REF (a branch, tag or commit; default main): its mu-plugin, then design.php writes the styles,
+    # templates and pages. Run it again after a price change, so the home and plans pages show the new prices.
+    THEME_VERSION=0.6.0
+    THEME_SHA256=67e26cf568ba5ba3d1c44e7870fd1565ab4fabc6ce8891a0209ad3bcb027f018
+    if [ "$($WP theme get anypress --field=version 2>/dev/null)" != "$THEME_VERSION" ]; then
+      curl -fsSL -o /tmp/anypress.zip "https://github.com/hamchowderr/anypress-theme/releases/download/v$THEME_VERSION/anypress.zip"
+      echo "$THEME_SHA256  /tmp/anypress.zip" | sha256sum -c --quiet || { echo "AnyPress theme checksum mismatch"; exit 1; }
+      $WP theme install /tmp/anypress.zip --force
+    fi
+    $WP theme activate anypress
+    rm -rf /tmp/design && mkdir -p /tmp/design
+    curl -fsSL "https://codeload.github.com/hamchowderr/waas-plugins/tar.gz/${DESIGN_REF:-main}" \
+      | tar -xz -C /tmp/design --strip-components=4 --wildcards '*/scripts/test-storefront/remote/design'
+    mkdir -p /var/www/html/wp-content/mu-plugins && cp /tmp/design/anypress-shop.php /var/www/html/wp-content/mu-plugins/
+    chown 33:33 /var/www/html/wp-content/mu-plugins/anypress-shop.php
+    $WP eval-file /tmp/design/design.php --user=admin
+    chown -R 33:33 /var/www/html/wp-content/uploads/anypress-shop /var/www/html/wp-content/uploads/fonts 2>/dev/null || true
+    $WP cache flush ;;
   check)
     $WP eval-file $X/check.php ;;
   *) echo "unknown step"; exit 2 ;;
