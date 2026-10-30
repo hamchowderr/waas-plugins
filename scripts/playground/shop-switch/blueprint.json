@@ -1,0 +1,67 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "meta": {
+    "title": "Shop switch test site",
+    "author": "Otaku Solutions",
+    "description": "WooCommerce and FluentCart at the versions the site-moving tests used, the FluentCart Migrator add-on from FluentCart's add-ons page, and WaaS Client (mounted from this checkout by shop-switch.mjs). WP-CLI comes from its official build (wp-cli/builds) at /tmp/wp-cli.phar."
+  },
+  "landingPage": "/wp-admin/admin.php?page=fluent-cart",
+  "preferredVersions": {
+    "php": "8.3",
+    "wp": "latest"
+  },
+  "features": {
+    "networking": true
+  },
+  "steps": [
+    {
+      "step": "writeFile",
+      "path": "/tmp/wp-cli.phar",
+      "data": {
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar"
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/woocommerce.11.2.1.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/fluent-cart.2.2.0.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://addons-cdn.fluentcart.com/fluent-cart-migrator.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "activatePlugin",
+      "pluginPath": "waas-client/index.php"
+    },
+    {
+      "step": "setSiteOptions",
+      "options": {
+        "blogname": "Shop switch test",
+        "permalink_structure": "/%postname%/"
+      }
+    }
+  ]
+}

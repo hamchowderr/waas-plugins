@@ -140,6 +140,33 @@ Running it again changes nothing that was already done: converted forms are skip
 
 The id map and each changed page's original content are kept in the `waas_client_forms_switch` option (not autoloaded). Sources: `src/Forms/FormsSwitch.php`, `src/Forms/Migrators/`, `src/Forms/PageSwitcher.php`, `src/Forms/FormsCommand.php`, `src/Forms/FormsAbilities.php`. Tested end to end by `scripts/playground/forms.mjs` (`npm run forms`).
 
+## Moving a WooCommerce shop to FluentCart
+
+The shop switch copies a WooCommerce shop into FluentCart with the free FluentCart Migrator add-on, then adds what the add-on leaves out. The add-on is not on wordpress.org: it is on FluentCart's add-ons page (https://fluentcart.com/fluentcart-addons, zip at https://addons-cdn.fluentcart.com/fluent-cart-migrator.zip). Run it with WP-CLI as an administrator, with WooCommerce, FluentCart and the add-on active:
+
+```sh
+wp waas shop switch --user=admin --dry-run   # check the shop and report what the switch would do; changes nothing
+wp waas shop switch --user=admin             # do it
+wp waas shop switch --user=admin --undo      # take the switch's own fixes back out
+```
+
+Add `--format=json` for the report as JSON. The same is available as two abilities: `anypress/check-shop` (the dry run, read-only) and `anypress/switch-shop` (with `{"undo": true}` to undo). Both need an administrator.
+
+What it does, in order:
+
+1. **Checks** that WooCommerce, FluentCart and the add-on are active (and says where to get the add-on when it's missing), and reports where WooCommerce keeps its orders (HPOS on or off), the counts (products, variations, orders by status, guest orders, refunds, coupons, registered customers, tax rates, shipping zones, product tags) and whether WooCommerce Subscriptions is in use.
+2. **Runs the add-on's WooCommerce migration** through its own PHP classes, the same steps as its `wp fluent_cart_migrator migrate_from_woo --all`: products and store settings, tax rates, coupons, orders (with their refunds, payments and addresses), registered customers without orders, and the stats recount. The add-on reads WooCommerce through its own API, so HPOS on or off gives the same result. Records it couldn't copy are listed from its own log.
+3. **Fills the add-on's gaps**:
+   - Gallery images: each FluentCart product gets its WooCommerce gallery images after the featured image (the add-on copies only the featured image).
+   - Shipping: each WooCommerce shipping zone, and the "rest of the world" zone, becomes a FluentCart zone, with its flat rate, free shipping and local pickup methods. A zone on one country, several countries, a continent or the states of one country maps across; postcodes, states mixed with other countries, shipping class costs and cost formulas FluentCart can't hold are reported. A free shipping method that needs a minimum order or a coupon is copied turned off, since FluentCart's free shipping has no conditions.
+   - Customers: the add-on finds customers by billing email, so a registered customer who ordered with another billing email becomes two FluentCart customers with the same WordPress user. They are merged into the one with the account's email: orders, subscriptions, download permissions, carts, addresses, customer meta, reviews, labels and activity move across, FluentCart's `fluent_cart/customer_resources_moved` action runs (FluentCart Pro moves its licences on it), and the stats are recounted.
+4. **Lists what to check by hand**, without changing anything: products with tags (FluentCart has no product tags), and each WooCommerce tax rate whose value, name, shipping flag, compound flag, postcodes, cities or tax class differ from the FluentCart rate the add-on mapped it to (the add-on uses FluentCart's built-in rates, not WooCommerce's).
+5. **Compares WooCommerce with FluentCart** and lists every difference: products, SKUs, orders (each order's total and refunds), the sum of order totals, refunds, coupons and customers (including any WordPress user who still has more than one FluentCart customer).
+
+Running it again adds nothing twice: the add-on skips each step it has finished, gallery images already there are kept, each zone and method is copied once, and merged customers have nothing left to merge. WooCommerce and its data are never changed, deactivated or deleted. Undo puts back the galleries as the add-on left them, removes the copied shipping zones and methods, and splits the merged customers again; what the add-on copied stays, because the add-on has no undo outside its developer mode.
+
+The galleries before the switch, the copied zone and method ids and each merged customer (its row and the rows moved off it) are kept in the `waas_client_shop_switch` option (not autoloaded). Sources: `src/Shop/ShopSwitch.php`, `src/Shop/GalleryImages.php`, `src/Shop/ShippingZones.php`, `src/Shop/CustomerMerge.php`, `src/Shop/ShopReview.php`, `src/Shop/ShopCompare.php`, `src/Shop/ShopCommand.php`, `src/Shop/ShopAbilities.php`. Tested end to end, with HPOS off and on, by `scripts/playground/shop-switch.mjs` (`npm run shop-switch`).
+
 ## Updates
 
 WaaS Client does not update itself. Its `Update URI` header only keeps wordpress.org from offering updates. A website gets a newer WaaS Client when it is moved to a newer template version, whose code replaces the website's plugins (`index.php`, `tests/Unit/NoSelfUpdateTest.php`).
