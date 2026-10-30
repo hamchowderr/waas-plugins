@@ -1,0 +1,87 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "meta": {
+    "title": "CRM switch test site",
+    "author": "Otaku Solutions",
+    "description": "WooCommerce, FluentCRM, MailPoet and the Newsletter plugin at pinned wordpress.org versions, and WaaS Client (mounted from this checkout by crm-switch.mjs). Background updates and WP-Cron are off so nothing changes mid-test. WP-CLI comes from its official build (wp-cli/builds) at /tmp/wp-cli.phar."
+  },
+  "landingPage": "/wp-admin/admin.php?page=fluentcrm-admin",
+  "preferredVersions": {
+    "php": "8.3",
+    "wp": "latest"
+  },
+  "features": {
+    "networking": true
+  },
+  "steps": [
+    {
+      "step": "defineWpConfigConsts",
+      "consts": {
+        "AUTOMATIC_UPDATER_DISABLED": true,
+        "DISABLE_WP_CRON": true,
+        "WP_DEBUG": true,
+        "WP_DEBUG_LOG": true,
+        "WP_DEBUG_DISPLAY": false
+      }
+    },
+    {
+      "step": "writeFile",
+      "path": "/tmp/wp-cli.phar",
+      "data": {
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar"
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/woocommerce.11.2.1.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/fluent-crm.3.3.1.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/mailpoet.5.44.0.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/newsletter.9.5.3.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "activatePlugin",
+      "pluginPath": "waas-client/index.php"
+    },
+    {
+      "step": "setSiteOptions",
+      "options": {
+        "blogname": "CRM switch test",
+        "permalink_structure": "/%postname%/"
+      }
+    }
+  ]
+}

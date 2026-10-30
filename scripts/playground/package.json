@@ -13,6 +13,7 @@
     "shop": "node shop-preview.mjs",
     "forms": "node forms.mjs",
     "shop-switch": "node shop-switch.mjs",
+    "crm-switch": "node crm-switch.mjs",
     "emails": "node email-preview.mjs"
   },
   "dependencies": {
