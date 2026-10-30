@@ -35,14 +35,14 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 /**
  * @package WaaSHost
- * @version 2.5.0
+ * @version 2.5.1
  */
 /*
 Plugin Name: WaaS Host
 Plugin URI: https://github.com/hamchowderr/waas-plugins
 Description: Sells WaaS stores from your storefront: creates, suspends and restores each customer's store through the WaaS provisioning API, with FluentCart or WooCommerce (and WooCommerce Subscriptions) for billing.
 Author: Otaku Solutions
-Version: 2.5.0
+Version: 2.5.1
 Author URI: https://otakusolutions.io
 Update URI: wpcs-waas-host
 Requires at least: 6.4
@@ -55,7 +55,7 @@ Text Domain: waas-host
 define( 'WAAS_HOST_SLUG', 'wpcs-waas-host' );
 define( 'WAAS_HOST_BASENAME', plugin_basename( __FILE__ ) );
 define( 'WAAS_HOST_UPDATE_URI', 'wpcs-waas-host' );
-define( 'WAAS_HOST_VERSION', '2.5.0' );
+define( 'WAAS_HOST_VERSION', '2.5.1' );
 define( 'WAAS_HOST_TEXTDOMAIN', 'waas-host' );
 
 // Settings and data saved under the old platform's names move to the waas_ names before anything reads them

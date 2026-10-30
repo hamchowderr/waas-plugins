@@ -202,14 +202,13 @@ class ProvisioningApi
     }
 
     /**
-     * Signs the store's owner in to an app (the website assistant) for this one website: the API answers
-     * with the app's sign-in address and a code, which the app finishes with its PKCE verifier.
-     * @param array{clientId: string, redirectUri: string, codeChallenge: string, state?: string} $params
+     * Hands the store's owner to the website assistant at $assistant_url for this one website: the API
+     * answers with the assistant's address and a one-time handoff, which the assistant trades for a sign-in.
      */
-    public function site_sign_in($external_id, array $params): string
+    public function site_handoff($external_id, string $assistant_url): string
     {
-        $answer = $this->httpService->post('/v1/tenants/site/sign-in?externalId=' . rawurlencode((string) $external_id), $params);
-        return (string) ($answer->redirectUrl ?? '');
+        $answer = $this->httpService->post('/v1/tenants/site/handoff?externalId=' . rawurlencode((string) $external_id), ['assistantUrl' => $assistant_url]);
+        return (string) ($answer->url ?? '');
     }
 
     /** The tenant's backups, newest first, also after the tenant was deleted. */
