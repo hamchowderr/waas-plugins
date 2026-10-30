@@ -13,6 +13,21 @@ class Notifications
         add_action('waas_tenant_ready', [__CLASS__, 'send_email_on_tenant_ready'], 10, 1);
         add_action('waas_tenant_suspend_scheduled', [__CLASS__, 'send_email_on_suspend_scheduled'], 10, 2);
         add_action('waas_tenant_suspended', [__CLASS__, 'send_email_on_suspended'], 10, 2);
+        // FluentCart's receipts open with its store logo: keep it the storefront's own logo.
+        foreach (['update_option_site_logo', 'add_option_site_logo', 'delete_option_site_logo', 'customize_save_after'] as $hook) {
+            add_action($hook, [__CLASS__, 'sync_cart_logo']);
+        }
+    }
+
+    /** Sets FluentCart's store logo (shown at the top of its emails) to the site logo, or clears it. */
+    public static function sync_cart_logo(): void
+    {
+        if (!class_exists('\FluentCart\Api\StoreSettings')) {
+            return;
+        }
+        $id = (int) (get_option('site_logo') ?: get_theme_mod('custom_logo'));
+        $url = $id ? (string) wp_get_attachment_image_url($id, 'medium') : '';
+        (new \FluentCart\Api\StoreSettings())->save(['store_logo' => ['id' => $id ?: '', 'url' => $url]]);
     }
 
     /**
@@ -175,11 +190,12 @@ class Notifications
         return (string) apply_filters('waas_email_support_address', is_email($email) ? $email : '');
     }
 
-    /** The storefront's logo (custom logo, else site icon), or '' to show its name alone. */
+    /** The storefront's logo (site logo, else site icon), or '' to show its name alone. */
     public static function logo_url(): string
     {
         $url = '';
-        $logo = (int) get_theme_mod('custom_logo');
+        // Block themes keep the logo in the site_logo option; classic themes in the custom_logo theme mod.
+        $logo = (int) (get_option('site_logo') ?: get_theme_mod('custom_logo'));
         if ($logo > 0) {
             $url = (string) wp_get_attachment_image_url($logo, 'medium');
         }
