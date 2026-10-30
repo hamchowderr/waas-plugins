@@ -143,8 +143,11 @@ class AdminHome
             'dashboard_url' => admin_url('admin.php?page=' . self::SLUG),
         ];
         // FluentKit puts its sidebar on the pages whose slug is an app; Settings is a second page of the same app.
-        // FluentKit reads the open page's own entry for the page title and the phone menu, so it repeats the app's.
-        $apps[AdminSettings::SLUG] = $apps[self::SLUG] + ['hide_on_menu' => true, 'parent_slug' => self::SLUG];
+        // FluentKit reads the open page's own entry for the page title, the phone menu and which sidebar app is open,
+        // so Settings repeats the app's entry and only the open page's entry is listed in the sidebar.
+        $on_settings = ($_GET['page'] ?? '') === AdminSettings::SLUG; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        $apps[AdminSettings::SLUG] = ['parent_slug' => self::SLUG, 'disabled' => !$on_settings || $apps[self::SLUG]['disabled']] + $apps[self::SLUG];
+        $apps[self::SLUG]['disabled'] = $on_settings || $apps[self::SLUG]['disabled'];
 
         return $apps;
     }
