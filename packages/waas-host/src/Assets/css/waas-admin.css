@@ -165,7 +165,7 @@
 .ap-admin input[type="number"],
 .ap-admin select,
 .ap-admin textarea { border: 1px solid var(--ap-line); border-radius: var(--ap-r-btn); padding: 7px 11px; background: var(--ap-paper); color: var(--ap-ink); box-shadow: none; max-width: 100%; }
-.ap-admin select { padding-right: 28px; }
+.ap-admin select { height: auto; min-height: 38px; line-height: 1.4; padding: 7px 30px 7px 11px; }
 .ap-admin input:focus,
 .ap-admin select:focus,
 .ap-admin textarea:focus { border-color: var(--ap-ink); box-shadow: 0 0 0 1px var(--ap-ink); outline: 0; }
@@ -178,10 +178,12 @@
 .ap-banner.is-warn { background: var(--ap-warn-bg); }
 .ap-banner.is-bad { background: var(--ap-bad-bg); }
 .ap-tiers { border-collapse: separate; border-spacing: 0; margin-top: 10px; border: 1px solid var(--ap-line); border-radius: var(--ap-r-tile); overflow: hidden; min-width: 240px; }
-.ap-tiers th,
-.ap-tiers td { padding: 7px 14px; text-align: left; font-size: 13.5px; }
-.ap-tiers th { background: var(--ap-paper-2); font-weight: 600; color: var(--ap-ink-soft); }
-.ap-tiers td { border-top: 1px solid var(--ap-hair); font-variant-numeric: tabular-nums; }
+.ap-setcard .form-table .ap-tiers th,
+.ap-setcard .form-table .ap-tiers td { width: auto; padding: 7px 18px; text-align: left; font-size: 13.5px; line-height: 1.4; display: table-cell; }
+.ap-setcard .form-table .ap-tiers th { background: var(--ap-paper-2); font-weight: 600; color: var(--ap-ink-soft); }
+.ap-setcard .form-table .ap-tiers td { border-top: 1px solid var(--ap-hair); font-variant-numeric: tabular-nums; }
+.ap-setcard .form-table .ap-tiers tr + tr { border-top: 0; }
+.ap-setcard .ap-tiers + .description { margin-top: 10px; }
 
 /* Emails */
 .ap-emails { display: grid; margin-top: 8px; }
@@ -189,6 +191,7 @@
 .ap-email:first-child { border-top: 0; }
 .ap-email .ap-pill { justify-self: start; }
 .ap-email p { color: var(--ap-ink-soft); font-size: 13.5px; }
+.ap-email .ap-subject { color: var(--ap-ink); font-size: 13px; margin-top: 2px; overflow-wrap: anywhere; }
 .ap-field { display: grid; gap: 6px; padding: 12px 0; }
 .ap-field > label,
 .ap-label { font-weight: 600; font-size: 14px; }
@@ -219,7 +222,9 @@
 @media (max-width: 860px) {
     .ap-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .ap-settings { grid-template-columns: minmax(0, 1fr); gap: 14px; }
-    .ap-setnav { position: static; display: flex; overflow-x: auto; gap: 6px; padding-bottom: 2px; }
+    .ap-setnav { position: static; display: flex; flex-wrap: wrap; gap: 6px; }
+    .ap-setnav a { border: 1px solid var(--ap-line); padding: 6px 12px; }
+    .ap-setnav a[aria-current="page"] { background: var(--ap-ink); color: #fff; border-color: var(--ap-ink); box-shadow: none; }
 }
 
 @media (max-width: 782px) {
@@ -240,7 +245,7 @@
     .ap-list .ap-c-cust { grid-column: 1; color: var(--ap-ink-soft); font-size: 13px; }
     .ap-list .ap-c-status { grid-column: 2; grid-row: 1; justify-self: end; align-self: start; }
     .ap-list .ap-c-act { grid-column: 2; grid-row: 2; justify-self: end; }
-    .ap-email { grid-template-columns: 52px minmax(0, 1fr); }
+    .ap-email { grid-template-columns: 52px minmax(0, 1fr); align-items: start; }
     .ap-email .ap-btn { grid-column: 2; justify-self: start; }
     .ap-setcard .form-table th { width: auto; padding: 14px 0 4px; }
     .ap-setcard .form-table td { padding: 0 0 14px; }

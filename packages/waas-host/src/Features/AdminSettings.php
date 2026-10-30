@@ -255,7 +255,9 @@ class AdminSettings
                 $on = get_option($email['send'], 'on') === 'on';
                 $subject = (string) get_option($email['subject']) ?: call_user_func($email['default_subject']);
                 echo '<div class="ap-email"><span class="ap-pill ' . ($on ? 'is-ok' : '') . '">' . esc_html($on ? __('On', 'waas-host') : __('Off', 'waas-host')) . '</span>'
-                    . '<div><strong>' . esc_html($email['title']) . '</strong><p>' . esc_html($email['when']) . ' “' . esc_html($subject) . '”</p></div>'
+                    . '<div><strong>' . esc_html($email['title']) . '</strong><p>' . esc_html($email['when']) . '</p>'
+                    /* translators: %s: the email's subject line */
+                    . '<p class="ap-subject">' . esc_html(sprintf(__('Subject: %s', 'waas-host'), $subject)) . '</p></div>'
                     . '<a class="ap-btn is-sm" href="' . esc_url(self::url('emails', ['email' => $slug])) . '">' . esc_html__('Edit', 'waas-host') . '</a></div>';
             }
             echo '</div>';

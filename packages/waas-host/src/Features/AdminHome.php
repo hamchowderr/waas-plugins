@@ -422,7 +422,10 @@ class AdminHome
                     </div>
                     <div class="ap-progress" role="progressbar" aria-valuemin="0" aria-valuemax="<?php echo (int) $total; ?>" aria-valuenow="<?php echo (int) $done; ?>"><i style="width:<?php echo (int) round($done / max(1, $total) * 100); ?>%"></i></div>
                     <ol class="ap-steps">
-                        <?php $n = 0; foreach ($checklist_items as $item) :
+                        <?php
+                        $n = 0;
+                        $first_todo = 1 + (int) array_search(false, array_map(fn ($item) => !empty($item['is_done']), array_values($checklist_items)), true);
+                        foreach ($checklist_items as $item) :
                             $n++;
                             $is_done = !empty($item['is_done']); ?>
                             <li class="<?php echo $is_done ? 'is-done' : 'is-todo'; ?>">
@@ -435,7 +438,7 @@ class AdminHome
                                     <?php endif; ?>
                                 </div>
                                 <?php if (!$is_done && !empty($item['action_url'])) : ?>
-                                    <a class="ap-btn is-sm<?php echo $n === $done + 1 ? ' is-ink' : ''; ?>" href="<?php echo esc_url($item['action_url']); ?>"><?php echo esc_html($item['action_label'] ?? __('Set up', 'waas-host')); ?></a>
+                                    <a class="ap-btn is-sm<?php echo $n === $first_todo ? ' is-ink' : ''; ?>" href="<?php echo esc_url($item['action_url']); ?>"><?php echo esc_html($item['action_label'] ?? __('Set up', 'waas-host')); ?></a>
                                 <?php endif; ?>
                             </li>
                         <?php endforeach; ?>

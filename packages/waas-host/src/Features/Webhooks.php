@@ -238,7 +238,7 @@ class Webhooks
             $label = __('Register', 'waas-host');
         }
 
-        echo '<p><a class="button" href="' . esc_url(self::register_url()) . '">' . esc_html($label) . '</a></p>';
+        echo '<p><a class="ap-btn is-sm" href="' . esc_url(self::register_url()) . '">' . esc_html($label) . '</a></p>';
     }
 
     /**

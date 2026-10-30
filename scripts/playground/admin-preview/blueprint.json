@@ -1,0 +1,52 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "landingPage": "/wp-admin/admin.php?page=waas-admin",
+  "preferredVersions": {
+    "php": "8.3",
+    "wp": "latest"
+  },
+  "login": true,
+  "steps": [
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "wordpress.org/plugins",
+        "slug": "fluent-cart"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/SHA/scripts/playground/preview-zips/waas-host.zip"
+      },
+      "options": {
+        "activate": true,
+        "targetFolderName": "waas-host"
+      }
+    },
+    {
+      "step": "writeFile",
+      "path": "/wordpress/wp-content/mu-plugins/waas-admin-preview.php",
+      "data": {
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/SHA/scripts/playground/admin-preview/seed.php"
+      }
+    },
+    {
+      "step": "runPHP",
+      "code": "<?php\n// Loading WordPress once runs the seed (mu-plugin, on init), so the first page shows the sample websites.\nrequire '/wordpress/wp-load.php';",
+      "progress": {
+        "caption": "Adding the sample websites"
+      }
+    }
+  ],
+  "meta": {
+    "title": "WaaS Host: the AnyPress admin pages",
+    "description": "A storefront selling websites, connected and with sample customers and websites in every state, signed in as its admin.",
+    "author": "hamchowderr"
+  }
+}
