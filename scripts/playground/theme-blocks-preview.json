@@ -1,28 +1,111 @@
 {
   "$schema": "https://playground.wordpress.net/blueprint-schema.json",
   "meta": {
-    "title": "AnyPress theme 0.5.1 with AnyPress Blocks 0.3.0",
-    "description": "The Ridge kit with the popup, carousel, counters and map running on the Interactivity API, plus a page on the new Blank page template.",
-    "author": "hamchowderr"
+    "title": "AnyPress store template v1.1.5 preview",
+    "author": "hamchowderr",
+    "description": "AnyPress theme 0.7.0 and AnyPress Blocks 0.3.0 with WaaS Client 2.4.0: site details on every kit, synced patterns with overrides, wide and sidebar templates, and the MCP Adapter switch."
   },
-  "landingPage": "/blocks-preview/",
-  "preferredVersions": { "php": "8.3", "wp": "latest" },
+  "landingPage": "/store-preview/",
+  "preferredVersions": {
+    "php": "8.3",
+    "wp": "latest"
+  },
   "steps": [
     {
+      "step": "login"
+    },
+    {
+      "step": "writeFile",
+      "path": "/wordpress/wp-content/mu-plugins/anypress-preview-store.php",
+      "data": "<?php\n// Preview only: makes WaaS Client behave as on an AnyPress store (the Your plan page, plan-managed plugins).\nputenv('WAAS_IS_TENANT=true');\ndefine('WAAS_TENANT_ROLES', 'everything');\n"
+    },
+    {
       "step": "installTheme",
-      "themeData": { "resource": "git:directory", "url": "https://github.com/hamchowderr/anypress-theme", "ref": "7df3288704d573e78dad01a6e69be9a7c9c339fe", "refType": "commit", "path": "/" },
-      "options": { "activate": true, "targetFolderName": "anypress" }
+      "themeData": {
+        "resource": "git:directory",
+        "url": "https://github.com/hamchowderr/anypress-theme",
+        "ref": "120b7c97e828983baf31f92ccdaee2d4c5b9672c",
+        "refType": "commit",
+        "path": "/"
+      },
+      "options": {
+        "activate": true,
+        "targetFolderName": "anypress"
+      }
     },
     {
       "step": "installPlugin",
-      "pluginData": { "resource": "git:directory", "url": "https://github.com/hamchowderr/anypress-blocks", "ref": "3b8c30711b1472e9d5ef8ff14171eafb01cdc7b1", "refType": "commit", "path": "/" },
-      "options": { "activate": true, "targetFolderName": "anypress-blocks" }
+      "pluginData": {
+        "resource": "git:directory",
+        "url": "https://github.com/hamchowderr/anypress-blocks",
+        "ref": "a0a788dca32ce2075b32f8f2078003b08625ef30",
+        "refType": "commit",
+        "path": "/"
+      },
+      "options": {
+        "activate": true,
+        "targetFolderName": "anypress-blocks"
+      }
     },
-    { "step": "setSiteOptions", "options": { "permalink_structure": "/%postname%/", "blogname": "Ridge Plumbing" } },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/mcp-adapter.0.7.1.zip"
+      },
+      "options": {
+        "activate": false
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "git:directory",
+        "url": "https://github.com/hamchowderr/waas-plugins",
+        "ref": "6cdd12b62cfd4f4be74ef272c9b17c25abff4862",
+        "refType": "commit",
+        "path": "/packages/waas-client"
+      },
+      "options": {
+        "activate": false,
+        "targetFolderName": "waas-client"
+      }
+    },
+    {
+      "step": "mkdir",
+      "path": "/wordpress/wp-content/plugins/waas-client/vendor"
+    },
+    {
+      "step": "mkdir",
+      "path": "/wordpress/wp-content/plugins/waas-client-data"
+    },
+    {
+      "step": "writeFile",
+      "path": "/wordpress/wp-content/plugins/waas-client/vendor/autoload.php",
+      "data": "<?php\n// Preview only: what composer's autoloader does for WaaS Client (PSR-4, no other packages).\nspl_autoload_register(function ($class) {\n    if (strncmp($class, 'WaaSClient\\\\', 11) !== 0) return;\n    $file = __DIR__ . '/../src/' . str_replace('\\\\', '/', substr($class, 11)) . '.php';\n    if (is_file($file)) require $file;\n});\n"
+    },
+    {
+      "step": "writeFile",
+      "path": "/wordpress/wp-content/plugins/waas-client-data/roles.json",
+      "data": "{\"everything\": {\"title\": \"Everything\", \"plugins\": [\"anypress-blocks/anypress-blocks.php\"]}}"
+    },
+    {
+      "step": "activatePlugin",
+      "pluginPath": "waas-client/index.php"
+    },
+    {
+      "step": "setSiteOptions",
+      "options": {
+        "permalink_structure": "/%postname%/",
+        "blogname": "Rosa Plumbing"
+      }
+    },
     {
       "step": "runPHP",
-      "progress": { "caption": "Making the preview pages" },
-      "code": "<?php\nrequire '/wordpress/wp-load.php';\n$reg = WP_Block_Patterns_Registry::get_instance();\n$content = '';\nforeach (['anypress/ridge-page-about', 'anypress/ridge-numbers', 'anypress/ridge-areas-map', 'anypress/ridge-popup'] as $slug) {\n    $p = $reg->get_registered($slug);\n    if ($p) $content .= $p['content'] . \"\\n\\n\";\n}\nwp_insert_post(['post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Blocks preview', 'post_name' => 'blocks-preview', 'post_content' => $content]);\n$id = wp_insert_post(['post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Blank page preview', 'post_name' => 'blank-preview', 'post_content' => $content]);\nupdate_post_meta($id, '_wp_page_template', 'page-blank');\nflush_rewrite_rules(false);\n"
+      "progress": {
+        "caption": "Making the preview pages"
+      },
+      "code": "<?php\nrequire '/wordpress/wp-load.php';\n$reg = WP_Block_Patterns_Registry::get_instance();\n$pattern = function ($slug) use ($reg) { $p = $reg->get_registered($slug); return $p ? $p['content'] : ''; };\n$page = function ($title, $slug, $content, $template = null) {\n    $id = wp_insert_post(['post_type' => 'page', 'post_status' => 'publish', 'post_title' => $title, 'post_name' => $slug, 'post_content' => wp_slash($content)]);\n    if ($template) update_post_meta($id, '_wp_page_template', $template);\n    return $id;\n};\n\n// A clean start: no Sample Page or Hello world, so the menu is just the preview pages.\nforeach (get_posts(['post_type' => ['page', 'post'], 'numberposts' => -1, 'post_status' => 'any']) as $old) wp_delete_post($old->ID, true);\n\n// The business's own details: every bound phone, email, address and hours block shows these instead of the kit's demo text.\nupdate_option('anypress_site_details', ['name' => 'Rosa Plumbing', 'phone' => '(217) 555-0123', 'email' => 'hello@rosaplumbing.test', 'address' => \"88 Elm Street\\nSpringfield\", 'hours' => '7am to 7pm, seven days']);\n\n// Synced patterns, as the store template makes them (templates/anypress-store/presets.php).\n$overridable = ['core/heading', 'core/paragraph', 'core/button', 'core/image'];\n$withOverrides = function (array $blocks, array &$used) use (&$withOverrides, $overridable): array {\n    foreach ($blocks as &$block) {\n        if (in_array($block['blockName'], $overridable, true)) {\n            $kind = ['core/heading' => 'Heading', 'core/paragraph' => 'Text', 'core/button' => 'Button', 'core/image' => 'Image'][$block['blockName']];\n            $used[$kind] = ($used[$kind] ?? 0) + 1;\n            $block['attrs']['metadata'] = array_merge($block['attrs']['metadata'] ?? [], ['name' => $used[$kind] === 1 ? $kind : \"$kind {$used[$kind]}\", 'bindings' => ['__default' => ['source' => 'core/pattern-overrides']]]);\n        }\n        $block['innerBlocks'] = $withOverrides($block['innerBlocks'], $used);\n    }\n    return $blocks;\n};\n$synced = [];\nforeach (['anypress/notice' => ['Notice band', false], 'anypress/call-to-action-dark' => ['Call to action', true], 'anypress/testimonial-single' => ['Customer quote', true]] as $slug => [$title, $overrides]) {\n    $content = $pattern($slug);\n    if ($overrides) { $used = []; $content = serialize_blocks($withOverrides(parse_blocks($content), $used)); }\n    $synced[$title] = wp_insert_post(['post_type' => 'wp_block', 'post_status' => 'publish', 'post_title' => $title, 'post_content' => wp_slash($content)]);\n}\n$ref = fn ($title, $content = null) => '<!-- wp:block ' . wp_json_encode(array_filter(['ref' => $synced[$title], 'content' => $content])) . ' /-->';\n\n$contact = $page('Contact', 'contact-preview', $pattern('anypress/ridge-page-contact') . \"\\n\\n\" . $pattern('anypress/contact-details'));\n$a = $page('Synced one', 'synced-one', $ref('Notice band') . \"\\n\\n\" . $pattern('anypress/ridge-numbers') . \"\\n\\n\" . $ref('Call to action', ['Heading' => ['content' => 'Burst pipe? We can be there within the hour.'], 'Button' => ['text' => 'Call now', 'url' => '#call']]));\n$b = $page('Synced two', 'synced-two', $ref('Notice band') . \"\\n\\n\" . $pattern('anypress/ridge-areas-map') . \"\\n\\n\" . $ref('Customer quote') . \"\\n\\n\" . $ref('Call to action', ['Heading' => ['content' => 'Thinking about a new boiler? Get a fixed price.'], 'Button' => ['text' => 'Get a quote', 'url' => '#quote']]));\n$long = '<!-- wp:heading --><h2 class=\"wp-block-heading\">How we price a job</h2><!-- /wp:heading --><!-- wp:paragraph --><p>Every job gets a fixed price before we start. We look, we tell you what it costs and how long it takes, and that is what you pay.</p><!-- /wp:paragraph -->';\n$more = '<!-- wp:heading --><h2 class=\"wp-block-heading\">What happens on the day</h2><!-- /wp:heading --><!-- wp:paragraph --><p>We text when we set off, arrive in a marked van, cover the floor and clean up before we leave. If we find anything else, we show you a photo and ask first.</p><!-- /wp:paragraph -->';\n$wide = $page('Wide', 'wide-preview', $long . $pattern('anypress/ridge-numbers'), 'page-wide');\n$side = $page('Sidebar', 'sidebar-preview', $long . $more, 'page-with-sidebar');\n$blank = $page('Blank', 'blank-preview', $pattern('anypress/ridge-popup') . $pattern('anypress/call-to-action-dark'), 'page-blank');\nwp_insert_post(['post_type' => 'post', 'post_status' => 'publish', 'post_title' => 'Five signs your water heater needs replacing', 'post_content' => wp_slash($long . $more)]);\n\n$links = [\n    ['Contact page with the business\\'s own details (bound to Site details)', get_permalink($contact)],\n    ['Edit that page: type a new phone number into any bound block, save, and every page changes', admin_url(\"post.php?post=$contact&action=edit\")],\n    ['Synced patterns, page one (Notice band, Call to action with its own words)', get_permalink($a)],\n    ['Synced patterns, page two (same Notice band and design, different words)', get_permalink($b)],\n    ['The synced patterns (edit the Notice band once, both pages change)', admin_url('edit.php?post_type=wp_block')],\n    ['Wide page template', get_permalink($wide)],\n    ['Page with sidebar template', get_permalink($side)],\n    ['Blank page template (no header or footer)', get_permalink($blank)],\n    ['Your plan: AI apps (MCP) switch, off by default', admin_url('index.php?page=waas-your-plan#ai-apps')],\n];\n$list = '<!-- wp:list --><ul class=\"wp-block-list\">' . implode('', array_map(fn ($l) => '<!-- wp:list-item --><li><a href=\"' . esc_url($l[1]) . '\">' . esc_html($l[0]) . '</a></li><!-- /wp:list-item -->', $links)) . '</ul><!-- /wp:list -->';\n$page('Preview', 'store-preview', '<!-- wp:heading --><h2 class=\"wp-block-heading\">What to click through</h2><!-- /wp:heading -->' . $list);\nflush_rewrite_rules(false);\n"
     }
   ]
 }
