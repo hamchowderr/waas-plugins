@@ -101,6 +101,8 @@ case "${1:-}" in
     mkdir -p /var/www/html/wp-content/mu-plugins && cp /tmp/design/anypress-shop.php /var/www/html/wp-content/mu-plugins/
     chown 33:33 /var/www/html/wp-content/mu-plugins/anypress-shop.php
     $WP eval-file /tmp/design/design.php --user=admin
+    # The receipts and CRM emails in the AnyPress look (logo, colours, footer, replies to support@anypress.io).
+    $WP eval-file /tmp/design/emails.php --user=admin
     chown -R 33:33 /var/www/html/wp-content/uploads/anypress-shop /var/www/html/wp-content/uploads/fonts 2>/dev/null || true
     $WP cache flush ;;
   check)
