@@ -65,7 +65,7 @@ class WebhooksTest extends TestCase
     public function test_registers_the_receiver_for_the_events_it_handles_and_seals_the_secret(): void
     {
         $this->api->expects('create_webhook_endpoint')->once()
-            ->with('https://shop.example.com/wp-json/waas-host/v1/webhook', ['tenant.ready', 'tenant.restored', 'tenant.domains_changed', 'tenant.failed'], Mockery::type('string'))
+            ->with('https://shop.example.com/wp-json/waas-host/v1/webhook', ['tenant.ready', 'tenant.restored', 'tenant.deleted', 'tenant.domains_changed', 'tenant.failed'], Mockery::type('string'))
             ->andReturn($this->created('ep-1'));
 
         $this->assertFalse(Webhooks::is_registered());
@@ -90,6 +90,20 @@ class WebhooksTest extends TestCase
         $this->webhooks->connection_saved();
 
         $this->assertSame('ep-1', $this->options[Webhooks::OPTION]['id']);
+    }
+
+    public function test_an_endpoint_registered_for_fewer_events_is_replaced(): void
+    {
+        $this->api->expects('create_webhook_endpoint')->twice()->andReturn($this->created('ep-1'), $this->created('ep-2'));
+        $this->api->expects('delete_webhook_endpoint')->once()->with('ep-1');
+        $this->api->allows('get_webhook_endpoints')->andReturn([]);
+        $this->webhooks->ensure_registered();
+        // As an older version stored it: no event list.
+        unset($this->options[Webhooks::OPTION]['events']);
+
+        $this->webhooks->ensure_registered();
+
+        $this->assertSame('ep-2', $this->options[Webhooks::OPTION]['id']);
     }
 
     public function test_a_new_site_address_replaces_the_endpoint(): void

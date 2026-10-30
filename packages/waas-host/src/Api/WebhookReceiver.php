@@ -120,8 +120,13 @@ class WebhookReceiver
         }
 
         switch ($type) {
-            case 'tenant.ready':
+            case 'tenant.deleted':
+                $this->statusService->forget_if_gone($subscription_id);
+                return true;
             case 'tenant.restored':
+                $this->statusService->bring_back_if_restored($subscription_id);
+                // And on, as for ready.
+            case 'tenant.ready':
                 // The store is answering: take it on towards Ready now. A certificate that isn't served yet gets
                 // one more look in a few seconds; after that, the poll.
                 if (in_array($this->statusService->process_subscription($subscription_id), TenantStatusService::IN_PROGRESS, true)) {

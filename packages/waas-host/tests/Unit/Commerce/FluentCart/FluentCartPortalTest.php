@@ -76,8 +76,9 @@ class FluentCartPortalTest extends TestCase
         $this->portal->render();
         $html = ob_get_clean();
 
-        $this->assertStringContainsString('apex.sites.example', $html);
-        $this->assertStringContainsString('new.sites.example', $html);
+        // Long addresses break after a dot on a phone.
+        $this->assertStringContainsString('<h3>apex.<wbr>sites.<wbr>example</h3>', $html);
+        $this->assertStringContainsString('<h3>new.<wbr>sites.<wbr>example</h3>', $html);
         $this->assertStringContainsString('Setting up your website', $html);
         $this->assertSame(1, substr_count($html, 'tenant/single_login?subscription_id='), 'login only for the ready website');
         $this->assertStringContainsString('subscription_id=900', $html);
@@ -153,6 +154,25 @@ class FluentCartPortalTest extends TestCase
         $this->assertStringContainsString('Your website', $html);
         $this->assertStringContainsString('Status: </span>Setting up your website', $html);
         $this->assertStringNotContainsString('Status: Queued', $html);
+    }
+
+    public function test_a_removed_website_shows_last_without_its_buttons(): void
+    {
+        $this->meta[900][Tenant::TENANT_STATE] = Tenant::DELETED;
+        $this->meta[901][Tenant::TENANT_STATE] = Tenant::READY;
+        $this->domain_settings->expects('render_edit_domain')->with(901);
+        $this->domain_settings->expects('render_edit_domain')->with(900)->never();
+
+        ob_start();
+        $this->portal->render();
+        $html = ob_get_clean();
+
+        $removed = strpos($html, 'Status: </span>Removed');
+        $this->assertNotFalse($removed);
+        $this->assertGreaterThan(strpos($html, 'Status: </span>Online'), $removed, 'the removed website comes after the live one');
+        $this->assertStringContainsString('This website was removed.', $html);
+        $this->assertStringNotContainsString('subscription_id=900', $html, 'no log-in or assistant for it');
+        $this->assertStringContainsString('sub-900">Manage or cancel plan', $html);
     }
 
     public function test_a_failed_setup_shows_as_delayed(): void

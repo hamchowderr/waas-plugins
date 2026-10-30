@@ -273,7 +273,7 @@ class NameConflicts
     {
         ?>
         <form class="waas-choose-website-name" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-            <p><?php esc_html_e('The website name you picked was taken by someone else just before we could set up your website. Choose another name and we will set it up right away.', 'waas-host'); ?></p>
+            <p class="waas-acct-lead"><?php esc_html_e('The website name you picked was taken by someone else just before we could set up your website. Choose another name and we will set it up right away.', 'waas-host'); ?></p>
             <input type="hidden" name="action" value="<?php echo esc_attr(self::CHOOSE_ACTION); ?>" />
             <input type="hidden" name="subscription_id" value="<?php echo esc_attr((string) $subscription_id); ?>" />
             <?php wp_nonce_field(self::CHOOSE_ACTION . '_' . $subscription_id); ?>

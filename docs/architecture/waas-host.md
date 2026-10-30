@@ -194,7 +194,7 @@ Sources: `src/Commerce/FluentCart/FluentCartCheckout.php`, `src/Features/UserWcT
 
 - If a retry runs after an earlier attempt already created the website, `job_create` asks the API for it by `externalId` and adopts it, so a website is never made twice.
 - The `POST /v1/tenants` body carries: name, WordPress username (from the customer's name) and email, the default user role, group and size, the roles, the public login key, whether to remove plugin rights from administrators, and the options `blogname`, `admin_email` and `waas_store_owner` (JSON: the billing country, name, phone and address, which the store fills in as its business details, time zone and currency).
-- Every 1 minute a second cron copies each website's current domain from `GET /v1/tenants`, so the API stays the source of truth for domains. A `tenant.domains_changed` webhook does the same for one website at once.
+- Every 1 minute a second cron copies each website's current domain from `GET /v1/tenants`, so the API stays the source of truth for domains. A `tenant.domains_changed` webhook does the same for one website at once. The same cron shows a live website the list no longer has as Removed (an empty list marks nothing), and brings one shown as Removed back once the list has it again, Done and not suspended.
 
 ## The background job queue
 
@@ -297,12 +297,13 @@ Sources: `src/Features/AdminSettings.php` (`render_waas_admin_page`), `src/Featu
 
 | Event | What WaaS Host does |
 |---|---|
-| `tenant.ready`, `tenant.restored` | Runs the poller's steps for that website now. If HTTPS doesn't answer 200 yet, one re-check 5 seconds later, then the poll |
+| `tenant.ready`, `tenant.restored` | Runs the poller's steps for that website now. If HTTPS doesn't answer 200 yet, one re-check 5 seconds later, then the poll. A website shown as removed that was restored outside the storefront (dashboard, API) goes back through those steps to Ready |
+| `tenant.deleted` | Once `GET /v1/tenants?externalId=` no longer has the website, it is shown as Removed on the account page, without its log-in, assistant, domain and email buttons |
 | `tenant.domains_changed` | A live website takes the API's current domain, read again with `GET /v1/tenants?externalId=`. One still being set up gets the poller's next step |
 | `tenant.failed` | Saved on the subscription (`_waas_tenant_api_failure`), logged, `waas_tenant_failed` fired, and shown in an admin notice until dismissed or the website is Ready. The state is left to the poll |
-| Anything else | Answered 200 and ignored. Suspend, resume and delete start on the storefront, which already knows |
+| Anything else | Answered 200 and ignored. Suspend and resume start on the storefront, which already knows |
 
-- **Registering** happens when the Connection tab is saved and the API answers, from the tab's **Register** button, and in an hourly WP-Cron check that needs no admin (API settings in `wp-config.php`, a site that moved). Endpoints at the same URL that WaaS Host has no secret for are deleted first, so a lost answer doesn't leave extras behind.
+- **Registering** happens when the Connection tab is saved and the API answers, from the tab's **Register** button, and in an hourly WP-Cron check that needs no admin (API settings in `wp-config.php`, a site that moved, an endpoint an older version registered for fewer events). Endpoints at the same URL that WaaS Host has no secret for are deleted first, so a lost answer doesn't leave extras behind.
 - **Answers:** 401 for a missing, stale or wrong signature, 400 for a body that isn't an event, 200 for everything else, a repeat included. The event id is remembered only once the event was handled, so a delivery that failed here is retried by the API.
 - **Polling:** the status cron runs every minute while an endpoint is registered and every five seconds while not. The cron run moves itself to the other schedule when that changes.
 
