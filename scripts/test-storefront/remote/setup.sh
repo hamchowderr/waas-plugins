@@ -87,8 +87,8 @@ case "${1:-}" in
     # The shop's look (shop only): the AnyPress theme at the release the store template pins, then remote/design from
     # GitHub at DESIGN_REF (a branch, tag or commit; default main): its mu-plugin, then design.php writes the styles,
     # templates and pages. Run it again after a price change, so the home and plans pages show the new prices.
-    THEME_VERSION=0.5.0
-    THEME_SHA256=2dd1c0e36d0002d4a1169faef127f0e7009158174bd317b445baef175f30ba7b
+    THEME_VERSION=0.6.0
+    THEME_SHA256=67e26cf568ba5ba3d1c44e7870fd1565ab4fabc6ce8891a0209ad3bcb027f018
     if [ "$($WP theme get anypress --field=version 2>/dev/null)" != "$THEME_VERSION" ]; then
       curl -fsSL -o /tmp/anypress.zip "https://github.com/hamchowderr/anypress-theme/releases/download/v$THEME_VERSION/anypress.zip"
       echo "$THEME_SHA256  /tmp/anypress.zip" | sha256sum -c --quiet || { echo "AnyPress theme checksum mismatch"; exit 1; }

@@ -15,7 +15,7 @@ import { runCLI } from '@wp-playground/cli';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DESIGN = resolve(HERE, '../test-storefront/remote/design');
 const THEME = process.env.ANYPRESS_THEME ? resolve(process.env.ANYPRESS_THEME) : null;
-const THEME_ZIP = 'https://github.com/hamchowderr/anypress-theme/releases/download/v0.5.0/anypress.zip';
+const THEME_ZIP = 'https://github.com/hamchowderr/anypress-theme/releases/download/v0.6.0/anypress.zip';
 const SHOTS = process.argv.includes('--shots');
 const PORT = Number(process.env.PLAYGROUND_PORT || 9420);
 

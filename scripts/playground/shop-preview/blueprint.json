@@ -19,7 +19,7 @@
       "themeData": {
         "resource": "git:directory",
         "url": "https://github.com/hamchowderr/anypress-theme",
-        "ref": "v0.5.0",
+        "ref": "v0.6.0",
         "refType": "tag",
         "path": "/"
       },
