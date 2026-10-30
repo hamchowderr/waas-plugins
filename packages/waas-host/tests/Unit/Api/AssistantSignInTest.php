@@ -16,7 +16,6 @@ use WaaSHost\Core\Tenant;
 class AssistantSignInTest extends TestCase
 {
     private const ASSISTANT = 'https://assistant.example.com';
-    private const CHALLENGE = 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM';
 
     private FakeCommerceAdapter $cart;
     /** @var ConfigService&\Mockery\MockInterface */
@@ -47,55 +46,36 @@ class AssistantSignInTest extends TestCase
         parent::tearDown();
     }
 
-    private function step(string $client_id = '', string $redirect_uri = '', string $state = ''): array
+    private function step(): array
     {
-        return (new AssistantSignIn($this->config, $this->api))->next_step(42, $client_id, $redirect_uri, self::CHALLENGE, $state);
+        return (new AssistantSignIn($this->config, $this->api))->next_step(42);
     }
 
-    public function test_the_button_first_sends_the_owner_to_the_assistant_with_the_way_back(): void
+    public function test_the_button_sends_the_owner_to_the_assistant_with_the_api_handoff(): void
     {
-        $step = $this->step();
+        $next = self::ASSISTANT . '/from-shop?handoff=abc';
+        $this->api->expects('site_handoff')->with('store-42', self::ASSISTANT)->andReturn($next);
 
-        $this->assertStringStartsWith(self::ASSISTANT . '/from-shop?shop=', $step['redirect']);
-        $back = rawurldecode(substr($step['redirect'], strlen(self::ASSISTANT . '/from-shop?shop=')));
-        $this->assertSame('https://shop.example.com/wp-json/waas/v1/tenant/assistant?subscription_id=42&_wpnonce=nonce1', $back);
-    }
-
-    public function test_the_api_code_goes_back_to_the_assistant(): void
-    {
-        $next = self::ASSISTANT . '/callback?code=abc&state=s1&iss=https%3A%2F%2Fapi.example.com';
-        $this->api->expects('site_sign_in')
-            ->with('store-42', ['clientId' => 'client-1', 'redirectUri' => self::ASSISTANT . '/callback', 'codeChallenge' => self::CHALLENGE, 'state' => 's1'])
-            ->andReturn($next);
-
-        $this->assertSame(['redirect' => $next], $this->step('client-1', self::ASSISTANT . '/callback', 's1'));
-    }
-
-    public function test_never_signs_in_for_another_address(): void
-    {
-        $this->api->shouldNotReceive('site_sign_in');
-
-        $step = $this->step('client-1', 'https://evil.example.com/callback');
-
-        $this->assertSame(400, $step['status']);
+        $this->assertSame(['redirect' => $next], $this->step());
     }
 
     public function test_an_api_answer_for_another_address_is_not_followed(): void
     {
-        $this->api->allows('site_sign_in')->andReturn('https://evil.example.com/callback?code=abc');
+        $this->api->allows('site_handoff')->andReturn('https://evil.example.com/from-shop?handoff=abc');
 
-        $this->assertSame(502, $this->step('client-1', self::ASSISTANT . '/callback')['status']);
+        $this->assertSame(502, $this->step()['status']);
     }
 
     public function test_an_unreachable_api_shows_a_plain_message(): void
     {
-        $this->api->allows('site_sign_in')->andThrow(new Exception('Failed: timeout'));
+        $this->api->allows('site_handoff')->andThrow(new Exception('Failed: timeout'));
 
-        $this->assertSame(502, $this->step('client-1', self::ASSISTANT . '/callback')['status']);
+        $this->assertSame(502, $this->step()['status']);
     }
 
-    public function test_not_offered_for_a_website_that_is_not_ready_or_without_the_setting(): void
+    public function test_not_offered_for_a_website_that_is_not_ready_or_without_an_assistant(): void
     {
+        $this->api->shouldNotReceive('site_handoff');
         $this->cart->meta[42][Tenant::TENANT_STATE] = Tenant::PROVISIONING;
         $this->assertSame(404, $this->step()['status']);
 

@@ -159,4 +159,35 @@ class ConfigServiceTest extends TestCase
         $this->assertSame(['198.51.100.1', '198.51.100.2'], $config->get_dns_a_records());
         $this->assertSame('edge.from-constant.example', $config->get_dns_cname_target());
     }
+
+    private function assistant(): string
+    {
+        Functions\when('wp_parse_url')->alias(fn ($url, $part) => parse_url($url, $part));
+        Functions\when('esc_url_raw')->returnArg();
+        return (new ConfigService())->get_assistant_url();
+    }
+
+    public function test_a_storefront_on_the_anypress_api_offers_its_assistant_without_a_setting(): void
+    {
+        $this->options['waas_api_base_url'] = 'https://api.anypress.io';
+
+        $this->assertSame(ConfigService::ANYPRESS_ASSISTANT_URL, $this->assistant());
+    }
+
+    public function test_clearing_the_setting_hides_the_assistant(): void
+    {
+        $this->options['waas_api_base_url'] = 'https://api.anypress.io';
+        $this->options['waas_assistant_url'] = '';
+
+        $this->assertSame('', $this->assistant());
+    }
+
+    public function test_another_api_gets_no_assistant_unless_one_is_set(): void
+    {
+        $this->options['waas_api_base_url'] = 'https://api.example.com';
+        $this->assertSame('', $this->assistant());
+
+        $this->options['waas_assistant_url'] = 'https://assistant.example.com/';
+        $this->assertSame('https://assistant.example.com', $this->assistant());
+    }
 }
