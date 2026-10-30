@@ -1,0 +1,28 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "meta": {
+    "title": "AnyPress theme 0.5.1 with AnyPress Blocks 0.3.0",
+    "description": "The Ridge kit with the popup, carousel, counters and map running on the Interactivity API, plus a page on the new Blank page template.",
+    "author": "hamchowderr"
+  },
+  "landingPage": "/blocks-preview/",
+  "preferredVersions": { "php": "8.3", "wp": "latest" },
+  "steps": [
+    {
+      "step": "installTheme",
+      "themeData": { "resource": "git:directory", "url": "https://github.com/hamchowderr/anypress-theme", "ref": "7df3288704d573e78dad01a6e69be9a7c9c339fe", "refType": "commit", "path": "/" },
+      "options": { "activate": true, "targetFolderName": "anypress" }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": { "resource": "git:directory", "url": "https://github.com/hamchowderr/anypress-blocks", "ref": "3b8c30711b1472e9d5ef8ff14171eafb01cdc7b1", "refType": "commit", "path": "/" },
+      "options": { "activate": true, "targetFolderName": "anypress-blocks" }
+    },
+    { "step": "setSiteOptions", "options": { "permalink_structure": "/%postname%/", "blogname": "Ridge Plumbing" } },
+    {
+      "step": "runPHP",
+      "progress": { "caption": "Making the preview pages" },
+      "code": "<?php\nrequire '/wordpress/wp-load.php';\n$reg = WP_Block_Patterns_Registry::get_instance();\n$content = '';\nforeach (['anypress/ridge-page-about', 'anypress/ridge-numbers', 'anypress/ridge-areas-map', 'anypress/ridge-popup'] as $slug) {\n    $p = $reg->get_registered($slug);\n    if ($p) $content .= $p['content'] . \"\\n\\n\";\n}\nwp_insert_post(['post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Blocks preview', 'post_name' => 'blocks-preview', 'post_content' => $content]);\n$id = wp_insert_post(['post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Blank page preview', 'post_name' => 'blank-preview', 'post_content' => $content]);\nupdate_post_meta($id, '_wp_page_template', 'page-blank');\nflush_rewrite_rules(false);\n"
+    }
+  ]
+}
