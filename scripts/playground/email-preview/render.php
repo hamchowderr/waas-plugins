@@ -41,7 +41,7 @@ foreach ( \FluentCart\App\Services\Email\EmailNotifications::getNotifications() 
 	);
 }
 
-// FluentCRM: two of the shop's automation emails, rendered the way an automation sends them.
+// FluentCRM: two of the shop's automation emails in the layout emails.php gives them, rendered the way FluentCRM sends.
 $contact = \FluentCrm\App\Models\Subscriber::where( 'email', 'pat@example.com' )->first()
 	?: \FluentCrm\App\Models\Subscriber::create( array( 'email' => 'pat@example.com', 'first_name' => 'Pat', 'status' => 'subscribed' ) );
 $all     = json_decode( file_get_contents( '/wordpress/wp-content/anypress-remote/crm-emails.json' ), true );
@@ -57,8 +57,8 @@ foreach ( array( array( 'Email: Website owner welcome', 0 ), array( 'Email: Sell
 				'title'            => $email['subject'],
 				'email_subject'    => $email['subject'],
 				'email_pre_header' => $email['preheader'],
-				'email_body'       => $email['body'],
-				'design_template'  => $mock['design_template'],
+				'email_body'       => anypress_crm_email_html( $email['body'], $email['subject'], $email['preheader'], 'support@anypress.io' ),
+				'design_template'  => 'raw_html',
 				'settings'         => (array) $mock['settings'],
 				'status'           => 'draft',
 			)

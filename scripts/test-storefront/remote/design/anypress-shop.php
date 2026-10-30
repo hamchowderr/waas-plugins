@@ -215,8 +215,9 @@ add_filter(
 );
 
 /**
- * WaaS Host's website emails: the AnyPress mark next to the name, and support@anypress.io in the footer and Reply-To,
- * as in the AnyPress API's account emails.
+ * WaaS Host's website emails: the AnyPress mark next to the name, the AnyPress colour strip, and support@anypress.io in
+ * the footer and Reply-To, as in the AnyPress API's account emails.
  */
 add_filter( 'waas_email_logo_url', static fn () => 'https://anypress.io/logo-512.png' );
 add_filter( 'waas_email_support_address', static fn () => 'support@anypress.io' );
+add_filter( 'waas_email_accent', static fn () => 'linear-gradient(90deg,#ffc75a,#ff7a2a,#ee2f5e,#d21fa4)' );
