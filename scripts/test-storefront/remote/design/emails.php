@@ -21,7 +21,13 @@ if ( class_exists( '\FluentCart\Api\StoreSettings' ) ) {
 			'email_footer'   => '<p>Questions? Write to <a href="mailto:' . $ap_support . '" style="color:#5f5a55">' . $ap_support . '</a> or just reply to this email.</p>',
 		)
 	);
-	echo "FluentCart: logo, sender name, reply-to and footer set\n";
+	// The store digest (FluentCart's weekly report to the admin) keeps FluentCart's own design and a Pro ad: off.
+	$ap_digest = \FluentCart\App\Services\Email\StoreDigestService::getSettings();
+	foreach ( array( 'daily', 'weekly', 'monthly' ) as $ap_cadence ) {
+		$ap_digest[ $ap_cadence ]['enabled'] = 'no';
+	}
+	\FluentCart\App\Services\Email\StoreDigestService::saveSettings( $ap_digest );
+	echo "FluentCart: logo, sender name, reply-to and footer set, store digest off\n";
 }
 
 if ( defined( 'FLUENTCRM' ) ) {
