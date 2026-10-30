@@ -34,7 +34,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 /**
  * @package WaaSHost
- * @version 2.2.7
+ * @version 2.4.1
  */
 /*
 Plugin Name: WaaS Host
