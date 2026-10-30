@@ -8,6 +8,16 @@
   "login": true,
   "steps": [
     {
+      "step": "installTheme",
+      "themeData": {
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/main/scripts/playground/preview-zips/anypress.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
       "step": "installPlugin",
       "pluginData": {
         "resource": "wordpress.org/plugins",

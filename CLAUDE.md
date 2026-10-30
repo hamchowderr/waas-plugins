@@ -15,7 +15,7 @@ How they fit together: `docs/architecture/`. Releases and the update channel: `d
 ## Building and testing
 
 - In the package you change: `composer install`, then `composer test -- --exclude-group mock` (the `mock` group needs network). CI runs PHP 8.1 and 8.3, so keep code valid on 8.1.
-- `scripts/playground`: `npm ci`, then `npm run smoke` (WaaS Client's site-editing API and abilities on WordPress Playground with Ollie), `npm run export` (AnyPress Export end to end), `npm run forms` (WaaS Client's forms switch from Contact Form 7, WPForms and Ninja Forms to Fluent Forms) and `npm run shop` (a copy of shop.anypress.io with its design from `scripts/test-storefront/remote/design`; `-- --shots` screenshots every page). Playground uses SQLite; plugins that need MySQL warn there but most still work.
+- `scripts/playground`: `npm ci`, then `npm run smoke` (WaaS Client's site-editing API and abilities on WordPress Playground with the AnyPress theme), `npm run export` (AnyPress Export end to end), `npm run forms` (WaaS Client's forms switch from Contact Form 7, WPForms and Ninja Forms to Fluent Forms) and `npm run shop` (a copy of shop.anypress.io with its design from `scripts/test-storefront/remote/design`; `-- --shots` screenshots every page). Playground uses SQLite; plugins that need MySQL warn there but most still work.
 - `scripts/test-env.sh` and `docker-compose.yml`: a full local storefront with the Host plugin.
 - After changing `packages/waas-updater`, run `scripts/sync-updater.sh`; CI fails when the copies drift.
 
@@ -28,7 +28,8 @@ WaaS Client never updates itself in stores: a new release reaches stores only th
 ## Building for WordPress
 
 - Use the WordPress skills in `.claude/skills/` (list in its README): `wp-plugin-development` for structure and security, `wp-rest-api` for routes, `wp-abilities-api` and `wp-abilities-verify` for abilities, `wp-playground` and `blueprint` for tests and previews, `wp-phpstan` for static analysis.
-- Stores run WordPress 7.1 on PHP 8.3 with the **Ollie** block theme (free, wordpress.org). Anything WaaS Client adds to a store's pages must be block markup that uses Ollie's patterns and its `theme.json` colour, font and spacing slugs, not fixed values (`wp-block-themes`, `wp-patterns`). Store pages are edited in WordPress, never headless.
+- Stores run WordPress 7.1 on PHP 8.3 with the **AnyPress** block theme (`hamchowderr/anypress-theme`; stores made before it run Ollie). Anything WaaS Client adds to a store's pages must be block markup that uses the theme's patterns and its `theme.json` colour, font and spacing slugs, not fixed values (`wp-block-themes`, `wp-patterns`). Store pages are edited in WordPress, never headless.
+- Every Playground blueprint and preview installs the AnyPress theme from `scripts/playground/preview-zips/anypress.zip` (kept at the latest theme release), never Ollie or Twenty Twenty-Five.
 - Every write route checks a capability or the request signature, every input is sanitized and every output escaped. Site-editing writes keep a revision so they can be undone.
 - Sites must keep working when the API can't be reached: cache answers, fail quietly in the front end, and show admins a plain notice.
 

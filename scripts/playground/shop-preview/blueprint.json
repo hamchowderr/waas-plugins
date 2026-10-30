@@ -17,18 +17,11 @@
     {
       "step": "installTheme",
       "themeData": {
-        "resource": "git:directory",
-        "url": "https://github.com/hamchowderr/anypress-theme",
-        "ref": "v0.6.0",
-        "refType": "tag",
-        "path": "/"
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/main/scripts/playground/preview-zips/anypress.zip"
       },
       "options": {
-        "activate": true,
-        "targetFolderName": "anypress"
-      },
-      "progress": {
-        "caption": "Installing the AnyPress theme"
+        "activate": true
       }
     },
     {
