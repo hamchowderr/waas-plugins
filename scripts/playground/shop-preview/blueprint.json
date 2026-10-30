@@ -61,7 +61,7 @@
       "filesTree": {
         "resource": "git:directory",
         "url": "https://github.com/hamchowderr/waas-plugins",
-        "ref": "7d762fe35f372568b423b67f2f6de8ab47f6ec57",
+        "ref": "c01f8d6d13a8aae77300f850240c30556100f237",
         "refType": "commit",
         "path": "scripts/test-storefront/remote/design"
       },
@@ -79,7 +79,7 @@
       "filesTree": {
         "resource": "git:directory",
         "url": "https://github.com/hamchowderr/waas-plugins",
-        "ref": "7d762fe35f372568b423b67f2f6de8ab47f6ec57",
+        "ref": "c01f8d6d13a8aae77300f850240c30556100f237",
         "refType": "commit",
         "path": "scripts/playground/shop-preview"
       }
