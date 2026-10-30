@@ -21,7 +21,7 @@
       "step": "installPlugin",
       "pluginData": {
         "resource": "url",
-        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/245702c4ce4980a5c37eca6a026c708b0ce533e9/scripts/playground/preview-zips/waas-host.zip"
+        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/27efa5e1657d6c2d7cbaf162fd1ddf7fc03a9261/scripts/playground/preview-zips/waas-host.zip"
       },
       "options": {
         "activate": true,
@@ -33,7 +33,7 @@
       "path": "/wordpress/wp-content/mu-plugins/waas-admin-preview.php",
       "data": {
         "resource": "url",
-        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/245702c4ce4980a5c37eca6a026c708b0ce533e9/scripts/playground/admin-preview/seed.php"
+        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/27efa5e1657d6c2d7cbaf162fd1ddf7fc03a9261/scripts/playground/admin-preview/seed.php"
       }
     },
     {
