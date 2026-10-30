@@ -90,6 +90,48 @@ class TenantStatusServiceTest extends TestCase
         $this->assertSame('a.example.com', $this->cart->meta[1][Tenant::DOMAIN_NAME_META]);
     }
 
+    public function test_a_live_store_the_api_no_longer_has_is_shown_removed(): void
+    {
+        $this->cart->meta[1] = [Tenant::TENANT_STATE => Tenant::READY, Tenant::TENANT_EXTERNAL_ID_META => 'a', Tenant::DOMAIN_NAME_META => 'a.example.com'];
+        $this->cart->meta[2] = [Tenant::TENANT_STATE => Tenant::READY, Tenant::TENANT_EXTERNAL_ID_META => 'gone', Tenant::DOMAIN_NAME_META => 'gone.example.com'];
+        $api = Mockery::mock(ProvisioningApi::class);
+        $api->expects('get_tenants')->andReturn([(object) ['externalId' => 'a', 'domainName' => 'a.example.com', 'statusCode' => 1]]);
+
+        (new TenantStatusService($api))->sync_tenant_domains();
+
+        $this->assertSame(Tenant::READY, $this->cart->meta[1][Tenant::TENANT_STATE]);
+        $this->assertSame(Tenant::DELETED, $this->cart->meta[2][Tenant::TENANT_STATE]);
+        $this->assertSame('gone.example.com', $this->cart->meta[2][Tenant::DOMAIN_NAME_META], 'its address is kept for a restore');
+    }
+
+    public function test_an_empty_list_marks_nothing_removed(): void
+    {
+        $this->cart->meta[1] = [Tenant::TENANT_STATE => Tenant::READY, Tenant::TENANT_EXTERNAL_ID_META => 'a', Tenant::DOMAIN_NAME_META => 'a.example.com'];
+        $api = Mockery::mock(ProvisioningApi::class);
+        $api->expects('get_tenants')->andReturn([]);
+
+        (new TenantStatusService($api))->sync_tenant_domains();
+
+        $this->assertSame(Tenant::READY, $this->cart->meta[1][Tenant::TENANT_STATE]);
+    }
+
+    public function test_a_removed_store_restored_elsewhere_comes_back_but_one_being_removed_does_not(): void
+    {
+        $this->cart->meta[1] = [Tenant::TENANT_STATE => Tenant::DELETED, Tenant::TENANT_EXTERNAL_ID_META => 'back', Tenant::DOMAIN_NAME_META => 'back.example.com'];
+        $this->cart->meta[2] = [Tenant::TENANT_STATE => Tenant::DELETED, Tenant::TENANT_EXTERNAL_ID_META => 'removing', Tenant::DOMAIN_NAME_META => 'removing.example.com'];
+        $back = (object) ['externalId' => 'back', 'domainName' => 'back.example.com', 'statusCode' => 1, 'isSuspended' => false];
+        $api = Mockery::mock(ProvisioningApi::class);
+        $api->expects('get_tenants')->andReturn([$back, (object) ['externalId' => 'removing', 'domainName' => 'removing.example.com', 'statusCode' => 3]]);
+        $api->allows('get_tenant_safe')->with('back')->andReturn($back);
+        Functions\expect('wp_remote_head')->once()->with('https://back.example.com', ['redirection' => 0])->andReturn(['response' => ['code' => 200]]);
+        Functions\when('wp_remote_retrieve_response_code')->alias(fn ($response) => $response['response']['code']);
+
+        (new TenantStatusService($api))->sync_tenant_domains();
+
+        $this->assertSame(Tenant::READY, $this->cart->meta[1][Tenant::TENANT_STATE]);
+        $this->assertSame(Tenant::DELETED, $this->cart->meta[2][Tenant::TENANT_STATE]);
+    }
+
     /** Runs the poll the way WP-Cron does, from inside its hook (a test name; the cron event's real name is the plugin's). */
     private function run_poll_from_cron(TenantStatusService $service): void
     {
