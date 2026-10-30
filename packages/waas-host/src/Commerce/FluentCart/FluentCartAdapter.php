@@ -174,6 +174,12 @@ class FluentCartAdapter implements CommerceAdapter
         return $this->store->get_subscription_url($subscription_id);
     }
 
+    /** The subscription in FluentCart's admin, linked from the AnyPress Overview. */
+    public function get_admin_subscription_url($subscription_id): string
+    {
+        return $this->store->get_admin_subscription_url($subscription_id);
+    }
+
     public function is_subscription_active($subscription_id): bool
     {
         return in_array($this->store->get_subscription_status($subscription_id), FluentCartStore::ACTIVE_STATUSES, true);

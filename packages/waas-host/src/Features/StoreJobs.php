@@ -216,7 +216,8 @@ class StoreJobs
 
     public function show_failed_notice(): void
     {
-        if (!current_user_can('manage_options') || !($failed = $this->failed_stores())) {
+        // The AnyPress Overview lists these in place, with a Try again button.
+        if (!current_user_can('manage_options') || AdminHome::is_plugin_page() || !($failed = $this->failed_stores())) {
             return;
         }
 

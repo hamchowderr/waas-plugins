@@ -271,6 +271,14 @@ class WooCommerceAdapter implements CommerceAdapter
         return $subscription === null ? get_site_url() : $this->get_subscription_plugin()->get_subscription_url($subscription);
     }
 
+    /** The subscription in the WordPress admin, linked from the AnyPress Overview. */
+    public function get_admin_subscription_url($subscription_id): string
+    {
+        $subscription = $this->get_subscription($subscription_id);
+
+        return $subscription === null ? '' : (string) $subscription->get_edit_order_url();
+    }
+
     public function is_subscription_active($subscription_id): bool
     {
         $subscription = $this->get_subscription($subscription_id);

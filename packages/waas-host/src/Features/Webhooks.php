@@ -270,7 +270,8 @@ class Webhooks
     public function show_tenant_failures_notice(): void
     {
         $commerce = Commerce::adapter();
-        if ($commerce === null || !current_user_can('manage_options')) {
+        // The AnyPress Overview lists these in place.
+        if ($commerce === null || !current_user_can('manage_options') || AdminHome::is_plugin_page()) {
             return;
         }
 

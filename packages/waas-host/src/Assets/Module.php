@@ -12,8 +12,7 @@ class Module
     {
         add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_confirm_cancel_button']);
         add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_waas_product_data_visibility']);
-        add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_waas_settings_home_styles']);
-        add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_waas_settings_styles']);
+        add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_waas_admin_styles']);
     }
 
     public static function enqueue_confirm_cancel_button()
@@ -36,29 +35,16 @@ class Module
         wp_enqueue_script('waas-product-data-visibility', $src, ['jquery'], $version, true);
     }
 
-    public static function enqueue_waas_settings_home_styles($hook)
+    /** The AnyPress look on the plugin's own pages (Overview and Settings), checked by page slug, not hook name. */
+    public static function enqueue_waas_admin_styles()
     {
-        // Only load on the actual home settings page
-        if($hook !== 'toplevel_page_waas-admin') {
+        if (!\WaaSHost\Features\AdminHome::is_plugin_page()) {
             return;
         }
 
-        $style_name = 'waas-settings-home.css';
-        $src = plugin_dir_url( __FILE__ ) . "/css/$style_name";
+        $style_name = 'waas-admin.css';
+        $src = plugin_dir_url( __FILE__ ) . "css/$style_name";
         $version = gmdate("ymd-Gis", (int) filemtime( plugin_dir_path( __FILE__ ) . "css/$style_name" ));
-        wp_enqueue_style('waas-settings-home-style', $src, [], $version);
-    }
-
-    public static function enqueue_waas_settings_styles($hook)
-    {
-        // Only load on the actual home settings page
-        if($hook !== 'waas_page_waas-admin-settings') {
-            return;
-        }
-
-        $style_name = 'waas-settings.css';
-        $src = plugin_dir_url( __FILE__ ) . "/css/$style_name";
-        $version = gmdate("ymd-Gis", (int) filemtime( plugin_dir_path( __FILE__ ) . "css/$style_name" ));
-        wp_enqueue_style('waas-settings-style', $src, [], $version);
+        wp_enqueue_style('waas-admin-style', $src, [], $version);
     }
 }
