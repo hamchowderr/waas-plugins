@@ -197,6 +197,16 @@ What doesn't come across: order lines and history (FluentCRM free keeps none), c
 
 What the switch created, and each existing contact's values before it changed them, are kept in the `waas_client_crm_switch` option (not autoloaded). Sources: `src/Crm/CrmSwitch.php`, `src/Crm/ContactPlan.php`, `src/Crm/WooBuyers.php`, `src/Crm/MailPoetSubscribers.php`, `src/Crm/NewsletterSubscribers.php`, `src/Crm/CrmWriter.php`, `src/Crm/CrmCommand.php`, `src/Crm/CrmAbilities.php`. Tested end to end, with HPOS off and on, by `scripts/playground/crm-switch.mjs` (`npm run crm-switch`).
 
+## The website assistant beside the page
+
+Since 2.8.0 a store's administrators (anyone who can change its design, `edit_theme_options`) get an **Assistant** panel in the block editor and the Site Editor, opened from its star button in the editor's top bar, and an **Assistant** button in the admin bar that opens the page being viewed (or the Site Editor) with the panel open. The panel frames the website assistant's chat (`https://assistant.anypress.io/editor`; `WAAS_ASSISTANT_URL` changes it).
+
+- **Sign-in.** The chat asks the editor to sign it in. WaaS Client's `POST /wp-json/waas-client/v1/assistant/handoff` (same capability) asks the AnyPress API (`WAAS_API_URL`, default `https://api.anypress.io`) at `POST /oauth/site/store-handoff`, signed with the store's site key, and frames the one-time sign-in it answers. Only an address on the assistant's own site is framed.
+- **What the chat sees.** With each message the editor sends what it has open: the post type and id, its title, its top-level blocks and the selected block, each with its block markup.
+- **Changes.** The assistant's editor changes come back as replace, insert, remove or replace-everything, and land in the editor like any edit: the owner sees them, gets an Undo in the notice, and keeps them by pressing Save. Nothing is saved for them.
+- Messages go only to and from the assistant's own address (`postMessage` with its origin).
+- Stores only: without a site key (`WAAS_SITE_KEY`) there is no panel and no button.
+
 ## Updates
 
 WaaS Client does not update itself. Its `Update URI` header only keeps wordpress.org from offering updates. A website gets a newer WaaS Client when it is moved to a newer template version, whose code replaces the website's plugins (`index.php`, `tests/Unit/NoSelfUpdateTest.php`).

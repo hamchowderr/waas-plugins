@@ -94,4 +94,13 @@ class SignedRequestTest extends TestCase
 
         return "t=$time,n=$nonce,s=$signature";
     }
+
+    public function test_a_request_the_store_signs_itself_checks_out_the_same_way(): void
+    {
+        $header = SignedRequest::sign(self::KEY, 'POST', '/oauth/site/store-handoff', '{"site":"bakery.example"}');
+
+        $this->assertMatchesRegularExpression('/^t=\d+,n=[0-9a-f]{32},s=[0-9a-f]{64}$/', $header);
+        $this->assertTrue(SignedRequest::verify(self::KEY, $header, 'POST', '/oauth/site/store-handoff', '{"site":"bakery.example"}'));
+        $this->assertFalse(SignedRequest::verify(self::KEY, SignedRequest::sign(self::KEY, 'POST', '/oauth/site/store-handoff', '{}'), 'POST', '/oauth/site/store-handoff', '{"site":"other"}'));
+    }
 }

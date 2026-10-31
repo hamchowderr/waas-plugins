@@ -43,6 +43,17 @@ class SignedRequest
         return implode("\n", [$time, $nonce, strtoupper($method), $route, hash('sha256', $body)]);
     }
 
+    /**
+     * The header for a request this store signs itself (to the API), in the same form: "t=…,n=…,s=…".
+     */
+    public static function sign(string $key, string $method, string $route, string $body, ?int $now = null): string
+    {
+        $time = (string) ($now ?? time());
+        $nonce = bin2hex(random_bytes(16));
+
+        return 't=' . $time . ',n=' . $nonce . ',s=' . hash_hmac('sha256', self::payload($time, $nonce, $method, $route, $body), $key);
+    }
+
     /** True when the header is a current, unused signature of this request by $key. Marks the nonce used. */
     public static function verify(string $key, ?string $header, string $method, string $route, string $body, ?int $now = null): bool
     {
