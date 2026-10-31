@@ -15,7 +15,8 @@
     "shop-switch": "node shop-switch.mjs",
     "crm-switch": "node crm-switch.mjs",
     "emails": "node email-preview.mjs",
-    "editor": "node editor-assistant.mjs"
+    "editor": "node editor-assistant.mjs",
+    "moving": "node moving.mjs"
   },
   "dependencies": {
     "@wp-playground/cli": "3.1.59"

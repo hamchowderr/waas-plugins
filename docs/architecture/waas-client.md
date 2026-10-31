@@ -197,6 +197,32 @@ What doesn't come across: order lines and history (FluentCRM free keeps none), c
 
 What the switch created, and each existing contact's values before it changed them, are kept in the `waas_client_crm_switch` option (not autoloaded). Sources: `src/Crm/CrmSwitch.php`, `src/Crm/ContactPlan.php`, `src/Crm/WooBuyers.php`, `src/Crm/MailPoetSubscribers.php`, `src/Crm/NewsletterSubscribers.php`, `src/Crm/CrmWriter.php`, `src/Crm/CrmCommand.php`, `src/Crm/CrmAbilities.php`. Tested end to end, with HPOS off and on, by `scripts/playground/crm-switch.mjs` (`npm run crm-switch`).
 
+## Moving a help desk, an affiliate program or a community
+
+Fluent Support, FluentAffiliate and FluentCommunity each have their own importer. Three switches run those importers and add what they leave to the person running them: a check first, a count of what the source holds next to what came across, no email while they run, one run at a time, and an undo. Run them with WP-CLI as an administrator, with the Fluent plugin active:
+
+```sh
+wp waas support switch --user=admin --dry-run     # check and count; changes nothing
+wp waas affiliate switch --user=admin             # do it
+wp waas community switch --user=admin --undo      # take it back out
+```
+
+Add `--from=<source>` when more than one source plugin is active, and `--format=json` for the report as JSON. Each is also two abilities: `anypress/check-support`, `anypress/check-affiliate` and `anypress/check-community` (the dry run, read-only), and `anypress/switch-support`, `anypress/switch-affiliate` and `anypress/switch-community` (with `{"undo": true}` to undo). They take `from` and need an administrator.
+
+| Switch | Sources (`--from`) | What comes across | Runs into |
+|---|---|---|---|
+| support | Awesome Support (`awesome-support`), SupportCandy (`support-candy`), JS Help Desk (`js-helpdesk`) | Tickets with their replies, attachments, customers and agents | Any Fluent Support: it skips tickets it already imported. If it has no business inbox yet, the switch makes one in the website's name, as Fluent Support's setup screen does. |
+| affiliate | AffiliateWP (`affiliate_wp`), Affiliates Manager (`affiliate_manager`), Solid Affiliate (`solid_affiliate`), SliceWP (`slicewp`), Ultimate Affiliate Pro (`ultimate_affiliate`) | Affiliate groups, affiliates, referrals, customers, payouts and visits, with earnings recounted | An empty FluentAffiliate only: its importer keeps the source ids. |
+| community | BuddyPress or BuddyBoss (`buddypress`) | Groups become spaces with their members and roles; activity posts become posts with their comments, reactions and media; member profiles are synced | An empty FluentCommunity only (no spaces or posts): its command-line importer wipes FluentCommunity first, so the switch uses the one behind its Migrations screen. |
+
+FluentCommunity's importer makes every BuddyPress group membership an active member, so after it runs the switch takes banned members out of their spaces again and makes membership requests and invitations that weren't accepted pending, for a space admin to approve.
+
+The source plugin and its data are never changed: none of the importers' "delete the source" steps is called. Running a switch again is refused until it is undone. Undo deletes what the switch added (tickets, replies, attachments, the inbox it made and the people only those tickets name; the FluentAffiliate rows; the FluentCommunity spaces, members, posts, comments, reactions, media and new profiles) and the marks the importers leave so they can skip what they already brought across.
+
+What doesn't come across: ticket tags, products and custom fields, and the help desk's settings, templates and canned replies; affiliate program settings, and creatives (FluentAffiliate Pro); private messages, friendships, forums and extended profile fields. Help Scout, Zendesk and Freshdesk need an API key and come in through Fluent Support's own import screen. bbPress, PeepSo, wpForo and Ultimate Member, and WP Support Plus, KB Support, YITH WooCommerce Affiliates, Affiliate for WooCommerce and Easy Affiliate, are named in the check when active: the Fluent plugins have no importer for them.
+
+What each switch added is kept in the `waas_client_<switch>_import` option (not autoloaded). Sources: `src/Moving/NativeImport.php`, `src/Moving/SupportImport.php`, `src/Moving/AffiliateImport.php`, `src/Moving/CommunityImport.php`, `src/Moving/ImportCommand.php`, `src/Moving/ImportAbilities.php`. Tested end to end with Awesome Support, SliceWP and BuddyPress by `scripts/playground/moving.mjs` (`npm run moving`).
+
 ## The website assistant beside the page
 
 Since 2.8.0 a store's administrators (anyone who can change its design, `edit_theme_options`) get an **Assistant** panel in the block editor and the Site Editor, opened from its star button in the editor's top bar, and an **Assistant** button in the admin bar that opens the page being viewed (or the Site Editor) with the panel open. The panel frames the website assistant's chat (`https://assistant.anypress.io/editor`; `WAAS_ASSISTANT_URL` changes it).
