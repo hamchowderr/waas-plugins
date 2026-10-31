@@ -18,11 +18,12 @@
 	min-height: 420px;
 	border: 0;
 }
-/* On a phone the panel fills the screen: the editor's notices go to the top, off the chat's message box. */
+/* On a phone the panel fills the screen: the editor's notices sit just below the panel's
+ * header (admin bar, editor top bar, panel header), clear of Save and of the chat's message box. */
 @media (max-width: 781px) {
 	body:has(.waas-editor-assistant) .components-notices__snackbar,
 	body:has(.waas-editor-assistant) .components-editor-notices__snackbar {
-		top: 64px;
+		top: calc(var(--wp-admin--admin-bar--height, 46px) + 124px);
 		bottom: auto;
 	}
 }

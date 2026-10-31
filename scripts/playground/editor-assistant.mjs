@@ -161,6 +161,11 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
         // The panel fills a phone's screen, so the notice sits at the top, clear of the chat's message box.
         const box = await notice.boundingBox();
         check(Boolean(box && box.y + box.height < height / 2), `${label}: the notice stays clear of the chat's message box`);
+        // ...and below the editor's Save button and the panel's header, which the owner needs while it shows.
+        const save = await page.getByRole('region', { name: 'Editor top bar' }).getByRole('button', { name: /^Save|^Publish/ }).first().boundingBox();
+        const header = await page.locator('.interface-complementary-area-header').first().boundingBox();
+        const below = (b) => !b || !box || box.y >= b.y + b.height;
+        check(below(save) && below(header), `${label}: the notice leaves Save and the panel's header uncovered`);
     }
     const saved = await cli.playground.run({ code: `<?php require '/wordpress/wp-load.php'; echo get_post(${pageId})->post_content;` });
     check(saved.text.includes('Fresh bread') && !saved.text.includes('dawn'), `${label}: nothing is saved until the owner saves`);
