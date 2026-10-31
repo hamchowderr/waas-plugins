@@ -157,6 +157,11 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
     check(await canvas.locator('h2', { hasText: 'Bread baked at dawn' }).isVisible(), `${label}: the change shows in the editor`);
     const notice = page.locator('.components-snackbar', { hasText: 'The assistant changed the page. Save to keep it.' });
     check(await notice.isVisible(), `${label}: a notice says to save, with Undo`);
+    if (label === 'phone') {
+        // The panel fills a phone's screen, so the notice sits at the top, clear of the chat's message box.
+        const box = await notice.boundingBox();
+        check(Boolean(box && box.y + box.height < height / 2), `${label}: the notice stays clear of the chat's message box`);
+    }
     const saved = await cli.playground.run({ code: `<?php require '/wordpress/wp-load.php'; echo get_post(${pageId})->post_content;` });
     check(saved.text.includes('Fresh bread') && !saved.text.includes('dawn'), `${label}: nothing is saved until the owner saves`);
     const wide = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
