@@ -12,7 +12,7 @@ Plugin Name: WaaS Client
 Plugin URI: https://github.com/hamchowderr/waas-plugins
 Description: Runs on each WaaS store: one-click login from the storefront, turns plugins on or off to match the store's plan (roles), and lets the AnyPress connector edit the site's design and content.
 Author: Otaku Solutions
-Version: 2.8.0
+Version: 2.9.0
 Author URI: https://otakusolutions.io
 Update URI: wpcs-waas-client
 Requires at least: 6.9
@@ -25,7 +25,7 @@ Text Domain: waas-client
 define( 'WAAS_CLIENT_SLUG', 'wpcs-waas-client' );
 define( 'WAAS_CLIENT_BASENAME', plugin_basename( __FILE__ ) );
 define( 'WAAS_CLIENT_UPDATE_URI', 'wpcs-waas-client' );
-define( 'WAAS_CLIENT_VERSION', '2.8.0' );
+define( 'WAAS_CLIENT_VERSION', '2.9.0' );
 define( 'WAAS_CLIENT_TEXTDOMAIN', 'waas-client' );
 
 use WaaSClient\Api\SingleSignOnController;
@@ -48,6 +48,11 @@ use WaaSClient\Forms\ConditionalConfirmations;
 use WaaSClient\Forms\FormsAbilities;
 use WaaSClient\Forms\FormsCommand;
 use WaaSClient\Forms\FormsSwitch;
+use WaaSClient\Moving\AffiliateImport;
+use WaaSClient\Moving\CommunityImport;
+use WaaSClient\Moving\ImportAbilities;
+use WaaSClient\Moving\ImportCommand;
+use WaaSClient\Moving\SupportImport;
 use WaaSClient\Shop\ShopAbilities;
 use WaaSClient\Shop\ShopCommand;
 use WaaSClient\Shop\ShopSwitch;
@@ -103,6 +108,16 @@ if (!wp_doing_ajax()) {
     new CrmAbilities(new CrmSwitch());
     if (defined('WP_CLI') && WP_CLI) {
         \WP_CLI::add_command('waas crm', CrmCommand::class);
+    }
+
+    // Help desk, affiliate and community data into Fluent Support, FluentAffiliate and FluentCommunity with their own
+    // importers: `wp waas support|affiliate|community switch` and the check-* and switch-* abilities.
+    $imports = [new SupportImport(), new AffiliateImport(), new CommunityImport()];
+    new ImportAbilities(...$imports);
+    if (defined('WP_CLI') && WP_CLI) {
+        foreach ($imports as $import) {
+            \WP_CLI::add_command('waas ' . $import->key(), new ImportCommand($import));
+        }
     }
 
     // No self-update: a store's waas-client comes with its template version, and the store gets a

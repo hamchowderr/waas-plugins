@@ -1,0 +1,107 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "meta": {
+    "title": "Support, affiliate and community switch test site",
+    "author": "Otaku Solutions",
+    "description": "Fluent Support, FluentAffiliate and FluentCommunity next to Awesome Support, SliceWP and BuddyPress, at pinned wordpress.org versions, and WaaS Client (mounted from this checkout by moving.mjs). Background updates and WP-Cron are off so nothing changes mid-test. WP-CLI comes from its official build (wp-cli/builds) at /tmp/wp-cli.phar."
+  },
+  "landingPage": "/wp-admin/",
+  "preferredVersions": {
+    "php": "8.3",
+    "wp": "latest"
+  },
+  "features": {
+    "networking": true
+  },
+  "steps": [
+    {
+      "step": "defineWpConfigConsts",
+      "consts": {
+        "AUTOMATIC_UPDATER_DISABLED": true,
+        "DISABLE_WP_CRON": true,
+        "WP_DEBUG": true,
+        "WP_DEBUG_LOG": true,
+        "WP_DEBUG_DISPLAY": false
+      }
+    },
+    {
+      "step": "writeFile",
+      "path": "/tmp/wp-cli.phar",
+      "data": {
+        "resource": "url",
+        "url": "https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar"
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/fluent-support.2.4.7.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/fluent-affiliate.1.7.0.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/fluent-community.2.12.0.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/awesome-support.6.4.2.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/slicewp.1.2.14.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://downloads.wordpress.org/plugin/buddypress.14.5.4.zip"
+      },
+      "options": {
+        "activate": true
+      }
+    },
+    {
+      "step": "activatePlugin",
+      "pluginPath": "waas-client/index.php"
+    },
+    {
+      "step": "setSiteOptions",
+      "options": {
+        "blogname": "Moving test",
+        "permalink_structure": "/%postname%/"
+      }
+    }
+  ]
+}
