@@ -214,13 +214,16 @@ async function runMode(hpos) {
         expect(after.products === 0 && after.orders === 0 && after.zones.length === 0 && before.orders === 0, `changed: ${short(after)}`);
     });
 
-    await check('without the add-on: the check says where to get it and the switch refuses', async () => {
+    await check('with the add-on off (as the store template ships it), the switch turns it on; without it, it says where to get it', async () => {
         await php(`deactivate_plugins('fluent-cart-migrator/fluent-cart-migrator.php');`);
-        const inactive = await wp('wp waas shop switch --dry-run --format=json --user=admin');
-        expect(inactive.preflight.ready === false && inactive.preflight.blockers.some((b) => b.includes('installed but not active')), short(inactive.preflight));
-        const refused = await php(`$r = (new WaaSClient\\Shop\\ShopSwitch())->run(); echo json_encode(is_wp_error($r) ? ['code' => $r->get_error_code(), 'message' => $r->get_error_message()] : ['report' => true]);`);
-        expect(refused.code === 'waas_shop_not_ready' && refused.message.includes('not active'), short(refused));
+        const off = await php(`echo json_encode(WaaSClient\\Shop\\ShopSwitch::preflight());`);
+        expect(off.ready === true && off.warnings.some((w) => w.includes('installed but off')), short(off));
+        const turnedOn = await wp('wp waas shop switch --dry-run --format=json --user=admin');
+        expect(turnedOn.preflight.ready === true && turnedOn.preflight.migrator_addon, short(turnedOn.preflight));
+        const active = await php(`echo json_encode(['on' => in_array('fluent-cart-migrator/fluent-cart-migrator.php', (array) get_option('active_plugins'), true)]);`);
+        expect(active.on === true, 'the dry run left the add-on off');
         // Not installed at all: WordPress's plugin list (its cache, for this one request) without the add-on.
+        await php(`deactivate_plugins('fluent-cart-migrator/fluent-cart-migrator.php');`);
         const missing = await php(`$plugins = get_plugins(); unset($plugins['fluent-cart-migrator/fluent-cart-migrator.php']); wp_cache_set('plugins', ['' => $plugins], 'plugins');
             echo json_encode(WaaSClient\\Shop\\ShopSwitch::preflight());`);
         expect(missing.ready === false && missing.blockers.some((b) => b.includes('fluentcart.com/fluentcart-addons') && b.includes('fluent-cart-migrator.zip')), short(missing.blockers));

@@ -41,7 +41,13 @@ class ShopSwitch
         if (!current_user_can('manage_options')) {
             return new WP_Error('waas_shop_unauthorized', __('Only an administrator can switch the shop.', 'waas-client'), ['status' => 403]);
         }
+        // The store template ships the add-on switched off, so it doesn't load on every page: turn it on now.
+        self::turn_on_addon();
         $preflight = self::preflight();
+        if (!class_exists(self::ADDON_CLASS) && $preflight['ready']) {
+            $preflight['ready'] = false;
+            $preflight['blockers'][] = __('The FluentCart Migrator add-on could not be turned on. Turn it on under Plugins, then run this again.', 'waas-client');
+        }
         if (!$dry_run && !$preflight['ready']) {
             return new WP_Error('waas_shop_not_ready', implode(' ', $preflight['blockers']), ['status' => 409, 'preflight' => $preflight]);
         }
@@ -142,6 +148,20 @@ class ShopSwitch
         }
     }
 
+    /** Turns on the FluentCart Migrator add-on when it is installed but off (the store template ships it off). */
+    private static function turn_on_addon(): void
+    {
+        if (class_exists(self::ADDON_CLASS)) {
+            return;
+        }
+        if (!function_exists('get_plugins')) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        }
+        if (array_key_exists(self::ADDON_FILE, get_plugins())) {
+            activate_plugin(self::ADDON_FILE);
+        }
+    }
+
     /** Whether the switch can run, and what's in the WooCommerce shop. */
     public static function preflight(): array
     {
@@ -168,10 +188,12 @@ class ShopSwitch
         }
         if (!$addon) {
             $installed = function_exists('get_plugins') && array_key_exists(self::ADDON_FILE, get_plugins());
-            $report['blockers'][] = $installed
-                ? __('The FluentCart Migrator add-on is installed but not active. Turn it on under Plugins.', 'waas-client')
-                /* translators: 1: FluentCart add-ons page, 2: download link. */
-                : sprintf(__('The FluentCart Migrator add-on isn\'t installed. It is free from FluentCart\'s add-ons page (%1$s), download: %2$s. Install and activate it, then run this again.', 'waas-client'), self::ADDON_PAGE, self::ADDON_ZIP);
+            if ($installed) {
+                $report['warnings'][] = __('The FluentCart Migrator add-on is installed but off. The switch turns it on when it runs.', 'waas-client');
+            } else {
+                $report['blockers'][] = sprintf(
+                    /* translators: 1: FluentCart add-ons page, 2: download link. */__('The FluentCart Migrator add-on isn\'t installed. It is free from FluentCart\'s add-ons page (%1$s), download: %2$s. Install and activate it, then run this again.', 'waas-client'), self::ADDON_PAGE, self::ADDON_ZIP);
+            }
         } elseif (strpos((string) FLUENTCART_MIGRATOR_VERSION, 'beta') !== false) {
             /* translators: %s: add-on version. */
             $report['warnings'][] = sprintf(__('The FluentCart Migrator add-on is a beta (%s).', 'waas-client'), FLUENTCART_MIGRATOR_VERSION);
