@@ -60,6 +60,7 @@
     };
     var poll = function () {
         request('status').then(function (s) {
+            error(''); // AnyPress answered again after a hiccup
             if (s.status === 'done') {
                 show({ percent: 100, message: sprintf(/* translators: %s: the site's address on AnyPress */ __('Done. Your site is on AnyPress: %s', 'anypress-export'), s.url), store: s.store });
                 $('[data-field="hint"]').textContent = __('Check it there, then connect your domain on AnyPress. You can deactivate and delete this plugin now.', 'anypress-export');
@@ -71,7 +72,7 @@
                 return;
             }
             setTimeout(poll, 10000);
-        }).catch(function (e) { error(e.message); setTimeout(poll, 30000); });
+        }).catch(function (e) { error(e.message + ' ' + __('Checking again shortly.', 'anypress-export')); setTimeout(poll, 30000); });
     };
     var step = function () {
         request('step').then(function (p) {
