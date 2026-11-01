@@ -76,7 +76,13 @@ const server = createServer((req, res) => {
             api.source = data.source;
             return json(502, { message: 'Bad gateway' });
         }
-        if (req.url === '/imports/status') return json(200, { status: api.started ? 'moving' : 'waiting', store: {} });
+        if (req.url === '/imports/status') {
+            // Answers queued by a check (an HTTP status while the API restarts, or a move status) come first.
+            const next = (api.statusPlan || []).shift();
+            if (typeof next === 'number') return json(next, { message: 'Bad gateway' });
+            if (next) return json(200, { status: next, store: {}, url: 'https://moved.anypress.site' });
+            return json(200, { status: api.started ? 'moving' : 'waiting', store: {} });
+        }
         json(404, { message: 'Not found' });
     });
 });
@@ -296,6 +302,26 @@ await check('big rows: every row arrives, and no INSERT is much over 1 MB', asyn
 await check('the work folder is removed after the upload', async () => {
     const left = await php(`echo wp_json_encode(glob(wp_upload_dir(null, false)['basedir'] . '/anypress-export-*'));`);
     expect(Array.isArray(left) && left.length === 0, `left behind: ${JSON.stringify(left)}`);
+});
+
+await check('waiting from the command line rides out a restart of the API (HTTP 502)', async () => {
+    api.statusPlan = [502, 'moving', 503, 'done'];
+    // A stand-in for WP-CLI's logging; error() stops the run as WP-CLI does.
+    const out = await php(`
+if (!class_exists('WP_CLI')) {
+    class WP_CLI {
+        public static $lines = [];
+        public static function log($m) { self::$lines[] = 'log: ' . $m; }
+        public static function success($m) { self::$lines[] = 'success: ' . $m; }
+        public static function error($m) { self::$lines[] = 'error: ' . $m; throw new RuntimeException($m); }
+    }
+}
+try { (new AnyPressExport\\Cli())->status([], ['wait' => true]); } catch (RuntimeException $e) {}
+echo wp_json_encode(WP_CLI::$lines);`);
+    expect(Array.isArray(out), `no answer: ${JSON.stringify(out)}`);
+    expect(!out.some((l) => l.startsWith('error:')), `gave up: ${out.join(' | ')}`);
+    expect(out[out.length - 1] === 'success: The site is on AnyPress: https://moved.anypress.site', `ended with: ${out.join(' | ')}`);
+    expect(out.filter((l) => l.includes('not answering')).length === 2, `lines: ${out.join(' | ')}`);
 });
 
 rmSync(dir, { recursive: true, force: true });

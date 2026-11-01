@@ -7,6 +7,9 @@ defined('ABSPATH') || exit;
 /** Moves the site to AnyPress from the command line, in one run (no time limit, no browser needed). */
 final class Cli
 {
+    /** Seconds to keep asking while AnyPress doesn't answer, when waiting for the move. */
+    private const PATIENCE = 600;
+
     /**
      * Sends this site to AnyPress.
      *
@@ -61,9 +64,19 @@ final class Cli
         $state = get_option(Plugin::OPTION);
         if (!is_array($state)) \WP_CLI::error('No move in progress.');
         $api = new Api(Plugin::code($state['code']));
+        $unreachable = null; // when AnyPress stopped answering, while waiting
         for (;;) {
             try {
                 $status = $api->status();
+                $unreachable = null;
+            } catch (ApiError $e) {
+                // AnyPress restarting (a gateway error or no answer) doesn't stop the move, so keep asking for a while.
+                if (empty($assoc['wait']) || !$e->passing()) \WP_CLI::error($e->getMessage());
+                $unreachable = $unreachable ?? time();
+                if (time() - $unreachable >= self::PATIENCE) \WP_CLI::error($e->getMessage() . ' The move carries on at AnyPress; run `wp anypress-export status` later to check it.');
+                \WP_CLI::log('AnyPress is not answering right now; asking again shortly.');
+                sleep(10);
+                continue;
             } catch (\Throwable $e) {
                 \WP_CLI::error($e->getMessage());
             }
