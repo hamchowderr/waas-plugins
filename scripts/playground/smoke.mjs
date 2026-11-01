@@ -2,7 +2,7 @@
 // database server). Boots WordPress with WaaS Client from this checkout, the AnyPress theme and the store
 // template's starter pages, then calls the site-editing routes the AnyPress connector uses (signed with a
 // throwaway site key), the same actions as WordPress abilities, and the "AnyPress website" MCP server once the
-// owner switch turns on the MCP Adapter, and checks the answers.
+// owner switch turns on the MCP Adapter, and the dashboard's "Log in to WordPress" link (Api\AdminLogin), and checks the answers.
 //
 //   cd scripts/playground && npm ci
 //   npm run smoke             # run the checks, exit 1 on a failure
@@ -196,6 +196,42 @@ await check('a reused signature is refused', async () => {
     const first = await fetch(url, { headers: { 'x-waas-signature': header } });
     const second = await fetch(url, { headers: { 'x-waas-signature': header } });
     expect(first.status === 200 && second.status === 401, `first ${first.status}, second ${second.status}`);
+});
+
+/** A "Log in to WordPress" link as the AnyPress API makes it (src/wplogin.ts): t, n, s over LOGIN and the route. */
+function loginLink(key = SITE_KEY, t = String(Math.floor(Date.now() / 1000))) {
+    const route = '/waas-client/v1/admin-login';
+    const n = randomBytes(16).toString('hex');
+    const payload = [t, n, 'LOGIN', route, createHash('sha256').update('').digest('hex')].join('\n');
+    return `${base}/wp-json${route}?${new URLSearchParams({ t, n, s: createHmac('sha256', key).update(payload).digest('hex') })}`;
+}
+
+await check('log in to WordPress: a signed link signs in once and opens wp-admin', async () => {
+    const link = loginLink();
+    const first = await fetch(link, { redirect: 'manual' });
+    // As a browser keeps them: WordPress first clears every auth cookie, then sets the new ones, so the last one wins.
+    const jar = new Map(first.headers.getSetCookie().map((c) => c.split(';')[0].split('=')).map(([k, ...v]) => [k, v.join('=')]));
+    const cookies = [...jar].filter(([, v]) => v !== '%20').map(([k, v]) => `${k}=${v}`);
+    expect(first.status === 302, `first: HTTP ${first.status}`);
+    expect(new URL(first.headers.get('location'), base).pathname === '/wp-admin/', `went to ${first.headers.get('location')}`);
+    expect(cookies.some((c) => c.startsWith('wordpress_logged_in_')), `cookies: ${cookies.join('; ')}`);
+    // The cookie it set really is a signed-in admin session.
+    const admin = await fetch(`${base}/wp-admin/`, { headers: { cookie: cookies.join('; ') }, redirect: 'manual' });
+    expect(admin.status === 200, `wp-admin with the cookie: HTTP ${admin.status} to ${admin.headers.get('location')}`);
+    const again = await fetch(link, { redirect: 'manual' });
+    expect(again.status === 403 && !again.headers.getSetCookie().some((c) => c.startsWith('wordpress_logged_in_') && !c.includes('=%20')), `used twice: HTTP ${again.status}`);
+});
+
+await check('log in to WordPress: unsigned, wrong-key and old links are refused', async () => {
+    for (const [what, link] of [
+        ['unsigned', `${base}/wp-json/waas-client/v1/admin-login`],
+        ['another key', loginLink(randomBytes(24).toString('hex'))],
+        ['10 minutes old', loginLink(SITE_KEY, String(Math.floor(Date.now() / 1000) - 600))],
+    ]) {
+        const res = await fetch(link, { redirect: 'manual' });
+        expect(res.status === 403, `${what}: HTTP ${res.status}`);
+        expect(!res.headers.getSetCookie().some((c) => c.startsWith('wordpress_logged_in_') && !c.includes('=%20')), `${what}: signed in`);
+    }
 });
 
 await check('site: name and theme', async () => {

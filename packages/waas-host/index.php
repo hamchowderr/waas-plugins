@@ -10,6 +10,7 @@ use WaaSHost\Api\AccountSignIn;
 use WaaSHost\Api\AccountTokens;
 use WaaSHost\Api\RolesController;
 use WaaSHost\Api\AssistantSignIn;
+use WaaSHost\Api\AdminLogin;
 use WaaSHost\Api\SingleLogin;
 use WaaSHost\Api\WebhookReceiver;
 use WaaSHost\Commerce\Commerce;
@@ -35,14 +36,14 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 /**
  * @package WaaSHost
- * @version 2.7.3
+ * @version 2.8.0
  */
 /*
 Plugin Name: WaaS Host
 Plugin URI: https://github.com/hamchowderr/waas-plugins
 Description: Sells WaaS stores from your storefront: creates, suspends and restores each customer's store through the WaaS provisioning API, with FluentCart or WooCommerce (and WooCommerce Subscriptions) for billing.
 Author: Otaku Solutions
-Version: 2.7.3
+Version: 2.8.0
 Author URI: https://otakusolutions.io
 Update URI: wpcs-waas-host
 Requires at least: 6.4
@@ -55,7 +56,7 @@ Text Domain: waas-host
 define( 'WAAS_HOST_SLUG', 'wpcs-waas-host' );
 define( 'WAAS_HOST_BASENAME', plugin_basename( __FILE__ ) );
 define( 'WAAS_HOST_UPDATE_URI', 'wpcs-waas-host' );
-define( 'WAAS_HOST_VERSION', '2.7.3' );
+define( 'WAAS_HOST_VERSION', '2.8.0' );
 define( 'WAAS_HOST_TEXTDOMAIN', 'waas-host' );
 
 // Settings and data saved under the old platform's names move to the waas_ names before anything reads them
@@ -72,6 +73,8 @@ new AssistantSignIn($configService, $provisioningApi);
 
 // UI
 SingleLogin::init();
+// "Log in to WordPress" from the AnyPress dashboard: a one-time link the API signs with this site's key.
+AdminLogin::init();
 // Store API calls run as background jobs, never inside the cart's hooks
 // Background work starts when the request that asked for it ends, not on the next cron run
 new RunSoon();
