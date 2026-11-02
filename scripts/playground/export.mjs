@@ -3,8 +3,8 @@
 // backslashes and emoji, a plugin's own table without a primary key, more rows than one database batch, rows near
 // 1 MB, a file too big to pack in one request, a licence key in wp-config.php and a linked folder), then moves it to
 // a stand-in AnyPress API run by this script, in many short requests as the Tools page does, and checks the archive
-// that arrives. The stand-in API also hands out an expired upload link first and drops the answer to the first
-// start, as real networks sometimes do.
+// that arrives. The upload goes in 1 MB parts; the stand-in API fails one part once (a busy server), lets one part
+// link expire and drops the answer to the first start, as real networks sometimes do.
 //
 //   cd scripts/playground && npm ci
 //   npm run export
@@ -43,8 +43,9 @@ if (!existsSync(resolve(PLUGIN, 'vendor/autoload.php'))) {
     process.exit(1);
 }
 
-// The stand-in AnyPress API: the three import calls and the upload link.
-const api = { calls: [], archive: null, source: null };
+// The stand-in AnyPress API: the import calls, uploads in parts and the part links.
+const PART = 1024 * 1024;
+const api = { calls: [], archive: null, source: null, parts: new Map(), rounds: 0 };
 const server = createServer((req, res) => {
     const chunks = [];
     req.on('data', (c) => chunks.push(c));
@@ -55,15 +56,38 @@ const server = createServer((req, res) => {
             res.writeHead(status, { 'content-type': 'application/json' });
             res.end(JSON.stringify(data));
         };
-        if (req.method === 'PUT' && req.url.startsWith('/upload/archive')) {
-            // The first upload link has "expired" (as a 12-hour link left overnight would): the plugin must ask for a new one.
-            if (req.url === '/upload/archive-1') return json(403, { message: 'Request has expired' });
-            api.archive = body;
-            api.uploadedTo = req.url;
+        if (req.method === 'PUT' && req.url.startsWith('/upload/part')) {
+            const url = new URL(req.url, apiBase);
+            const n = Number(url.searchParams.get('n'));
+            // Part 3's first link has "expired" (as a 12-hour link left overnight would): the plugin must ask for new ones.
+            if (n === 3 && url.searchParams.get('round') === '1') return json(403, { message: 'Request has expired' });
+            // Part 2 fails once, as a busy server does: the plugin tries it again.
+            if (n === 2 && !api.busy) {
+                api.busy = true;
+                return json(503, { message: 'Slow down' });
+            }
+            api.parts.set(n, body);
             return json(200, {});
         }
         const data = body.length ? JSON.parse(body.toString()) : {};
         if (data.code !== importCode) return json(401, { message: 'Unknown import code.' });
+        if (req.url === '/imports/upload/parts/start') {
+            api.partCount = Math.ceil(data.bytes / PART);
+            return json(200, { uploadId: 'up-1', partSize: PART, partCount: api.partCount, maxBytes: 200 * 1024 * 1024, store: { domain: 'moved.anypress.site' } });
+        }
+        if (req.url === '/imports/upload/parts') {
+            api.rounds++;
+            const done = [...api.parts.keys()].sort((a, b) => a - b);
+            return json(200, { done, bytes: 0, urls: Object.fromEntries(data.parts.map((n) => [n, `${apiBase}/upload/part?n=${n}&round=${api.rounds}`])) });
+        }
+        if (req.url === '/imports/upload/parts/finish') {
+            if (api.finished) return json(404, { message: 'This upload is no longer known. Upload the export again.' });
+            api.finished = true;
+            const numbers = [...api.parts.keys()].sort((a, b) => a - b);
+            if (numbers.length !== api.partCount || numbers.some((n, i) => n !== i + 1)) return json(400, { message: 'Some parts of the export are missing.' });
+            api.archive = Buffer.concat(numbers.map((n) => api.parts.get(n)));
+            return json(200, { bytes: api.archive.length });
+        }
         if (req.url === '/imports/upload') {
             if (api.started) return json(409, { message: 'This site is already being moved in.' });
             api.links = (api.links || 0) + 1;
@@ -214,9 +238,10 @@ try {
     }
     expect(api.archive, 'nothing was uploaded');
     expect(
-        api.calls.join(' ').match(/POST \/imports\/upload PUT \/upload\/archive-1 POST \/imports\/upload PUT \/upload\/archive-2 POST \/imports\/start POST \/imports\/start POST \/imports\/status/),
+        api.calls.join(' ').match(/POST \/imports\/upload .*POST \/imports\/upload\/parts\/start POST \/imports\/upload\/parts PUT \/upload\/part\?n=1&round=1 PUT \/upload\/part\?n=2&round=1 PUT \/upload\/part\?n=2&round=1 PUT \/upload\/part\?n=3&round=1 POST \/imports\/upload\/parts PUT \/upload\/part\?n=3&round=2 .*POST \/imports\/upload\/parts\/finish POST \/imports\/start POST \/imports\/start POST \/imports\/status/),
         `calls: ${api.calls.join(', ')}`,
     );
+    expect(api.partCount >= 4, `only ${api.partCount} parts`);
     expect(startRetried, 'the first start never failed');
     console.log(`        ${requests} requests, ${(api.archive.length / 1024 / 1024).toFixed(1)} MB uploaded`);
 });

@@ -27,6 +27,31 @@ final class FakeApi extends Api
     /** @var int */
     public $uploads = 0;
 
+    /** @var bool whether this AnyPress takes uploads in parts (an older one answers 404) */
+    public $parts = false;
+    /** @var int */
+    public $partSize = 1048576;
+    /** @var array<int, string> the parts AnyPress has, by number */
+    public $partData = [];
+    /** @var int[] HTTP statuses the next part PUTs fail with */
+    public $partFailures = [];
+    /** @var int how many times part links were handed out */
+    public $linkRounds = 0;
+    /** @var int|null */
+    private $partCount;
+
+    public function putPart(string $url, string $file, int $offset, int $length, ?callable $heartbeat = null): void
+    {
+        $this->calls[] = ['part', $url];
+        if ($heartbeat) $heartbeat();
+        if ($this->partFailures) {
+            $status = array_shift($this->partFailures);
+            throw new ApiError($status === 403 ? 'The upload link has expired.' : "Uploading the export failed (HTTP $status).", $status);
+        }
+        preg_match('/part=(\d+)/', $url, $m);
+        $this->partData[(int) $m[1]] = (string) file_get_contents($file, false, null, $offset, $length);
+    }
+
     public function put(string $url, string $file, ?callable $heartbeat = null): void
     {
         $this->calls[] = ['put', $url];
@@ -41,6 +66,24 @@ final class FakeApi extends Api
     protected function post(string $path, array $body): array
     {
         $this->calls[] = [$path, $body];
+        if ($path === 'upload/parts/start') {
+            if (!$this->parts) throw new ApiError('Not found', 404);
+            $this->partCount = (int) ceil($body['bytes'] / $this->partSize);
+            return ['uploadId' => 'up-1', 'partSize' => $this->partSize, 'partCount' => $this->partCount, 'maxBytes' => $this->maxBytes, 'store' => []];
+        }
+        if ($path === 'upload/parts') {
+            $this->linkRounds++;
+            $urls = [];
+            foreach ($body['parts'] as $n) $urls[(string) $n] = "https://bucket.example/imports/x?part=$n&round=$this->linkRounds";
+            ksort($this->partData);
+            return ['done' => array_keys($this->partData), 'bytes' => 0, 'urls' => $urls];
+        }
+        if ($path === 'upload/parts/finish') {
+            ksort($this->partData);
+            if (array_keys($this->partData) !== range(1, $this->partCount)) throw new ApiError('Some parts of the export are missing.', 400);
+            $this->uploaded = implode('', $this->partData);
+            return ['bytes' => strlen($this->uploaded)];
+        }
         if ($path === 'upload') return ['uploadUrl' => 'https://bucket.example/imports/' . ++$this->uploads, 'maxBytes' => $this->maxBytes, 'store' => ['name' => 'Shop', 'size' => 'small', 'domain' => 'shop.anypress.site']];
         if ($path === 'start') {
             if ($this->startFailures) {
@@ -176,6 +219,66 @@ final class ExporterTest extends TestCase
         exec('tar -xzf ' . escapeshellarg("$this->dir/export.tar.gz") . ' -C ' . escapeshellarg("$this->dir/out") . ' 2>&1', $output, $code);
         $this->assertSame(0, $code, implode("\n", $output));
         $this->assertSame($big, file_get_contents("$this->dir/out/wp-content/uploads/big.bin"));
+    }
+
+    public function testUploadsInPartsAndCarriesOnAfterDroppedPartsAndExpiredLinks(): void
+    {
+        $big = random_bytes(3 * 1048576 + 1234);
+        file_put_contents("$this->dir/content/uploads/big.bin", $big);
+        $api = new FakeApi(self::code());
+        $api->parts = true;
+        $exporter = new Exporter(new FakeDatabase(), "$this->dir/content");
+        $state = $exporter->begin(self::code(), $api, "$this->dir/content/uploads", []);
+        for ($i = 0; !isset($state['parts']); $i++) {
+            $state = $exporter->run($state, $api, 0.001);
+            $this->assertLessThan(10000, $i);
+        }
+        $archive = (string) file_get_contents($state['work'] . '/export.tar.gz');
+
+        // Part 1 goes up; then a request dies after sending part 2 but before saving that it did.
+        for ($i = 0; count($api->partData) < 1; $i++) {
+            $state = json_decode(json_encode($exporter->run($state, $api, 0.001)), true);
+            $this->assertLessThan(100, $i);
+        }
+        $before = $state;
+        for ($i = 0; count($api->partData) < 2; $i++) {
+            $state = $exporter->run($state, $api, 0.001);
+            $this->assertLessThan(100, $i);
+        }
+        $state = $before;
+        $this->assertMatchesRegularExpression('/\(part [1-4] of 4\)/', Exporter::progress($state)['message']);
+        // Then a busy server once, and a link that expired overnight.
+        $api->partFailures = [503, 403];
+        for ($i = 0; $state['step'] !== 'moving'; $i++) {
+            $state = json_decode(json_encode($exporter->run($state, $api, 5)), true);
+            $this->assertLessThan(100, $i);
+        }
+
+        $this->assertSame($archive, $api->uploaded, 'the joined parts are the archive');
+        $this->assertSame(4, count($api->partData));
+        $sent = array_values(array_filter($api->calls, function ($call) {
+            return $call[0] === 'part';
+        }));
+        // Part 1 was never sent again; each part went up at most twice (the dropped request and the busy server).
+        $this->assertSame(1, count(array_filter($sent, function ($call) {
+            return strpos($call[1], 'part=1&') !== false;
+        })));
+        $this->assertLessThanOrEqual(7, count($sent));
+        $this->assertSame(2, $api->linkRounds, 'new links after the expired one');
+        $this->assertSame('start', $api->calls[count($api->calls) - 1][0]);
+        $this->assertSame('upload/parts/finish', $api->calls[count($api->calls) - 2][0]);
+    }
+
+    public function testAPartRefusedRightAfterFreshLinksTellsThePersonToStartAgain(): void
+    {
+        file_put_contents("$this->dir/content/uploads/a.txt", 'a');
+        $api = new FakeApi(self::code());
+        $api->parts = true;
+        $api->partFailures = [403, 403];
+        $exporter = new Exporter(new FakeDatabase(), "$this->dir/content");
+        $state = $exporter->begin(self::code(), $api, "$this->dir/content/uploads", []);
+        $this->expectExceptionMessage('AnyPress refused the upload');
+        for ($i = 0; $i < 100; $i++) $state = $exporter->run($state, $api, 5);
     }
 
     public function testAnExpiredUploadLinkIsRenewedOnce(): void

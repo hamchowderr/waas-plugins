@@ -109,6 +109,8 @@ final class Exporter
                     break;
                 case 'upload':
                     $state = $this->upload($state, $api, $heartbeat);
+                    // Save that the upload is done before starting, so a failed start doesn't send it again.
+                    if ($state['step'] === 'start') return $state;
                     break;
                 case 'start':
                     $this->start($state, $api);
@@ -276,7 +278,12 @@ final class Exporter
         return $state;
     }
 
-    /** Uploads the archive; asks AnyPress for a new link once if the saved one has expired. */
+    /**
+     * Uploads the archive in parts, one part per call, so a dropped connection or a request that dies
+     * costs one part: the next call asks AnyPress which parts it has and carries on. Part links expire
+     * after 12 hours; an expired one is asked for again. An AnyPress without uploads in parts (404)
+     * gets the archive in one request.
+     */
     private function upload(array $state, Api $api, ?callable $heartbeat): array
     {
         $archive = $state['work'] . '/export.tar.gz';
@@ -289,6 +296,94 @@ final class Exporter
                 self::size($state['maxBytes'])
             ));
         }
+        if (empty($state['parts'])) {
+            try {
+                $started = $api->startParts($size);
+            } catch (ApiError $e) {
+                if ($e->status !== 404) throw $e;
+                return $this->uploadWhole($state, $archive, $api, $heartbeat);
+            }
+            $state['parts'] = [
+                'uploadId' => (string) $started['uploadId'],
+                'size' => max(1, (int) $started['partSize']),
+                'count' => max(1, (int) $started['partCount']),
+                'done' => [],
+                'urls' => [],
+                'fresh' => false,
+                'tries' => 0,
+            ];
+            return $state;
+        }
+        $parts = $state['parts'];
+        $missing = array_values(array_diff(range(1, $parts['count']), $parts['done']));
+        if (!$missing) {
+            try {
+                $api->finishParts($parts['uploadId']);
+            } catch (ApiError $e) {
+                if ($e->status !== 400 || $parts['fresh']) {
+                    // 404: AnyPress no longer knows the upload, because an earlier finish joined it and its answer
+                    // was lost (409: and the move began). Starting tells which: it says when nothing arrived.
+                    if ($e->status !== 404 && $e->status !== 409) throw $e;
+                    unset($state['parts']);
+                    $state['step'] = 'start';
+                    return $state;
+                }
+                // A part is missing after all: ask AnyPress which ones it has.
+                $state['parts']['done'] = [];
+                $state['parts']['urls'] = [];
+                return $state;
+            }
+            unset($state['parts']);
+            $state['step'] = 'start';
+            return $state;
+        }
+        $part = $missing[0];
+        if (!isset($parts['urls'][$part])) {
+            try {
+                $answer = $api->parts($parts['uploadId'], array_slice($missing, 0, 50));
+            } catch (ApiError $e) {
+                if ($e->status !== 404) throw $e;
+                unset($state['parts']);
+                return $state;
+            }
+            $parts['done'] = array_values(array_map('intval', (array) ($answer['done'] ?? [])));
+            $parts['urls'] = [];
+            foreach ((array) ($answer['urls'] ?? []) as $number => $url) {
+                if (!in_array((int) $number, $parts['done'], true)) $parts['urls'][(int) $number] = (string) $url;
+            }
+            $parts['fresh'] = true;
+            $state['parts'] = $parts;
+            return $state;
+        }
+        $offset = ($part - 1) * $parts['size'];
+        try {
+            $api->putPart($parts['urls'][$part], $archive, $offset, min($parts['size'], $size - $offset), $heartbeat);
+        } catch (ApiError $e) {
+            if ($e->status === 403) {
+                if ($parts['fresh']) throw new ApiError(__('AnyPress refused the upload. Cancel, then start again with a new code from AnyPress.', 'anypress-export'), 403);
+                // The link expired (a move left overnight): ask for new ones.
+                $state['parts']['urls'] = [];
+                return $state;
+            }
+            if (($e->passing() || $e->status >= 500) && $parts['tries'] < 3) {
+                // A network blip or a busy server: try this part again shortly.
+                $state['parts']['tries']++;
+                sleep(2 * $state['parts']['tries']);
+                return $state;
+            }
+            throw $e;
+        }
+        $parts['done'][] = $part;
+        unset($parts['urls'][$part]);
+        $parts['fresh'] = false;
+        $parts['tries'] = 0;
+        $state['parts'] = $parts;
+        return $state;
+    }
+
+    /** Uploads the archive in one request; asks AnyPress for a new link once if the saved one has expired. */
+    private function uploadWhole(array $state, string $archive, Api $api, ?callable $heartbeat): array
+    {
         try {
             $api->put($state['uploadUrl'], $archive, $heartbeat);
         } catch (ApiError $e) {
@@ -375,6 +470,15 @@ final class Exporter
                     self::size((int) $state['packedBytes'])
                 )];
             case 'upload':
+                if (!empty($state['parts'])) {
+                    return ['step' => $step, 'percent' => 75 + (int) (20 * count($state['parts']['done']) / max(1, $state['parts']['count'])), 'message' => sprintf(
+                        /* translators: 1: size of the export, such as 3 GB, 2: parts sent, 3: number of parts */
+                        __('Uploading %1$s to AnyPress (part %2$d of %3$d). If this page stops answering, come back: the upload carries on from the last part.', 'anypress-export'),
+                        self::size((int) $state['packedBytes']),
+                        min(count($state['parts']['done']) + 1, $state['parts']['count']),
+                        $state['parts']['count']
+                    )];
+                }
                 $message = $state['packedBytes'] > Preflight::LARGE_BYTES
                     /* translators: %s: size of the export, such as 3 GB */
                     ? __('Uploading %s to AnyPress. If this page stops answering, the upload carries on here; for sites this big, wp anypress-export send on the command line is more reliable.', 'anypress-export')
