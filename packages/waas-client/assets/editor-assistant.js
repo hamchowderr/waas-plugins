@@ -3,16 +3,18 @@
  * the assistant's chat (Features/EditorAssistant.php). No build step: plain JavaScript on the wp.* globals.
  *
  * Messages with the chat, only to and from the assistant's own address:
- * - from the chat: { source: 'anypress-assistant', type: 'sign-in' | 'ready' | 'apply', id?, change? }
+ * - from the chat: { source: 'anypress-assistant', type: 'sign-in' | 'ready' | 'apply' | 'clear-selection' | 'width' | 'toggle',
+ *   id?, change?, wide? }
  * - to the chat: { source: 'anypress-editor', type: 'view', view } with the page, its top-level blocks and the
- *   selected block; { source: 'anypress-editor', type: 'applied', id, ok }.
- * A change lands in the editor like any edit: the owner sees it, can undo it, and keeps it by pressing Save.
+ *   selected block (and whether it is on a phone); { source: 'anypress-editor', type: 'applied', id, ok }.
+ * A change lands in the editor like any edit: the owner sees it outlined on the page, and a card at the top of the
+ * panel says what changed with Undo and Save. Nothing is kept until the owner saves.
  */
 ( function ( wp, config ) {
 	if ( ! wp || ! config || ! wp.plugins || ! wp.editor || ! wp.editor.PluginSidebar ) {
 		return;
 	}
-	const { createElement: el, useEffect, useRef } = wp.element;
+	const { createElement: el, useEffect, useRef, useState } = wp.element;
 	const { select, dispatch, subscribe } = wp.data;
 	const { __ } = wp.i18n;
 
@@ -47,6 +49,7 @@
 			title: typeof title === 'string' ? title : '',
 			blocks: blocks.getBlocks().slice( 0, 200 ).map( describe ),
 			selected: selected ? describe( selected ) : null,
+			phone: window.matchMedia( '(max-width: 781px)' ).matches,
 		};
 	}
 
@@ -65,6 +68,7 @@
 		if ( id && ! blocks.getBlock( id ) ) {
 			throw new Error( __( 'That block is no longer on the page.', 'waas-client' ) );
 		}
+		const before = id ? blocks.getBlock( id ) : null;
 		const fresh = change.action === 'remove' ? [] : parse( change.content );
 		if ( change.action !== 'remove' && ! fresh.length ) {
 			throw new Error( __( 'The assistant sent no blocks.', 'waas-client' ) );
@@ -98,24 +102,181 @@
 			default:
 				throw new Error( __( 'The assistant sent a change the editor doesn’t know.', 'waas-client' ) );
 		}
+		return { label: label( change.action, before, fresh ), shown: fresh.length ? fresh[ 0 ].clientId : null };
 	}
 
-	function notify( ok, message ) {
-		const notices = dispatch( 'core/notices' );
-		if ( ! ok ) {
-			notices.createErrorNotice( message, { type: 'snackbar', id: NAME } );
+	/** A block's name as the owner knows it: "Heading", "Group". */
+	function title( block ) {
+		const type = block && wp.blocks.getBlockType( block.name );
+		return ( type && type.title ) || __( 'Block', 'waas-client' );
+	}
+
+	/** What one change did, in a few words: "Heading changed", "2 blocks added". */
+	function label( action, before, fresh ) {
+		/* translators: %s: a block's name, such as Heading. */
+		const one = function ( text, block ) {
+			return wp.i18n.sprintf( text, title( block ) );
+		};
+		if ( action === 'remove' ) {
+			/* translators: %s: a block's name, such as Heading. */
+			return one( __( '%s removed', 'waas-client' ), before );
+		}
+		if ( action === 'replace_all' ) {
+			return __( 'Page rewritten', 'waas-client' );
+		}
+		if ( fresh.length > 1 ) {
+			return wp.i18n.sprintf(
+				/* translators: %d: a number of blocks. */
+				action === 'insert' ? __( '%d blocks added', 'waas-client' ) : __( '%d blocks changed', 'waas-client' ),
+				fresh.length
+			);
+		}
+		/* translators: %s: a block's name, such as Heading. */
+		return one( action === 'insert' ? __( '%s added', 'waas-client' ) : __( '%s changed', 'waas-client' ), fresh[ 0 ] );
+	}
+
+	/** Brings the changed block into view and outlines it for a moment, without moving the owner's cursor away for long. */
+	function show( clientId ) {
+		if ( ! clientId ) {
 			return;
 		}
-		notices.createSuccessNotice( __( 'The assistant changed the page. Save to keep it.', 'waas-client' ), {
-			type: 'snackbar',
-			id: NAME,
-			actions: [ { label: __( 'Undo', 'waas-client' ), onClick: () => dispatch( 'core/editor' ).undo() } ],
-		} );
+		setTimeout( function () {
+			const canvas = document.querySelector( 'iframe[name="editor-canvas"]' );
+			const doc = canvas && canvas.contentDocument ? canvas.contentDocument : document;
+			const node = doc.getElementById( 'block-' + clientId );
+			if ( ! node ) {
+				return;
+			}
+			node.scrollIntoView( { block: 'center', behavior: matchMedia( '(prefers-reduced-motion: reduce)' ).matches ? 'auto' : 'smooth' } );
+			// The page is in its own frame without this file's styles, so the outline is set on the block itself.
+			const before = { outline: node.style.outline, outlineOffset: node.style.outlineOffset, transition: node.style.transition };
+			node.style.transition = 'outline-color 0.6s ease';
+			node.style.outline = '2px solid var(--wp-admin-theme-color, #3858e9)';
+			node.style.outlineOffset = '4px';
+			setTimeout( function () {
+				node.style.outlineColor = 'transparent';
+			}, 1800 );
+			setTimeout( function () {
+				Object.assign( node.style, before );
+			}, 2600 );
+		}, 60 );
+	}
+
+	/** A problem the owner should know about, in the editor's own notices. */
+	function warn( message ) {
+		dispatch( 'core/notices' ).createErrorNotice( message, { type: 'snackbar', id: NAME } );
+	}
+
+	const check = el(
+		'svg',
+		{ viewBox: '0 0 24 24', width: 16, height: 16, 'aria-hidden': true, className: 'waas-editor-assistant__icon' },
+		el( 'path', { d: 'M9.5 16.2 5.3 12l-1.4 1.4 5.6 5.6L20.1 8.4 18.7 7z', fill: 'currentColor' } )
+	);
+
+	/**
+	 * One quiet line under the panel's header after the assistant changes the page: what changed, "Not saved", Undo
+	 * (or Undo all, for several changes) and Save. It goes once nothing is unsaved, and says "Saved" for a moment.
+	 */
+	function Changes( props ) {
+		const items = props.items;
+		const editor = select( 'core/editor' );
+		const saving = editor.isSavingPost() && ! editor.isAutosavingPost();
+		if ( props.saved ) {
+			return el(
+				'div',
+				{ className: 'waas-editor-assistant__changes is-saved', role: 'status' },
+				check,
+				el( 'span', { className: 'waas-editor-assistant__what' }, __( 'Saved', 'waas-client' ) )
+			);
+		}
+		if ( ! items.length ) {
+			return null;
+		}
+		const what = items.length > 1
+			? wp.i18n.sprintf(
+				/* translators: %d: how many changes the assistant made. */
+				__( '%d changes', 'waas-client' ),
+				items.length
+			)
+			: items[ 0 ];
+		return el(
+			'div',
+			{ className: 'waas-editor-assistant__changes', role: 'status' },
+			el( 'span', { className: 'waas-editor-assistant__dot', 'aria-hidden': true } ),
+			el(
+				'span',
+				{ className: 'waas-editor-assistant__text', title: items.join( ', ' ) },
+				el( 'span', { className: 'waas-editor-assistant__what' }, what ),
+				el( 'span', { className: 'waas-editor-assistant__note' }, __( 'Not saved', 'waas-client' ) )
+			),
+			el(
+				wp.components.Button,
+				{ variant: 'tertiary', size: 'compact', onClick: props.onUndo, disabled: saving, className: 'waas-editor-assistant__undo' },
+				items.length > 1 ? __( 'Undo all', 'waas-client' ) : __( 'Undo', 'waas-client' )
+			),
+			el(
+				wp.components.Button,
+				{ variant: 'primary', size: 'compact', onClick: props.onSave, isBusy: saving, disabled: saving },
+				saving ? __( 'Saving…', 'waas-client' ) : __( 'Save', 'waas-client' )
+			)
+		);
 	}
 
 	function Chat() {
 		const frame = useRef( null );
 		const signingIn = useRef( false );
+		const [ items, setItems ] = useState( [] );
+		const [ saved, setSaved ] = useState( false );
+		const [ , redraw ] = useState( 0 );
+
+		// The card follows the editor: it clears once nothing is unsaved, and redraws while a save runs.
+		useEffect( function () {
+			let wasSaving = false;
+			return subscribe( function () {
+				const editor = select( 'core/editor' );
+				const savingNow = editor.isSavingPost() && ! editor.isAutosavingPost();
+				if ( savingNow !== wasSaving ) {
+					wasSaving = savingNow;
+					redraw( function ( n ) {
+						return n + 1;
+					} );
+				}
+				if ( ! editor.isEditedPostDirty() ) {
+					setItems( function ( list ) {
+						return list.length ? [] : list;
+					} );
+				}
+			} );
+		}, [] );
+
+		useEffect( function () {
+			if ( ! saved ) {
+				return undefined;
+			}
+			const timer = setTimeout( function () {
+				setSaved( false );
+			}, 3000 );
+			return function () {
+				clearTimeout( timer );
+			};
+		}, [ saved ] );
+
+		// Undo takes back every change the assistant made since the last save, newest first.
+		const undo = function () {
+			for ( let i = 0; i < items.length; i++ ) {
+				dispatch( 'core/editor' ).undo();
+			}
+			setItems( [] );
+		};
+		const save = function () {
+			Promise.resolve( dispatch( 'core/editor' ).savePost() ).then( function () {
+				const editor = select( 'core/editor' );
+				if ( ! editor.didPostSaveRequestFail() ) {
+					setItems( [] );
+					setSaved( true );
+				}
+			} );
+		};
 
 		useEffect( function () {
 			let stop = null;
@@ -146,7 +307,7 @@
 							}
 						} )
 						.catch( function ( error ) {
-							notify( false, ( error && error.message ) || __( 'The assistant can’t be reached right now.', 'waas-client' ) );
+							warn( ( error && error.message ) || __( 'The assistant can’t be reached right now.', 'waas-client' ) );
 						} );
 				}
 				if ( data.type === 'ready' ) {
@@ -159,13 +320,27 @@
 						} );
 					}
 				}
+				if ( data.type === 'clear-selection' ) {
+					dispatch( 'core/block-editor' ).clearSelectedBlock();
+				}
+				if ( data.type === 'toggle' ) {
+					// Ctrl + . pressed inside the chat.
+					togglePanel();
+				}
+				if ( data.type === 'width' ) {
+					document.body.classList.toggle( 'waas-editor-assistant-wide', Boolean( data.wide ) );
+				}
 				if ( data.type === 'apply' && data.change ) {
 					try {
-						apply( data.change );
-						notify( true );
+						const done = apply( data.change );
+						setSaved( false );
+						setItems( function ( list ) {
+							return list.concat( [ done.label ] );
+						} );
+						show( done.shown );
 						send( { type: 'applied', id: data.id, ok: true } );
 					} catch ( error ) {
-						notify( false, error.message );
+						warn( error.message );
 						send( { type: 'applied', id: data.id, ok: false } );
 					}
 				}
@@ -180,13 +355,18 @@
 			};
 		}, [] );
 
-		return el( 'iframe', {
-			ref: frame,
-			className: 'waas-editor-assistant__frame',
-			title: __( 'Website assistant', 'waas-client' ),
-			src: config.assistantUrl + '/editor',
-			allow: 'clipboard-write; microphone',
-		} );
+		return el(
+			'div',
+			{ className: 'waas-editor-assistant__body' },
+			el( Changes, { items, saved, onUndo: undo, onSave: save } ),
+			el( 'iframe', {
+				ref: frame,
+				className: 'waas-editor-assistant__frame',
+				title: __( 'Website assistant', 'waas-client' ),
+				src: config.assistantUrl + '/editor',
+				allow: 'clipboard-write; microphone',
+			} )
+		);
 	}
 
 	const icon = el(
@@ -196,34 +376,100 @@
 		el( 'path', { d: 'M18.5 15.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9.9-2.6z' } )
 	);
 
+	const AREA = NAME + '/' + SIDEBAR;
+	const isOpen = function () {
+		return select( 'core/interface' ).getActiveComplementaryArea( 'core' ) === AREA;
+	};
+	const openPanel = function () {
+		if ( ! isOpen() ) {
+			dispatch( 'core/interface' ).enableComplementaryArea( 'core', AREA );
+		}
+	};
+	const togglePanel = function () {
+		if ( isOpen() ) {
+			dispatch( 'core/interface' ).disableComplementaryArea( 'core' );
+		} else {
+			openPanel();
+		}
+	};
+
+	/**
+	 * On a phone WordPress hides the admin bar's Assistant button and the top bar's star, so a round Assistant button
+	 * floats at the bottom right of the editor while the panel is closed.
+	 */
+	function PhoneButton() {
+		const phone = wp.compose.useViewportMatch( 'medium', '<' );
+		const open = wp.data.useSelect( function ( pick ) {
+			return pick( 'core/interface' ).getActiveComplementaryArea( 'core' ) === AREA;
+		}, [] );
+		if ( ! phone || open ) {
+			return null;
+		}
+		return wp.element.createPortal(
+			el(
+				'button',
+				{ type: 'button', className: 'waas-editor-assistant__fab', onClick: openPanel, 'aria-label': __( 'Open the assistant', 'waas-client' ) },
+				icon,
+				el( 'span', null, __( 'Assistant', 'waas-client' ) )
+			),
+			document.body
+		);
+	}
+
 	wp.plugins.registerPlugin( NAME, {
 		icon,
 		render: function () {
 			return el(
-				wp.editor.PluginSidebar,
-				{ name: SIDEBAR, title: __( 'Assistant', 'waas-client' ), icon, className: 'waas-editor-assistant' },
-				el( Chat )
+				wp.element.Fragment,
+				null,
+				el(
+					wp.editor.PluginSidebar,
+					{ name: SIDEBAR, title: __( 'Assistant', 'waas-client' ), icon, className: 'waas-editor-assistant' },
+					el( Chat )
+				),
+				el( PhoneButton )
 			);
 		},
 	} );
 
-	// The admin bar's Assistant button opens the editor with the panel open. Once the editor is ready: on a phone
+	// Ctrl + . (⌘ + . on a Mac) opens and closes the panel, from the editor or from inside the page.
+	const shortcut = function ( event ) {
+		if ( event.key === '.' && ( event.ctrlKey || event.metaKey ) && ! event.altKey && ! event.shiftKey ) {
+			event.preventDefault();
+			togglePanel();
+		}
+	};
+	document.addEventListener( 'keydown', shortcut );
+	const watchCanvas = function () {
+		const canvas = document.querySelector( 'iframe[name="editor-canvas"]' );
+		const doc = canvas && canvas.contentDocument;
+		if ( doc && ! doc.__waasAssistantShortcut ) {
+			doc.__waasAssistantShortcut = true;
+			doc.addEventListener( 'keydown', shortcut );
+		}
+	};
+	setInterval( watchCanvas, 2000 );
+
+	// The admin bar's Assistant button opens the editor with the panel open. WordPress's one-time welcome guide would
+	// cover the page and the panel, so it is switched off for this person. Once the editor is ready: on a phone
 	// WordPress closes its sidebars while it loads, so the panel is opened after that, and again if it was closed.
 	if ( new URLSearchParams( window.location.search ).get( config.openParam ) === '1' ) {
-		const area = NAME + '/' + SIDEBAR;
-		const open = function () {
-			if ( select( 'core/interface' ).getActiveComplementaryArea( 'core' ) !== area ) {
-				dispatch( 'core/interface' ).enableComplementaryArea( 'core', area );
-			}
-		};
+		const prefs = dispatch( 'core/preferences' );
+		if ( prefs && prefs.set ) {
+			prefs.set( 'core/edit-post', 'welcomeGuide', false );
+			prefs.set( 'core/edit-site', 'welcomeGuide', false );
+			prefs.set( 'core/edit-site', 'welcomeGuideStyles', false );
+			prefs.set( 'core/edit-site', 'welcomeGuidePage', false );
+			prefs.set( 'core/edit-site', 'welcomeGuideTemplate', false );
+		}
 		const stop = subscribe( function () {
 			const editor = select( 'core/editor' );
 			if ( editor.__unstableIsEditorReady && ! editor.__unstableIsEditorReady() ) {
 				return;
 			}
 			stop();
-			setTimeout( open, 0 );
-			setTimeout( open, 800 );
+			setTimeout( openPanel, 0 );
+			setTimeout( openPanel, 800 );
 		} );
 	}
 } )( window.wp, window.waasEditorAssistant );

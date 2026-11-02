@@ -27,6 +27,7 @@ const SITE_KEY = randomBytes(24).toString('hex');
 const OUT = resolve(HERE, 'shots/editor');
 mkdirSync(OUT, { recursive: true });
 
+const ORIGINAL = '<!-- wp:heading --><h2 class="wp-block-heading">Fresh bread</h2><!-- /wp:heading -->\n\n<!-- wp:paragraph --><p>Baked every morning.</p><!-- /wp:paragraph -->';
 const WARMER = '<!-- wp:heading --><h2 class="wp-block-heading">Bread baked at dawn</h2><!-- /wp:heading -->';
 
 // The stand-in chat. Signed out it asks the editor to sign it in; /from-shop (the handoff) signs it in.
@@ -95,7 +96,7 @@ add_filter('pre_http_request', function ($answer, $args, $url) {
 });
 const base = cli.serverUrl.replace(/\/$/, '');
 const made = await cli.playground.run({
-    code: `<?php require '/wordpress/wp-load.php'; echo wp_insert_post(['post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Home', 'post_content' => '<!-- wp:heading --><h2 class="wp-block-heading">Fresh bread</h2><!-- /wp:heading -->\n\n<!-- wp:paragraph --><p>Baked every morning.</p><!-- /wp:paragraph -->']);`,
+    code: `<?php require '/wordpress/wp-load.php'; echo wp_insert_post(['post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'Home', 'post_content' => ${JSON.stringify(ORIGINAL)}]);`,
 });
 const pageId = Number(made.text.trim());
 
@@ -151,21 +152,26 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
     check(Boolean(selected && selected.markup.includes('Fresh bread')), `${label}: the chat got the selected heading with its markup`);
 
     // The assistant's change lands in the editor, unsaved, with Undo.
-    const live = page.frames().find((f) => f.url().startsWith(CHAT)) ?? chatFrame;
+    let live = page.frames().find((f) => f.url().startsWith(CHAT)) ?? chatFrame;
     await live.evaluate(([clientId, content]) => window.applyChange({ action: 'replace', clientId, content }), [selected?.clientId, WARMER]);
     await canvas.locator('h2', { hasText: 'Bread baked at dawn' }).waitFor({ timeout: 10_000 }).catch(() => {});
     check(await canvas.locator('h2', { hasText: 'Bread baked at dawn' }).isVisible(), `${label}: the change shows in the editor`);
-    const notice = page.locator('.components-snackbar', { hasText: 'The assistant changed the page. Save to keep it.' });
-    check(await notice.isVisible(), `${label}: a notice says to save, with Undo`);
-    if (label === 'phone') {
-        // The panel fills a phone's screen, so the notice sits at the top, clear of the chat's message box.
-        const box = await notice.boundingBox();
-        check(Boolean(box && box.y + box.height < height / 2), `${label}: the notice stays clear of the chat's message box`);
-        // ...and below the editor's Save button and the panel's header, which the owner needs while it shows.
-        const save = await page.getByRole('region', { name: 'Editor top bar' }).getByRole('button', { name: /^Save|^Publish/ }).first().boundingBox();
+    // A card at the top of the panel says what changed, with Undo and Save; WordPress's dark pop-up is not used.
+    const card = page.locator('.waas-editor-assistant__changes');
+    await card.waitFor({ timeout: 5_000 }).catch(() => {});
+    check(await card.isVisible() && (await card.innerText()).includes('Heading changed') && (await card.innerText()).includes('Not saved'),
+        `${label}: a quiet line says what changed and that it isn't saved`);
+    check(await card.getByRole('button', { name: 'Undo' }).isVisible() && await card.getByRole('button', { name: 'Save' }).isVisible(), `${label}: the card has Undo and Save`);
+    check(!(await page.locator('.components-snackbar').isVisible().catch(() => false)), `${label}: no dark pop-up over the page`);
+    {
+        // Inside the panel, under its header and above the chat, so it covers nothing.
+        const box = await card.boundingBox();
         const header = await page.locator('.interface-complementary-area-header').first().boundingBox();
-        const below = (b) => !b || !box || box.y >= b.y + b.height;
-        check(below(save) && below(header), `${label}: the notice leaves Save and the panel's header uncovered`);
+        const chatBox = await page.locator('iframe.waas-editor-assistant__frame').boundingBox();
+        check(Boolean(box && header && chatBox && box.y >= header.y + header.height && box.y + box.height <= chatBox.y + 1),
+            `${label}: the card sits between the panel's header and the chat`);
+        const save = await card.getByRole('button', { name: 'Save' }).boundingBox();
+        check(Boolean(save && box && save.x + save.width <= box.x + box.width + 1 && box.height <= 56), `${label}: the line is one row and its buttons fit`);
     }
     const saved = await cli.playground.run({ code: `<?php require '/wordpress/wp-load.php'; echo get_post(${pageId})->post_content;` });
     check(saved.text.includes('Fresh bread') && !saved.text.includes('dawn'), `${label}: nothing is saved until the owner saves`);
@@ -179,9 +185,73 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
     check(!panel.scrolls, `${label}: only the chat scrolls, not the panel around it`);
     await page.screenshot({ path: `${OUT}/editor-${label}.png` });
 
-    await notice.getByRole('button', { name: 'Undo' }).click();
+    await card.getByRole('button', { name: 'Undo' }).click();
     await canvas.locator('h2', { hasText: 'Fresh bread' }).waitFor({ timeout: 10_000 }).catch(() => {});
     check(await canvas.locator('h2', { hasText: 'Fresh bread' }).isVisible(), `${label}: Undo puts it back`);
+    await page.waitForTimeout(500);
+    check(!(await card.isVisible().catch(() => false)), `${label}: with nothing left unsaved, the card goes away`);
+
+    // Two changes, then Save from the card: the page is saved and the card says so.
+    const firstHeading = await page.evaluate(() => wp.data.select('core/block-editor').getBlocks().find((b) => b.name === 'core/heading')?.clientId);
+    await live.evaluate(([clientId, content]) => window.applyChange({ action: 'replace', clientId, content }), [firstHeading, WARMER]);
+    await canvas.locator('h2', { hasText: 'Bread baked at dawn' }).waitFor({ timeout: 10_000 }).catch(() => {});
+    await live.evaluate((content) => window.applyChange({ action: 'insert', content }), '<!-- wp:paragraph --><p>Open every day from 7.</p><!-- /wp:paragraph -->');
+    await page.waitForTimeout(800);
+    check((await card.innerText().catch(() => '')).includes('2 changes') && await card.getByRole('button', { name: 'Undo all' }).isVisible().catch(() => false),
+        `${label}: several changes are counted, with Undo all`);
+    await page.screenshot({ path: `${OUT}/editor-two-changes-${label}.png` });
+    await card.getByRole('button', { name: 'Save' }).click();
+    await page.locator('.waas-editor-assistant__changes.is-saved').waitFor({ timeout: 15_000 }).catch(() => {});
+    check(await page.locator('.waas-editor-assistant__changes.is-saved').isVisible(), `${label}: after Save the card says the page is saved`);
+    await page.screenshot({ path: `${OUT}/editor-saved-${label}.png` });
+    const kept = await cli.playground.run({ code: `<?php require '/wordpress/wp-load.php'; echo get_post(${pageId})->post_content;` });
+    check(kept.text.includes('dawn') && kept.text.includes('Open every day') && kept.text.includes('Baked every morning'), `${label}: Save from the card keeps both changes and the rest of the page`);
+    if (process.env.DEBUG_EDITOR) console.log(kept.text);
+    // Put the page back for the next run.
+    await cli.playground.run({ code: `<?php require '/wordpress/wp-load.php'; wp_update_post(['ID' => ${pageId}, 'post_content' => ${JSON.stringify(ORIGINAL)}]);` });
+
+    // Undo all takes back every change since the last save.
+    const headingNow = await page.evaluate(() => wp.data.select('core/block-editor').getBlocks().find((b) => b.name === 'core/heading')?.clientId);
+    await live.evaluate(([clientId, content]) => window.applyChange({ action: 'replace', clientId, content }), [headingNow, '<!-- wp:heading --><h2 class="wp-block-heading">One</h2><!-- /wp:heading -->']);
+    await page.waitForTimeout(400);
+    await live.evaluate((content) => window.applyChange({ action: 'insert', content }), '<!-- wp:paragraph --><p>Two</p><!-- /wp:paragraph -->');
+    await page.waitForTimeout(600);
+    await card.getByRole('button', { name: 'Undo all' }).click().catch(() => {});
+    await page.waitForTimeout(600);
+    if (process.env.DEBUG_EDITOR) console.log('after undo all:', JSON.stringify(await page.evaluate(() => wp.data.select('core/block-editor').getBlocks().map((b) => b.name + ':' + (b.attributes.content?.text ?? b.attributes.content ?? '')))), 'card:', await card.innerText().catch(() => '-'));
+    check(!(await canvas.locator('h2', { hasText: /^One$/ }).count()) && !(await canvas.locator('p', { hasText: /^Two$/ }).count()), `${label}: Undo all takes back every change`);
+
+    // The chat can clear the selection and ask for a wider panel.
+    await page.evaluate(() => wp.data.dispatch('core/block-editor').selectBlock(wp.data.select('core/block-editor').getBlocks()[0].clientId));
+    await live.evaluate(() => parent.postMessage({ source: 'anypress-assistant', type: 'clear-selection' }, '*'));
+    await page.waitForTimeout(300);
+    check(!(await page.evaluate(() => wp.data.select('core/block-editor').getSelectedBlockClientId())), `${label}: the chat can clear the selected block`);
+    await live.evaluate(() => parent.postMessage({ source: 'anypress-assistant', type: 'width', wide: true }, '*'));
+    await page.waitForTimeout(300);
+    check(await page.evaluate(() => document.body.classList.contains('waas-editor-assistant-wide')), `${label}: the chat can ask for a wider panel`);
+    await live.evaluate(() => parent.postMessage({ source: 'anypress-assistant', type: 'width', wide: false }, '*'));
+    check(!(await page.locator('.components-guide, .edit-post-welcome-guide').isVisible().catch(() => false)), `${label}: no welcome guide over the page`);
+
+    // Ctrl + . closes and opens the panel; on a phone a round button opens it while it is closed.
+    // Focus on the editor itself; inside the chat the chat handles the shortcut.
+    await page.evaluate(() => document.activeElement?.blur());
+    await page.keyboard.press('Control+.');
+    await page.waitForTimeout(500);
+    if (process.env.DEBUG_EDITOR) console.log('area after shortcut:', await page.evaluate(() => [wp.data.select('core/interface').getActiveComplementaryArea('core'), document.activeElement?.tagName, document.activeElement?.className]));
+    check(!(await page.locator('iframe.waas-editor-assistant__frame').isVisible().catch(() => false)), `${label}: Ctrl + . closes the panel`);
+    const fab = page.locator('.waas-editor-assistant__fab');
+    if (label === 'phone') {
+        check(await fab.isVisible().catch(() => false), `${label}: a round Assistant button shows while the panel is closed`);
+        await page.screenshot({ path: `${OUT}/editor-fab-${label}.png` });
+        await fab.click().catch(() => {});
+    } else {
+        check(!(await fab.isVisible().catch(() => false)), `${label}: no round button on a wide screen`);
+        await page.keyboard.press('Control+.');
+    }
+    await page.locator('iframe.waas-editor-assistant__frame').waitFor({ timeout: 5_000 }).catch(() => {});
+    check(await page.locator('iframe.waas-editor-assistant__frame').isVisible().catch(() => false), `${label}: and it opens again`);
+    await page.frameLocator('iframe.waas-editor-assistant__frame').locator('#state', { hasText: 'Signed in' }).waitFor({ timeout: 15_000 }).catch(() => {});
+    live = page.frames().find((f) => f.url().startsWith(CHAT) && f.url().includes('signed=1')) ?? live;
 
     // A block that isn't there is refused with a notice, not applied.
     await live.evaluate(() => window.applyChange({ action: 'remove', clientId: 'not-a-block' }));

@@ -31,6 +31,8 @@ class Tenant
 
     /** Order meta: 'yes' when checkout accepted the website name without the API's availability check. */
     public const WEBSITE_NAME_UNVERIFIED_META = 'waas_website_name_unverified';
+    /** The checkout's optional "What does your business do, and who is it for?" answer; the store's assistant starts from it. */
+    public const BUSINESS_ABOUT_META = 'waas_business_about';
     /** Subscription meta while the store waits for a new name (see NameConflicts). */
     public const NAME_CONFLICT_META = 'waas_name_conflict';
 

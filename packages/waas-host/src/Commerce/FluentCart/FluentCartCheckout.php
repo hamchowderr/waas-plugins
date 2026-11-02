@@ -7,13 +7,17 @@ use WaaSHost\Core\ProvisioningApi;
 use WaaSHost\Core\Tenant;
 
 /**
- * The "Website name" field on FluentCart's checkout, shown when the cart holds a website plan.
+ * The "Website name" field on FluentCart's checkout, shown when the cart holds a website plan, and an optional
+ * "What does your business do, and who is it for?" box, which the new website's assistant starts from.
  * The name becomes the store's subdomain, so it is checked against this storefront's stores and with the
  * provisioning API. When the API can't answer, the name is accepted (and marked unverified on the order).
  */
 class FluentCartCheckout
 {
     public const FIELD = Tenant::WEBSITE_NAME_META;
+    public const ABOUT_FIELD = Tenant::BUSINESS_ABOUT_META;
+    /** The most characters of the business answer kept. */
+    public const ABOUT_MAX = 500;
 
     private ProvisioningApi $provisioning_api;
     private FluentCartAdapter $adapter;
@@ -64,6 +68,18 @@ class FluentCartCheckout
             'value' => '',
             'placeholder' => $label,
             'aria-label' => $label,
+        ];
+        $about = __('What does your business do, and who is it for? (optional)', 'waas-host');
+        $fields[self::ABOUT_FIELD] = [
+            'id' => self::ABOUT_FIELD,
+            'name' => self::ABOUT_FIELD,
+            'type' => 'textarea',
+            'data-type' => 'textarea',
+            'label' => '',
+            'required' => 'no',
+            'value' => '',
+            'placeholder' => $about,
+            'aria-label' => $about,
         ];
 
         return $fields;
@@ -127,5 +143,17 @@ class FluentCartCheckout
         if (isset($this->unverified[$website_name])) {
             $order->updateMeta(Tenant::WEBSITE_NAME_UNVERIFIED_META, 'yes');
         }
+        $about = self::about((string) ($data['request_data'][self::ABOUT_FIELD] ?? ''));
+        if ($about !== '') {
+            $order->updateMeta(self::ABOUT_FIELD, $about);
+        }
+    }
+
+    /** The business answer as one tidy paragraph, at most ABOUT_MAX characters. */
+    public static function about(string $answer): string
+    {
+        $answer = trim((string) preg_replace('/\s+/', ' ', sanitize_textarea_field($answer)));
+
+        return function_exists('mb_substr') ? mb_substr($answer, 0, self::ABOUT_MAX) : substr($answer, 0, self::ABOUT_MAX);
     }
 }

@@ -369,7 +369,7 @@ Sources: `src/Api/AccountSignIn.php`, `src/Api/AccountTokens.php`, `src/Api/Acco
 |---|---|
 | The link to the API's website (`externalId`), domains, roles, state, suspend and delete dates, name conflict, job queue, job failure | Subscription meta (WooCommerce order meta, or FluentCart subscription meta), keys in `src/Core/Tenant.php` and `src/Features/StoreJobs.php` |
 | Login private key | Subscription meta `_waas_tenant_private_key`, sealed by `src/Core/PrivateKeyStore.php` |
-| Website name chosen at checkout | Order meta |
+| Website name chosen at checkout, and the optional "What does your business do, and who is it for?" answer (2.9.0, FluentCart; it reaches the store in `waas_store_owner` as `about`, where the website assistant starts from it) | Order meta `waas_website_name`, `waas_business_about` |
 | Plan role, snapshot group, size per product | FluentCart product feed `waas_provisioning`, or WooCommerce product meta (`src/Core/StoreProduct.php`) |
 | Plan roles list | Option `waas-host-roles-options` |
 | API login, website domain, DNS targets, grace days, emails | Options or `wp-config.php` constants (`src/Core/ConfigService.php`, `src/Features/AdminSettings.php`) |
