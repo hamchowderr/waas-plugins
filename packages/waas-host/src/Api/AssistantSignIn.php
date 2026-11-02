@@ -13,7 +13,8 @@ use WP_REST_Request;
 /**
  * The "Ask the website assistant" button on the customer's account page. The owner is already signed in
  * here, so the storefront vouches for them: this route asks the API for a one-time handoff for the owner's
- * website and sends the owner to the assistant with it. The assistant trades it, with its own PKCE
+ * website and sends the owner to the assistant with it. With the default assistant that is the website's own
+ * https://<its domain>/assistant, so the owner lands on their own site. The assistant trades it, with its own PKCE
  * challenge, for a sign-in; the tokens never pass through this site.
  */
 class AssistantSignIn
@@ -74,6 +75,9 @@ class AssistantSignIn
         if ($assistant === '' || $external_id === '' || !$ready) {
             return ['error' => __('The website assistant is not available for this website yet.', 'waas-host'), 'status' => 404];
         }
+        if ($assistant === ConfigService::ANYPRESS_ASSISTANT_URL) {
+            $assistant = self::on_website($commerce, $subscription_id) ?: $assistant;
+        }
         try {
             $next = $this->api->site_handoff($external_id, $assistant);
         } catch (Exception $e) {
@@ -84,5 +88,17 @@ class AssistantSignIn
             return ['error' => __('The website assistant could not be opened right now. Please try again in a minute.', 'waas-host'), 'status' => 502];
         }
         return ['redirect' => $next];
+    }
+
+    /** The default assistant on the website's own domain (its custom domain, else its first one), or '' without one. */
+    private static function on_website($commerce, int $subscription_id): string
+    {
+        $domain = (string) ($commerce->get_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META)
+            ?: $commerce->get_subscription_meta($subscription_id, Tenant::BASE_DOMAIN_NAME_META));
+        $domain = strtolower(preg_replace('#^https?://#i', '', rtrim(trim($domain), '/')));
+        if (!preg_match('/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/', $domain)) {
+            return '';
+        }
+        return 'https://' . $domain . '/assistant';
     }
 }
