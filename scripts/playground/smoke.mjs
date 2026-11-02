@@ -59,6 +59,14 @@ const blueprint = {
         { step: 'activatePlugin', pluginPath: 'waas-client/index.php' },
         { step: 'installPlugin', pluginData: { resource: 'url', url: MCP_ADAPTER }, options: { activate: false } },
         { step: 'writeFile', path: '/wordpress/wp-content/mu-plugins/anypress-patterns.php', data: starterPages },
+        // The business details a purchase leaves on a store, with the checkout's optional "what does your business do".
+        {
+            step: 'setSiteOptions',
+            options: {
+                waas_store_owner: JSON.stringify({ name: 'Rosa Diaz', phone: '555-0100', city: 'Austin', state: 'TX', country: 'US', about: 'A small bakery: sourdough and cakes to order.' }),
+                waas_tenant_roles: ['website'],
+            },
+        },
         {
             // Stores get the site key as an environment variable on their container; here a must-use plugin sets it.
             step: 'writeFile',
@@ -311,6 +319,31 @@ await check('menus: listed', async () => {
     const res = await site('GET', '/menus');
     expectStatus(res, 200);
     expect(Array.isArray(res.data), 'not a list');
+});
+
+await check('business: what the site says, and the checkout answer as what the business does', async () => {
+    const res = await site('GET', '/business');
+    expectStatus(res, 200);
+    const { site: facts, about } = res.data;
+    expect(facts.name === 'Playground Store', `name ${facts.name}`);
+    expect(facts.siteType === 'website', `siteType ${facts.siteType}`);
+    expect(facts.owner?.name === 'Rosa Diaz' && facts.owner?.city === 'Austin' && facts.owner?.country === 'United States', `owner ${JSON.stringify(facts.owner)}`);
+    expect(typeof facts.language === 'string' && typeof facts.timezone === 'string', 'language and time zone');
+    expect(about.what === 'A small bakery: sourdough and cakes to order.', `what ${about.what}`);
+});
+
+await check('business: the owner’s facts are saved, cleaned, cleared and undone', async () => {
+    const saved = await site('PATCH', '/business', { about: { who: 'Families in north Austin<script>x</script>', hours: 'Tue–Sat 7–3', voice: 'warm' } });
+    expectStatus(saved, 200);
+    expect(saved.data.about.who === 'Families in north Austin', `who ${saved.data.about.who}`);
+    expect(saved.data.about.hours === 'Tue–Sat 7–3', `hours ${saved.data.about.hours}`);
+    expect(saved.data.updated, 'no updated time');
+    const cleared = await site('PATCH', '/business', { about: { voice: '' } });
+    expect(cleared.data.about.voice === undefined, 'voice not cleared');
+    const undone = await site('POST', '/business/undo');
+    expect(undone.data.about.voice === 'warm', `undo gave ${JSON.stringify(undone.data.about)}`);
+    expectStatus(await site('PATCH', '/business', { about: { nothing: 'x' } }), 400);
+    expectStatus(await site('GET', '/business', undefined, { sign: false }), 401);
 });
 
 await check('abilities: listed with all three safety hints', async () => {

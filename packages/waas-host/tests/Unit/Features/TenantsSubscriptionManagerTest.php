@@ -124,13 +124,14 @@ class TenantsSubscriptionManagerTest extends StoreJobsTestCase
         $this->stub_new_store_functions();
         $purchase = new PlanPurchase([new PlanProduct(101, 'peptide-store', 'peptide-starter')], 'Apex Research', 'owner@apexresearch.example', 'us', [
             'name' => 'Jordan Reyes', 'phone' => '512 555 0100', 'address_1' => '1 Main St', 'address_2' => '', 'city' => 'Austin',
-            'state' => 'TX', 'postcode' => ' 78701 ', 'company' => 'not passed on',
+            'state' => 'TX', 'postcode' => ' 78701 ', 'company' => 'not passed on', 'about' => "Lab supplies\n  for research teams.",
         ]);
+        Functions\when('sanitize_textarea_field')->returnArg();
         $this->manager->create_tenant_when_subscription_created(901, $purchase);
         $this->api->expects('create_tenant')->once()->with(Mockery::on(function ($args) {
             return json_decode($args['wp_options']['waas_store_owner'], true) === [
                 'country' => 'US', 'name' => 'Jordan Reyes', 'phone' => '512 555 0100', 'address_1' => '1 Main St',
-                'city' => 'Austin', 'state' => 'TX', 'postcode' => '78701',
+                'city' => 'Austin', 'state' => 'TX', 'postcode' => '78701', 'about' => 'Lab supplies for research teams.',
             ];
         }))->andReturn((object) ['externalId' => '5f0b7c3e-2d1a-4e8b-9c6f-0a1b2c3d4e5f', 'baseDomain' => 't-1.stores.waas.example']);
 

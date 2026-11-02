@@ -27,6 +27,7 @@ class FluentCartCheckoutTest extends TestCase
         parent::setUp();
         Functions\stubTranslationFunctions();
         Functions\when('sanitize_text_field')->alias('trim');
+        Functions\when('sanitize_textarea_field')->alias(fn ($s) => trim(strip_tags($s)));
         Functions\when('remove_accents')->returnArg();
         Functions\when('sanitize_title_with_dashes')->alias(fn ($s) => trim(preg_replace('/[^a-z0-9]+/', '-', strtolower($s)), '-'));
         Functions\when('get_option')->alias(fn ($key, $default = '') => $key === 'waas_root_domain' ? 'sites.example' : $default);
@@ -54,6 +55,26 @@ class FluentCartCheckoutTest extends TestCase
         $this->assertArrayHasKey(self::FIELD, $this->checkout->add_field([], ['cart' => $this->plan_cart]));
         $this->assertSame('yes', $this->checkout->add_field([], ['cart' => $this->plan_cart])[self::FIELD]['required']);
         $this->assertSame([], $this->checkout->add_field([], ['cart' => $this->other_cart]));
+    }
+
+    public function test_the_business_question_is_optional(): void
+    {
+        $fields = $this->checkout->add_field([], ['cart' => $this->plan_cart]);
+        $this->assertSame('no', $fields[FluentCartCheckout::ABOUT_FIELD]['required']);
+        $this->assertSame('textarea', $fields[FluentCartCheckout::ABOUT_FIELD]['type']);
+    }
+
+    public function test_the_business_answer_is_saved_tidy_and_short(): void
+    {
+        $order = Mockery::mock();
+        $order->expects('updateMeta')->with(self::FIELD, 'Apex Research');
+        $order->expects('updateMeta')->with(FluentCartCheckout::ABOUT_FIELD, 'We fix bikes for commuters in Leeds.');
+
+        $this->checkout->save(['order' => $order, 'cart' => $this->plan_cart, 'request_data' => [
+            self::FIELD => 'Apex Research',
+            FluentCartCheckout::ABOUT_FIELD => "  We fix bikes\n for <b>commuters</b> in Leeds.  ",
+        ]]);
+        $this->assertSame(500, mb_strlen(FluentCartCheckout::about(str_repeat('a', 900))));
     }
 
     public function test_carts_without_a_plan_are_not_validated(): void

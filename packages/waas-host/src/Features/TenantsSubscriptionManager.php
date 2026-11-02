@@ -525,6 +525,11 @@ class TenantsSubscriptionManager
                 $owner[$key] = $value;
             }
         }
+        // The checkout's optional "What does your business do?": the store's assistant starts from it.
+        $about = isset($billing['about']) ? trim((string) preg_replace('/\s+/', ' ', sanitize_textarea_field((string) $billing['about']))) : '';
+        if ($about !== '') {
+            $owner['about'] = function_exists('mb_substr') ? mb_substr($about, 0, 500) : substr($about, 0, 500);
+        }
 
         return $owner;
     }
@@ -533,7 +538,7 @@ class TenantsSubscriptionManager
      * WordPress settings the new store starts with: its title is the website name, and its admin email (where
      * WordPress and the store's plugins send owner notices) is the buyer's, not the template's placeholder.
      * `waas_store_owner` (JSON) carries the rest: the country and the buyer's billing name, phone and address, which
-     * the store fills in as its business details. Read at job time, so a name changed after a conflict is the one used.
+     * the store fills in as its business details, and their answer to what the business does, if they gave one. Read at job time, so a name changed after a conflict is the one used.
      */
     private function store_options(array $args): array
     {

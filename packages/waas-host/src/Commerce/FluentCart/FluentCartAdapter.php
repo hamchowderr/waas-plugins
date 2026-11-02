@@ -92,7 +92,8 @@ class FluentCartAdapter implements CommerceAdapter
             $this->store->get_order_meta($purchase_context, Tenant::WEBSITE_NAME_META),
             $customer['email'] ?? '',
             $customer['country'] ?? '',
-            $this->store->get_order_billing($purchase_context)
+            // The checkout's optional business answer travels with the billing details to the store.
+            array_filter($this->store->get_order_billing($purchase_context) + ['about' => $this->store->get_order_meta($purchase_context, Tenant::BUSINESS_ABOUT_META)], 'strlen')
         );
     }
 

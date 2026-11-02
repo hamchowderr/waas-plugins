@@ -2,6 +2,7 @@
 
 namespace WaaSClient\Api;
 
+use WaaSClient\Core\BusinessProfile;
 use WaaSClient\Core\SignedRequest;
 use WaaSClient\Core\SiteSections;
 use WaaSClient\Features\PluginBootstrap;
@@ -50,6 +51,9 @@ class SiteController
             ['/menus', WP_REST_Server::READABLE, 'list_menus'],
             ['/menus/' . self::ID, WP_REST_Server::EDITABLE, 'update_menu'],
             ['/media', WP_REST_Server::CREATABLE, 'add_media'],
+            ['/business', WP_REST_Server::READABLE, 'get_business'],
+            ['/business', WP_REST_Server::EDITABLE, 'update_business'],
+            ['/business/undo', WP_REST_Server::CREATABLE, 'undo_business'],
         ];
         foreach ($routes as [$path, $methods, $callback]) {
             register_rest_route(PluginBootstrap::API_V1_NAMESPACE, self::ROUTE . $path, [
@@ -95,6 +99,29 @@ class SiteController
             'homePage' => $front ?: null,
             'homeShows' => $front ? 'page' : 'latest posts',
         ];
+    }
+
+    /** What the site says about its business, and what its owner has told the assistant (Core\BusinessProfile). */
+    public function get_business(): array
+    {
+        return BusinessProfile::read();
+    }
+
+    /** { about: { what?, who?, area?, hours?, contact?, voice?, notes? } } Only the fields given change; "" clears one. */
+    public function update_business(WP_REST_Request $request)
+    {
+        $about = $request->get_param('about');
+        if (!is_array($about) || !array_intersect_key($about, BusinessProfile::FIELDS)) {
+            return $this->bad('Send about with at least one of: ' . implode(', ', array_keys(BusinessProfile::FIELDS)) . '.');
+        }
+
+        return BusinessProfile::save($about);
+    }
+
+    /** Puts back what the owner's facts were before the last save. */
+    public function undo_business(): array
+    {
+        return BusinessProfile::undo();
     }
 
     public function list_pages(): array
