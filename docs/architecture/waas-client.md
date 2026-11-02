@@ -229,7 +229,7 @@ Since 2.8.0 a store's administrators (anyone who can change its design, `edit_th
 
 - **Sign-in.** The chat asks the editor to sign it in. WaaS Client's `POST /wp-json/waas-client/v1/assistant/handoff` (same capability) asks the AnyPress API (`WAAS_API_URL`, default `https://api.anypress.io`) at `POST /oauth/site/store-handoff`, signed with the store's site key, and frames the one-time sign-in it answers. Only an address on the assistant's own site is framed.
 - **What the chat sees.** With each message the editor sends what it has open: the post type and id, its title, its top-level blocks and the selected block, each with its block markup.
-- **Changes.** The assistant's editor changes come back as replace, insert, remove or replace-everything, and land in the editor like any edit: the owner sees them, gets an Undo in the notice, and keeps them by pressing Save. Nothing is saved for them.
+- **Changes.** The assistant's editor changes come back as replace, insert, remove or replace-everything, and land in the editor like any edit. The changed block scrolls into view with a brief outline. Since 2.11.0 a card at the top of the panel says what changed ("Changed: Heading", and how many changes are unsaved) with **Undo** and **Save**; it goes away once nothing is unsaved and says "Saved" for a moment after a save. Nothing is saved until the owner saves, from the card or the editor's own Save button.
 - Messages go only to and from the assistant's own address (`postMessage` with its origin).
 - Stores only: without a site key (`WAAS_SITE_KEY`) there is no panel and no button.
 

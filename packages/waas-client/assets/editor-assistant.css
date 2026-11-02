@@ -11,15 +11,80 @@
 .interface-complementary-area:has(.waas-editor-assistant) {
 	overflow: hidden;
 }
-.waas-editor-assistant__frame {
-	display: block;
-	width: 100%;
+.waas-editor-assistant__body {
+	display: flex;
+	flex-direction: column;
 	height: calc(100vh - var(--wp-admin--admin-bar--height, 0px) - 150px);
 	min-height: 420px;
+}
+.waas-editor-assistant__frame {
+	display: block;
+	flex: 1 1 auto;
+	width: 100%;
+	min-height: 0;
 	border: 0;
 }
-/* On a phone the panel fills the screen: the editor's notices sit just below the panel's
- * header (admin bar, editor top bar, panel header), clear of Save and of the chat's message box. */
+/* What the assistant changed, with Undo and Save: a quiet card at the top of the panel, in the editor's own look. */
+.waas-editor-assistant__changes {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 12px 12px 4px;
+	padding: 10px 10px 10px 12px;
+	border: 1px solid #e0e0e0;
+	border-radius: 8px;
+	background: #fff;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+	animation: waas-assistant-in 0.18s ease-out;
+}
+.waas-editor-assistant__dot {
+	flex: none;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #f0b849;
+}
+.waas-editor-assistant__changes.is-saved .waas-editor-assistant__dot {
+	background: #4ab866;
+}
+.waas-editor-assistant__text {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+.waas-editor-assistant__what,
+.waas-editor-assistant__note {
+	margin: 0;
+	font-size: 13px;
+	line-height: 1.4;
+}
+.waas-editor-assistant__what {
+	font-weight: 500;
+	color: #1e1e1e;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.waas-editor-assistant__changes.is-saved .waas-editor-assistant__what {
+	font-weight: 400;
+	white-space: normal;
+}
+.waas-editor-assistant__note {
+	color: #757575;
+}
+.waas-editor-assistant__actions {
+	display: flex;
+	flex: none;
+	gap: 4px;
+}
+@keyframes waas-assistant-in {
+	from { opacity: 0; transform: translateY(-4px); }
+	to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.waas-editor-assistant__changes { animation: none; }
+}
+/* On a phone the panel fills the screen: a problem notice sits just below the panel's header
+ * (admin bar, editor top bar, panel header), clear of Save and of the chat's message box. */
 @media (max-width: 781px) {
 	body:has(.waas-editor-assistant) .components-notices__snackbar,
 	body:has(.waas-editor-assistant) .components-editor-notices__snackbar {
