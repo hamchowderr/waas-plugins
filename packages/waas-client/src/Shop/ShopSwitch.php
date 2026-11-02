@@ -2,6 +2,7 @@
 
 namespace WaaSClient\Shop;
 
+use WaaSClient\Core\FluentPlugin;
 use WP_Error;
 
 /**
@@ -40,6 +41,10 @@ class ShopSwitch
     {
         if (!current_user_can('manage_options')) {
             return new WP_Error('waas_shop_unauthorized', __('Only an administrator can switch the shop.', 'waas-client'), ['status' => 403]);
+        }
+        $off = FluentPlugin::turn_on('fluent-cart/fluent-cart.php', 'FluentCart', defined('FLUENTCART_VERSION'));
+        if ($off) {
+            return $off;
         }
         // The store template ships the add-on switched off, so it doesn't load on every page: turn it on now.
         self::turn_on_addon();

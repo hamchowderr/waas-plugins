@@ -2,6 +2,7 @@
 
 namespace WaaSClient\Moving;
 
+use WaaSClient\Core\FluentPlugin;
 use WP_Error;
 
 /**
@@ -26,6 +27,9 @@ abstract class NativeImport
 
     /** The Fluent plugin's name. */
     abstract public function target_name(): string;
+
+    /** The Fluent plugin's main file, as in active_plugins. */
+    abstract protected function target_file(): string;
 
     /** The Fluent plugin's version, or '' when it isn't active. */
     abstract protected function target_version(): string;
@@ -157,6 +161,10 @@ abstract class NativeImport
     {
         if (!current_user_can('manage_options')) {
             return new WP_Error('waas_import_unauthorized', __('Only an administrator can run this switch.', 'waas-client'), ['status' => 403]);
+        }
+        $off = FluentPlugin::turn_on($this->target_file(), $this->target_name(), $this->target_version() !== '');
+        if ($off) {
+            return $off;
         }
         $from = sanitize_key($from);
         $preflight = $this->preflight($from);

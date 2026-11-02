@@ -28,6 +28,11 @@ class SupportImport extends NativeImport
         return 'Fluent Support';
     }
 
+    protected function target_file(): string
+    {
+        return 'fluent-support/fluent-support.php';
+    }
+
     protected function target_version(): string
     {
         return defined('FLUENT_SUPPORT_VERSION') && class_exists('\FluentSupport\App\Services\Tickets\Importer\MigratorService') ? (string) FLUENT_SUPPORT_VERSION : '';

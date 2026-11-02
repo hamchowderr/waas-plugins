@@ -2,6 +2,7 @@
 
 namespace WaaSClient\Forms;
 
+use WaaSClient\Core\FluentPlugin;
 use WaaSClient\Forms\Migrators\Cf7Migrator;
 use WaaSClient\Forms\Migrators\NinjaMigrator;
 use WaaSClient\Forms\Migrators\WpFormsMigrator;
@@ -58,6 +59,10 @@ class FormsSwitch
     {
         if (!current_user_can('manage_options')) {
             return new WP_Error('waas_forms_unauthorized', __('Only an administrator can switch the forms.', 'waas-client'), ['status' => 403]);
+        }
+        $off = FluentPlugin::turn_on('fluentform/fluentform.php', 'Fluent Forms', self::fluent_active());
+        if ($off) {
+            return $off;
         }
         if (!self::fluent_active()) {
             return new WP_Error('waas_forms_not_initialized', __('Fluent Forms isn\'t active on this website. Turn it on first; the forms are converted into it.', 'waas-client'), ['status' => 409]);
