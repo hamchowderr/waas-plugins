@@ -257,14 +257,14 @@ async function runMode(hpos) {
         expect(same(after.contacts, start.contacts) && same(after.tags, start.tags) && same(after.lists, start.lists) && same(after.fields, start.fields), `changed: ${short(after)}`);
     });
 
-    await check('without FluentCRM: the check says to install it and the switch refuses', async () => {
+    await check('with FluentCRM off: the check says so, and the switch turns it on and asks to run again', async () => {
         await php(`deactivate_plugins('fluent-crm/fluent-crm.php');`);
         const off = await php(`echo json_encode(WaaSClient\\Crm\\CrmSwitch::preflight());`);
         expect(off.ready === false && off.blockers.some((b) => b.includes('FluentCRM isn')), short(off));
-        const refused = await php(`$r = (new WaaSClient\\Crm\\CrmSwitch())->run(); echo json_encode(is_wp_error($r) ? ['code' => $r->get_error_code()] : ['report' => true]);`);
-        expect(refused.code === 'waas_crm_not_ready', short(refused));
-        const activated = await php(`$r = activate_plugin('fluent-crm/fluent-crm.php'); echo json_encode(['error' => is_wp_error($r) ? $r->get_error_message() : null]);`);
-        expect(!activated.error, short(activated));
+        const first = await php(`$r = (new WaaSClient\\Crm\\CrmSwitch())->run(); echo json_encode(is_wp_error($r) ? ['code' => $r->get_error_code(), 'message' => $r->get_error_message()] : ['report' => true]);`);
+        expect(first.code === 'waas_plugin_turned_on' && first.message.includes('Run this again'), short(first));
+        const active = await php(`echo json_encode(in_array('fluent-crm/fluent-crm.php', (array) get_option('active_plugins'), true));`);
+        expect(active === true, `FluentCRM active: ${short(active)}`);
     });
 
     let now;
