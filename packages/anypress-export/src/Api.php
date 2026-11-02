@@ -30,6 +30,33 @@ class Api
         return $this->post('upload', []);
     }
 
+    /**
+     * Starts an upload in parts for an archive of `$bytes`. AnyPress picks the part size.
+     *
+     * @return array{uploadId: string, partSize: int, partCount: int, maxBytes: int, store: array}
+     */
+    public function startParts(int $bytes): array
+    {
+        return $this->post('upload/parts/start', ['bytes' => $bytes]);
+    }
+
+    /**
+     * The parts AnyPress has so far, and links to PUT the parts asked for (at most 100).
+     *
+     * @param int[] $parts
+     * @return array{done: int[], bytes: int, urls: array<string, string>}
+     */
+    public function parts(string $uploadId, array $parts): array
+    {
+        return $this->post('upload/parts', ['uploadId' => $uploadId, 'parts' => array_values($parts)]);
+    }
+
+    /** Joins the uploaded parts into the archive. */
+    public function finishParts(string $uploadId): array
+    {
+        return $this->post('upload/parts/finish', ['uploadId' => $uploadId]);
+    }
+
     /** @param array<string, mixed> $source what the export tells about this site */
     public function start(array $source): array
     {
@@ -52,15 +79,33 @@ class Api
      */
     public function put(string $url, string $file, ?callable $heartbeat = null): void
     {
+        $this->send($url, $file, 0, (int) filesize($file), $heartbeat);
+    }
+
+    /**
+     * PUTs `$length` bytes of `$file` from `$offset` (one part of an upload in parts) to the part's link.
+     * Fails as put() does.
+     *
+     * @throws ApiError
+     */
+    public function putPart(string $url, string $file, int $offset, int $length, ?callable $heartbeat = null): void
+    {
+        $this->send($url, $file, $offset, $length, $heartbeat);
+    }
+
+    /** @throws ApiError */
+    protected function send(string $url, string $file, int $offset, int $length, ?callable $heartbeat): void
+    {
         if (!function_exists('curl_init')) throw new ApiError(self::noCurl());
         $fh = fopen($file, 'rb');
-        if (!$fh) throw new ApiError(__('Could not read the export to upload it.', 'anypress-export'));
+        if (!$fh || ($offset > 0 && fseek($fh, $offset) !== 0)) throw new ApiError(__('Could not read the export to upload it.', 'anypress-export'));
         $last = time();
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_UPLOAD => true,
             CURLOPT_INFILE => $fh,
-            CURLOPT_INFILESIZE => filesize($file),
+            // cURL sends exactly this many bytes from where the handle is.
+            CURLOPT_INFILESIZE => $length,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CONNECTTIMEOUT => 30,
             // Give up on a stalled upload (under 1 KB/s for two minutes) instead of hanging for good.

@@ -4,7 +4,7 @@ Tags: migration, move site, export, backup, anypress
 Requires at least: 5.6
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.1
+Stable tag: 1.2.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -26,6 +26,10 @@ From WP-CLI: `wp anypress-export send <code>` and `wp anypress-export status --w
 The plugin sends this site's database and its `wp-content` folder (plugins, themes, must-use plugins, uploads, languages; caches and backup archives are left out) to the AnyPress address inside the import code you paste, and nowhere else. Nothing is sent until you paste a code and start. AnyPress: https://anypress.io
 
 == Changelog ==
+
+= 1.2.0 =
+* The export goes up in 16 MB parts. A dropped connection or a busy server costs one part, not the whole upload, and if the page stops answering, the upload carries on from the last part. The page shows which part it is on.
+* An AnyPress that doesn't take uploads in parts still gets the export in one request, as before.
 
 = 1.1.1 =
 * Waiting for the move (`wp anypress-export send` and `status --wait`) no longer gives up when AnyPress restarts: it keeps asking for up to 10 minutes.
