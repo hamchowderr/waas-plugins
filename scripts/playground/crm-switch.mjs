@@ -263,8 +263,8 @@ async function runMode(hpos) {
         expect(off.ready === false && off.blockers.some((b) => b.includes('FluentCRM isn')), short(off));
         const first = await php(`$r = (new WaaSClient\\Crm\\CrmSwitch())->run(); echo json_encode(is_wp_error($r) ? ['code' => $r->get_error_code(), 'message' => $r->get_error_message()] : ['report' => true]);`);
         expect(first.code === 'waas_plugin_turned_on' && first.message.includes('Run this again'), short(first));
-        const active = await php(`echo json_encode(in_array('fluent-crm/fluent-crm.php', (array) get_option('active_plugins'), true));`);
-        expect(active === true, `FluentCRM active: ${short(active)}`);
+        const active = await php(`echo json_encode(['on' => in_array('fluent-crm/fluent-crm.php', (array) get_option('active_plugins'), true)]);`);
+        expect(active.on === true, `FluentCRM active: ${short(active)}`);
     });
 
     let now;
