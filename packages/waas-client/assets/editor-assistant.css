@@ -24,64 +24,101 @@
 	min-height: 0;
 	border: 0;
 }
-/* What the assistant changed, with Undo and Save: a quiet card at the top of the panel, in the editor's own look. */
+/* What the assistant changed: one quiet line under the panel's header, in the editor's own look. */
 .waas-editor-assistant__changes {
 	display: flex;
 	align-items: center;
-	gap: 10px;
-	margin: 12px 12px 4px;
-	padding: 10px 10px 10px 12px;
-	border: 1px solid #e0e0e0;
-	border-radius: 8px;
+	gap: 8px;
+	min-height: 48px;
+	padding: 6px 12px 6px 16px;
+	border-bottom: 1px solid #f0f0f0;
 	background: #fff;
-	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+	font-size: 13px;
+	line-height: 1.4;
 	animation: waas-assistant-in 0.18s ease-out;
 }
 .waas-editor-assistant__dot {
 	flex: none;
-	width: 8px;
-	height: 8px;
+	width: 6px;
+	height: 6px;
 	border-radius: 50%;
-	background: #f0b849;
-}
-.waas-editor-assistant__changes.is-saved .waas-editor-assistant__dot {
-	background: #4ab866;
+	background: var(--wp-admin-theme-color, #3858e9);
 }
 .waas-editor-assistant__text {
+	display: flex;
 	flex: 1 1 auto;
+	align-items: baseline;
+	gap: 6px;
 	min-width: 0;
-}
-.waas-editor-assistant__what,
-.waas-editor-assistant__note {
-	margin: 0;
-	font-size: 13px;
-	line-height: 1.4;
-}
-.waas-editor-assistant__what {
-	font-weight: 500;
-	color: #1e1e1e;
-	overflow: hidden;
-	text-overflow: ellipsis;
 	white-space: nowrap;
 }
-.waas-editor-assistant__changes.is-saved .waas-editor-assistant__what {
-	font-weight: 400;
-	white-space: normal;
+.waas-editor-assistant__what {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-weight: 500;
+	color: #1e1e1e;
 }
 .waas-editor-assistant__note {
+	flex: none;
 	color: #757575;
 }
-.waas-editor-assistant__actions {
-	display: flex;
+.waas-editor-assistant__changes .components-button.is-tertiary,
+.waas-editor-assistant__changes .components-button.is-tertiary:hover:not(:disabled) {
+	color: #1e1e1e;
+	background: transparent;
+}
+.waas-editor-assistant__changes .components-button.is-tertiary:hover:not(:disabled) {
+	text-decoration: underline;
+}
+.waas-editor-assistant__changes.is-saved {
+	color: #1e1e1e;
+}
+.waas-editor-assistant__icon {
 	flex: none;
-	gap: 4px;
+	color: #4ab866;
 }
 @keyframes waas-assistant-in {
-	from { opacity: 0; transform: translateY(-4px); }
-	to { opacity: 1; transform: none; }
+	from { opacity: 0; }
+	to { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
 	.waas-editor-assistant__changes { animation: none; }
+}
+/* Wider on request (the chat's expand button), on screens with room for it. */
+@media (min-width: 1080px) {
+	body.waas-editor-assistant-wide .interface-interface-skeleton__sidebar:has(.waas-editor-assistant),
+	body.waas-editor-assistant-wide .interface-complementary-area__fill:has(.waas-editor-assistant),
+	body.waas-editor-assistant-wide .interface-complementary-area:has(.waas-editor-assistant) {
+		width: 560px !important;
+	}
+}
+/* The way in on a phone, while the panel is closed. */
+.waas-editor-assistant__fab {
+	position: fixed;
+	right: 16px;
+	bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+	z-index: 100000;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 44px;
+	padding: 0 16px 0 12px;
+	border: 0;
+	border-radius: 22px;
+	background: #1e1e1e;
+	color: #fff;
+	font: 500 14px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+	cursor: pointer;
+}
+.waas-editor-assistant__fab svg {
+	width: 20px;
+	height: 20px;
+	fill: currentColor;
+}
+.waas-editor-assistant__fab:focus-visible {
+	outline: 2px solid var(--wp-admin-theme-color, #3858e9);
+	outline-offset: 2px;
 }
 /* On a phone the panel fills the screen: a problem notice sits just below the panel's header
  * (admin bar, editor top bar, panel header), clear of Save and of the chat's message box. */
