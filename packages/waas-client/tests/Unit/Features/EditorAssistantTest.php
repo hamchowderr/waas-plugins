@@ -19,7 +19,7 @@ class EditorAssistantTest extends TestCase
         parent::setUp();
         putenv(SignedRequest::KEY_ENV . '=' . self::KEY);
         $this->sent = [];
-        $this->answer = ['code' => 200, 'body' => '{"url":"https://bakery.example/assistant/from-shop?handoff=abc"}'];
+        $this->answer = ['code' => 200, 'body' => '{"url":"https://bakery.example/.assistant/from-shop?handoff=abc"}'];
         Functions\when('home_url')->justReturn('https://Bakery.example/');
         Functions\when('wp_parse_url')->alias(fn ($url, $part = -1) => parse_url($url, $part));
         Functions\when('is_wp_error')->alias(fn ($thing) => $thing instanceof \WP_Error);
@@ -47,12 +47,12 @@ class EditorAssistantTest extends TestCase
     {
         $answer = (new EditorAssistant())->handoff();
 
-        $this->assertSame(['url' => 'https://bakery.example/assistant/from-shop?handoff=abc'], $answer);
+        $this->assertSame(['url' => 'https://bakery.example/.assistant/from-shop?handoff=abc'], $answer);
         $this->assertCount(1, $this->sent);
         $this->assertSame('https://api.anypress.io/oauth/site/store-handoff', $this->sent[0]['url']);
         $body = $this->sent[0]['args']['body'];
         // The assistant on the website's own domain.
-        $this->assertSame(['site' => 'bakery.example', 'assistantUrl' => 'https://bakery.example/assistant'], json_decode($body, true));
+        $this->assertSame(['site' => 'bakery.example', 'assistantUrl' => 'https://bakery.example/.assistant'], json_decode($body, true));
         $this->assertTrue(SignedRequest::verify(self::KEY, $this->sent[0]['args']['headers']['X-Waas-Signature'], 'POST', '/oauth/site/store-handoff', $body));
     }
 
@@ -62,9 +62,9 @@ class EditorAssistantTest extends TestCase
         $this->assertInstanceOf(\WP_Error::class, (new EditorAssistant())->handoff());
 
         // A look-alike address that only starts with the assistant's.
-        $this->answer['body'] = '{"url":"https://bakery.example/assistant.evil/from-shop"}';
+        $this->answer['body'] = '{"url":"https://bakery.example/.assistant.evil/from-shop"}';
         $this->assertInstanceOf(\WP_Error::class, (new EditorAssistant())->handoff());
-        $this->answer['body'] = '{"url":"https://bakery.example.evil.example/assistant/from-shop"}';
+        $this->answer['body'] = '{"url":"https://bakery.example.evil.example/.assistant/from-shop"}';
         $this->assertInstanceOf(\WP_Error::class, (new EditorAssistant())->handoff());
 
         $this->answer = ['code' => 403, 'body' => '{"message":"no"}'];
@@ -73,7 +73,7 @@ class EditorAssistantTest extends TestCase
 
     public function test_the_assistant_is_on_the_websites_own_domain_unless_set(): void
     {
-        $this->assertSame('https://bakery.example/assistant', EditorAssistant::assistant_url());
+        $this->assertSame('https://bakery.example/.assistant', EditorAssistant::assistant_url());
 
         putenv('WAAS_ASSISTANT_URL=https://assistant.example/');
         try {

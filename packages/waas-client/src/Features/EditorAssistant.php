@@ -7,7 +7,7 @@ use WaaSClient\Core\SignedRequest;
 /**
  * The website assistant beside the page: an "Assistant" panel in the block editor and the Site Editor, and an
  * Assistant button in the admin bar that opens it. The panel frames the assistant's chat at the website's own address
- * (https://<its domain>/assistant/editor, which the server's proxy sends to the assistant) and passes it what the
+ * (https://<its domain>/.assistant/editor, which the server's proxy sends to the assistant) and passes it what the
  * editor has open; the assistant's changes come back and land in the editor, where the owner
  * sees them, can undo them, and keeps them by pressing Save (assets/editor-assistant.js).
  *
@@ -36,7 +36,7 @@ class EditorAssistant
     }
 
     /**
-     * The assistant's address: WAAS_ASSISTANT_URL when set, otherwise /assistant on the website's own domain, so the
+     * The assistant's address: WAAS_ASSISTANT_URL when set, otherwise /.assistant on the website's own domain, so the
      * owner never leaves their website and the chat's sign-in is the website's own (first-party) cookie.
      */
     public static function assistant_url(): string
@@ -48,7 +48,7 @@ class EditorAssistant
         $host = strtolower((string) wp_parse_url(home_url(), PHP_URL_HOST));
         $port = wp_parse_url(home_url(), PHP_URL_PORT);
 
-        return 'https://' . $host . ($port ? ':' . (int) $port : '') . '/assistant';
+        return 'https://' . $host . ($port ? ':' . (int) $port : '') . '/.assistant';
     }
 
     /** A constant, then an environment variable, then the default. */

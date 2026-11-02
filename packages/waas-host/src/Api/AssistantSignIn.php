@@ -14,7 +14,7 @@ use WP_REST_Request;
  * The "Ask the website assistant" button on the customer's account page. The owner is already signed in
  * here, so the storefront vouches for them: this route asks the API for a one-time handoff for the owner's
  * website and sends the owner to the assistant with it. With the default assistant that is the website's own
- * https://<its domain>/assistant, so the owner lands on their own site. The assistant trades it, with its own PKCE
+ * https://<its domain>/.assistant, so the owner lands on their own site. The assistant trades it, with its own PKCE
  * challenge, for a sign-in; the tokens never pass through this site.
  */
 class AssistantSignIn
@@ -99,6 +99,6 @@ class AssistantSignIn
         if (!preg_match('/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/', $domain)) {
             return '';
         }
-        return 'https://' . $domain . '/assistant';
+        return 'https://' . $domain . '/.assistant';
     }
 }

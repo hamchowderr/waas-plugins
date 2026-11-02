@@ -65,14 +65,14 @@ class AssistantSignInTest extends TestCase
         $this->config->allows('get_assistant_url')->andReturn(ConfigService::ANYPRESS_ASSISTANT_URL);
         $this->cart->meta[42][Tenant::BASE_DOMAIN_NAME_META] = 't-42.stores.example.com';
         $this->cart->meta[42][Tenant::DOMAIN_NAME_META] = 'Bakery.example';
-        $next = 'https://bakery.example/assistant/from-shop?handoff=abc';
-        $this->api->expects('site_handoff')->with('store-42', 'https://bakery.example/assistant')->andReturn($next);
+        $next = 'https://bakery.example/.assistant/from-shop?handoff=abc';
+        $this->api->expects('site_handoff')->with('store-42', 'https://bakery.example/.assistant')->andReturn($next);
         $this->assertSame(['redirect' => $next], $this->step());
 
         // No custom domain: the website's first one.
         $this->cart->meta[42][Tenant::DOMAIN_NAME_META] = '';
-        $next = 'https://t-42.stores.example.com/assistant/from-shop?handoff=abc';
-        $this->api->expects('site_handoff')->with('store-42', 'https://t-42.stores.example.com/assistant')->andReturn($next);
+        $next = 'https://t-42.stores.example.com/.assistant/from-shop?handoff=abc';
+        $this->api->expects('site_handoff')->with('store-42', 'https://t-42.stores.example.com/.assistant')->andReturn($next);
         $this->assertSame(['redirect' => $next], $this->step());
 
         // An answer for the panel's own address is not followed once the website's own was asked for.
