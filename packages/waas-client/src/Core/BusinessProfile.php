@@ -41,7 +41,8 @@ class BusinessProfile
     {
         return [
             'site' => self::site(),
-            'about' => self::about(),
+            // An object even when empty, so it reads as {} in JSON.
+            'about' => (object) self::about(),
             'updated' => (string) get_option(self::OPTION . '_updated', ''),
         ];
     }
