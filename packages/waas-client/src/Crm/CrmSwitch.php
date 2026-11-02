@@ -2,6 +2,7 @@
 
 namespace WaaSClient\Crm;
 
+use WaaSClient\Core\FluentPlugin;
 use WP_Error;
 
 /**
@@ -55,6 +56,10 @@ class CrmSwitch
         }
         if (!in_array($without_consent, self::WITHOUT_CONSENT, true)) {
             return new WP_Error('waas_crm_invalid_input', __('without_consent must be transactional or unsubscribed.', 'waas-client'), ['status' => 400]);
+        }
+        $off = FluentPlugin::turn_on('fluent-crm/fluent-crm.php', 'FluentCRM', self::fluentcrm_active());
+        if ($off) {
+            return $off;
         }
         $preflight = self::preflight();
         if (!$dry_run && !$preflight['ready']) {

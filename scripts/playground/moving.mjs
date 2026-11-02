@@ -351,11 +351,14 @@ await check('affiliate: a FluentAffiliate that already has affiliates is refused
     expect(!dry.preflight.ready && dry.preflight.blockers.some((b) => b.includes('already holds affiliates')), short(dry.preflight));
 });
 
-await check('without the Fluent plugin: the check says to turn it on', async () => {
+await check('with the Fluent plugin switched off (as on a moved site), the switch turns it on and asks to be run again', async () => {
     await php(`deactivate_plugins('fluent-support/fluent-support.php');`);
-    const off = await wp('wp waas support switch --dry-run --format=json --user=admin');
-    expect(!off.preflight.ready && off.preflight.blockers.some((b) => b.includes('Fluent Support isn')), short(off.preflight));
-    await php(`activate_plugin('fluent-support/fluent-support.php');`);
+    const off = await wp('wp waas support switch --dry-run --user=admin');
+    expect(off.includes('Fluent Support was switched off, so it has been turned on. Run this again'), off.slice(-500));
+    const active = await php(`echo json_encode(['on' => in_array('fluent-support/fluent-support.php', (array) get_option('active_plugins'), true)]);`);
+    expect(active.on === true, 'Fluent Support is still off');
+    const again = await wp('wp waas support switch --dry-run --format=json --user=admin');
+    expect(!again.preflight.blockers.some((b) => b.includes('Fluent Support isn')), short(again.preflight));
 });
 
 await check('no PHP warnings or errors from WaaS Client', async () => {

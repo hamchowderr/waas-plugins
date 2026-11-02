@@ -34,6 +34,11 @@ class CommunityImport extends NativeImport
         return 'FluentCommunity';
     }
 
+    protected function target_file(): string
+    {
+        return 'fluent-community/fluent-community.php';
+    }
+
     protected function target_version(): string
     {
         return defined('FLUENT_COMMUNITY_PLUGIN_VERSION') && class_exists('\FluentCommunity\Modules\Migrations\Helpers\BPMigratorHelper') ? (string) FLUENT_COMMUNITY_PLUGIN_VERSION : '';

@@ -49,6 +49,11 @@ class AffiliateImport extends NativeImport
         return 'FluentAffiliate';
     }
 
+    protected function target_file(): string
+    {
+        return 'fluent-affiliate/fluent-affiliate.php';
+    }
+
     protected function target_version(): string
     {
         return defined('FLUENT_AFFILIATE_VERSION') && class_exists(self::NS . 'SliceWP') ? (string) FLUENT_AFFILIATE_VERSION : '';
