@@ -45,14 +45,14 @@ window.views = [];
 window.applied = [];
 const signed = ${JSON.stringify(Boolean(url.searchParams.get('signed')))};
 let editorOrigin = null;
-if (!signed) parent.postMessage({ source: 'anypress-assistant', type: 'sign-in' }, '*');
+if (!signed) parent.postMessage({ source: 'site-assistant', type: 'sign-in' }, '*');
 addEventListener('message', (event) => {
-  if (event.source !== parent || event.data?.source !== 'anypress-editor') return;
+  if (event.source !== parent || event.data?.source !== 'site-editor') return;
   if (event.data.type === 'view') window.views.push(event.data.view);
   if (event.data.type === 'applied') window.applied.push(event.data);
 });
-window.applyChange = (change) => parent.postMessage({ source: 'anypress-assistant', type: 'apply', id: 'call-' + Date.now(), change }, '*');
-if (signed) parent.postMessage({ source: 'anypress-assistant', type: 'ready' }, '*');
+window.applyChange = (change) => parent.postMessage({ source: 'site-assistant', type: 'apply', id: 'call-' + Date.now(), change }, '*');
+if (signed) parent.postMessage({ source: 'site-assistant', type: 'ready' }, '*');
 </script>`);
 }).listen(0);
 await new Promise((r) => chat.once('listening', r));
@@ -116,10 +116,10 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
 
     // The admin bar's button on the page itself opens its editor with the panel.
     await page.goto(`${base}/?page_id=${pageId}`, { waitUntil: 'networkidle' });
-    const button = page.locator('#wp-admin-bar-anypress-assistant a');
+    const button = page.locator('#wp-admin-bar-site-assistant a');
     if (label === 'desktop') check(await button.isVisible(), `${label}: Assistant button in the admin bar`);
     const href = await button.getAttribute('href');
-    check(Boolean(href && href.includes(`post=${pageId}`) && href.includes('anypress-assistant=1')), `${label}: it opens this page's editor with the panel`);
+    check(Boolean(href && href.includes(`post=${pageId}`) && href.includes('site-assistant=1')), `${label}: it opens this page's editor with the panel`);
 
     await page.goto(href, { waitUntil: 'networkidle' });
     const frame = page.frameLocator('iframe.waas-editor-assistant__frame');
@@ -223,13 +223,13 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
 
     // The chat can clear the selection and ask for a wider panel.
     await page.evaluate(() => wp.data.dispatch('core/block-editor').selectBlock(wp.data.select('core/block-editor').getBlocks()[0].clientId));
-    await live.evaluate(() => parent.postMessage({ source: 'anypress-assistant', type: 'clear-selection' }, '*'));
+    await live.evaluate(() => parent.postMessage({ source: 'site-assistant', type: 'clear-selection' }, '*'));
     await page.waitForTimeout(300);
     check(!(await page.evaluate(() => wp.data.select('core/block-editor').getSelectedBlockClientId())), `${label}: the chat can clear the selected block`);
-    await live.evaluate(() => parent.postMessage({ source: 'anypress-assistant', type: 'width', wide: true }, '*'));
+    await live.evaluate(() => parent.postMessage({ source: 'site-assistant', type: 'width', wide: true }, '*'));
     await page.waitForTimeout(300);
     check(await page.evaluate(() => document.body.classList.contains('waas-editor-assistant-wide')), `${label}: the chat can ask for a wider panel`);
-    await live.evaluate(() => parent.postMessage({ source: 'anypress-assistant', type: 'width', wide: false }, '*'));
+    await live.evaluate(() => parent.postMessage({ source: 'site-assistant', type: 'width', wide: false }, '*'));
     check(!(await page.locator('.components-guide, .edit-post-welcome-guide').isVisible().catch(() => false)), `${label}: no welcome guide over the page`);
 
     // Ctrl + . closes and opens the panel; on a phone a round button opens it while it is closed.

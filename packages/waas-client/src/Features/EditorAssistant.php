@@ -6,11 +6,12 @@ use WaaSClient\Core\SignedRequest;
 
 /**
  * The website assistant beside the page: an "Assistant" panel in the block editor and the Site Editor, and an
- * Assistant button in the admin bar that opens it. The panel frames the assistant's chat (assistant.anypress.io/editor)
- * and passes it what the editor has open; the assistant's changes come back and land in the editor, where the owner
+ * Assistant button in the admin bar that opens it. The panel frames the assistant's chat at the website's own address
+ * (https://<its domain>/.assistant/editor, which the server's proxy sends to the assistant) and passes it what the
+ * editor has open; the assistant's changes come back and land in the editor, where the owner
  * sees them, can undo them, and keeps them by pressing Save (assets/editor-assistant.js).
  *
- * The chat signs in by itself: this store asks the AnyPress API for a one-time handoff, signed with its site key, for
+ * The chat signs in by itself: this store asks the API for a one-time handoff, signed with its site key, for
  * administrators who can change the site's design. Stores only: without a site key there is no panel.
  */
 class EditorAssistant
@@ -20,7 +21,7 @@ class EditorAssistant
     const ROUTE = '/assistant/handoff';
     const API_ROUTE = '/oauth/site/store-handoff';
     /** Opens the panel when the editor loads (the admin bar's button). */
-    const OPEN_PARAM = 'anypress-assistant';
+    const OPEN_PARAM = 'site-assistant';
 
     public function __construct()
     {
@@ -34,9 +35,20 @@ class EditorAssistant
         return rtrim(self::setting('WAAS_API_URL', 'https://api.anypress.io'), '/');
     }
 
+    /**
+     * The assistant's address: WAAS_ASSISTANT_URL when set, otherwise /.assistant on the website's own domain, so the
+     * owner never leaves their website and the chat's sign-in is the website's own (first-party) cookie.
+     */
     public static function assistant_url(): string
     {
-        return rtrim(self::setting('WAAS_ASSISTANT_URL', 'https://assistant.anypress.io'), '/');
+        $set = self::setting('WAAS_ASSISTANT_URL', '');
+        if ($set !== '') {
+            return rtrim($set, '/');
+        }
+        $host = strtolower((string) wp_parse_url(home_url(), PHP_URL_HOST));
+        $port = wp_parse_url(home_url(), PHP_URL_PORT);
+
+        return 'https://' . $host . ($port ? ':' . (int) $port : '') . '/.assistant';
     }
 
     /** A constant, then an environment variable, then the default. */
@@ -133,7 +145,7 @@ class EditorAssistant
             }
         }
         $bar->add_node([
-            'id' => 'anypress-assistant',
+            'id' => 'site-assistant',
             'title' => '<span class="ab-icon dashicons dashicons-format-chat" aria-hidden="true" style="margin-top:2px"></span><span class="ab-label">' . esc_html__('Assistant', 'waas-client') . '</span>',
             'href' => add_query_arg(self::OPEN_PARAM, '1', $target),
             'meta' => ['title' => __('Change this page in plain words', 'waas-client')],
