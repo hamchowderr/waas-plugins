@@ -7,7 +7,7 @@
 //   cd scripts/playground && npm ci
 //   npm run editor            # run the checks, exit 1 on a failure; screenshots in shots/editor/
 //
-// Needs Node 24.18+, Playwright with Chromium, and packages/waas-client/vendor (composer install there).
+// Needs Node 24.18+, Playwright with Chromium, and packages/anypress-client/vendor (composer install there).
 
 import { randomBytes } from 'node:crypto';
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -19,7 +19,7 @@ import { runCLI } from '@wp-playground/cli';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '../..');
-const CLIENT = resolve(ROOT, 'packages/waas-client');
+const CLIENT = resolve(ROOT, 'packages/anypress-client');
 const THEME = resolve(HERE, 'preview-zips/anypress.zip');
 const WP = process.env.PLAYGROUND_WP || '7.1.3';
 const PORT = Number(process.env.PLAYGROUND_PORT || 9430);
@@ -67,21 +67,21 @@ const cli = await runCLI({
         login: true,
         steps: [
             { step: 'installTheme', themeData: { resource: 'literal', name: 'anypress.zip', contents: readFileSync(THEME) }, options: { activate: true } },
-            { step: 'activatePlugin', pluginPath: 'waas-client/index.php' },
+            { step: 'activatePlugin', pluginPath: 'anypress-client/anypress-client.php' },
             {
                 // A store's site key and the assistant's address; the API's answer to the store's signed handoff
                 // request is played here, after checking its signature with the same key.
                 step: 'writeFile',
-                path: '/wordpress/wp-content/mu-plugins/waas-test-assistant.php',
+                path: '/wordpress/wp-content/mu-plugins/anypress-test-assistant.php',
                 data: `<?php
-putenv('WAAS_SITE_KEY=${SITE_KEY}');
-define('WAAS_API_URL', 'https://api.anypress.test');
-define('WAAS_ASSISTANT_URL', '${CHAT}');
+putenv('ANYPRESS_SITE_KEY=${SITE_KEY}');
+define('ANYPRESS_API_URL', 'https://api.anypress.test');
+define('ANYPRESS_ASSISTANT_URL', '${CHAT}');
 add_filter('pre_http_request', function ($answer, $args, $url) {
     if ($url !== 'https://api.anypress.test/oauth/site/store-handoff') return $answer;
-    $ok = \\WaaSClient\\Core\\SignedRequest::verify(getenv('WAAS_SITE_KEY'), $args['headers']['X-Waas-Signature'] ?? '', 'POST', '/oauth/site/store-handoff', $args['body']);
+    $ok = \\AnyPressClient\\Core\\SignedRequest::verify(getenv('ANYPRESS_SITE_KEY'), $args['headers']['X-AnyPress-Signature'] ?? '', 'POST', '/oauth/site/store-handoff', $args['body']);
     $body = json_decode($args['body'], true);
-    update_option('waas_test_handoff_asked', ['signed' => $ok, 'body' => $body]);
+    update_option('anypress_test_handoff_asked', ['signed' => $ok, 'body' => $body]);
     if (!$ok) return ['response' => ['code' => 403], 'body' => '{}', 'headers' => [], 'cookies' => []];
     return ['response' => ['code' => 200], 'body' => wp_json_encode(['url' => $body['assistantUrl'] . '/from-shop?handoff=test-handoff']), 'headers' => [], 'cookies' => []];
 }, 10, 3);
@@ -91,7 +91,7 @@ add_filter('pre_http_request', function ($answer, $args, $url) {
             { step: 'updateUserMeta', userId: 1, meta: { wp_persisted_preferences: { 'core/edit-post': { welcomeGuide: false }, core: { welcomeGuide: false } } } },
         ],
     },
-    mount: [{ hostPath: CLIENT, vfsPath: '/wordpress/wp-content/plugins/waas-client' }],
+    mount: [{ hostPath: CLIENT, vfsPath: '/wordpress/wp-content/plugins/anypress-client' }],
     verbosity: 'quiet',
 });
 const base = cli.serverUrl.replace(/\/$/, '');
@@ -122,10 +122,10 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
     check(Boolean(href && href.includes(`post=${pageId}`) && href.includes('site-assistant=1')), `${label}: it opens this page's editor with the panel`);
 
     await page.goto(href, { waitUntil: 'networkidle' });
-    const frame = page.frameLocator('iframe.waas-editor-assistant__frame');
+    const frame = page.frameLocator('iframe.anypress-editor-assistant__frame');
     await frame.locator('#state', { hasText: 'Signed in' }).waitFor({ timeout: 30_000 }).catch(() => {});
     check(await frame.locator('#state', { hasText: 'Signed in' }).isVisible(), `${label}: the panel is open and the chat signed in through the website`);
-    const asked = await cli.playground.run({ code: "<?php require '/wordpress/wp-load.php'; echo wp_json_encode(get_option('waas_test_handoff_asked'));" });
+    const asked = await cli.playground.run({ code: "<?php require '/wordpress/wp-load.php'; echo wp_json_encode(get_option('anypress_test_handoff_asked'));" });
     const handoff = JSON.parse(asked.text || 'null');
     check(handoff?.signed === true && handoff?.body?.assistantUrl === CHAT && handoff?.body?.site === new URL(base).hostname, `${label}: the handoff request was signed with the site key`);
 
@@ -140,7 +140,7 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
     if (label === 'phone') {
         await page.getByRole('region', { name: 'Editor top bar' }).getByRole('button', { name: 'Options' }).click();
         await page.locator('.components-dropdown-menu__menu [role^=menuitem]', { hasText: /^Assistant$/ }).click();
-        await page.locator('iframe.waas-editor-assistant__frame').waitFor({ timeout: 10_000 });
+        await page.locator('iframe.anypress-editor-assistant__frame').waitFor({ timeout: 10_000 });
     }
     const chatFrame = page.frames().find((f) => f.url().startsWith(CHAT)) ?? null;
     let selected = null;
@@ -157,7 +157,7 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
     await canvas.locator('h2', { hasText: 'Bread baked at dawn' }).waitFor({ timeout: 10_000 }).catch(() => {});
     check(await canvas.locator('h2', { hasText: 'Bread baked at dawn' }).isVisible(), `${label}: the change shows in the editor`);
     // A card at the top of the panel says what changed, with Undo and Save; WordPress's dark pop-up is not used.
-    const card = page.locator('.waas-editor-assistant__changes');
+    const card = page.locator('.anypress-editor-assistant__changes');
     await card.waitFor({ timeout: 5_000 }).catch(() => {});
     check(await card.isVisible() && (await card.innerText()).includes('Heading changed') && (await card.innerText()).includes('Not saved'),
         `${label}: a quiet line says what changed and that it isn't saved`);
@@ -167,7 +167,7 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
         // Inside the panel, under its header and above the chat, so it covers nothing.
         const box = await card.boundingBox();
         const header = await page.locator('.interface-complementary-area-header').first().boundingBox();
-        const chatBox = await page.locator('iframe.waas-editor-assistant__frame').boundingBox();
+        const chatBox = await page.locator('iframe.anypress-editor-assistant__frame').boundingBox();
         check(Boolean(box && header && chatBox && box.y >= header.y + header.height && box.y + box.height <= chatBox.y + 1),
             `${label}: the card sits between the panel's header and the chat`);
         const save = await card.getByRole('button', { name: 'Save' }).boundingBox();
@@ -177,7 +177,7 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
     check(saved.text.includes('Fresh bread') && !saved.text.includes('dawn'), `${label}: nothing is saved until the owner saves`);
     const wide = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
     check(!wide, `${label}: no sideways scroll`);
-    const panel = await page.locator('.interface-complementary-area:has(.waas-editor-assistant)').evaluate((el) => ({
+    const panel = await page.locator('.interface-complementary-area:has(.anypress-editor-assistant)').evaluate((el) => ({
         width: el.getBoundingClientRect().width,
         scrolls: el.scrollHeight > el.clientHeight + 1,
     }));
@@ -201,8 +201,8 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
         `${label}: several changes are counted, with Undo all`);
     await page.screenshot({ path: `${OUT}/editor-two-changes-${label}.png` });
     await card.getByRole('button', { name: 'Save' }).click();
-    await page.locator('.waas-editor-assistant__changes.is-saved').waitFor({ timeout: 15_000 }).catch(() => {});
-    check(await page.locator('.waas-editor-assistant__changes.is-saved').isVisible(), `${label}: after Save the card says the page is saved`);
+    await page.locator('.anypress-editor-assistant__changes.is-saved').waitFor({ timeout: 15_000 }).catch(() => {});
+    check(await page.locator('.anypress-editor-assistant__changes.is-saved').isVisible(), `${label}: after Save the card says the page is saved`);
     await page.screenshot({ path: `${OUT}/editor-saved-${label}.png` });
     const kept = await cli.playground.run({ code: `<?php require '/wordpress/wp-load.php'; echo get_post(${pageId})->post_content;` });
     check(kept.text.includes('dawn') && kept.text.includes('Open every day') && kept.text.includes('Baked every morning'), `${label}: Save from the card keeps both changes and the rest of the page`);
@@ -228,7 +228,7 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
     check(!(await page.evaluate(() => wp.data.select('core/block-editor').getSelectedBlockClientId())), `${label}: the chat can clear the selected block`);
     await live.evaluate(() => parent.postMessage({ source: 'site-assistant', type: 'width', wide: true }, '*'));
     await page.waitForTimeout(300);
-    check(await page.evaluate(() => document.body.classList.contains('waas-editor-assistant-wide')), `${label}: the chat can ask for a wider panel`);
+    check(await page.evaluate(() => document.body.classList.contains('anypress-editor-assistant-wide')), `${label}: the chat can ask for a wider panel`);
     await live.evaluate(() => parent.postMessage({ source: 'site-assistant', type: 'width', wide: false }, '*'));
     check(!(await page.locator('.components-guide, .edit-post-welcome-guide').isVisible().catch(() => false)), `${label}: no welcome guide over the page`);
 
@@ -238,8 +238,8 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
     await page.keyboard.press('Control+.');
     await page.waitForTimeout(500);
     if (process.env.DEBUG_EDITOR) console.log('area after shortcut:', await page.evaluate(() => [wp.data.select('core/interface').getActiveComplementaryArea('core'), document.activeElement?.tagName, document.activeElement?.className]));
-    check(!(await page.locator('iframe.waas-editor-assistant__frame').isVisible().catch(() => false)), `${label}: Ctrl + . closes the panel`);
-    const fab = page.locator('.waas-editor-assistant__fab');
+    check(!(await page.locator('iframe.anypress-editor-assistant__frame').isVisible().catch(() => false)), `${label}: Ctrl + . closes the panel`);
+    const fab = page.locator('.anypress-editor-assistant__fab');
     if (label === 'phone') {
         check(await fab.isVisible().catch(() => false), `${label}: a round Assistant button shows while the panel is closed`);
         await page.screenshot({ path: `${OUT}/editor-fab-${label}.png` });
@@ -248,9 +248,9 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
         check(!(await fab.isVisible().catch(() => false)), `${label}: no round button on a wide screen`);
         await page.keyboard.press('Control+.');
     }
-    await page.locator('iframe.waas-editor-assistant__frame').waitFor({ timeout: 5_000 }).catch(() => {});
-    check(await page.locator('iframe.waas-editor-assistant__frame').isVisible().catch(() => false), `${label}: and it opens again`);
-    await page.frameLocator('iframe.waas-editor-assistant__frame').locator('#state', { hasText: 'Signed in' }).waitFor({ timeout: 15_000 }).catch(() => {});
+    await page.locator('iframe.anypress-editor-assistant__frame').waitFor({ timeout: 5_000 }).catch(() => {});
+    check(await page.locator('iframe.anypress-editor-assistant__frame').isVisible().catch(() => false), `${label}: and it opens again`);
+    await page.frameLocator('iframe.anypress-editor-assistant__frame').locator('#state', { hasText: 'Signed in' }).waitFor({ timeout: 15_000 }).catch(() => {});
     live = page.frames().find((f) => f.url().startsWith(CHAT) && f.url().includes('signed=1')) ?? live;
 
     // A block that isn't there is refused with a notice, not applied.

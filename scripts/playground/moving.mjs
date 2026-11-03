@@ -1,4 +1,4 @@
-// End-to-end test of the support, affiliate and community switches (`wp waas support|affiliate|community switch`
+// End-to-end test of the support, affiliate and community switches (`wp anypress support|affiliate|community switch`
 // and their check-* / switch-* abilities) on WordPress Playground. Boots moving/blueprint.json (Fluent Support,
 // FluentAffiliate and FluentCommunity next to Awesome Support, SliceWP and BuddyPress, with background updates and
 // WP-Cron off) with AnyPress Client from this checkout, seeds the source plugins (moving/seed.php), then for each switch
@@ -8,7 +8,7 @@
 //   npm run moving              # exit 1 on a failure
 //   npm run moving -- --serve   # leave the site running at http://127.0.0.1:9404 (admin / password)
 //
-// Needs packages/waas-client/vendor (composer install in packages/waas-client) and network access to
+// Needs packages/anypress-client/vendor (composer install in packages/anypress-client) and network access to
 // downloads.wordpress.org. Playground stores the database in SQLite, not MariaDB: this checks the PHP and WordPress
 // behaviour.
 
@@ -21,7 +21,7 @@ import { validateBlueprintDeclaration, wpCLI } from '@wp-playground/blueprints';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '../..');
-const CLIENT = resolve(ROOT, 'packages/waas-client');
+const CLIENT = resolve(ROOT, 'packages/anypress-client');
 const WP = process.env.PLAYGROUND_WP || '7.1.3';
 const PHP = process.env.PLAYGROUND_PHP || '8.3';
 const PORT = Number(process.env.PLAYGROUND_PORT || 9404);
@@ -32,7 +32,7 @@ const REPORTS = process.env.MOVING_REPORT_DIR;
 const keep = (name, text) => REPORTS && (mkdirSync(REPORTS, { recursive: true }), writeFileSync(resolve(REPORTS, name), typeof text === 'string' ? text : JSON.stringify(text, null, 2)));
 
 if (!existsSync(resolve(CLIENT, 'vendor/autoload.php'))) {
-    console.error('packages/waas-client/vendor is missing: run composer install in packages/waas-client first.');
+    console.error('packages/anypress-client/vendor is missing: run composer install in packages/anypress-client first.');
     process.exit(1);
 }
 
@@ -108,7 +108,7 @@ const cli = await runCLI({
     php: PHP,
     port: PORT,
     blueprint,
-    mount: [{ hostPath: CLIENT, vfsPath: '/wordpress/wp-content/plugins/waas-client' }],
+    mount: [{ hostPath: CLIENT, vfsPath: '/wordpress/wp-content/plugins/anypress-client' }],
     verbosity: 'quiet',
 });
 const base = cli.serverUrl.replace(/\/$/, '');
@@ -225,7 +225,7 @@ for (const [key, s] of Object.entries(SWITCHES)) {
     const targetStart = await tables(s.targetTables);
 
     await check(`${key}: the check reports the source, its counts and nothing in the way, and changes nothing`, async () => {
-        const dry = await wp(`wp waas ${key} switch --dry-run --format=json --user=admin`);
+        const dry = await wp(`wp anypress ${key} switch --dry-run --format=json --user=admin`);
         keep(`${key}-dry-run.json`, dry);
         const p = dry.preflight;
         expect(p.ready && p.target === s.target && p.source === s.source && !p.blockers.length, short(p));
@@ -246,13 +246,13 @@ for (const [key, s] of Object.entries(SWITCHES)) {
         expect(editor.status === 403, `editor: HTTP ${editor.status}`);
         const nobody = await ability(`anypress/switch-${key}`, {}, { as: null });
         expect(nobody.status === 401, `signed out: HTTP ${nobody.status}`);
-        const cliEditor = await wp(`wp waas ${key} switch --dry-run --user=editor`);
+        const cliEditor = await wp(`wp anypress ${key} switch --dry-run --user=editor`);
         expect(cliEditor.includes('Run this as an administrator'), cliEditor.slice(-300));
     });
 
     let added;
     await check(`${key}: the switch brings everything across, holds back email and leaves the source alone`, async () => {
-        const run = await wp(`wp waas ${key} switch --format=json --user=admin`);
+        const run = await wp(`wp anypress ${key} switch --format=json --user=admin`);
         keep(`${key}-switch.json`, run);
         expect(!run.dry_run && run.compare.every((r) => r.missing === 0 && r.added === r.source), short(run.compare));
         expect(run.notes[0].includes('Everything the source holds'), short(run.notes));
@@ -311,7 +311,7 @@ for (const [key, s] of Object.entries(SWITCHES)) {
     });
 
     await check(`${key}: running it again is refused and changes nothing`, async () => {
-        const again = await wp(`wp waas ${key} switch --user=admin`);
+        const again = await wp(`wp anypress ${key} switch --user=admin`);
         expect(again.includes('already ran here'), again.slice(-400));
         const viaAbility = await ability(`anypress/switch-${key}`, {});
         expect(viaAbility.status === 409, `switch-${key}: HTTP ${viaAbility.status} ${short(viaAbility.data)}`);
@@ -320,9 +320,9 @@ for (const [key, s] of Object.entries(SWITCHES)) {
     });
 
     await check(`${key}: undo removes only what the switch added; switching again through the ability redoes it`, async () => {
-        const preview = await wp(`wp waas ${key} switch --undo --dry-run --format=json --user=admin`);
+        const preview = await wp(`wp anypress ${key} switch --undo --dry-run --format=json --user=admin`);
         expect(preview.dry_run && same(rows(await tables(s.targetTables)), added), short(preview));
-        const undo = await wp(`wp waas ${key} switch --undo --format=json --user=admin`);
+        const undo = await wp(`wp anypress ${key} switch --undo --format=json --user=admin`);
         keep(`${key}-undo.json`, undo);
         expect(same(undo.removed, preview.removed), `undo ${short(undo.removed)} vs preview ${short(preview.removed)}`);
         const undone = await tables(s.targetTables);
@@ -336,35 +336,35 @@ for (const [key, s] of Object.entries(SWITCHES)) {
 }
 
 await check('community: a FluentCommunity that already has a space is refused', async () => {
-    await wp('wp waas community switch --undo --user=admin');
+    await wp('wp anypress community switch --undo --user=admin');
     await php(`global $wpdb; $wpdb->insert($wpdb->prefix . 'fcom_spaces', ['title' => 'Existing', 'slug' => 'existing', 'type' => 'community', 'privacy' => 'public', 'status' => 'published', 'created_by' => 1]); echo json_encode(['id' => $wpdb->insert_id]);`);
-    const dry = await wp('wp waas community switch --dry-run --format=json --user=admin');
+    const dry = await wp('wp anypress community switch --dry-run --format=json --user=admin');
     expect(!dry.preflight.ready && dry.preflight.blockers.some((b) => b.includes('already has spaces or posts')), short(dry.preflight));
-    const run = await wp('wp waas community switch --user=admin');
+    const run = await wp('wp anypress community switch --user=admin');
     expect(run.includes('already has spaces or posts'), run.slice(-400));
 });
 
 await check('affiliate: a FluentAffiliate that already has affiliates is refused', async () => {
-    await wp('wp waas affiliate switch --undo --user=admin');
+    await wp('wp anypress affiliate switch --undo --user=admin');
     await php(`global $wpdb; $wpdb->insert($wpdb->prefix . 'fa_affiliates', ['user_id' => 1, 'status' => 'active']); echo json_encode(['id' => $wpdb->insert_id]);`);
-    const dry = await wp('wp waas affiliate switch --dry-run --format=json --user=admin');
+    const dry = await wp('wp anypress affiliate switch --dry-run --format=json --user=admin');
     expect(!dry.preflight.ready && dry.preflight.blockers.some((b) => b.includes('already holds affiliates')), short(dry.preflight));
 });
 
 await check('with the Fluent plugin switched off (as on a moved site), the switch turns it on and asks to be run again', async () => {
     await php(`deactivate_plugins('fluent-support/fluent-support.php');`);
-    const off = await wp('wp waas support switch --dry-run --user=admin');
+    const off = await wp('wp anypress support switch --dry-run --user=admin');
     expect(off.includes('Fluent Support was switched off, so it has been turned on. Run this again'), off.slice(-500));
     const active = await php(`echo json_encode(['on' => in_array('fluent-support/fluent-support.php', (array) get_option('active_plugins'), true)]);`);
     expect(active.on === true, 'Fluent Support is still off');
-    const again = await wp('wp waas support switch --dry-run --format=json --user=admin');
+    const again = await wp('wp anypress support switch --dry-run --format=json --user=admin');
     expect(!again.preflight.blockers.some((b) => b.includes('Fluent Support isn')), short(again.preflight));
 });
 
 await check('no PHP warnings or errors from AnyPress Client', async () => {
     const log = await php(`$f = WP_CONTENT_DIR . '/debug.log'; echo json_encode(['log' => file_exists($f) ? file_get_contents($f) : '']);`);
     keep('debug.log', log.log);
-    const ours = log.log.split('\n').filter((line) => /waas-client|WaaSClient/.test(line));
+    const ours = log.log.split('\n').filter((line) => /anypress-client|AnyPressClient/.test(line));
     expect(!ours.length, ours.slice(0, 5).join('\n'));
 });
 

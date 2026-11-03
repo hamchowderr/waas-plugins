@@ -89,7 +89,7 @@ final class Plugin
         delete_transient(self::LOCK);
     }
 
-    /** What waas.json tells AnyPress about this site. */
+    /** What anypress.json tells AnyPress about this site. */
     public static function siteInfo(): array
     {
         global $wpdb;

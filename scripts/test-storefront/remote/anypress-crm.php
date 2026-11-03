@@ -55,15 +55,15 @@ final class AnyPress_CRM
         add_action('fluent_cart/subscription_canceled', [self::class, 'after_cancel_emails'], 99, 1);
 
         // The day they cancel, AnyPress Host's "stays online until" email also asks why, so it's the only email that day.
-        add_filter('waas_suspend_scheduled_email_body', [self::class, 'ask_why_they_left'], 20, 1);
-        add_filter('waas_suspend_scheduled_email_headers', [self::class, 'replies_to_support'], 20, 1);
+        add_filter('anypress_suspend_scheduled_email_body', [self::class, 'ask_why_they_left'], 20, 1);
+        add_filter('anypress_suspend_scheduled_email_headers', [self::class, 'replies_to_support'], 20, 1);
 
         // FluentCart makes a WordPress account at every first purchase; its "New Sales" email already tells the admin.
         add_filter('wp_send_new_user_notification_to_admin', '__return_false');
         // The buyer's "Login Details" email lands with the receipt; "Your website is ready" carries the set-password link instead.
         add_action('fluent_cart/user/after_register', [self::class, 'note_checkout_account'], 10, 1);
         add_filter('wp_send_new_user_notification_to_user', [self::class, 'skip_login_details'], 20, 2);
-        add_filter('waas_tenant_ready_email_body', [self::class, 'add_set_password_link'], 20, 3);
+        add_filter('anypress_tenant_ready_email_body', [self::class, 'add_set_password_link'], 20, 3);
 
         add_action('fluent_affiliate/affiliate_created', [self::class, 'on_affiliate_created'], 20, 1);
         add_action('fluent_affiliate/affiliate_status_to_active', [self::class, 'on_affiliate_active'], 20, 1);

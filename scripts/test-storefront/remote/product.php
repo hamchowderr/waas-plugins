@@ -1,5 +1,5 @@
 <?php
-// Creates the storefront's plan: a monthly FluentCart subscription with the WaaS Provisioning feed. Idempotent.
+// Creates the storefront's plan: a monthly FluentCart subscription with the AnyPress Provisioning feed. Idempotent.
 // The test storefront gets "Website plan (test)" at $1; the shop's compose sets PLAN_TITLE, PLAN_PRICE (cents) and
 // PLAN_CONTENT for its placeholder plan.
 use FluentCart\App\Models\ProductMeta;
@@ -8,7 +8,7 @@ use FluentCart\App\Services\BulkProductInsertService;
 
 $title = getenv('PLAN_TITLE') ?: 'Website plan (test)';
 $price = (int) (getenv('PLAN_PRICE') ?: 100);
-$content = getenv('PLAN_CONTENT') ?: 'Test plan for the WaaS end-to-end check. A website on the Starter store (FluentCart) template. Not a real offer.';
+$content = getenv('PLAN_CONTENT') ?: 'Test plan for the AnyPress end-to-end check. A website on the Starter store (FluentCart) template. Not a real offer.';
 $existing = get_posts(['post_type' => 'fluent-products', 'title' => $title, 'post_status' => 'any', 'numberposts' => 1]);
 if ($existing) {
     $id = $existing[0]->ID;
@@ -28,23 +28,23 @@ if ($existing) {
     echo "product created: $id\n";
 }
 
-$roles = array_keys((array) get_option('waas-host-roles-options', []));
-$meta = ProductMeta::where('object_id', $id)->where('object_type', 'product_integration')->where('meta_key', 'waas_provisioning')->first();
+$roles = array_keys((array) get_option('anypress-host-roles-options', []));
+$meta = ProductMeta::where('object_id', $id)->where('object_type', 'product_integration')->where('meta_key', 'anypress_provisioning')->first();
 $old = $meta && is_array($meta->meta_value) ? $meta->meta_value : [];
-// waas-host's default triggers; keep a role already chosen in wp-admin.
+// anypress-host's default triggers; keep a role already chosen in wp-admin.
 $feed = [
     'enabled' => 'yes', 'name' => 'Website plan', 'role' => (string) ($old['role'] ?? '') ?: (string) ($roles[0] ?? ''),
     'group_name' => (string) ($old['group_name'] ?? ''),
-    'event_trigger' => \WaaSHost\Commerce\FluentCart\WaasProvisioningIntegration::DEFAULT_TRIGGERS,
+    'event_trigger' => \AnyPressHost\Commerce\FluentCart\AnyPressProvisioningIntegration::DEFAULT_TRIGGERS,
     'watch_on_access_revoke' => 'yes',
 ];
-$data = IntegrationHelper::validateAndFormatIntegrationFeedSettings($feed, ['provider' => 'waas_provisioning', 'scope' => 'product', 'product_id' => $id, 'integration_id' => null]);
+$data = IntegrationHelper::validateAndFormatIntegrationFeedSettings($feed, ['provider' => 'anypress_provisioning', 'scope' => 'product', 'product_id' => $id, 'integration_id' => null]);
 if (is_wp_error($data)) { echo 'feed invalid: ' . $data->get_error_message() . ' ' . json_encode($data->get_error_data()) . "\n"; return; }
 if ($meta) { $meta->meta_value = $data; $meta->save(); } else {
-    ProductMeta::create(['object_id' => $id, 'object_type' => 'product_integration', 'meta_key' => 'waas_provisioning', 'meta_value' => $data]);
+    ProductMeta::create(['object_id' => $id, 'object_type' => 'product_integration', 'meta_key' => 'anypress_provisioning', 'meta_value' => $data]);
 }
 do_action('fluent_cart/reindex_integration_feeds', []);
-$saved = ProductMeta::where('object_id', $id)->where('object_type', 'product_integration')->where('meta_key', 'waas_provisioning')->first()->meta_value;
+$saved = ProductMeta::where('object_id', $id)->where('object_type', 'product_integration')->where('meta_key', 'anypress_provisioning')->first()->meta_value;
 echo 'feed saved, role: ' . ($feed['role'] ?: '(default)') . ', roles available: ' . implode(',', $roles) . "\n";
 echo 'feed triggers: ' . implode(',', (array) ($saved['event_trigger'] ?? [])) . "\n";
 echo 'url: ' . get_permalink($id) . "\n";

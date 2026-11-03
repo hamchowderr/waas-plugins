@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Prints the base64 ed25519 signature of a release, as the plugins' Updater checks it:
-# the signed message is "waas-release-v1\n<slug>\n<version>\n<sha256 hex>".
+# the signed message is "anypress-release-v1\n<slug>\n<version>\n<sha256 hex>".
 #
 #   scripts/release/sign.sh <slug> <version> <sha256> <private key PEM file>
 #
@@ -15,6 +15,6 @@ slug=$1 version=$2 sha256=$3 key=$4
 
 message=$(mktemp)
 trap 'rm -f "$message"' EXIT
-printf 'waas-release-v1\n%s\n%s\n%s' "$slug" "$version" "$sha256" > "$message"
+printf 'anypress-release-v1\n%s\n%s\n%s' "$slug" "$version" "$sha256" > "$message"
 openssl pkeyutl -sign -rawin -inkey "$key" -in "$message" | openssl base64 -A
 echo

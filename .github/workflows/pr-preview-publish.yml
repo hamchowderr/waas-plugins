@@ -19,7 +19,7 @@ jobs:
       blueprint: |
         {
           "$schema": "https://playground.wordpress.net/blueprint-schema.json",
-          "landingPage": "/wp-admin/admin.php?page=waas-admin",
+          "landingPage": "/wp-admin/admin.php?page=anypress-admin",
           "preferredVersions": { "php": "8.3", "wp": "latest" },
           "steps": [
             { "step": "login", "username": "admin" },
@@ -30,7 +30,7 @@ jobs:
               "pluginData": { "resource": "wordpress.org/plugins", "slug": "fluent-cart" },
               "options": { "activate": true } },
             { "step": "installPlugin",
-              "pluginData": { "resource": "url", "url": "{{ARTIFACT_URL:waas-host}}" },
+              "pluginData": { "resource": "url", "url": "{{ARTIFACT_URL:anypress-host}}" },
               "options": { "activate": true } }
           ]
         }

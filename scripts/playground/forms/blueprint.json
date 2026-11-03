@@ -84,7 +84,7 @@
     },
     {
       "step": "activatePlugin",
-      "pluginPath": "waas-client/index.php"
+      "pluginPath": "anypress-client/anypress-client.php"
     },
     {
       "step": "writeFile",

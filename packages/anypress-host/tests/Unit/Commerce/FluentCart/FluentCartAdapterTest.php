@@ -1,0 +1,115 @@
+<?php
+
+namespace Tests\Unit\Commerce\FluentCart;
+
+use Brain\Monkey\Functions;
+use Mockery;
+use Tests\Unit\TestCase;
+use AnyPressHost\Commerce\FluentCart\FluentCartAdapter;
+use AnyPressHost\Commerce\FluentCart\FluentCartStore;
+use AnyPressHost\Commerce\PlanProduct;
+use AnyPressHost\Core\Tenant;
+
+class FluentCartAdapterTest extends TestCase
+{
+    private $store;
+    private FluentCartAdapter $adapter;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->store = Mockery::mock(FluentCartStore::class);
+        $this->adapter = new FluentCartAdapter($this->store);
+    }
+
+    private function customer(int $user_id, string $email = 'owner@apexresearch.example', string $name = 'Jordan Reyes'): void
+    {
+        $this->store->allows('get_subscription_customer')->with(900)
+            ->andReturn(['user_id' => $user_id, 'email' => $email, 'name' => $name]);
+    }
+
+    public function test_plan_purchase_reads_plan_settings_from_the_product_feeds(): void
+    {
+        $order = (object) ['id' => 500];
+        $this->store->allows('get_order_product_ids')->with($order)->andReturn([101, 102]);
+        $this->store->allows('get_plan_feed')->with(101)
+            ->andReturn(['enabled' => 'yes', 'role' => 'peptide-store', 'group_name' => 'peptide-starter', 'size' => 'medium']);
+        $this->store->allows('get_plan_feed')->with(102)->andReturnNull();
+        $this->store->allows('get_order_meta')->with($order, Tenant::WEBSITE_NAME_META)->andReturn('Apex Research');
+        $this->store->allows('get_order_meta')->with($order, Tenant::BUSINESS_ABOUT_META)->andReturn('Lab supplies for research teams.');
+        $this->store->allows('get_order_billing')->with($order)->andReturn(['name' => 'Jordan Reyes', 'city' => 'Austin', 'state' => 'TX']);
+        $this->customer(7);
+
+        $purchase = $this->adapter->get_plan_purchase(900, $order);
+
+        $this->assertEquals([new PlanProduct(101, 'peptide-store', 'peptide-starter', 'medium')], $purchase->plans);
+        $this->assertSame('Apex Research', $purchase->website_name);
+        $this->assertSame('owner@apexresearch.example', $purchase->customer_email);
+        $this->assertSame(['name' => 'Jordan Reyes', 'city' => 'Austin', 'state' => 'TX', 'about' => 'Lab supplies for research teams.'], $purchase->billing);
+    }
+
+    public function test_customer_subscriptions_are_the_users_own_newest_first(): void
+    {
+        Functions\when('get_userdata')->alias(fn ($id) => $id === 7 ? (object) ['ID' => 7, 'user_email' => 'owner@apexresearch.example'] : false);
+        $this->store->allows('find_user_subscription_ids')->with(7, 'owner@apexresearch.example')->andReturn([902, 901, 900]);
+        // 901 is an unlinked customer with the same email whose account is someone else's.
+        $this->store->allows('get_subscription_customer')->andReturnUsing(fn ($id) => ['user_id' => $id === 901 ? 99 : 7, 'email' => 'owner@apexresearch.example', 'name' => 'X']);
+
+        $this->assertSame([902, 900], $this->adapter->get_customer_subscription_ids(7));
+        $this->assertSame([], $this->adapter->get_customer_subscription_ids(8), 'no such user');
+        $this->assertSame([], $this->adapter->get_customer_subscription_ids(0));
+    }
+
+    public function test_linked_customer_is_the_owner(): void
+    {
+        $this->customer(7);
+        Functions\expect('get_user_by')->never();
+
+        $this->assertSame(7, $this->adapter->get_customer_id(900));
+    }
+
+    public function test_unlinked_customer_falls_back_to_the_account_with_their_email(): void
+    {
+        $this->customer(0);
+        Functions\expect('get_user_by')->once()->with('email', 'owner@apexresearch.example')->andReturn((object) ['ID' => 12]);
+
+        $this->assertSame(12, $this->adapter->get_customer_id(900));
+    }
+
+    public function test_unknown_subscription_has_no_owner(): void
+    {
+        $this->store->allows('get_subscription_customer')->with(900)->andReturnNull();
+
+        $this->assertSame(0, $this->adapter->get_customer_id(900));
+        $this->assertSame('', $this->adapter->get_customer_email(900));
+        $this->assertSame('', $this->adapter->get_customer_name(900));
+    }
+
+    public function test_customer_name_falls_back_to_the_email_name(): void
+    {
+        $this->customer(7, 'jordan@apexresearch.example', '');
+
+        $this->assertSame('jordan', $this->adapter->get_customer_name(900));
+    }
+
+    public function test_subscription_meta_goes_to_fluentcart(): void
+    {
+        $this->store->expects('update_subscription_meta')->with(900, Tenant::DOMAIN_NAME_META, 'shop.example.com');
+        $this->store->allows('get_subscription_meta')->with(900, Tenant::DOMAIN_NAME_META)->andReturn('shop.example.com');
+        $this->store->allows('find_subscription_meta')->with(Tenant::TENANT_STATE, [Tenant::READY])->andReturn([900 => Tenant::PROVISIONING]);
+
+        $this->adapter->update_subscription_meta(900, Tenant::DOMAIN_NAME_META, 'shop.example.com');
+
+        $this->assertSame('shop.example.com', $this->adapter->get_subscription_meta(900, Tenant::DOMAIN_NAME_META));
+        $this->assertSame([900 => Tenant::PROVISIONING], $this->adapter->find_subscriptions_by_meta(Tenant::TENANT_STATE, [Tenant::READY]));
+    }
+
+    public function test_checklist_plan_item_is_done_once_a_product_has_the_feed(): void
+    {
+        $this->store->allows('has_plan_feed')->andReturn(true);
+
+        $items = $this->adapter->mark_plan_product_checklist_item(['create_woo_anypress_product' => ['label' => 'x', 'is_done' => false]]);
+
+        $this->assertTrue($items['create_woo_anypress_product']['is_done']);
+    }
+}

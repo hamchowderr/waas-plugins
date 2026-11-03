@@ -2,7 +2,7 @@
 
 AnyPress Host has a REST API for the customer's websites, so a front end of your own can show what the account page shows and do what it does: list the websites, sign in to one, change its address, set up its email sender, and choose a new name when the first one was taken.
 
-Base URL: `https://<your storefront>/wp-json/waas-host/v1/account`
+Base URL: `https://<your storefront>/wp-json/anypress-host/v1/account`
 
 `{id}` in a path is the subscription id (the cart's own id: a FluentCart subscription or a WooCommerce subscription). It works the same on both carts.
 
@@ -26,9 +26,9 @@ A site on another domain (a headless front end, say) signs the customer in throu
 **1. Register the front end** on the storefront with WP-CLI. The secret is shown once; keep it on the front end's server.
 
 ```sh
-wp waas-host account-client add "My front end" --redirect-uris=https://front.example/api/auth/callback
-wp waas-host account-client list
-wp waas-host account-client remove <client_id>
+wp anypress-host account-client add "My front end" --redirect-uris=https://front.example/api/auth/callback
+wp anypress-host account-client list
+wp anypress-host account-client remove <client_id>
 ```
 
 Redirect URIs are matched exactly, must be `https` (`http` only for `localhost`) and can't have a `#fragment`.
@@ -36,7 +36,7 @@ Redirect URIs are matched exactly, must be `https` (`http` only for `localhost`)
 **2. Send the customer to the storefront** to sign in:
 
 ```
-https://<your storefront>/wp-login.php?action=waas-account-authorize
+https://<your storefront>/wp-login.php?action=anypress-account-authorize
   &response_type=code
   &client_id=<client_id>
   &redirect_uri=<a registered redirect URI>
@@ -50,7 +50,7 @@ The customer signs in to the storefront as usual (if they aren't already) and co
 **3. Swap the code for tokens**, from the server:
 
 ```
-POST https://<your storefront>/wp-json/waas-host/v1/account/token
+POST https://<your storefront>/wp-json/anypress-host/v1/account/token
 grant_type=authorization_code&code=…&redirect_uri=…&code_verifier=…&client_id=…&client_secret=…
 ```
 
@@ -63,7 +63,7 @@ The client can send its id and secret in the body or as HTTP Basic auth.
 **4. Refresh** before the access token runs out (15 minutes):
 
 ```
-POST /wp-json/waas-host/v1/account/token
+POST /wp-json/anypress-host/v1/account/token
 grant_type=refresh_token&refresh_token=…&client_id=…&client_secret=…
 ```
 
@@ -72,26 +72,26 @@ Each refresh gives a new access token **and** a new refresh token; the old ones 
 **5. Sign out**:
 
 ```
-POST /wp-json/waas-host/v1/account/revoke
+POST /wp-json/anypress-host/v1/account/revoke
 token=<access or refresh token>&client_id=…&client_secret=…
 ```
 
 Always answers `200` with `{}`.
 
-Token errors use the OAuth shape, `{ "error": "invalid_grant", "error_description": "…" }`: `400` `invalid_grant` (code or refresh token not valid: sign in again), `401` `invalid_client`, `400` `unsupported_grant_type`, and `429` `slow_down` with `Retry-After` after 20 failed requests in a minute from one IP. An account route called with an expired or unknown access token answers `401` with the code `waas_invalid_token`.
+Token errors use the OAuth shape, `{ "error": "invalid_grant", "error_description": "…" }`: `400` `invalid_grant` (code or refresh token not valid: sign in again), `401` `invalid_client`, `400` `unsupported_grant_type`, and `429` `slow_down` with `Retry-After` after 20 failed requests in a minute from one IP. An account route called with an expired or unknown access token answers `401` with the code `anypress_invalid_token`.
 
 ## Errors
 
 Errors are JSON in WordPress's usual shape, with a message you can show to the customer as it is:
 
 ```json
-{ "code": "waas_forbidden", "message": "This website is not in your account.", "data": { "status": 403 } }
+{ "code": "anypress_forbidden", "message": "This website is not in your account.", "data": { "status": 403 } }
 ```
 
 | Status | When |
 |---|---|
 | `400` | The input isn't valid (`Please enter a valid domain name, like example.com.`), or the platform refused the change and said why |
-| `401` | Not signed in, or the access token expired (`waas_invalid_token`) |
+| `401` | Not signed in, or the access token expired (`anypress_invalid_token`) |
 | `403` | The subscription isn't the customer's, or doesn't exist |
 | `409` | The website isn't set up yet, isn't ready to sign in to, or doesn't need a new name |
 | `429` | Too many sign-in links; wait for `Retry-After` seconds |
@@ -127,7 +127,7 @@ The customer's websites, newest first: those with a website, or one being set up
       "can_log_in": true,
       "needs_new_name": false,
       "manage_plan_url": "https://shop.example.com/account/subscriptions/42",
-      "buy_emails_url": "https://shop.example.com/?fluent-cart=instant_checkout&item_id=31&quantity=1&waas_website=42"
+      "buy_emails_url": "https://shop.example.com/?fluent-cart=instant_checkout&item_id=31&quantity=1&anypress_website=42"
     }
   ],
   "custom_address_records": {
@@ -150,7 +150,7 @@ The customer's websites, newest first: those with a website, or one being set up
 A fresh one-time sign-in link to the website's WordPress admin. Open it right away: it works once and expires after `expires_in` seconds. Make a new one on each click; never put one in a page ahead of time.
 
 ```json
-{ "url": "https://apex.example.com/wp-json/waas-client/v1/single_login/verify?token=…", "expires_in": 300 }
+{ "url": "https://apex.example.com/wp-json/anypress-client/v1/single_login/verify?token=…", "expires_in": 300 }
 ```
 
 Limited to 10 links a minute per customer (`429` after that). `409` while the website isn't ready.

@@ -1,5 +1,5 @@
-// End-to-end test of the shop switch (`wp waas shop switch` and the check-shop / switch-shop abilities) on WordPress
-// Playground. Boots shop-switch/blueprint.json (WooCommerce, FluentCart and the FluentCart Migrator add-on) with WaaS
+// End-to-end test of the shop switch (`wp anypress shop switch` and the check-shop / switch-shop abilities) on WordPress
+// Playground. Boots shop-switch/blueprint.json (WooCommerce, FluentCart and the FluentCart Migrator add-on) with AnyPress
 // Client from this checkout, seeds a WooCommerce shop (shop-switch/seed.php), then runs the checks, the dry run, the
 // switch, the switch again, the abilities and the undo, and compares the result with WooCommerce. It runs twice, on a
 // fresh site each time: WooCommerce orders in posts (HPOS off), then in its own order tables (HPOS on).
@@ -9,7 +9,7 @@
 //   npm run shop-switch -- --hpos=yes        # one run only (yes or no)
 //   npm run shop-switch -- --hpos=no --serve # leave the site running at http://127.0.0.1:9402 (admin / password)
 //
-// Needs packages/waas-client/vendor (composer install in packages/waas-client), and network access to
+// Needs packages/anypress-client/vendor (composer install in packages/anypress-client), and network access to
 // downloads.wordpress.org and addons-cdn.fluentcart.com (the add-on's zip, which isn't on wordpress.org).
 // Playground stores the database in SQLite, not MariaDB: this checks the PHP and WordPress behaviour.
 
@@ -22,7 +22,7 @@ import { validateBlueprintDeclaration, wpCLI } from '@wp-playground/blueprints';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '../..');
-const CLIENT = resolve(ROOT, 'packages/waas-client');
+const CLIENT = resolve(ROOT, 'packages/anypress-client');
 const WP = process.env.PLAYGROUND_WP || '7.1.3';
 const PHP = process.env.PLAYGROUND_PHP || '8.3';
 const PORT = Number(process.env.PLAYGROUND_PORT || 9402);
@@ -35,7 +35,7 @@ const REPORTS = process.env.SHOP_REPORT_DIR;
 const keep = (name, text) => REPORTS && (mkdirSync(REPORTS, { recursive: true }), writeFileSync(resolve(REPORTS, name), typeof text === 'string' ? text : JSON.stringify(text, null, 2)));
 
 if (!existsSync(resolve(CLIENT, 'vendor/autoload.php'))) {
-    console.error('packages/waas-client/vendor is missing: run composer install in packages/waas-client first.');
+    console.error('packages/anypress-client/vendor is missing: run composer install in packages/anypress-client first.');
     process.exit(1);
 }
 
@@ -86,7 +86,7 @@ async function runMode(hpos) {
         php: PHP,
         port: PORT,
         blueprint,
-        mount: [{ hostPath: CLIENT, vfsPath: '/wordpress/wp-content/plugins/waas-client' }],
+        mount: [{ hostPath: CLIENT, vfsPath: '/wordpress/wp-content/plugins/anypress-client' }],
         verbosity: 'quiet',
     });
     const base = cli.serverUrl.replace(/\/$/, '');
@@ -198,7 +198,7 @@ async function runMode(hpos) {
     let dry;
     await check('dry run: reports the shop, the HPOS state and what the switch would do, and changes nothing', async () => {
         const before = await counts();
-        dry = await wp('wp waas shop switch --dry-run --format=json --user=admin');
+        dry = await wp('wp anypress shop switch --dry-run --format=json --user=admin');
         keep(`hpos-${hpos}-dry-run.json`, dry);
         const p = dry.preflight;
         expect(p.ready === true && p.blockers.length === 0, `preflight ${short(p)}`);
@@ -216,29 +216,29 @@ async function runMode(hpos) {
 
     await check('with the add-on off (as the store template ships it), the switch turns it on; without it, it says where to get it', async () => {
         await php(`deactivate_plugins('fluent-cart-migrator/fluent-cart-migrator.php');`);
-        const off = await php(`echo json_encode(WaaSClient\\Shop\\ShopSwitch::preflight());`);
+        const off = await php(`echo json_encode(AnyPressClient\\Shop\\ShopSwitch::preflight());`);
         expect(off.ready === true && off.warnings.some((w) => w.includes('installed but off')), short(off));
-        const turnedOn = await wp('wp waas shop switch --dry-run --format=json --user=admin');
+        const turnedOn = await wp('wp anypress shop switch --dry-run --format=json --user=admin');
         expect(turnedOn.preflight.ready === true && turnedOn.preflight.migrator_addon, short(turnedOn.preflight));
         const active = await php(`echo json_encode(['on' => in_array('fluent-cart-migrator/fluent-cart-migrator.php', (array) get_option('active_plugins'), true)]);`);
         expect(active.on === true, 'the dry run left the add-on off');
         // Not installed at all: WordPress's plugin list (its cache, for this one request) without the add-on.
         await php(`deactivate_plugins('fluent-cart-migrator/fluent-cart-migrator.php');`);
         const missing = await php(`$plugins = get_plugins(); unset($plugins['fluent-cart-migrator/fluent-cart-migrator.php']); wp_cache_set('plugins', ['' => $plugins], 'plugins');
-            echo json_encode(WaaSClient\\Shop\\ShopSwitch::preflight());`);
+            echo json_encode(AnyPressClient\\Shop\\ShopSwitch::preflight());`);
         expect(missing.ready === false && missing.blockers.some((b) => b.includes('fluentcart.com/fluentcart-addons') && b.includes('fluent-cart-migrator.zip')), short(missing.blockers));
         const activated = await php(`$r = activate_plugin('fluent-cart-migrator/fluent-cart-migrator.php'); echo json_encode(['error' => is_wp_error($r) ? $r->get_error_message() : null]);`);
         expect(!activated.error, short(activated));
-        const back = await wp('wp waas shop switch --dry-run --format=json --user=admin');
+        const back = await wp('wp anypress shop switch --dry-run --format=json --user=admin');
         expect(back.preflight.ready === true, short(back.preflight));
     });
 
     let report;
     await check('switch: the add-on copies the shop, and the gaps are filled', async () => {
-        const table = await wp('wp waas shop switch --user=admin');
+        const table = await wp('wp anypress shop switch --user=admin');
         keep(`hpos-${hpos}-switch.txt`, table);
         expect(table.includes('WooCommerce and FluentCart compared') && !/database error|Error:/.test(table), table.slice(-1500));
-        report = await wp('wp waas shop switch --dry-run --format=json --user=admin');
+        report = await wp('wp anypress shop switch --dry-run --format=json --user=admin');
         keep(`hpos-${hpos}-after.json`, report);
         expect(report.migration.done === true, short(report.migration));
         const now = await counts();
@@ -292,7 +292,7 @@ async function runMode(hpos) {
 
     await check('running it again adds nothing', async () => {
         const before = await counts();
-        const again = await wp('wp waas shop switch --format=json --user=admin');
+        const again = await wp('wp anypress shop switch --format=json --user=admin');
         keep(`hpos-${hpos}-again.json`, again);
         const after = await counts();
         expect(Object.values(again.migration.steps).filter((s) => s === 'already done').length >= 3, short(again.migration));
@@ -317,7 +317,7 @@ async function runMode(hpos) {
     });
 
     await check('undo takes the fixes back out; switching again puts them back', async () => {
-        const undo = await wp('wp waas shop switch --undo --format=json --user=admin');
+        const undo = await wp('wp anypress shop switch --undo --format=json --user=admin');
         keep(`hpos-${hpos}-undo.json`, undo);
         expect(undo.gallery_images === 4 && undo.shipping.zones === 1 && undo.shipping.methods === 2 && undo.customers === 1, short(undo));
         const undone = await counts();
@@ -334,7 +334,7 @@ async function runMode(hpos) {
     await check('no PHP warnings or errors from AnyPress Client', async () => {
         const log = await php(`$f = WP_CONTENT_DIR . '/debug.log'; echo json_encode(['log' => file_exists($f) ? file_get_contents($f) : '']);`);
         keep(`hpos-${hpos}-debug.log`, log.log);
-        const ours = log.log.split('\n').filter((line) => /waas-client|WaaSClient/.test(line));
+        const ours = log.log.split('\n').filter((line) => /anypress-client|AnyPressClient/.test(line));
         expect(!ours.length, ours.slice(0, 5).join('\n'));
     });
 

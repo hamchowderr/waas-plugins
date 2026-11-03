@@ -1,0 +1,127 @@
+<?php
+
+namespace AnyPressHost\Core;
+
+use Exception;
+
+class HttpService
+{
+    /** Reads also run in customer requests (the checkout's domain check), so they get a short explicit timeout. */
+    private const READ_TIMEOUT = 10;
+
+    private string $auth_keys;
+    private string $base_uri;
+
+    public function __construct(ConfigService $config_service)
+    {
+        $this->base_uri = (string) $config_service->get_api_base_url();
+        $this->auth_keys = $config_service->get_api_key() . ":" . $config_service->get_api_secret();
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function get($uri)
+    {
+        $response = wp_remote_get($this->base_uri . $uri, [
+            'headers' => $this->get_api_header(),
+            'timeout' => self::READ_TIMEOUT,
+        ]);
+
+        $this->ensureSuccessStatusCode($response);
+        return json_decode($response['body']);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function getraw($uri)
+    {
+        $response = wp_remote_get($this->base_uri . $uri, [
+            'headers' => $this->get_api_header(),
+            'timeout' => self::READ_TIMEOUT,
+        ]);
+
+        // Skip ensureSuccessStatusCode and let caller handle
+
+        return $response;
+    }
+
+    private function get_api_header(): array
+    {
+        if ($this->auth_keys === '') {
+            return [
+                'Content-Type' => 'application/json',
+            ];
+        }
+
+        return [
+            'Content-Type' => 'application/json',
+            'Authorization' => "Basic " . base64_encode($this->auth_keys),
+        ];
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function post($uri, $data)
+    {
+        $response = wp_remote_post($this->base_uri . $uri, [
+            'method' => 'POST',
+            'headers' => $this->get_api_header(),
+            'body' => wp_json_encode($data),
+            'timeout' => 20,
+        ]);
+
+        $this->ensureSuccessStatusCode($response);
+        return json_decode($response['body']);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function put($uri, $data)
+    {
+        $response = wp_remote_post($this->base_uri . $uri, [
+            'method' => 'PUT',
+            'headers' => $this->get_api_header(),
+            'body' => wp_json_encode($data),
+            'timeout' => 20,
+        ]);
+
+        $this->ensureSuccessStatusCode($response);
+        return json_decode($response['body']);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function delete($uri)
+    {
+        $response = wp_remote_get($this->base_uri . $uri, [
+            'method' => 'DELETE',
+            'headers' => $this->get_api_header(),
+            'timeout' => 20,
+        ]);
+
+        $this->ensureSuccessStatusCode($response);
+        return json_decode($response['body']);
+    }
+
+    private function ensureSuccessStatusCode($response)
+    {
+        if (is_wp_error($response)) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not printed here; every place that shows the message escapes it.
+            throw new Exception("Failed: " . $response->get_error_message());
+        }
+
+        $response_code = wp_remote_retrieve_response_code($response);
+
+        // Only accept truly successful status codes 
+        if ($response_code < 200 || $response_code > 299) {
+            $response_body = wp_remote_retrieve_body($response);
+            // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not printed here; every place that shows the message escapes it.
+            throw new Exception("Failed: " . $response_code . " - " . $response_body);
+        }
+    }
+}

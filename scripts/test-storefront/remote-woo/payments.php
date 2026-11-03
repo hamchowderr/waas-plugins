@@ -1,7 +1,7 @@
 <?php
 // Payments in test mode: Woo's Stripe gateway with Stripe test keys from STRIPE_TEST_PUBLISHABLE_KEY /
 // STRIPE_TEST_SECRET_KEY in the container's environment (locked Coolify variables), or left off for the owner when
-// they are absent; and Cash on delivery for by-hand tests (waas-test-storefront-cod-shim.php lets WP Swings accept it). Prints no secrets.
+// they are absent; and Cash on delivery for by-hand tests (anypress-test-storefront-cod-shim.php lets WP Swings accept it). Prints no secrets.
 $stripe = (array) get_option('woocommerce_stripe_settings', []);
 $stripe['testmode'] = 'yes';
 $publishable = (string) getenv('STRIPE_TEST_PUBLISHABLE_KEY');
@@ -30,4 +30,4 @@ update_option('woocommerce_cod_settings', $cod);
 
 echo 'stripe: ' . $stripeStatus . '; enabled=' . $stripe['enabled'] . ' testmode=' . $stripe['testmode'] . "\n";
 echo 'cash on delivery: enabled=' . $cod['enabled'] . ', accepted for subscriptions: '
-    . (has_filter('wps_sfw_supported_payment_gateway_for_woocommerce', 'waas_test_cod_for_subscriptions') ? 'yes' : 'no') . "\n";
+    . (has_filter('wps_sfw_supported_payment_gateway_for_woocommerce', 'anypress_test_cod_for_subscriptions') ? 'yes' : 'no') . "\n";

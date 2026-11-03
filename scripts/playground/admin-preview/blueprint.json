@@ -1,6 +1,6 @@
 {
   "$schema": "https://playground.wordpress.net/blueprint-schema.json",
-  "landingPage": "/wp-admin/admin.php?page=waas-admin",
+  "landingPage": "/wp-admin/admin.php?page=anypress-admin",
   "preferredVersions": {
     "php": "8.3",
     "wp": "latest"
@@ -42,16 +42,16 @@
       "step": "installPlugin",
       "pluginData": {
         "resource": "url",
-        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/697e626475d5975f6deb7bf86d83f3ada685a553/scripts/playground/preview-zips/waas-host.zip"
+        "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/697e626475d5975f6deb7bf86d83f3ada685a553/scripts/playground/preview-zips/anypress-host.zip"
       },
       "options": {
         "activate": true,
-        "targetFolderName": "waas-host"
+        "targetFolderName": "anypress-host"
       }
     },
     {
       "step": "writeFile",
-      "path": "/wordpress/wp-content/mu-plugins/waas-admin-preview.php",
+      "path": "/wordpress/wp-content/mu-plugins/anypress-admin-preview.php",
       "data": {
         "resource": "url",
         "url": "https://raw.githubusercontent.com/hamchowderr/waas-plugins/697e626475d5975f6deb7bf86d83f3ada685a553/scripts/playground/admin-preview/seed.php"
@@ -71,8 +71,8 @@
     "author": "hamchowderr"
   },
   "constants": {
-    "WAAS_API_BASE_URL": "https://api.anypress.io",
-    "WAAS_API_KEY": "ak_live_7f3c9a21",
-    "WAAS_API_SECRET": "preview-secret"
+    "ANYPRESS_API_BASE_URL": "https://api.anypress.io",
+    "ANYPRESS_API_KEY": "ak_live_7f3c9a21",
+    "ANYPRESS_API_SECRET": "preview-secret"
   }
 }

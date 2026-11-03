@@ -2,7 +2,7 @@
 /**
  * The shop's emails in the AnyPress look, through settings only (FluentCart and FluentCRM keep their own layouts, so
  * plugin updates don't break them): the AnyPress logo, the same colours as the AnyPress API's account emails, a footer
- * naming support@anypress.io, and FluentCart replies going there (crm.php already sends CRM replies there). WaaS
+ * naming support@anypress.io, and FluentCart replies going there (crm.php already sends CRM replies there). AnyPress
  * Host's own emails get the logo and address from anypress-shop.php. Run by the design step after design.php has copied the images; safe to run again.
  *   wp eval-file emails.php --user=admin
  */

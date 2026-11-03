@@ -4,11 +4,11 @@
 package_info() {
   PACKAGE=$1
   case "$PACKAGE" in
-    waas-host)     SLUG=wpcs-waas-host;   MAIN=index.php ;;
-    waas-client)   SLUG=wpcs-waas-client; MAIN=index.php ;;
-    waas-payments) SLUG=waas-payments;    MAIN=waas-payments.php ;;
+    anypress-host)     SLUG=anypress-host;   MAIN=anypress-host.php ;;
+    anypress-client)   SLUG=anypress-client; MAIN=anypress-client.php ;;
+    anypress-payments) SLUG=anypress-payments;    MAIN=anypress-payments.php ;;
     anypress-export) SLUG=anypress-export; MAIN=anypress-export.php ;;
-    *) echo "unknown package: $PACKAGE (waas-host, waas-client, waas-payments or anypress-export)" >&2; return 1 ;;
+    *) echo "unknown package: $PACKAGE (anypress-host, anypress-client, anypress-payments or anypress-export)" >&2; return 1 ;;
   esac
 }
 

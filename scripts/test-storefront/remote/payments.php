@@ -1,5 +1,5 @@
 <?php
-// FluentCart in test mode; FluentCart's offline gateway on; the waas-payments Card gateway with Authorize.Net
+// FluentCart in test mode; FluentCart's offline gateway on; the anypress-payments Card gateway with Authorize.Net
 // sandbox credentials as its test credentials (the store's test mode picks them). The Card credentials come from AUTHNET_LOGIN_ID / AUTHNET_TRANSACTION_KEY, plus the optional
 // AUTHNET_SIGNATURE_KEY that registers its webhook, in the container's environment (locked Coolify variables);
 // without them the gateway stays off for the owner to fill in. Prints no secrets.
@@ -11,7 +11,7 @@
 // store-managed subscriptions).
 use FluentCart\App\Helpers\Helper;
 use FluentCart\App\Models\Meta;
-use WaaSPayments\Gateway\AuthorizeNetGateway;
+use AnyPressPayments\Gateway\AuthorizeNetGateway;
 
 $mode = $args[0] ?? 'store';
 if (!in_array($mode, ['store', 'gateway'], true)) {
@@ -30,7 +30,7 @@ if ($mode === 'gateway') {
 update_option('fluent_cart_store_settings', $store);
 \FluentCart\Api\StoreSettings::clearCache();
 
-function waas_storefront_save_gateway(string $key, array $value): void
+function anypress_storefront_save_gateway(string $key, array $value): void
 {
     $meta = Meta::where('meta_key', $key)->first();
     if ($meta) {
@@ -41,17 +41,17 @@ function waas_storefront_save_gateway(string $key, array $value): void
     }
 }
 
-function waas_storefront_gateway(string $key): array
+function anypress_storefront_gateway(string $key): array
 {
     $meta = Meta::where('meta_key', $key)->first();
     return $meta && is_array($meta->meta_value) ? $meta->meta_value : [];
 }
 
-$offline = array_merge(waas_storefront_gateway('fluent_cart_payment_settings_offline_payment'), ['is_active' => 'yes', 'payment_mode' => 'test']);
-waas_storefront_save_gateway('fluent_cart_payment_settings_offline_payment', $offline);
+$offline = array_merge(anypress_storefront_gateway('fluent_cart_payment_settings_offline_payment'), ['is_active' => 'yes', 'payment_mode' => 'test']);
+anypress_storefront_save_gateway('fluent_cart_payment_settings_offline_payment', $offline);
 
-$cardKey = 'fluent_cart_payment_settings_waas_authorizenet';
-$card = \WaaSPayments\Gateway\AuthorizeNetSettings::migrateLegacy(array_merge(['is_active' => 'no'], waas_storefront_gateway($cardKey)));
+$cardKey = 'fluent_cart_payment_settings_anypress_authorizenet';
+$card = \AnyPressPayments\Gateway\AuthorizeNetSettings::migrateLegacy(array_merge(['is_active' => 'no'], anypress_storefront_gateway($cardKey)));
 $loginId = (string) getenv('AUTHNET_LOGIN_ID');
 $transactionKey = (string) getenv('AUTHNET_TRANSACTION_KEY');
 $cardStatus = 'no credentials in the environment; left for the owner';
@@ -71,7 +71,7 @@ if ($loginId !== '' && $transactionKey !== '') {
         $cardStatus = 'credentials rejected: ' . ($check['message'] ?? '?');
     }
 }
-waas_storefront_save_gateway($cardKey, $card);
+anypress_storefront_save_gateway($cardKey, $card);
 
 $settings = new \FluentCart\Api\StoreSettings();
 echo 'order_mode: ' . $settings->get('order_mode') . "\n";

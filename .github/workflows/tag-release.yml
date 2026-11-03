@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to create, like waas-host-v2.3.1 (stable) or waas-host-v2.4.0-beta.1 (beta channel only)'
+        description: 'Tag to create, like anypress-host-v2.3.1 (stable) or anypress-host-v2.4.0-beta.1 (beta channel only)'
         required: true
       notes:
         description: 'What changed, for the changelog (the tag message)'
@@ -34,7 +34,7 @@ jobs:
           NOTES: ${{ inputs.notes }}
           COMMIT: ${{ inputs.commit }}
         run: |
-          if [[ ! $TAG =~ ^(waas-host|waas-client|waas-payments|anypress-export)-v[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$ ]]; then
+          if [[ ! $TAG =~ ^(anypress-host|anypress-client|anypress-payments|anypress-export)-v[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$ ]]; then
             echo "::error::$TAG is not <package>-v<x.y.z> or <package>-v<x.y.z>-beta.<n>"
             exit 1
           fi

@@ -1,4 +1,4 @@
-// End-to-end test of the CRM switch (`wp waas crm switch` and the check-crm / switch-crm abilities) on WordPress
+// End-to-end test of the CRM switch (`wp anypress crm switch` and the check-crm / switch-crm abilities) on WordPress
 // Playground. Boots crm-switch/blueprint.json (WooCommerce, FluentCRM, MailPoet and the Newsletter plugin, with
 // background updates and WP-Cron off) with AnyPress Client from this checkout, seeds buyers and subscribers
 // (crm-switch/seed.php), then runs the checks, the dry run, the switch, the switch again, the abilities and the undo.
@@ -9,7 +9,7 @@
 //   npm run crm-switch -- --hpos=yes        # one run only (yes or no)
 //   npm run crm-switch -- --hpos=no --serve # leave the site running at http://127.0.0.1:9403 (admin / password)
 //
-// Needs packages/waas-client/vendor (composer install in packages/waas-client) and network access to
+// Needs packages/anypress-client/vendor (composer install in packages/anypress-client) and network access to
 // downloads.wordpress.org. Playground stores the database in SQLite, not MariaDB: this checks the PHP and WordPress
 // behaviour.
 
@@ -22,7 +22,7 @@ import { validateBlueprintDeclaration, wpCLI } from '@wp-playground/blueprints';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '../..');
-const CLIENT = resolve(ROOT, 'packages/waas-client');
+const CLIENT = resolve(ROOT, 'packages/anypress-client');
 const WP = process.env.PLAYGROUND_WP || '7.1.3';
 const PHP = process.env.PLAYGROUND_PHP || '8.3';
 const PORT = Number(process.env.PLAYGROUND_PORT || 9403);
@@ -35,7 +35,7 @@ const REPORTS = process.env.CRM_REPORT_DIR;
 const keep = (name, text) => REPORTS && (mkdirSync(REPORTS, { recursive: true }), writeFileSync(resolve(REPORTS, name), typeof text === 'string' ? text : JSON.stringify(text, null, 2)));
 
 if (!existsSync(resolve(CLIENT, 'vendor/autoload.php'))) {
-    console.error('packages/waas-client/vendor is missing: run composer install in packages/waas-client first.');
+    console.error('packages/anypress-client/vendor is missing: run composer install in packages/anypress-client first.');
     process.exit(1);
 }
 
@@ -98,7 +98,7 @@ async function runMode(hpos) {
         php: PHP,
         port: PORT,
         blueprint,
-        mount: [{ hostPath: CLIENT, vfsPath: '/wordpress/wp-content/plugins/waas-client' }],
+        mount: [{ hostPath: CLIENT, vfsPath: '/wordpress/wp-content/plugins/anypress-client' }],
         verbosity: 'quiet',
     });
     const base = cli.serverUrl.replace(/\/$/, '');
@@ -232,7 +232,7 @@ async function runMode(hpos) {
 
     let dry;
     await check('dry run: reports each source, the statuses and what would be created, and changes nothing', async () => {
-        dry = await wp('wp waas crm switch --dry-run --format=json --user=admin');
+        dry = await wp('wp anypress crm switch --dry-run --format=json --user=admin');
         keep(`hpos-${hpos}-dry-run.json`, dry);
         const p = dry.preflight;
         expect(p.ready && p.fluentcrm === '3.3.1' && p.sources.woocommerce.active && p.sources.woocommerce.hpos === (hpos === 'yes'), short(p));
@@ -259,10 +259,10 @@ async function runMode(hpos) {
 
     await check('with FluentCRM off: the check says so, and the switch turns it on and asks to run again', async () => {
         await php(`deactivate_plugins('fluent-crm/fluent-crm.php');`);
-        const off = await php(`echo json_encode(WaaSClient\\Crm\\CrmSwitch::preflight());`);
+        const off = await php(`echo json_encode(AnyPressClient\\Crm\\CrmSwitch::preflight());`);
         expect(off.ready === false && off.blockers.some((b) => b.includes('FluentCRM isn')), short(off));
-        const first = await php(`$r = (new WaaSClient\\Crm\\CrmSwitch())->run(); echo json_encode(is_wp_error($r) ? ['code' => $r->get_error_code(), 'message' => $r->get_error_message()] : ['report' => true]);`);
-        expect(first.code === 'waas_plugin_turned_on' && first.message.includes('Run this again'), short(first));
+        const first = await php(`$r = (new AnyPressClient\\Crm\\CrmSwitch())->run(); echo json_encode(is_wp_error($r) ? ['code' => $r->get_error_code(), 'message' => $r->get_error_message()] : ['report' => true]);`);
+        expect(first.code === 'anypress_plugin_turned_on' && first.message.includes('Run this again'), short(first));
         const active = await php(`echo json_encode(['on' => in_array('fluent-crm/fluent-crm.php', (array) get_option('active_plugins'), true)]);`);
         expect(active.on === true, `FluentCRM active: ${short(active)}`);
     });
@@ -270,7 +270,7 @@ async function runMode(hpos) {
     let now;
     await check('switch: everyone comes in with the right status, tags, lists and fields, and no email is sent', async () => {
         const before = await crm();
-        const table = await wp('wp waas crm switch --user=admin');
+        const table = await wp('wp anypress crm switch --user=admin');
         keep(`hpos-${hpos}-switch.txt`, table);
         expect(/(\d+) email\(s\) that something tried to send during the import were held back/.exec(table)?.[1] === '12', `held: ${table.slice(-600)}`);
         expect(table.includes('Contacts brought into FluentCRM') && !/database error|Fatal|Error:/.test(table), table.slice(-1500));
@@ -310,7 +310,7 @@ async function runMode(hpos) {
     });
 
     await check('running it again changes nothing', async () => {
-        const again = await wp('wp waas crm switch --format=json --user=admin');
+        const again = await wp('wp anypress crm switch --format=json --user=admin');
         keep(`hpos-${hpos}-again.json`, again);
         expect(again.contacts.created === 0 && again.contacts.updated === 0 && again.contacts.unchanged === 14, short(again.contacts));
         expect(again.tags.created.length === 3 && again.tags.existing.length === 0, 'tags created by the first run are still reported as created by it');
@@ -334,10 +334,10 @@ async function runMode(hpos) {
     });
 
     await check('undo removes only what the switch made and puts the existing contacts back; switching again redoes it', async () => {
-        const preview = await wp('wp waas crm switch --undo --dry-run --format=json --user=admin');
+        const preview = await wp('wp anypress crm switch --undo --dry-run --format=json --user=admin');
         keep(`hpos-${hpos}-undo-preview.json`, preview);
         expect(preview.contacts_removed === 12 && (await crm()).contacts['alice@example.com'], short(preview));
-        const undo = await wp('wp waas crm switch --undo --format=json --user=admin');
+        const undo = await wp('wp anypress crm switch --undo --format=json --user=admin');
         keep(`hpos-${hpos}-undo.json`, undo);
         expect(undo.contacts_removed === 12 && undo.contacts_restored === 2 && undo.tags_removed === 3 && undo.lists_removed === 2 && undo.fields_removed === 2, short(undo));
         const undone = await crm();
@@ -354,7 +354,7 @@ async function runMode(hpos) {
     await check('no PHP warnings or errors from AnyPress Client', async () => {
         const log = await php(`$f = WP_CONTENT_DIR . '/debug.log'; echo json_encode(['log' => file_exists($f) ? file_get_contents($f) : '']);`);
         keep(`hpos-${hpos}-debug.log`, log.log);
-        const ours = log.log.split('\n').filter((line) => /waas-client|WaaSClient/.test(line));
+        const ours = log.log.split('\n').filter((line) => /anypress-client|AnyPressClient/.test(line));
         expect(!ours.length, ours.slice(0, 5).join('\n'));
     });
 

@@ -1,0 +1,131 @@
+/* The Assistant panel beside the editor: wider than WordPress's settings sidebar, with the chat filling it.
+   PluginSidebar puts its class on the panel inside the sidebar, so the sidebar is found by what it holds. */
+@media (min-width: 782px) {
+	.interface-interface-skeleton__sidebar:has(.anypress-editor-assistant),
+	.interface-complementary-area__fill:has(.anypress-editor-assistant),
+	.interface-complementary-area:has(.anypress-editor-assistant) {
+		width: 380px !important;
+	}
+}
+/* The chat scrolls inside its frame; the panel itself never does. */
+.interface-complementary-area:has(.anypress-editor-assistant) {
+	overflow: hidden;
+}
+.anypress-editor-assistant__body {
+	display: flex;
+	flex-direction: column;
+	height: calc(100vh - var(--wp-admin--admin-bar--height, 0px) - 150px);
+	min-height: 420px;
+}
+.anypress-editor-assistant__frame {
+	display: block;
+	flex: 1 1 auto;
+	width: 100%;
+	min-height: 0;
+	border: 0;
+}
+/* What the assistant changed: one quiet line under the panel's header, in the editor's own look. */
+.anypress-editor-assistant__changes {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 48px;
+	padding: 6px 12px 6px 16px;
+	border-bottom: 1px solid #f0f0f0;
+	background: #fff;
+	font-size: 13px;
+	line-height: 1.4;
+	animation: anypress-assistant-in 0.18s ease-out;
+}
+.anypress-editor-assistant__dot {
+	flex: none;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--wp-admin-theme-color, #3858e9);
+}
+.anypress-editor-assistant__text {
+	display: flex;
+	flex: 1 1 auto;
+	align-items: baseline;
+	gap: 6px;
+	min-width: 0;
+	white-space: nowrap;
+}
+.anypress-editor-assistant__what {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-weight: 500;
+	color: #1e1e1e;
+}
+.anypress-editor-assistant__note {
+	flex: none;
+	color: #757575;
+}
+.anypress-editor-assistant__changes .components-button.is-tertiary,
+.anypress-editor-assistant__changes .components-button.is-tertiary:hover:not(:disabled) {
+	color: #1e1e1e;
+	background: transparent;
+}
+.anypress-editor-assistant__changes .components-button.is-tertiary:hover:not(:disabled) {
+	text-decoration: underline;
+}
+.anypress-editor-assistant__changes.is-saved {
+	color: #1e1e1e;
+}
+.anypress-editor-assistant__icon {
+	flex: none;
+	color: #4ab866;
+}
+@keyframes anypress-assistant-in {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.anypress-editor-assistant__changes { animation: none; }
+}
+/* Wider on request (the chat's expand button), on screens with room for it. */
+@media (min-width: 1080px) {
+	body.anypress-editor-assistant-wide .interface-interface-skeleton__sidebar:has(.anypress-editor-assistant),
+	body.anypress-editor-assistant-wide .interface-complementary-area__fill:has(.anypress-editor-assistant),
+	body.anypress-editor-assistant-wide .interface-complementary-area:has(.anypress-editor-assistant) {
+		width: 560px !important;
+	}
+}
+/* The way in on a phone, while the panel is closed. */
+.anypress-editor-assistant__fab {
+	position: fixed;
+	right: 16px;
+	bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+	z-index: 100000;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 44px;
+	padding: 0 16px 0 12px;
+	border: 0;
+	border-radius: 22px;
+	background: #1e1e1e;
+	color: #fff;
+	font: 500 14px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+	cursor: pointer;
+}
+.anypress-editor-assistant__fab svg {
+	width: 20px;
+	height: 20px;
+	fill: currentColor;
+}
+.anypress-editor-assistant__fab:focus-visible {
+	outline: 2px solid var(--wp-admin-theme-color, #3858e9);
+	outline-offset: 2px;
+}
+/* On a phone the panel fills the screen: a problem notice sits just below the panel's header
+ * (admin bar, editor top bar, panel header), clear of Save and of the chat's message box. */
+@media (max-width: 781px) {
+	body:has(.anypress-editor-assistant) .components-notices__snackbar,
+	body:has(.anypress-editor-assistant) .components-editor-notices__snackbar {
+		top: calc(var(--wp-admin--admin-bar--height, 46px) + 124px);
+		bottom: auto;
+	}
+}

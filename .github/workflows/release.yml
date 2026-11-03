@@ -1,24 +1,24 @@
 name: Release plugin
 # Builds, signs and publishes one plugin to our update channel (waas-hw4).
-# Tag the commit on main: waas-host-v2.3.0, waas-client-v2.3.0, waas-payments-v0.2.0, anypress-export-v1.0.0 (stable), or
+# Tag the commit on main: anypress-host-v2.3.0, anypress-client-v2.3.0, anypress-payments-v0.2.0, anypress-export-v1.0.0 (stable), or
 # ...-v2.4.0-beta.1 (beta channel only). Run it by hand for a dry run: it builds and signs with a
 # throwaway key and uploads nothing. Promote a tested beta to stable with the "Promote release" workflow.
 # "Tag and release plugin" calls it to publish a tag it has just made (tags it pushes start no workflow themselves).
 #
-# Secrets: WAAS_RELEASE_SIGNING_KEY (ed25519 private key PEM), R2_RELEASES_ACCESS_KEY_ID and
+# Secrets: ANYPRESS_RELEASE_SIGNING_KEY (ed25519 private key PEM), R2_RELEASES_ACCESS_KEY_ID and
 # R2_RELEASES_SECRET_ACCESS_KEY (an R2 token for the releases bucket only).
 # Variables: R2_ENDPOINT (https://<account id>.r2.cloudflarestorage.com), R2_RELEASES_BUCKET (default waas-releases).
 on:
   push:
     tags:
-      - 'waas-host-v*'
-      - 'waas-client-v*'
-      - 'waas-payments-v*'
+      - 'anypress-host-v*'
+      - 'anypress-client-v*'
+      - 'anypress-payments-v*'
       - 'anypress-export-v*'
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to dry-run, like waas-host-v2.3.0-beta.1 (builds the selected branch; nothing is uploaded)'
+        description: 'Tag to dry-run, like anypress-host-v2.3.0-beta.1 (builds the selected branch; nothing is uploaded)'
         required: true
   workflow_call:
     inputs:
@@ -56,7 +56,7 @@ jobs:
       - name: Read the tag
         id: tag
         run: |
-          if [[ ! $TAG =~ ^(waas-host|waas-client|waas-payments|anypress-export)-v([0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?)$ ]]; then
+          if [[ ! $TAG =~ ^(anypress-host|anypress-client|anypress-payments|anypress-export)-v([0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?)$ ]]; then
             echo "::error::$TAG is not <package>-v<x.y.z> or <package>-v<x.y.z>-beta.<n>"
             exit 1
           fi
@@ -86,7 +86,7 @@ jobs:
       - name: Sign
         id: sign
         env:
-          SIGNING_KEY: ${{ secrets.WAAS_RELEASE_SIGNING_KEY }}
+          SIGNING_KEY: ${{ secrets.ANYPRESS_RELEASE_SIGNING_KEY }}
         run: |
           umask 077
           key="$RUNNER_TEMP/release-key.pem"
@@ -94,7 +94,7 @@ jobs:
             echo "Dry run: signing with a throwaway key"
             openssl genpkey -algorithm ed25519 -out "$key"
           else
-            [ -n "$SIGNING_KEY" ] || { echo "::error::The WAAS_RELEASE_SIGNING_KEY secret is not set"; exit 1; }
+            [ -n "$SIGNING_KEY" ] || { echo "::error::The ANYPRESS_RELEASE_SIGNING_KEY secret is not set"; exit 1; }
             printf '%s\n' "$SIGNING_KEY" > "$key"
           fi
           echo "signature=$(scripts/release/sign.sh ${{ steps.tag.outputs.slug }} ${{ steps.tag.outputs.version }} ${{ steps.build.outputs.sha256 }} "$key")" >> "$GITHUB_OUTPUT"

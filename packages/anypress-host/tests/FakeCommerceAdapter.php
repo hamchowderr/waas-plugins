@@ -1,0 +1,116 @@
+<?php
+
+namespace Tests;
+
+use AnyPressHost\Commerce\CommerceAdapter;
+use AnyPressHost\Commerce\PlanPurchase;
+use AnyPressHost\Core\ProvisioningApi;
+
+/**
+ * In-memory cart for testing the shared code without WooCommerce or FluentCart.
+ */
+class FakeCommerceAdapter implements CommerceAdapter
+{
+    public string $id;
+    public bool $available;
+    /** @var array<int|string, array<string, mixed>> subscription id => meta */
+    public array $meta = [];
+    public bool $booted = false;
+    public int $customer_id = 7;
+    /** @var array<int|string, int> owners of single subscriptions; the rest belong to $customer_id */
+    public array $owners = [];
+    /** @var array<int|string, true> subscriptions the cart reports as not active */
+    public array $inactive = [];
+
+    public function __construct(string $id = 'fake', bool $available = true)
+    {
+        $this->id = $id;
+        $this->available = $available;
+    }
+
+    public function get_id(): string
+    {
+        return $this->id;
+    }
+
+    public function is_available(): bool
+    {
+        return $this->available;
+    }
+
+    public function boot(ProvisioningApi $provisioning_api): void
+    {
+        $this->booted = true;
+    }
+
+    /** @param PlanPurchase $purchase_context tests pass the purchase itself */
+    public function get_plan_purchase($subscription_id, $purchase_context): PlanPurchase
+    {
+        return $purchase_context;
+    }
+
+    public function get_subscription_meta($subscription_id, string $key)
+    {
+        return $this->meta[$subscription_id][$key] ?? '';
+    }
+
+    public function update_subscription_meta($subscription_id, string $key, $value): void
+    {
+        $this->meta[$subscription_id][$key] = $value;
+    }
+
+    public function find_subscriptions_by_meta(string $key, array $excluded_values): array
+    {
+        $found = [];
+        foreach ($this->meta as $id => $meta) {
+            if (isset($meta[$key]) && !in_array($meta[$key], $excluded_values, true)) {
+                $found[$id] = $meta[$key];
+            }
+        }
+        return $found;
+    }
+
+    public function is_domain_taken(string $domain_name): bool
+    {
+        foreach ($this->meta as $meta) {
+            if (($meta['anypress_domain_name'] ?? null) === $domain_name && ($meta['anypress_tenant_state'] ?? '') !== 'Deleted') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function get_customer_subscription_ids(int $user_id): array
+    {
+        $ids = array_keys(array_filter($this->meta, fn ($meta, $id) => $this->get_customer_id($id) === $user_id, ARRAY_FILTER_USE_BOTH));
+        rsort($ids);
+
+        return $ids;
+    }
+
+    public function get_customer_id($subscription_id): int
+    {
+        return $this->owners[$subscription_id] ?? $this->customer_id;
+    }
+
+    public function get_customer_email($subscription_id): string
+    {
+        return 'owner@apexresearch.example';
+    }
+
+    public function get_customer_name($subscription_id): string
+    {
+        return 'Jordan Reyes';
+    }
+
+    public function get_subscription_url($subscription_id): string
+    {
+        return "https://storefront.example/account/subscriptions/$subscription_id";
+    }
+
+    public function is_subscription_active($subscription_id): bool
+    {
+        return !isset($this->inactive[$subscription_id]);
+    }
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds and drives the WaaS storefronts on Coolify: the two test storefronts and AnyPress's own storefront
+"""Builds and drives the AnyPress storefronts on Coolify: the two test storefronts and AnyPress's own storefront
 (--cart shop). Maintainers' runbooks for these are kept outside this repository.
 
     storefront.py [--cart woo] create            # project, service, variables (password generated, never printed)
@@ -11,13 +11,13 @@
     storefront.py [--cart woo] remove            # delete the service with its volumes, then the project if empty
 
 --cart picks the storefront: fluentcart (the default; service storefront-test), woo (WooCommerce with WP Swings'
-Subscriptions for WooCommerce; service storefront-woo-test), both in the project "WaaS Storefront (test)", or shop
+Subscriptions for WooCommerce; service storefront-woo-test), both in the project "AnyPress Storefront (test)", or shop
 (AnyPress's storefront at shop.anypress.io, FluentCart with Stripe, in the project "AnyPress Storefront"). The shop's
 API key isn't read from the session: the provisioning API writes it into the service (see `create`).
 
 Talks to the Coolify API at COOLIFY_URL (default https://coolify.otakusolutions.io) with
 COOLIFY_TOKEN, or with none where a proxy injects credentials. `create` reads the provisioning
-API key and secret from WAAS_TEST_KEY and WAAS_TEST_SECRET, and the Card gateway's
+API key and secret from ANYPRESS_TEST_KEY and ANYPRESS_TEST_SECRET, and the Card gateway's
 Authorize.Net sandbox credentials, when present, from AUTHNET_SANDBOX_LOGIN_ID and
 AUTHNET_SANDBOX_TRANSACTION_KEY (and AUTHNET_SANDBOX_SIGNATURE_KEY for its webhook). For --cart woo it reads Stripe test keys, when present, from
 STRIPE_TEST_PUBLISHABLE_KEY and STRIPE_TEST_SECRET_KEY.
@@ -38,30 +38,30 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 API = os.environ.get('COOLIFY_URL', 'https://coolify.otakusolutions.io').rstrip('/') + '/api/v1'
-TEST_PROJECT = 'WaaS Storefront (test)'
+TEST_PROJECT = 'AnyPress Storefront (test)'
 # Per storefront: service name, domain, compose file, its remote/ scripts, the plugins built from packages/, and the
 # optional variables `create` copies from the session (session name -> Coolify name), all locked.
 CARTS = {
     'fluentcart': {
         'service': 'storefront-test', 'domain': 'storefront-test.otakusolutions.io',
-        'compose': 'compose.yml', 'remote': ['remote'], 'packages': ['waas-host', 'waas-payments'],
+        'compose': 'compose.yml', 'remote': ['remote'], 'packages': ['anypress-host', 'anypress-payments'],
         'secrets': {'AUTHNET_SANDBOX_LOGIN_ID': 'AUTHNET_LOGIN_ID', 'AUTHNET_SANDBOX_TRANSACTION_KEY': 'AUTHNET_TRANSACTION_KEY',
                     'AUTHNET_SANDBOX_SIGNATURE_KEY': 'AUTHNET_SIGNATURE_KEY'},
-        'description': 'WaaS test storefront',
+        'description': 'AnyPress test storefront',
     },
     'shop': {
         'service': 'anypress-shop', 'domain': 'shop.anypress.io', 'project': 'AnyPress Storefront',
-        # No waas-payments: Stripe is FluentCart's own gateway, connected by the owner in wp-admin. No payments step.
-        'compose': 'compose-shop.yml', 'remote': ['remote'], 'packages': ['waas-host'],
+        # No anypress-payments: Stripe is FluentCart's own gateway, connected by the owner in wp-admin. No payments step.
+        'compose': 'compose-shop.yml', 'remote': ['remote'], 'packages': ['anypress-host'],
         'secrets': {}, 'description': 'AnyPress storefront (shop.anypress.io)', 'session_key': False,
         'steps': ['bootstrap', 'install', 'plugins', 'configure', 'pages', 'product', 'design', 'cron'],
     },
     'woo': {
         'service': 'storefront-woo-test', 'domain': 'storefront-woo-test.191.101.15.236.sslip.io',
         # The wp wrapper and check.php are shared; remote-woo/ adds the WooCommerce steps.
-        'compose': 'compose-woo.yml', 'remote': ['remote/wp', 'remote/check.php', 'remote-woo'], 'packages': ['waas-host'],
+        'compose': 'compose-woo.yml', 'remote': ['remote/wp', 'remote/check.php', 'remote-woo'], 'packages': ['anypress-host'],
         'secrets': {'STRIPE_TEST_PUBLISHABLE_KEY': 'STRIPE_TEST_PUBLISHABLE_KEY', 'STRIPE_TEST_SECRET_KEY': 'STRIPE_TEST_SECRET_KEY'},
-        'description': 'WaaS WooCommerce test storefront',
+        'description': 'AnyPress WooCommerce test storefront',
     },
 }
 CART = CARTS['fluentcart']
@@ -164,17 +164,17 @@ def set_env(uuid, key, value, locked=False):
 def compose(with_package):
     text = open(os.path.join(HERE, CART['compose'])).read()
     if with_package:
-        text = text.replace('      WAAS_API_SECRET: ${WAAS_API_SECRET}\n',
-                            '      WAAS_API_SECRET: ${WAAS_API_SECRET}\n      WAAS_PKG: ${WAAS_PKG:-}\n')
+        text = text.replace('      ANYPRESS_API_SECRET: ${ANYPRESS_API_SECRET}\n',
+                            '      ANYPRESS_API_SECRET: ${ANYPRESS_API_SECRET}\n      ANYPRESS_PKG: ${ANYPRESS_PKG:-}\n')
     return base64.b64encode(text.encode()).decode()
 
 
 def create():
     session_key = CART.get('session_key', True)
-    for var in ('WAAS_TEST_KEY', 'WAAS_TEST_SECRET') if session_key else ():
+    for var in ('ANYPRESS_TEST_KEY', 'ANYPRESS_TEST_SECRET') if session_key else ():
         if not os.environ.get(var):
             sys.exit(f'{var} is not set')
-    about = 'Throwaway test storefront for the WaaS chain' if PROJECT == TEST_PROJECT else CART['description']
+    about = 'Throwaway test storefront for the AnyPress chain' if PROJECT == TEST_PROJECT else CART['description']
     project = project_uuid() or api('POST', '/projects', {'name': PROJECT, 'description': about})['uuid']
     if any(s['name'] == SERVICE for s in api('GET', '/services')):
         sys.exit(f'{SERVICE} already exists; remove it first')
@@ -188,16 +188,16 @@ def create():
     # Readable in Coolify (masked until clicked) so the owner can log in; the API keys are locked.
     set_env(uuid, 'WP_ADMIN_PASSWORD', ''.join(secrets.choice(alphabet) for _ in range(32)))
     if session_key:
-        set_env(uuid, 'WAAS_API_KEY', os.environ['WAAS_TEST_KEY'], locked=True)
-        set_env(uuid, 'WAAS_API_SECRET', os.environ['WAAS_TEST_SECRET'], locked=True)
+        set_env(uuid, 'ANYPRESS_API_KEY', os.environ['ANYPRESS_TEST_KEY'], locked=True)
+        set_env(uuid, 'ANYPRESS_API_SECRET', os.environ['ANYPRESS_TEST_SECRET'], locked=True)
     else:
         # The key is made by the API and written straight into this service, never shown:
         #   npm run create-key -- --product-name "AnyPress shop" --coolify-service <this service's uuid>
         # (a scheduled task on waas-api). Until then the configure step stops with "missing".
         print('API key: run create-key with --coolify-service ' + uuid + ' on waas-api, then restart this service')
-    # Optional mail relay settings, the same WAAS_MAIL_B64 a store gets (the configure step installs the mailer).
-    if os.environ.get('WAAS_MAIL_B64'):
-        set_env(uuid, 'WAAS_MAIL_B64', os.environ['WAAS_MAIL_B64'], locked=True)
+    # Optional mail relay settings, the same ANYPRESS_MAIL_B64 a store gets (the configure step installs the mailer).
+    if os.environ.get('ANYPRESS_MAIL_B64'):
+        set_env(uuid, 'ANYPRESS_MAIL_B64', os.environ['ANYPRESS_MAIL_B64'], locked=True)
     # Optional gateway credentials (the payments step uses them): Authorize.Net sandbox, or Stripe test keys.
     if all(os.environ.get(var) for var in CART['secrets']):
         for var, key in CART['secrets'].items():
@@ -241,21 +241,21 @@ def push():
     run(uuid, 'rm -rf /opt/wpcli/pkg && mkdir -p /opt/wpcli/pkg')
     for i, chunk in enumerate(chunks):
         print(f'chunk {i + 1}/{len(chunks)}')
-        set_env(uuid, 'WAAS_PKG', chunk)
+        set_env(uuid, 'ANYPRESS_PKG', chunk)
         api('POST', f'/services/{uuid}/restart')
         time.sleep(15)
         wait_healthy(uuid)
         try:
-            run(uuid, f'printenv WAAS_PKG > /opt/wpcli/pkg/c{i:02d}')
+            run(uuid, f'printenv ANYPRESS_PKG > /opt/wpcli/pkg/c{i:02d}')
         except SystemExit:
             # Coolify sometimes reports the service healthy just before a container restarts once more.
             wait_healthy(uuid)
-            run(uuid, f'printenv WAAS_PKG > /opt/wpcli/pkg/c{i:02d}')
+            run(uuid, f'printenv ANYPRESS_PKG > /opt/wpcli/pkg/c{i:02d}')
     run(uuid, f'cd /opt/wpcli/pkg && cat c* | tr -d "\\n" | base64 -d > p.txz && rm -rf {REMOTE} && mkdir -p {REMOTE} && tar -xJf p.txz -C {REMOTE} && ls {REMOTE}')
     # Drop the package variable again.
     api('PATCH', f'/services/{uuid}', {'docker_compose_raw': compose(False)})
     for env in api('GET', f'/services/{uuid}/envs'):
-        if env['key'] == 'WAAS_PKG':
+        if env['key'] == 'ANYPRESS_PKG':
             api('DELETE', f'/services/{uuid}/envs/{env["uuid"]}')
     api('POST', f'/services/{uuid}/restart')
     time.sleep(15)

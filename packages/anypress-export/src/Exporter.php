@@ -13,7 +13,7 @@ defined('ABSPATH') || exit;
  * array the caller keeps between requests (an option on the site); run() advances it until its time
  * budget is spent. The WP-CLI command runs it to the end in one go.
  *
- * The archive holds database.sql, waas.json (what AnyPress needs to know about the site) and
+ * The archive holds database.sql, anypress.json (what AnyPress needs to know about the site) and
  * wp-content/, which is what the AnyPress store agent imports.
  */
 final class Exporter
@@ -37,7 +37,7 @@ final class Exporter
 
     /**
      * Checks the code with AnyPress and prepares the work folder (under `$workBase`, kept out of the
-     * export and closed to the web). `$site` is what waas.json tells AnyPress about the site, with what
+     * export and closed to the web). `$site` is what anypress.json tells AnyPress about the site, with what
      * WordPress knows of the preflight checks under `preflight`; the database and file checks are added
      * by the first steps.
      *
@@ -202,7 +202,7 @@ final class Exporter
     }
 
     /**
-     * Packs waas.json, database.sql and then the listed files, from where the last request stopped.
+     * Packs anypress.json, database.sql and then the listed files, from where the last request stopped.
      * `position` is where the current file's line starts in files.txt, or -1 for database.sql; a file
      * cut short by the deadline carries on from `fileOffset`. The archive is first cut back to the size
      * recorded with the state, so a request that failed half-way leaves nothing behind.
@@ -221,7 +221,7 @@ final class Exporter
         $tar = new TarGz($archive);
         $tar->open();
         if (empty($state['packedBytes'])) {
-            $tar->addString('waas.json', (string) file_get_contents("$work/waas.json"), time());
+            $tar->addString('anypress.json', (string) file_get_contents("$work/anypress.json"), time());
             $state['position'] = -1;
         }
         $list = fopen("$work/files.txt", 'rb');
@@ -493,13 +493,13 @@ final class Exporter
         }
     }
 
-    /** Writes waas.json from the state's site details. */
+    /** Writes anypress.json from the state's site details. */
     private static function writeSite(array $state): void
     {
         $site = $state['site'];
         if (isset($site['tables'])) $site['tables'] = (object) $site['tables'];
         $json = (string) json_encode($site, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
-        if (@file_put_contents($state['work'] . '/waas.json', $json) !== strlen($json)) {
+        if (@file_put_contents($state['work'] . '/anypress.json', $json) !== strlen($json)) {
             throw new \RuntimeException(__('Could not write the export. Is the disk full? Free up space on this server, then cancel and start again.', 'anypress-export'));
         }
     }

@@ -171,7 +171,7 @@ final class ExporterTest extends TestCase
         $this->assertSame('<?php // shop', file_get_contents("$out/wp-content/plugins/shop/shop.php"));
         $this->assertSame($big, file_get_contents("$out/wp-content/uploads/video.bin"));
         $this->assertSame('long', file_get_contents("$out/wp-content/uploads/$long"));
-        $site = json_decode(file_get_contents("$out/waas.json"), true);
+        $site = json_decode(file_get_contents("$out/anypress.json"), true);
         $this->assertSame('wpx_', $site['tablePrefix']);
         // Row counts for the import to compare, and the preflight report.
         $this->assertSame(['wpx_log' => 3, 'wpx_options' => 1], $site['tables']);

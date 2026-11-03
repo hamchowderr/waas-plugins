@@ -1,0 +1,95 @@
+.anypress-client-admin .anypress-lead {
+    max-width: 760px;
+    font-size: 14px;
+}
+
+.anypress-client-admin .anypress-add-role {
+    margin: 16px 0 20px;
+}
+
+.anypress-client-admin .anypress-roles-scroll {
+    overflow-x: auto;
+    max-width: 1100px;
+}
+
+.anypress-client-admin .anypress-roles-table th[scope="row"] {
+    font-weight: 400;
+}
+
+.anypress-client-admin .anypress-roles-table .anypress-role-col {
+    text-align: center;
+    width: 140px;
+}
+
+.anypress-client-admin .anypress-roles-table thead .anypress-role-col strong,
+.anypress-client-admin .anypress-roles-table thead .anypress-role-col code {
+    display: block;
+}
+
+.anypress-client-admin .anypress-roles-table thead .anypress-role-col code {
+    margin-top: 4px;
+    font-size: 11px;
+}
+
+.anypress-client-admin .anypress-roles-table tfoot td,
+.anypress-client-admin .anypress-roles-table tfoot th {
+    color: #b32d2e;
+}
+
+.anypress-client-admin .anypress-status .dashicons {
+    vertical-align: text-bottom;
+}
+
+.anypress-client-admin .anypress-status-success .dashicons {
+    color: #00a32a;
+}
+
+.anypress-client-admin .anypress-status-warning .dashicons {
+    color: #dba617;
+}
+
+.anypress-client-admin .anypress-status-error .dashicons {
+    color: #d63638;
+}
+
+.anypress-client-admin .anypress-status-table td p:first-child {
+    margin-top: 0;
+}
+
+.anypress-client-admin .anypress-inline-form {
+    margin: 8px 0 4px;
+}
+
+.anypress-client-admin .anypress-roles-summary + .description {
+    margin-top: 8px;
+}
+
+.anypress-client-admin .anypress-roles-summary,
+.anypress-client-admin .anypress-plan-table {
+    max-width: 760px;
+}
+
+.anypress-client-admin .anypress-roles-summary td:last-child,
+.anypress-client-admin .anypress-roles-summary th:last-child {
+    width: 160px;
+}
+
+.anypress-client-admin .notice.inline {
+    max-width: 1080px;
+}
+
+.anypress-client-admin .anypress-list {
+    list-style: disc;
+    margin-left: 20px;
+}
+
+.anypress-client-admin .anypress-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 0 6px;
+    border-radius: 3px;
+    background: #f0f0f1;
+    color: #50575e;
+    font-size: 11px;
+    line-height: 18px;
+}

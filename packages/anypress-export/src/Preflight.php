@@ -6,7 +6,7 @@ defined('ABSPATH') || exit;
 
 /**
  * Checks a site before it moves: what would stop the move, what stays behind, what the owner has to
- * set up again, and what to check on AnyPress afterwards. The facts go into waas.json under
+ * set up again, and what to check on AnyPress afterwards. The facts go into anypress.json under
  * `preflight` (for AnyPress and its support), and notes() turns them into the short list the Tools
  * page shows. Never reads a secret's value: of wp-config.php it keeps only the constants' names.
  *

@@ -11,9 +11,9 @@ jobs:
     with:
       php-version: "8.3"
       artifacts: |
-        waas-host=preview/wpcs-waas-host.zip
+        anypress-host=preview/anypress-host.zip
       build-command: |
         set -euo pipefail
         # The same zip as a release, stamped with the version already in the plugin header.
-        version=$(grep -m1 -E '^Version:' packages/waas-host/index.php | sed -E 's/^Version:[[:space:]]*//')
-        scripts/release/build.sh waas-host "$version" preview
+        version=$(grep -m1 -E '^Version:' packages/anypress-host/anypress-host.php | sed -E 's/^Version:[[:space:]]*//')
+        scripts/release/build.sh anypress-host "$version" preview
