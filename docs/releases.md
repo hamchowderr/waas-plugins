@@ -23,7 +23,7 @@ Settings in `wp-config.php`:
 - `ANYPRESS_UPDATE_CHANNEL`: `stable` (default), `beta`, or `off`.
 - `ANYPRESS_AUTO_UPDATE`: `patch` installs x.y.Z updates of the same x.y automatically. Otherwise an admin installs every update.
 
-`Updater::PUBLIC_KEYS` holds AnyPress's release key (its private half is this repository's `ANYPRESS_RELEASE_SIGNING_KEY` secret). With an empty list the updater registers nothing, since there would be nothing it could verify. Until the API has `RELEASES_S3_BUCKET`, every check gets 503 "not configured": the plugin caches that for an hour, offers nothing and shows no error.
+`Updater::PUBLIC_KEYS` holds AnyPress's release key (its private half is this repository's `WAAS_RELEASE_SIGNING_KEY` secret). With an empty list the updater registers nothing, since there would be nothing it could verify. Until the API has `RELEASES_S3_BUCKET`, every check gets 503 "not configured": the plugin caches that for an hour, offers nothing and shows no error.
 
 ## Releasing
 
@@ -46,7 +46,7 @@ To publish releases to your own API (for example from a fork), make your own key
    openssl genpkey -algorithm ed25519 -out anypress-release-signing.pem && openssl pkey -in anypress-release-signing.pem -pubout -outform DER | tail -c 32 | openssl base64 -A; echo
    ```
 
-2. Add the **whole PEM file** (including the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines) as the repository's GitHub Actions secret `ANYPRESS_RELEASE_SIGNING_KEY`, for example `gh secret set ANYPRESS_RELEASE_SIGNING_KEY -R <owner>/<repo> < anypress-release-signing.pem`. Keep the file offline, or delete it once the secret is set and accept that losing the secret means rotating the key.
+2. Add the **whole PEM file** (including the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines) as the repository's GitHub Actions secret `WAAS_RELEASE_SIGNING_KEY`, for example `gh secret set WAAS_RELEASE_SIGNING_KEY -R <owner>/<repo> < anypress-release-signing.pem`. Keep the file offline, or delete it once the secret is set and accept that losing the secret means rotating the key.
 3. Put the printed public key (44 characters ending in `=`) into `Updater::PUBLIC_KEYS` and run `scripts/sync-updater.sh`; releases built after that verify.
 4. Create an R2 API token with **Object Read & Write** on your releases bucket only, and add it as the secrets `R2_RELEASES_ACCESS_KEY_ID` and `R2_RELEASES_SECRET_ACCESS_KEY`. Add the repository variables `R2_ENDPOINT` = `https://<account id>.r2.cloudflarestorage.com` and `R2_RELEASES_BUCKET` = your bucket name.
 5. The API needs read access to the bucket: `RELEASES_S3_BUCKET` and a read token (`RELEASES_S3_ACCESS_KEY_ID`, `RELEASES_S3_SECRET_ACCESS_KEY`) in its environment.
