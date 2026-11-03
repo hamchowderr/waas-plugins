@@ -55,26 +55,42 @@ class ConfigService
     }
 
     /** AnyPress's own website assistant, and the API addresses it signs owners in with. */
-    public const ANYPRESS_ASSISTANT_URL = 'https://assistant.anypress.io';
+    /** The assistant setting's value for "on each customer's own website, at /.assistant". */
+    public const ASSISTANT_ON_WEBSITE = 'website';
+    /** The old shared address. A saved value of it now means ASSISTANT_ON_WEBSITE. */
+    private const OLD_ANYPRESS_ASSISTANT_URL = 'https://assistant.anypress.io';
     private const ANYPRESS_API_HOSTS = ['api.anypress.io', 'waas-api.otakusolutions.io'];
 
     /**
-     * The website assistant's address (WAAS_ASSISTANT_URL or the setting), without a trailing slash.
-     * A storefront on the AnyPress API offers AnyPress's assistant until the setting is saved empty.
+     * The website assistant (WAAS_ASSISTANT_URL or the setting): ASSISTANT_ON_WEBSITE for the assistant on
+     * each customer's own website, or another assistant's address without a trailing slash.
+     * A storefront on the AnyPress API offers the assistant on the website until the setting is saved empty.
      * Empty when the storefront doesn't offer it.
      */
     public function get_assistant_url(): string
     {
         $value = self::has_constant('ASSISTANT_URL') ? self::constant('ASSISTANT_URL') : get_option('waas_assistant_url', $this->default_assistant_url());
-        $value = (string) apply_filters('waas_settings_assistant_url', $value);
-        return $value === '' ? '' : untrailingslashit(esc_url_raw($value));
+        return self::sanitize_assistant_url((string) apply_filters('waas_settings_assistant_url', $value));
     }
 
-    /** AnyPress's assistant for a storefront on the AnyPress API, '' for any other API (it can't sign in there). */
+    /** The assistant on the website for a storefront on the AnyPress API, '' for any other API (it can't sign in there). */
     public function default_assistant_url(): string
     {
         $host = wp_parse_url((string) $this->get_api_base_url(), PHP_URL_HOST);
-        return in_array($host, self::ANYPRESS_API_HOSTS, true) ? self::ANYPRESS_ASSISTANT_URL : '';
+        return in_array($host, self::ANYPRESS_API_HOSTS, true) ? self::ASSISTANT_ON_WEBSITE : '';
+    }
+
+    /** '' (off), ASSISTANT_ON_WEBSITE, or an assistant's address without a trailing slash. */
+    public static function sanitize_assistant_url($value): string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return '';
+        }
+        if (strtolower($value) === self::ASSISTANT_ON_WEBSITE || untrailingslashit(strtolower($value)) === self::OLD_ANYPRESS_ASSISTANT_URL) {
+            return self::ASSISTANT_ON_WEBSITE;
+        }
+        return untrailingslashit(esc_url_raw($value));
     }
 
     /**

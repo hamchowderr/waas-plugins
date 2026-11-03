@@ -437,7 +437,7 @@ class AdminSettings
         if (!self::is_ready_made()) {
             // Shown filled in, so saving this page keeps the assistant on unless the field is cleared.
             register_setting('waas-admin', 'waas_assistant_url', [
-                'sanitize_callback' => 'esc_url_raw',
+                'sanitize_callback' => [ConfigService::class, 'sanitize_assistant_url'],
                 'default' => (new ConfigService())->default_assistant_url(),
             ]);
 
@@ -533,11 +533,11 @@ class AdminSettings
                 'hint' => self::constant_hint('API_SECRET', ''),
             ]);
             $this->add_field('waas_assistant_url', __('Website assistant', 'waas-host'), 'waas-admin', 'api_credentials', [
-                'type' => 'url',
+                'type' => 'text',
                 'class_name' => 'regular-text code',
-                'placeholder' => 'https://assistant.example.com',
+                'placeholder' => ConfigService::ASSISTANT_ON_WEBSITE,
                 'constant' => 'ASSISTANT_URL',
-                'hint' => self::constant_hint('ASSISTANT_URL', __('The website assistant\'s address. Each ready website on the customer\'s account page gets an "Ask the website assistant" button that opens it already signed in. On the AnyPress API this is AnyPress\'s own assistant; clear the field to hide the button.', 'waas-host')),
+                'hint' => self::constant_hint('ASSISTANT_URL', __('Each ready website on the customer\'s account page gets an "Ask the website assistant" button that opens it already signed in. "website" opens the assistant on the customer\'s own website, at /.assistant (the AnyPress API\'s default). Or enter the address of your own assistant. Clear the field to hide the button.', 'waas-host')),
             ]);
 
             // Website addresses

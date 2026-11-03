@@ -178,7 +178,17 @@ class ConfigServiceTest extends TestCase
     {
         $this->options['waas_api_base_url'] = 'https://api.anypress.io';
 
-        $this->assertSame(ConfigService::ANYPRESS_ASSISTANT_URL, $this->assistant());
+        $this->assertSame(ConfigService::ASSISTANT_ON_WEBSITE, $this->assistant());
+    }
+
+    public function test_a_saved_old_shared_address_means_the_assistant_on_the_website(): void
+    {
+        $this->options['waas_api_base_url'] = 'https://api.anypress.io';
+        $this->options['waas_assistant_url'] = 'https://assistant.anypress.io/';
+        $this->assertSame(ConfigService::ASSISTANT_ON_WEBSITE, $this->assistant());
+
+        $this->options['waas_assistant_url'] = ' Website ';
+        $this->assertSame(ConfigService::ASSISTANT_ON_WEBSITE, $this->assistant());
     }
 
     public function test_clearing_the_setting_hides_the_assistant(): void

@@ -13,8 +13,8 @@ use WP_REST_Request;
 /**
  * The "Ask the website assistant" button on the customer's account page. The owner is already signed in
  * here, so the storefront vouches for them: this route asks the API for a one-time handoff for the owner's
- * website and sends the owner to the assistant with it. With the default assistant that is the website's own
- * https://<its domain>/.assistant, so the owner lands on their own site. The assistant trades it, with its own PKCE
+ * website and sends the owner to the assistant with it. With the default assistant ("website") that is the website's
+ * own https://<its domain>/.assistant, so the owner lands on their own site. The assistant trades it, with its own PKCE
  * challenge, for a sign-in; the tokens never pass through this site.
  */
 class AssistantSignIn
@@ -72,11 +72,15 @@ class AssistantSignIn
         $commerce = Commerce::require_adapter();
         $external_id = (string) $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META);
         $ready = $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_STATE) === Tenant::READY;
+        $not_yet = ['error' => __('The website assistant is not available for this website yet.', 'waas-host'), 'status' => 404];
         if ($assistant === '' || $external_id === '' || !$ready) {
-            return ['error' => __('The website assistant is not available for this website yet.', 'waas-host'), 'status' => 404];
+            return $not_yet;
         }
-        if ($assistant === ConfigService::ANYPRESS_ASSISTANT_URL) {
-            $assistant = self::on_website($commerce, $subscription_id) ?: $assistant;
+        if ($assistant === ConfigService::ASSISTANT_ON_WEBSITE) {
+            $assistant = self::on_website($commerce, $subscription_id);
+            if ($assistant === '') {
+                return $not_yet;
+            }
         }
         try {
             $next = $this->api->site_handoff($external_id, $assistant);

@@ -4,8 +4,7 @@
  *
  * Messages with the chat, only to and from the assistant's own address (the website's own /.assistant):
  * - from the chat: { source: 'site-assistant', type: 'sign-in' | 'ready' | 'apply' | 'clear-selection' | 'width' | 'toggle',
- *   id?, change?, wide? } (or the name before 2.12, 'anypress-assistant', when WAAS_ASSISTANT_URL points at the
- *   panel's own address)
+ *   id?, change?, wide? }
  * - to the chat: { source: 'site-editor', type: 'view', view } with the page, its top-level blocks and the
  *   selected block (and whether it is on a phone); { source: 'site-editor', type: 'applied', id, ok }.
  * A change lands in the editor like any edit: the owner sees it outlined on the page, and a card at the top of the
@@ -21,7 +20,7 @@
 
 	const NAME = 'site-assistant';
 	const SIDEBAR = 'assistant';
-	const FROM_CHAT = [ 'site-assistant', 'anypress-assistant' ];
+	const FROM_CHAT = 'site-assistant';
 	const TO_CHAT = 'site-editor';
 	const origin = new URL( config.assistantUrl ).origin;
 	/** Markup longer than this is named only; the assistant asks the owner to select it. */
@@ -295,7 +294,7 @@
 					return;
 				}
 				const data = event.data || {};
-				if ( FROM_CHAT.indexOf( data.source ) < 0 ) {
+				if ( data.source !== FROM_CHAT ) {
 					return;
 				}
 				if ( data.type === 'sign-in' && ! signingIn.current ) {
