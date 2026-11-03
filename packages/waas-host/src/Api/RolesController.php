@@ -51,7 +51,7 @@ class RolesController
             $this->update_tenant_roles_list();
         } catch (\Exception $error) {
             // Set a transient notice message
-            set_transient(AdminNotices::REFRESH_ROLES_FAILED_NOTICE, __('Roles could not be loaded. Check that your template version labelled "Production" is running, has WaaS Client active, and has at least one role.', 'waas-host'), 5);
+            set_transient(AdminNotices::REFRESH_ROLES_FAILED_NOTICE, __('Roles could not be loaded. Check that your template version labelled "Production" is running, has AnyPress Client active, and has at least one role.', 'waas-host'), 5);
         }
 
         wp_safe_redirect(wp_get_referer());

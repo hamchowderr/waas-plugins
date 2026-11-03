@@ -14,7 +14,7 @@ class PluginBootstrap
     const REMOVED_ADMINISTRATOR_PLUGIN_CAPS = 'waas_removed_administrator_plugin_caps';
 
     /**
-     * Stores built before WaaS Client 2.4.0 get their environment flag and wp-config constants under the old
+     * Stores built before AnyPress Client 2.4.0 get their environment flag and wp-config constants under the old
      * platform's prefix, and saved two options under it; this client reads both spellings and moves the options.
      */
     const LEGACY_PREFIX = 'WPCS_';
@@ -106,12 +106,12 @@ class PluginBootstrap
             return $actions;
         }
 
-        // Tenant roles have not been defined, so the WaaS Client won't do anything.
+        // Tenant roles have not been defined, so the AnyPress Client won't do anything.
         if(!self::has_constant(self::TENANT_ROLES_CONSTANT)) {
             return $actions;
         }
 
-        // The WaaS Client itself should always have the deactivate button available.
+        // The AnyPress Client itself should always have the deactivate button available.
         if($plugin_file === WAAS_CLIENT_BASENAME) {
             return $actions;
         }
@@ -120,7 +120,7 @@ class PluginBootstrap
         unset($actions['deactivate']);
 
         return array_merge($actions, [
-            'waas_active' => is_plugin_active( $plugin_file ) ? __('Activated by the WaaS Client', 'waas-client') : __('Deactivated by the WaaS Client', 'waas-client'),
+            'waas_active' => is_plugin_active( $plugin_file ) ? sprintf(/* translators: %s: the plugin's name */ __('Activated by %s', 'waas-client'), \WaaSClient\Core\Brand::plugin_name()) : sprintf(/* translators: %s: the plugin's name */ __('Deactivated by %s', 'waas-client'), \WaaSClient\Core\Brand::plugin_name()),
         ]);
     }
 }

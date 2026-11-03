@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
 use WaaSClient\Features\PluginBootstrap;
 
 /**
- * Stores built before WaaS Client 2.4.0 were given their flag and constants under the old platform's prefix.
+ * Stores built before AnyPress Client 2.4.0 were given their flag and constants under the old platform's prefix.
  * @runTestsInSeparateProcesses
  * @preserveGlobalState disabled
  */

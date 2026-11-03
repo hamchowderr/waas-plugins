@@ -83,7 +83,7 @@ class TenantLifecycleTest extends TestCase
         $this->assertSame('apex-research.stores.waas.example', $sent['customDomainName']);
         $this->assertSame('peptide-starter', $sent['groupName']);
         $this->assertSame('peptide-store', $sent['phpConstants']['WAAS_TENANT_ROLES']['value']);
-        // Stores on an older WaaS Client read the old name.
+        // Stores on an older AnyPress Client read the old name.
         $this->assertSame('peptide-store', $sent['phpConstants']['WPCS_TENANT_ROLES']['value']);
         $this->assertMatchesRegularExpression('/^[0-9a-f-]{36}$/', $sent['externalId'], 'chosen up front, so a retry cannot make a second store');
 

@@ -1,6 +1,6 @@
 // End-to-end test of the forms switch (`wp waas forms switch` and the check-forms / switch-forms abilities) on
 // WordPress Playground. Boots forms/blueprint.json (Contact Form 7 with Flamingo, WPForms Lite, Ninja Forms and Fluent
-// Forms, at the versions the site-moving research used) with WaaS Client from this checkout, seeds each source plugin
+// Forms, at the versions the site-moving research used) with AnyPress Client from this checkout, seeds each source plugin
 // with a realistic form, entries and pages (forms/seed-*.php), then runs the dry run, the switch, the switch again,
 // form submissions through Fluent Forms and the undo, and checks each step.
 //
@@ -425,7 +425,7 @@ await check('switching again after undo reuses the same forms', async () => {
     expect(undo.status === 200 && undo.data.undo === true, `undo ability: HTTP ${undo.status} ${short(undo.data)}`);
 });
 
-await check('no PHP warnings or errors from WaaS Client', async () => {
+await check('no PHP warnings or errors from AnyPress Client', async () => {
     const log = await php(`$f = WP_CONTENT_DIR . '/debug.log'; echo json_encode(['log' => file_exists($f) ? file_get_contents($f) : '']);`);
     keep('debug.log', log.log);
     const ours = log.log.split('\n').filter((line) => /waas-client|WaaSClient/.test(line));

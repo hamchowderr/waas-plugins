@@ -402,7 +402,7 @@ class NameConflicts
         );
 
         if (!wp_mail((string) get_option('admin_email'), $subject, $message)) {
-            error_log('WaaS Host: could not email the admin about the name conflict for subscription ' . $subscription_id);
+            error_log('AnyPress Host: could not email the admin about the name conflict for subscription ' . $subscription_id);
         }
     }
 
@@ -423,7 +423,7 @@ class NameConflicts
         );
 
         if (!wp_mail($to, $subject, $message)) {
-            error_log('WaaS Host: could not email the customer about the name conflict for subscription ' . $subscription_id);
+            error_log('AnyPress Host: could not email the customer about the name conflict for subscription ' . $subscription_id);
         }
     }
 }

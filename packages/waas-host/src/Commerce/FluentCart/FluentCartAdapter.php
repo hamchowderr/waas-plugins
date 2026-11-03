@@ -13,7 +13,7 @@ use WaaSHost\Migrations\FluentCartFeedTriggers;
 /**
  * FluentCart (1.7+), which has subscriptions built in. Subscription ids are
  * fct_subscriptions ids and their data lives in fct_subscription_meta. A product is a
- * website plan when the "WaaS Provisioning" integration is enabled on it; the feed
+ * website plan when the "AnyPress websites" integration is enabled on it; the feed
  * holds the role and snapshot group, and its triggers create and remove the store. A feed
  * set to "Email pack" makes the product an email pack instead (FluentCartEmailPacks), never a plan.
  */

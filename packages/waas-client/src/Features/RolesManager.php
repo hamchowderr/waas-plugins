@@ -2,6 +2,8 @@
 
 namespace WaaSClient\Features;
 
+use WaaSClient\Core\Brand;
+
 class RolesManager
 {
     public function __construct()
@@ -102,8 +104,8 @@ class RolesManager
         }
 ?>
             <div class="notice notice-error">
-                <p><strong><?php esc_html_e('WaaS Client: this website has no plan roles.', 'waas-client'); ?></strong></p>
-                <p><?php esc_html_e('Its template version has no roles set up, so no plugins are turned on or off for its plan. Set up roles on the template website under WaaS Client > Plan roles, then deploy that version.', 'waas-client'); ?></p>
+                <p><strong><?php echo esc_html(sprintf(/* translators: %s: the plugin's name */ __('%s: this website has no plan roles.', 'waas-client'), Brand::plugin_name())); ?></strong></p>
+                <p><?php esc_html_e('Its template version has no roles set up, so no plugins are turned on or off for its plan. Set up roles on the template website under AnyPress Client > Plan roles, then deploy that version.', 'waas-client'); ?></p>
             </div>
 <?php
     }
@@ -115,7 +117,7 @@ class RolesManager
         }
 ?>
             <div class="notice notice-error">
-                <p><strong><?php esc_html_e('WaaS Client: this website\'s plan roles could not be read.', 'waas-client'); ?></strong></p>
+                <p><strong><?php echo esc_html(sprintf(/* translators: %s: the plugin's name */ __('%s: this website\'s plan roles could not be read.', 'waas-client'), Brand::plugin_name())); ?></strong></p>
                 <p><?php esc_html_e('The roles file that came with its template version is damaged, so no plugins were turned on or off and the website stays as it was. Save the plan roles again on the template website and deploy that version.', 'waas-client'); ?></p>
             </div>
 <?php
@@ -135,12 +137,13 @@ class RolesManager
 ?>
             <div class="notice <?php echo $stopped ? 'notice-error' : 'notice-warning'; ?>">
                 <p><strong><?php echo esc_html(sprintf(
-                    /* translators: %s: comma-separated role names */
-                    _n('WaaS Client: plan role "%s" was not found in this website\'s roles.', 'WaaS Client: plan roles "%s" were not found in this website\'s roles.', count($missing), 'waas-client'),
+                    /* translators: 1: the plugin's name, 2: comma-separated role names */
+                    _n('%1$s: plan role "%2$s" was not found in this website\'s roles.', '%1$s: plan roles "%2$s" were not found in this website\'s roles.', count($missing), 'waas-client'),
+                    Brand::plugin_name(),
                     implode('", "', $missing)
                 )); ?></strong></p>
                 <p><?php echo $stopped
-                    ? esc_html__('No plugins were turned on or off, so the website stays as it was. Add the role on the template website (WaaS Client > Plan roles) and deploy that version, or move this website to a plan whose role exists.', 'waas-client')
+                    ? esc_html__('No plugins were turned on or off, so the website stays as it was. Add the role on the template website (AnyPress Client > Plan roles) and deploy that version, or move this website to a plan whose role exists.', 'waas-client')
                     : esc_html__('Plugins were set from the plan\'s other roles only. Add the missing role on the template website and deploy that version.', 'waas-client'); ?></p>
                 <?php if ($available) : ?>
                     <p><?php esc_html_e('Roles this website has:', 'waas-client'); ?>
@@ -159,7 +162,7 @@ class RolesManager
             }
 ?>
             <div class="notice notice-error">
-                <p><strong><?php esc_html_e('WaaS Client: this website has no plan role.', 'waas-client'); ?></strong></p>
+                <p><strong><?php echo esc_html(sprintf(/* translators: %s: the plugin's name */ __('%s: this website has no plan role.', 'waas-client'), Brand::plugin_name())); ?></strong></p>
                 <p><?php esc_html_e('This happens when a website is created by hand instead of through a purchase, so no plugins are turned on or off for it.', 'waas-client'); ?></p>
                 <p><?php
                     /* translators: %s: a PHP constant name */

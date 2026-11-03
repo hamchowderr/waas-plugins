@@ -106,7 +106,7 @@ class ProvisioningApi
         try {
             $group_names = $this->get_available_groupnames();
         } catch (\Throwable $e) {
-            error_log('WaaS Host: could not load snapshot groups: ' . $e->getMessage());
+            error_log('AnyPress Host: could not load snapshot groups: ' . $e->getMessage());
             return [];
         }
 

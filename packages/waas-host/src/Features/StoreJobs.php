@@ -283,7 +283,7 @@ class StoreJobs
             'state' => (string) (new Tenant($subscription_id))->get_status(),
         ]);
         (new Tenant($subscription_id))->update_status(Tenant::FAILED);
-        error_log(sprintf('WaaS Host: store job "%s" for subscription %s failed %d times: %s', $queue[0]['op'], $subscription_id, $attempts, $error->getMessage()));
+        error_log(sprintf('AnyPress Host: store job "%s" for subscription %s failed %d times: %s', $queue[0]['op'], $subscription_id, $attempts, $error->getMessage()));
 
         $this->email_admin($subscription_id, $queue[0]['op'], $attempts, $error->getMessage());
 
@@ -305,7 +305,7 @@ class StoreJobs
         );
 
         if (!wp_mail((string) get_option('admin_email'), $subject, $message)) {
-            error_log('WaaS Host: could not email the admin about the failed store job for subscription ' . $subscription_id);
+            error_log('AnyPress Host: could not email the admin about the failed store job for subscription ' . $subscription_id);
         }
     }
 

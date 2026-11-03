@@ -56,7 +56,7 @@ if ( defined( 'FLUENTCRM' ) ) {
 	update_option( 'fluentcrm-global-settings', $ap_settings );
 
 	// The automation emails themselves: each is written as plain paragraphs (crm-emails.json), so put it in the
-	// AnyPress layout (the same as the API's account emails and WaaS Host's website emails) and send it as raw HTML,
+	// AnyPress layout (the same as the API's account emails and AnyPress Host's website emails) and send it as raw HTML,
 	// with the unsubscribe links in its own footer. The source text comes from crm-emails.json by subject, so running
 	// this again restyles from the original wording rather than wrapping twice.
 	$ap_sources = array();

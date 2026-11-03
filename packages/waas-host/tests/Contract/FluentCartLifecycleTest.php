@@ -132,7 +132,7 @@ class FluentCartLifecycleTest extends TestCase
         $this->assertSame('apex-research.stores.waas.example', $sent['customDomainName']);
         $this->assertSame('peptide-starter', $sent['groupName']);
         $this->assertSame('peptide-store', $sent['phpConstants']['WAAS_TENANT_ROLES']['value']);
-        // Stores on an older WaaS Client read the old name.
+        // Stores on an older AnyPress Client read the old name.
         $this->assertSame('peptide-store', $sent['phpConstants']['WPCS_TENANT_ROLES']['value']);
 
         $meta = $this->meta[self::SUBSCRIPTION_ID];

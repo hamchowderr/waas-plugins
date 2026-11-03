@@ -1,6 +1,6 @@
 // End-to-end test of the CRM switch (`wp waas crm switch` and the check-crm / switch-crm abilities) on WordPress
 // Playground. Boots crm-switch/blueprint.json (WooCommerce, FluentCRM, MailPoet and the Newsletter plugin, with
-// background updates and WP-Cron off) with WaaS Client from this checkout, seeds buyers and subscribers
+// background updates and WP-Cron off) with AnyPress Client from this checkout, seeds buyers and subscribers
 // (crm-switch/seed.php), then runs the checks, the dry run, the switch, the switch again, the abilities and the undo.
 // It runs twice, on a fresh site each time: WooCommerce orders in posts (HPOS off), then in its order tables (HPOS on).
 //
@@ -351,7 +351,7 @@ async function runMode(hpos) {
         expect(after.mail === start.mail && after.campaign_emails === 0, `email: ${start.mail} -> ${after.mail}`);
     });
 
-    await check('no PHP warnings or errors from WaaS Client', async () => {
+    await check('no PHP warnings or errors from AnyPress Client', async () => {
         const log = await php(`$f = WP_CONTENT_DIR . '/debug.log'; echo json_encode(['log' => file_exists($f) ? file_get_contents($f) : '']);`);
         keep(`hpos-${hpos}-debug.log`, log.log);
         const ours = log.log.split('\n').filter((line) => /waas-client|WaaSClient/.test(line));

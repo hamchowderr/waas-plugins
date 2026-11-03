@@ -331,7 +331,7 @@ async function runMode(hpos) {
         expect(Number(after.carol.purchase_count) === 2, short(after.carol));
     });
 
-    await check('no PHP warnings or errors from WaaS Client', async () => {
+    await check('no PHP warnings or errors from AnyPress Client', async () => {
         const log = await php(`$f = WP_CONTENT_DIR . '/debug.log'; echo json_encode(['log' => file_exists($f) ? file_get_contents($f) : '']);`);
         keep(`hpos-${hpos}-debug.log`, log.log);
         const ours = log.log.split('\n').filter((line) => /waas-client|WaaSClient/.test(line));

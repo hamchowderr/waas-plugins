@@ -368,7 +368,7 @@ class WaasProvisioningIntegrationTest extends TestCase
 
         $this->run_feed('subscription_eot');
 
-        $this->assertSame([['Website suspended', 'Subscription #900 (subscription_eot)', 'info', 'WaaS']], $this->logs);
+        $this->assertSame([['Website suspended', 'Subscription #900 (subscription_eot)', 'info', 'AnyPress']], $this->logs);
     }
 
     public function test_no_order_note_when_waas_host_did_nothing(): void

@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name: WaaS Payments
+ * Plugin Name: AnyPress Payments
  * Plugin URI: https://github.com/hamchowderr/waas-plugins
  * Description: Card payments for FluentCart through the store's payment gateway, including subscriptions charged automatically on renewal (FluentCart store-managed subscriptions). First gateway: Authorize.Net.
- * Version: 0.2.0-beta.2
+ * Version: 0.2.0-beta.3
  * Author: Otaku Solutions
  * Author URI: https://otakusolutions.io
  * Update URI: waas-payments
@@ -17,7 +17,7 @@
 
 defined('ABSPATH') || exit;
 
-define('WAAS_PAYMENTS_VERSION', '0.2.0-beta.2');
+define('WAAS_PAYMENTS_VERSION', '0.2.0-beta.3');
 define('WAAS_PAYMENTS_URL', plugin_dir_url(__FILE__));
 define('WAAS_PAYMENTS_BASENAME', plugin_basename(__FILE__));
 
@@ -26,7 +26,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 // Updates from our own channel, with the storefront's API credentials from waas-host (waas-hw4).
 (new \WaaSPayments\Updater\Updater([
     'slug' => 'waas-payments',
-    'name' => 'WaaS Payments',
+    'name' => 'AnyPress Payments',
     'basename' => WAAS_PAYMENTS_BASENAME,
     'version' => WAAS_PAYMENTS_VERSION,
     'update_uri' => 'waas-payments',

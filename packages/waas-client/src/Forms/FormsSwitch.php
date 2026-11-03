@@ -445,7 +445,7 @@ class FormsSwitch
             $confirmations = (array) ($item['settings']['confirmations'] ?? []);
             $conditional = array_filter($confirmations, fn ($c) => !empty($c['conditional_logic']));
             if ($conditional && !self::pro()) {
-                $notes[] = __('Fluent Forms runs conditional confirmations (such as a redirect for one answer) only with Pro; WaaS Client runs them for this form while Pro is off.', 'waas-client');
+                $notes[] = __('Fluent Forms runs conditional confirmations (such as a redirect for one answer) only with Pro; AnyPress Client runs them for this form while Pro is off.', 'waas-client');
             }
         }
         if ($dropped) {

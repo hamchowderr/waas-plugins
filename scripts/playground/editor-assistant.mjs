@@ -1,6 +1,6 @@
-// The website assistant beside the page editor (WaaS Client's EditorAssistant) on WordPress Playground, in a real
+// The website assistant beside the page editor (AnyPress Client's EditorAssistant) on WordPress Playground, in a real
 // browser at desktop and phone width. A small local page stands in for the assistant's chat (its /editor page), so
-// this checks WaaS Client's side: the Assistant panel opens from the admin bar's link, the chat signs in through the
+// this checks AnyPress Client's side: the Assistant panel opens from the admin bar's link, the chat signs in through the
 // store's own handoff (signed with the site key), it receives what the editor has open (the selected block), and a
 // change it sends lands in the editor, unsaved, with Undo.
 //

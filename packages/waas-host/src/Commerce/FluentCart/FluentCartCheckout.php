@@ -123,7 +123,7 @@ class FluentCartCheckout
         } catch (\Exception $e) {
             // Fail open: take the order (no store here has the name). If the API later finds it taken, the customer
             // is asked for a new one (NameConflicts).
-            error_log('WaaS Host: website name availability check failed, accepting "' . $website_name . '" unverified: ' . $e->getMessage());
+            error_log('AnyPress Host: website name availability check failed, accepting "' . $website_name . '" unverified: ' . $e->getMessage());
             $this->unverified[$website_name] = true;
         }
 

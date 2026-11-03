@@ -3,7 +3,7 @@
   "meta": {
     "title": "AnyPress store template v1.1.5 preview",
     "author": "hamchowderr",
-    "description": "AnyPress theme 0.7.0 and AnyPress Blocks 0.3.0 with WaaS Client 2.4.0: site details on every kit, synced patterns with overrides, wide and sidebar templates, and the MCP Adapter switch."
+    "description": "AnyPress theme 0.7.0 and AnyPress Blocks 0.3.0 with AnyPress Client 2.4.0: site details on every kit, synced patterns with overrides, wide and sidebar templates, and the MCP Adapter switch."
   },
   "landingPage": "/store-preview/",
   "preferredVersions": {
@@ -17,7 +17,7 @@
     {
       "step": "writeFile",
       "path": "/wordpress/wp-content/mu-plugins/anypress-preview-store.php",
-      "data": "<?php\n// Preview only: makes WaaS Client behave as on an AnyPress store (the Your plan page, plan-managed plugins).\nputenv('WAAS_IS_TENANT=true');\ndefine('WAAS_TENANT_ROLES', 'everything');\n"
+      "data": "<?php\n// Preview only: makes AnyPress Client behave as on an AnyPress store (the Your plan page, plan-managed plugins).\nputenv('WAAS_IS_TENANT=true');\ndefine('WAAS_TENANT_ROLES', 'everything');\n"
     },
     {
       "step": "installTheme",
@@ -72,7 +72,7 @@
     {
       "step": "writeFile",
       "path": "/wordpress/wp-content/plugins/waas-client/vendor/autoload.php",
-      "data": "<?php\n// Preview only: what composer's autoloader does for WaaS Client (PSR-4, no other packages).\nspl_autoload_register(function ($class) {\n    if (strncmp($class, 'WaaSClient\\\\', 11) !== 0) return;\n    $file = __DIR__ . '/../src/' . str_replace('\\\\', '/', substr($class, 11)) . '.php';\n    if (is_file($file)) require $file;\n});\n"
+      "data": "<?php\n// Preview only: what composer's autoloader does for AnyPress Client (PSR-4, no other packages).\nspl_autoload_register(function ($class) {\n    if (strncmp($class, 'WaaSClient\\\\', 11) !== 0) return;\n    $file = __DIR__ . '/../src/' . str_replace('\\\\', '/', substr($class, 11)) . '.php';\n    if (is_file($file)) require $file;\n});\n"
     },
     {
       "step": "writeFile",

@@ -16,7 +16,7 @@ if (!defined('WAAS_HOST_SLUG')) {
 }
 
 /**
- * WaaS Host's updates come only from our channel (the shared Updater, tested in
+ * AnyPress Host's updates come only from our channel (the shared Updater, tested in
  * packages/waas-updater), and it lends the storefront's API credentials to waas-payments.
  */
 class ModuleTest extends TestCase

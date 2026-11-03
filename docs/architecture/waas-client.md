@@ -1,8 +1,12 @@
-# WaaS Client
+# AnyPress Client
 
-WaaS Client lives inside the template that customer websites are copied from, so it is in every website. It does three things: checks one-click login tokens from the storefront, turns plugins on or off by plan role, and (on the template only) lets you edit the plan roles. It never calls the provisioning API. Paths are relative to `packages/waas-client/`.
+AnyPress Client lives inside the template that customer websites are copied from, so it is in every website. It does three things: checks one-click login tokens from the storefront, turns plugins on or off by plan role, and (on the template only) lets you edit the plan roles. It never calls the provisioning API. Paths are relative to `packages/waas-client/`.
 
 [Back to the overview](README.md)
+
+## Its name on a reseller's websites
+
+On a reseller's websites the plugin goes by the reseller's brand instead of AnyPress: the plugins list shows "<brand> Client" with the reseller as author, and its menu, notices and the website's MCP server use the same name. The AnyPress API keeps the brand in the `waas_brand_name` option, set when a website is built, restored or rolled back, and on every running website when the reseller's brand changes. Without the option the name is AnyPress Client. The plugin's folder, text domain and update address stay the same either way. Source: `src/Core/Brand.php`.
 
 ## Two modes: template and customer website
 
@@ -22,14 +26,14 @@ Sources: `index.php`, `src/Features/PluginBootstrap.php`, `src/Features/AdminTen
 
 ### What a customer website is given
 
-WaaS Client reads everything it needs from the website itself. WaaS Host puts the constants in its `POST /v1/tenants` request, and the API writes them into `wp-config.php`.
+AnyPress Client reads everything it needs from the website itself. AnyPress Host puts the constants in its `POST /v1/tenants` request, and the API writes them into `wp-config.php`.
 
 | Setting | Kind | Comes from | Read by |
 |---|---|---|---|
 | Is-tenant flag (`true`) | Environment variable | The API's website container | `index.php`, `RolesManager.php`, `PluginBootstrap.php` |
-| Plan roles (comma list) | PHP constant | WaaS Host, from the products bought | `RolesManager.php` |
-| Login public key (base64 PEM) | PHP constant | WaaS Host, one key pair per website | `SingleSignOnController.php` |
-| Remove plugin rights from administrators (`true`/`false`) | PHP constant | WaaS Host setting | `PluginBootstrap.php` |
+| Plan roles (comma list) | PHP constant | AnyPress Host, from the products bought | `RolesManager.php` |
+| Login public key (base64 PEM) | PHP constant | AnyPress Host, one key pair per website | `SingleSignOnController.php` |
+| Remove plugin rights from administrators (`true`/`false`) | PHP constant | AnyPress Host setting | `PluginBootstrap.php` |
 | `waas_host_website_url` | WordPress option | Set on the template, copied into each website | `CustomerPlanPage.php` |
 | `waas-client-data/roles.json` | File | Shipped inside the template | `RolesManager.php`, `CustomerPlanPage.php` |
 
@@ -49,13 +53,13 @@ flowchart TB
   ANY -->|"yes"| PLAN["Plan = every plugin listed<br/>under the matched roles"]
   N3 --> PLAN
   PLAN --> ON["Activate plan plugins that are off"]
-  PLAN --> OFF["Deactivate every other plugin<br/>except WaaS Client"]
+  PLAN --> OFF["Deactivate every other plugin<br/>except AnyPress Client"]
 ```
 
 Source: `src/Features/RolesManager.php` (`activate_enabled_plugins`, `plan_for`).
 
 - `roles.json` looks like `{"pro": {"title": "Pro", "plugins": ["fluent-crm/fluent-crm.php", ...]}}` (`src/Features/AdminRolesSettings.php`).
-- When the remove-plugin-rights constant is `true`, the website's administrators lose the six plugin capabilities (activate, delete, install, update, edit, upload). The Plugins screen shows "Activated by the WaaS Client" in place of the toggle links (`src/Features/PluginBootstrap.php`).
+- When the remove-plugin-rights constant is `true`, the website's administrators lose the six plugin capabilities (activate, delete, install, update, edit, upload). The Plugins screen shows "Activated by AnyPress Client" in place of the toggle links (`src/Features/PluginBootstrap.php`).
 - The **Your plan** page lists each role and its plugins, and links back to the storefront. It makes no network calls.
 
 How roles get from the template to the storefront is drawn in the overview: [Plan roles](README.md#plan-roles-which-plugins-a-website-gets).
@@ -84,18 +88,18 @@ flowchart TB
 
 Sources: `src/Api/SingleSignOnController.php` (`verify_single_login`, `claims_are_valid`), `src/Core/DecryptionService.php`.
 
-- The username is the one WaaS Host created the website with, built from the customer's name (`waas-host/src/Features/SingleLoginService.php`).
+- The username is the one AnyPress Host created the website with, built from the customer's name (`waas-host/src/Features/SingleLoginService.php`).
 - The `waas_sso_admin_url` filter can send the user somewhere other than wp-admin.
 
 ## Talking to the storefront
 
-WaaS Client only calls the storefront, and only from the template's admin pages.
+AnyPress Client only calls the storefront, and only from the template's admin pages.
 
 ```mermaid
 sequenceDiagram
   actor A as Template admin
-  participant CL as WaaS Client (template)
-  participant H as WaaS Host (storefront)
+  participant CL as AnyPress Client (template)
+  participant H as AnyPress Host (storefront)
 
   A->>CL: Settings, Test connection
   CL->>H: GET /wp-json/waas-host/v1
@@ -108,7 +112,7 @@ sequenceDiagram
   else 429
     H-->>CL: Already refreshed in the last minute
   else 404 or no route
-    H-->>CL: Could not load roles, or WaaS Host missing
+    H-->>CL: Could not load roles, or AnyPress Host missing
   end
 ```
 
@@ -130,7 +134,7 @@ What it does, in order:
 
 1. **Converts each form** with Fluent Forms' own importer (Fluent Forms → Tools → Migrator), and fixes what that importer gets wrong:
    - Contact Form 7: the emails are built from the form's Mail and Mail (2) (recipient, sender, subject, body, Reply-To, Cc, Bcc, with the mail tags turned into Fluent Forms smart codes), the thank-you message from its "sent" message, and the malformed notification rows the importer writes are deleted. Placeholders stay placeholders and a date field stays a date.
-   - WPForms: the confirmation that applies to every submission is the main one, and a conditional one (such as a redirect for one answer) stays conditional. Free Fluent Forms stores conditional confirmations but only Fluent Forms Pro runs them, so WaaS Client runs them for the converted forms while Pro is off (`src/Forms/ConditionalConfirmations.php`).
+   - WPForms: the confirmation that applies to every submission is the main one, and a conditional one (such as a redirect for one answer) stays conditional. Free Fluent Forms stores conditional confirmations but only Fluent Forms Pro runs them, so AnyPress Client runs them for the converted forms while Pro is off (`src/Forms/ConditionalConfirmations.php`).
    - Ninja Forms: each email keeps its own Reply-To, and the date format is converted (`MM/DD/YYYY` becomes `m/d/Y`).
    - Entries (Contact Form 7 through Flamingo, Ninja Forms, WPForms Pro) keep the date each was sent and their order; Contact Form 7 entries also keep the visitor's IP address and page. All Flamingo messages are read, not only the first 10.
 2. **Reports** every dropped field of each form by name and type, with the reason (most need Fluent Forms Pro), and anything else that didn't come across: show/hide rules on fields, email attachments, mail tags with no Fluent Forms equivalent, entries past Fluent Forms' limit of 1,000 per form.
@@ -227,7 +231,7 @@ What each switch added is kept in the `waas_client_<switch>_import` option (not 
 
 Since 2.8.0 a store's administrators (anyone who can change its design, `edit_theme_options`) get an **Assistant** panel in the block editor and the Site Editor, opened from its star button in the editor's top bar, and an **Assistant** button in the admin bar that opens the page being viewed (or the Site Editor) with the panel open. The panel frames the website assistant's chat. Since 2.12.0 it is on the website's own domain, `https://<its domain>/.assistant/editor`, which the server's proxy sends to the assistant, so the owner never leaves their website and nothing names the platform (before, `https://assistant.anypress.io/editor`). `WAAS_ASSISTANT_URL` changes it. The dot keeps it from hiding a page: WordPress never gives a page an address starting with one.
 
-- **Sign-in.** The chat asks the editor to sign it in. WaaS Client's `POST /wp-json/waas-client/v1/assistant/handoff` (same capability) asks the AnyPress API (`WAAS_API_URL`, default `https://api.anypress.io`) at `POST /oauth/site/store-handoff`, signed with the store's site key, and frames the one-time sign-in it answers. Only an address on the assistant's own site is framed.
+- **Sign-in.** The chat asks the editor to sign it in. AnyPress Client's `POST /wp-json/waas-client/v1/assistant/handoff` (same capability) asks the AnyPress API (`WAAS_API_URL`, default `https://api.anypress.io`) at `POST /oauth/site/store-handoff`, signed with the store's site key, and frames the one-time sign-in it answers. Only an address on the assistant's own site is framed.
 - **What the chat sees.** With each message the editor sends what it has open: the post type and id, its title, its top-level blocks and the selected block, each with its block markup.
 - **Changes.** The assistant's editor changes come back as replace, insert, remove or replace-everything, and land in the editor like any edit. The changed block scrolls into view with a brief outline. Since 2.11.0 one quiet line under the panel's header says what changed ("Heading changed", or "3 changes"), "Not saved", **Undo** (**Undo all** for several changes since the last save) and **Save**; it goes once nothing is unsaved and says "Saved" for a moment after a save. Nothing is saved until the owner saves, from that line or the editor's own Save button.
 - **Getting around (2.11.0).** Ctrl + . (⌘ + . on a Mac) opens and closes the panel, from the editor, the page or the chat. On a phone, where WordPress hides the admin bar and top-bar buttons, a round Assistant button floats at the bottom right while the panel is closed. Opening the editor from the Assistant button switches off WordPress's one-time welcome guides for that person, so they don't cover the panel. The chat can ask for a wider panel (560px, on screens 1080px and wider) and can clear the selected block.
@@ -237,4 +241,4 @@ Since 2.8.0 a store's administrators (anyone who can change its design, `edit_th
 
 ## Updates
 
-WaaS Client does not update itself. Its `Update URI` header only keeps wordpress.org from offering updates. A website gets a newer WaaS Client when it is moved to a newer template version, whose code replaces the website's plugins (`index.php`, `tests/Unit/NoSelfUpdateTest.php`).
+AnyPress Client does not update itself. Its `Update URI` header only keeps wordpress.org from offering updates. A website gets a newer AnyPress Client when it is moved to a newer template version, whose code replaces the website's plugins (`index.php`, `tests/Unit/NoSelfUpdateTest.php`).

@@ -11,7 +11,7 @@ use WP_REST_Request;
  * browser in as the site's first administrator and goes to wp-admin.
  *
  * The link carries t (Unix time), n (a random nonce) and s, an HMAC-SHA256 with the site key of
- * "t\nn\nLOGIN\n/waas-host/v1/admin-login\n" followed by the SHA-256 of an empty body: the same form as WaaS Client's
+ * "t\nn\nLOGIN\n/waas-host/v1/admin-login\n" followed by the SHA-256 of an empty body: the same form as AnyPress Client's
  * signed site requests. It works once and for MAX_AGE seconds. Sites without a site key (storefronts not built by
  * AnyPress) refuse every link.
  */

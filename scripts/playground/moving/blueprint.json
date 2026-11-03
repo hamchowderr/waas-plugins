@@ -3,7 +3,7 @@
   "meta": {
     "title": "Support, affiliate and community switch test site",
     "author": "Otaku Solutions",
-    "description": "Fluent Support, FluentAffiliate and FluentCommunity next to Awesome Support, SliceWP and BuddyPress, at pinned wordpress.org versions, and WaaS Client (mounted from this checkout by moving.mjs). Background updates and WP-Cron are off so nothing changes mid-test. WP-CLI comes from its official build (wp-cli/builds) at /tmp/wp-cli.phar."
+    "description": "Fluent Support, FluentAffiliate and FluentCommunity next to Awesome Support, SliceWP and BuddyPress, at pinned wordpress.org versions, and AnyPress Client (mounted from this checkout by moving.mjs). Background updates and WP-Cron are off so nothing changes mid-test. WP-CLI comes from its official build (wp-cli/builds) at /tmp/wp-cli.phar."
   },
   "landingPage": "/wp-admin/",
   "preferredVersions": {

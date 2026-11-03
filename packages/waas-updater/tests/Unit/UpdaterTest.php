@@ -69,7 +69,7 @@ class UpdaterTest extends TestCase
     {
         return new Updater($overrides + [
             'slug' => self::SLUG,
-            'name' => 'WaaS Host',
+            'name' => 'AnyPress Host',
             'basename' => self::BASENAME,
             'version' => '2.2.7',
             'update_uri' => 'wpcs-waas-host',
@@ -145,7 +145,7 @@ class UpdaterTest extends TestCase
         $this->assertSame(array_values(array_unique(Updater::PUBLIC_KEYS)), Updater::PUBLIC_KEYS);
 
         // An updater built the way the plugins build it (no public_keys given) uses them.
-        $updater = new Updater(['slug' => self::SLUG, 'name' => 'WaaS Host', 'basename' => self::BASENAME, 'version' => '2.2.7', 'update_uri' => 'wpcs-waas-host']);
+        $updater = new Updater(['slug' => self::SLUG, 'name' => 'AnyPress Host', 'basename' => self::BASENAME, 'version' => '2.2.7', 'update_uri' => 'wpcs-waas-host']);
         $this->assertTrue($updater->register());
         $this->assertNotFalse(has_filter('upgrader_pre_download'));
     }
@@ -270,7 +270,7 @@ class UpdaterTest extends TestCase
         Filters\expectApplied('waas_update_credentials')->once()->with(null)
             ->andReturn(['base_url' => 'https://api.from-filter.test', 'key' => 'k', 'secret' => 's']);
         $this->answers(200, $this->release());
-        $updater = new Updater(['slug' => self::SLUG, 'name' => 'WaaS Host', 'basename' => self::BASENAME, 'version' => '2.2.7', 'update_uri' => 'wpcs-waas-host', 'public_keys' => [$this->public_key]]);
+        $updater = new Updater(['slug' => self::SLUG, 'name' => 'AnyPress Host', 'basename' => self::BASENAME, 'version' => '2.2.7', 'update_uri' => 'wpcs-waas-host', 'public_keys' => [$this->public_key]]);
 
         $updater->check_update(false, [], self::BASENAME);
         $this->assertStringStartsWith('https://api.from-filter.test/v1/plugins/wpcs-waas-host/update?', $this->requests[0][0]);

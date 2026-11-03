@@ -1,6 +1,6 @@
-# WaaS Payments
+# AnyPress Payments
 
-WaaS Payments adds Authorize.Net card payments to FluentCart on the storefront, including subscriptions that the storefront charges on each renewal. Storefronts that can use FluentCart's own Stripe gateway do not need it. It does not talk to the provisioning API or to WaaS Host directly: it marks FluentCart orders and subscriptions paid, and WaaS Host reacts to those subscription events as usual. Paths are relative to `packages/waas-payments/`.
+AnyPress Payments adds Authorize.Net card payments to FluentCart on the storefront, including subscriptions that the storefront charges on each renewal. Storefronts that can use FluentCart's own Stripe gateway do not need it. It does not talk to the provisioning API or to AnyPress Host directly: it marks FluentCart orders and subscriptions paid, and AnyPress Host reacts to those subscription events as usual. Paths are relative to `packages/waas-payments/`.
 
 [Back to the overview](README.md)
 
@@ -14,7 +14,7 @@ flowchart LR
     REF["Refund screen"]
   end
 
-  subgraph WP["WaaS Payments: src/Gateway"]
+  subgraph WP["AnyPress Payments: src/Gateway"]
     GW["AuthorizeNetGateway<br/>route waas_authorizenet"]
     SET["AuthorizeNetSettings<br/>test and live keys, follows FluentCart order mode"]
     PC["PaymentConfirmation<br/>ajax: charge the token"]
@@ -90,7 +90,7 @@ sequenceDiagram
     PC->>PC: Record payment, SavedCard store
     PC->>FC: syncOrderStatuses: order paid, subscription active
     FC-->>C: Receipt page
-    Note over FC: WaaS Host now sees the subscription become<br/>active and creates the website
+    Note over FC: AnyPress Host now sees the subscription become<br/>active and creates the website
   else Declined or held for review
     AN-->>PC: error
     PC-->>JS: 422, the customer can try again on the same order
@@ -104,7 +104,7 @@ Sources: `assets/authorizenet-checkout.js`, `src/Gateway/AuthorizeNetGateway.php
 
 ## Renewals
 
-FluentCart decides when to charge. WaaS Payments makes sure a renewal is never charged twice, even if Authorize.Net does not answer.
+FluentCart decides when to charge. AnyPress Payments makes sure a renewal is never charged twice, even if Authorize.Net does not answer.
 
 ```mermaid
 sequenceDiagram
@@ -139,7 +139,7 @@ sequenceDiagram
 
 Source: `src/Gateway/RenewalCharge.php` (`charge`, `reconcile`, `settle`, `outcome`).
 
-- After a decline, FluentCart's dunning retries at 25%, 60% and 90% of the grace period and emails the customer a Pay Now link. The subscription becomes past due on the due date and expired when the grace period ends. Expiry is a WaaS Host remove trigger, so the website is suspended with a backup and scheduled for deletion. A later payment reactivates the subscription, which resumes the website ([WaaS Host](waas-host.md#from-cart-events-to-website-actions), [waas-payments README](../../packages/waas-payments/README.md)).
+- After a decline, FluentCart's dunning retries at 25%, 60% and 90% of the grace period and emails the customer a Pay Now link. The subscription becomes past due on the due date and expired when the grace period ends. Expiry is a AnyPress Host remove trigger, so the website is suspended with a backup and scheduled for deletion. A later payment reactivates the subscription, which resumes the website ([AnyPress Host](waas-host.md#from-cart-events-to-website-actions), [waas-payments README](../../packages/waas-payments/README.md)).
 - When a customer replaces a failing card on the card update page (`/?waas_payments_card_update=<subscription>`), any unpaid renewal is charged right away (`src/Gateway/CardUpdate.php`).
 
 ## Webhooks

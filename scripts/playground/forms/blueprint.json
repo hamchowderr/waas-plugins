@@ -3,7 +3,7 @@
   "meta": {
     "title": "Forms switch test site",
     "author": "Otaku Solutions",
-    "description": "Contact Form 7 with Flamingo, WPForms Lite, Ninja Forms and Fluent Forms, at the versions the site-moving tests used, plus WaaS Client (mounted from this checkout by forms.mjs). Outgoing email is logged to an option instead of sent. WP-CLI comes from its official build (wp-cli/builds) at /tmp/wp-cli.phar."
+    "description": "Contact Form 7 with Flamingo, WPForms Lite, Ninja Forms and Fluent Forms, at the versions the site-moving tests used, plus AnyPress Client (mounted from this checkout by forms.mjs). Outgoing email is logged to an option instead of sent. WP-CLI comes from its official build (wp-cli/builds) at /tmp/wp-cli.phar."
   },
   "landingPage": "/wp-admin/admin.php?page=fluent_forms",
   "preferredVersions": {

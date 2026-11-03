@@ -1,6 +1,6 @@
-# WaaS Host, Client & Payments Plugins
+# AnyPress Host, Client & Payments Plugins
 
-WordPress plugins for selling websites as a service: **WaaS Host** runs on the storefront and creates, suspends and restores each customer's website through the WaaS provisioning API; **WaaS Client** runs on the template and on every customer website (one-click login, plan roles); **WaaS Payments** adds card payments to FluentCart.
+WordPress plugins for selling websites as a service: **AnyPress Host** runs on the storefront and creates, suspends and restores each customer's website through the WaaS provisioning API; **AnyPress Client** runs on the template and on every customer website (one-click login, plan roles); **AnyPress Payments** adds card payments to FluentCart.
 
 They are the WordPress side of [AnyPress](https://anypress.io) and are open source (GPL-3.0): the [provisioning API](https://github.com/hamchowderr/waas-provisioning-api) builds and runs the stores, and the [dashboard](https://github.com/hamchowderr/waas-dashboard) manages them. To run the whole platform yourself, see the API's [self-hosting guide](https://github.com/hamchowderr/waas-provisioning-api/blob/main/docs/self-hosting.md).
 
@@ -8,7 +8,7 @@ How the three plugins work and fit together, with diagrams: [docs/architecture](
 
 ## Features
 
-**WaaS Host** (storefront):
+**AnyPress Host** (storefront):
 
 - Sells websites as subscription products on FluentCart (recommended) or WooCommerce with a subscriptions plugin (WP Swings' free Subscriptions for WooCommerce, or WooCommerce Subscriptions).
 - Asks for a **website name** at checkout, checks it's free, and names the store `<website name>.<website domain>` (e.g. `shop.example.com`).
@@ -18,23 +18,23 @@ How the three plugins work and fit together, with diagrams: [docs/architecture](
 - **Email packs** (FluentCart): one-time products that add emails to one of the customer's websites, bought from a **Buy more emails** link on each website ([Email packs](#email-packs)).
 - Updates itself through the provisioning API, which serves signed releases.
 
-**WaaS Client** (in every store): one-click login from the storefront, plugin access by plan role (`roles.json`), and a site-editing API that lets the AnyPress connector change the store's pages, design, header, footer and menus for an AI agent.
+**AnyPress Client** (in every store): one-click login from the storefront, plugin access by plan role (`roles.json`), and a site-editing API that lets the AnyPress connector change the store's pages, design, header, footer and menus for an AI agent.
 
-**WaaS Payments**: Authorize.Net card payments for FluentCart, including subscriptions charged on renewal.
+**AnyPress Payments**: Authorize.Net card payments for FluentCart, including subscriptions charged on renewal.
 
 ## Getting started
 
 You need a WordPress site to sell from (the **storefront**: WordPress 6.4 or newer, PHP 8.1 or newer) and a running provisioning API (to run one, see the [self-hosting guide](https://github.com/hamchowderr/waas-provisioning-api/blob/main/docs/self-hosting.md)). The API's operator gives you an **API key** and **API secret** for your storefront.
 
 1. **Install a cart.** FluentCart 1.7 or newer (recommended), or WooCommerce with WP Swings' free Subscriptions for WooCommerce or the paid WooCommerce Subscriptions.
-2. **Install WaaS Host** on the storefront (and **WaaS Payments** if you want Authorize.Net card payments on FluentCart). Build the zips with Composer installed: `scripts/release/build.sh waas-host <version> dist`, and `scripts/release/build.sh waas-payments <version> dist` for WaaS Payments. Upload them under **Plugins → Add New → Upload Plugin**.
+2. **Install AnyPress Host** on the storefront (and **AnyPress Payments** if you want Authorize.Net card payments on FluentCart). Build the zips with Composer installed: `scripts/release/build.sh waas-host <version> dist`, and `scripts/release/build.sh waas-payments <version> dist` for AnyPress Payments. Upload them under **Plugins → Add New → Upload Plugin**.
 3. **Add a secret to `wp-config.php`:** `define('WAAS_HOST_KEY_ENCRYPTION_KEY', '…');` with a long random string (`openssl rand -base64 48`). Keep it stable ([Storefront secrets](#storefront-secrets)).
 4. **Connect to the API.** In **WaaS → Settings**, on the **Connection** tab, enter the **API URL**, **API key** and **API secret**. Saving also registers the storefront for the API's webhooks ([Website status](#website-status)). On the **Websites** tab, set **Website domain** (the domain customers' websites are named under, e.g. `example.com`).
 5. **Make a product.** Create a subscription product and turn on WaaS for it, choosing the plan role and snapshot group ([Storefront cart](#storefront-cart) shows where this is on each cart).
-6. **Run cron every minute.** Websites are created in the background; on a quiet site WordPress's own cron waits for the next visitor. Define `DISABLE_WP_CRON` and run `wp action-scheduler run` and `wp cron event run --due-now` every minute from a real cron job. WaaS Host starts each new website's build as soon as checkout ends (a signed request the storefront sends itself), so cron is the fallback; the storefront must be able to reach its own address over HTTPS.
+6. **Run cron every minute.** Websites are created in the background; on a quiet site WordPress's own cron waits for the next visitor. Define `DISABLE_WP_CRON` and run `wp action-scheduler run` and `wp cron event run --due-now` every minute from a real cron job. AnyPress Host starts each new website's build as soon as checkout ends (a signed request the storefront sends itself), so cron is the fallback; the storefront must be able to reach its own address over HTTPS.
 7. **Test it.** Buy the product: checkout asks for a website name, and a few minutes after payment the customer finds the website, with a one-click login, under **My website**.
 
-**WaaS Client** is not installed on the storefront. It goes into the template the customers' websites are made from, and comes with every website. The provisioning API's [`templates/starter-fluentcart`](https://github.com/hamchowderr/waas-provisioning-api/tree/main/templates/starter-fluentcart) builds a starter template with it.
+**AnyPress Client** is not installed on the storefront. It goes into the template the customers' websites are made from, and comes with every website. The provisioning API's [`templates/starter-fluentcart`](https://github.com/hamchowderr/waas-provisioning-api/tree/main/templates/starter-fluentcart) builds a starter template with it.
 
 ## Storefront cart
 
@@ -119,7 +119,7 @@ The webhook signing secret ([Website status](#website-status)) is encrypted with
 
 WooCommerce products keep their WaaS settings through WooCommerce's product object, under `_waas_product_role` and `_waas_product_group_name`. Settings under the old names are still read, and move to the new names when waas-host updates.
 
-## WaaS Payments
+## AnyPress Payments
 
 `packages/waas-payments` adds Authorize.Net card payments to FluentCart, including subscriptions charged automatically on renewal. Subscriptions need **FluentCart > Settings > Subscriptions: Store managed** with **Automatic charge** on. Setup: [packages/waas-payments/README.md](packages/waas-payments/README.md).
 
@@ -129,17 +129,17 @@ WooCommerce products keep their WaaS settings through WooCommerce's product obje
 
 ## Account API
 
-WaaS Host has a REST API for the signed-in customer's websites (`waas-host/v1/account`): list them, sign in to one, change its address, set up its email sender, and choose a new name. Pages on the storefront call it with the login cookie; a front end on another domain signs the customer in with token sign-in (OAuth 2.0 with PKCE). How: [docs/account-api.md](docs/account-api.md).
+AnyPress Host has a REST API for the signed-in customer's websites (`waas-host/v1/account`): list them, sign in to one, change its address, set up its email sender, and choose a new name. Pages on the storefront call it with the login cookie; a front end on another domain signs the customer in with token sign-in (OAuth 2.0 with PKCE). How: [docs/account-api.md](docs/account-api.md).
 
 ## Site editing API
 
-WaaS Client lets the AnyPress connector edit a store's design and content (`waas-client/v1/site`): pages and their sections, the theme's patterns, colours and fonts, the header and footer, menus, revisions and images. Only the AnyPress API can call it, with requests signed by the store's own site key. The same actions are also WordPress abilities (category `anypress`) for a signed-in user with the right capabilities, so WordPress's MCP Adapter and AI agents on the site can use them. Stores come with the MCP Adapter installed but off; the owner can turn on an "AnyPress website" MCP server from the Your plan page. How: [docs/site-editing-api.md](docs/site-editing-api.md).
+AnyPress Client lets the AnyPress connector edit a store's design and content (`waas-client/v1/site`): pages and their sections, the theme's patterns, colours and fonts, the header and footer, menus, revisions and images. Only the AnyPress API can call it, with requests signed by the store's own site key. The same actions are also WordPress abilities (category `anypress`) for a signed-in user with the right capabilities, so WordPress's MCP Adapter and AI agents on the site can use them. Stores come with the MCP Adapter installed but off; the owner can turn on an "AnyPress website" MCP server from the Your plan page. How: [docs/site-editing-api.md](docs/site-editing-api.md).
 
 ## Updates
 
-WaaS Host and WaaS Payments update from the provisioning API they're connected to, never from wordpress.org. Every release is signed, and a plugin only installs a release signed with a key built into it (`Updater::PUBLIC_KEYS` in `packages/waas-updater`). The key built in today is AnyPress's release key. **If you run your own API**, either build the plugins with your own public key in that list and sign your releases with its private half, or set `WAAS_UPDATE_CHANNEL` to `off` and install new zips by hand. In `wp-config.php`, `WAAS_UPDATE_CHANNEL` picks `stable` (default), `beta` or `off`, and `WAAS_AUTO_UPDATE` set to `patch` installs bug-fix releases automatically.
+AnyPress Host and AnyPress Payments update from the provisioning API they're connected to, never from wordpress.org. Every release is signed, and a plugin only installs a release signed with a key built into it (`Updater::PUBLIC_KEYS` in `packages/waas-updater`). The key built in today is AnyPress's release key. **If you run your own API**, either build the plugins with your own public key in that list and sign your releases with its private half, or set `WAAS_UPDATE_CHANNEL` to `off` and install new zips by hand. In `wp-config.php`, `WAAS_UPDATE_CHANNEL` picks `stable` (default), `beta` or `off`, and `WAAS_AUTO_UPDATE` set to `patch` installs bug-fix releases automatically.
 
-WaaS Client never updates by itself on customer websites: it comes with the template version, and a website gets a newer one by moving to a newer version.
+AnyPress Client never updates by itself on customer websites: it comes with the template version, and a website gets a newer one by moving to a newer version.
 
 To build a zip locally: `scripts/release/build.sh waas-host <version> dist`. How this repo publishes signed releases (tags, signing, the release bucket): [docs/releases.md](docs/releases.md).
 
@@ -155,7 +155,7 @@ Each plugin is a Composer package under `packages/` (`waas-host`, `waas-client`,
 
 On Linux with Docker, `scripts/test-env.sh up` starts a throwaway WordPress (MariaDB + WordPress in Docker) at http://127.0.0.1 with this checkout's Host and Payments plugins, FluentCart, WooCommerce and Subscriptions for WooCommerce active. Log in as admin / admin. `scripts/test-env.sh wp ...` runs WP-CLI; `scripts/test-env.sh down` removes it.
 
-Without Docker, `scripts/playground` runs WaaS Client on [WordPress Playground](https://developer.wordpress.org/playground/) (WordPress and PHP inside Node) with the Ollie theme and the store template's starter pages, and checks the site-editing API and its abilities end to end with a throwaway site key. It needs Node 24.18 or newer and `composer install` in `packages/waas-client`:
+Without Docker, `scripts/playground` runs AnyPress Client on [WordPress Playground](https://developer.wordpress.org/playground/) (WordPress and PHP inside Node) with the Ollie theme and the store template's starter pages, and checks the site-editing API and its abilities end to end with a throwaway site key. It needs Node 24.18 or newer and `composer install` in `packages/waas-client`:
 
 ```shell
 cd scripts/playground
@@ -164,7 +164,7 @@ npm run smoke    # the checks; exits 1 on a failure
 npm run serve    # the same site left running at http://127.0.0.1:9400, signed in as admin
 ```
 
-Playground keeps the database in SQLite rather than MariaDB, so it checks the plugin's PHP and WordPress behaviour; database-specific SQL still needs a real store or `test-env.sh`. Pull requests also get a "Preview in WordPress Playground" button: a throwaway storefront with that PR's WaaS Host, FluentCart and Ollie. FluentCart there shows a "requires MySQL/MariaDB" notice because Playground only has SQLite; its pages work, but check real orders and payments on a store (`pr-preview-build.yml` and `pr-preview-publish.yml`).
+Playground keeps the database in SQLite rather than MariaDB, so it checks the plugin's PHP and WordPress behaviour; database-specific SQL still needs a real store or `test-env.sh`. Pull requests also get a "Preview in WordPress Playground" button: a throwaway storefront with that PR's AnyPress Host, FluentCart and Ollie. FluentCart there shows a "requires MySQL/MariaDB" notice because Playground only has SQLite; its pages work, but check real orders and payments on a store (`pr-preview-build.yml` and `pr-preview-publish.yml`).
 
 ### Tests
 
@@ -178,16 +178,16 @@ composer test
 
 `waas-host` also has contract tests (`tests/Contract`, group `mock`) that run the plugin's real API client against the provisioning API: by default the public Postman mock, or the server in `WAAS_TEST_API_BASE_URL`, such as the local API. They need network access; run `vendor/bin/phpunit --exclude-group mock` to skip them.
 
-Unit tests live in each package's `tests/Unit`. The `Tests` GitHub Actions workflow runs the unit tests of all four packages (host, client, payments, updater) on every pull request and on pushes to `main`, plus the Playground smoke test of WaaS Client; the contract tests run there too, in a separate job that reports but doesn't block, since they depend on the public mock. Release builds strip `tests/` and `phpunit.xml.dist`.
+Unit tests live in each package's `tests/Unit`. The `Tests` GitHub Actions workflow runs the unit tests of all four packages (host, client, payments, updater) on every pull request and on pushes to `main`, plus the Playground smoke test of AnyPress Client; the contract tests run there too, in a separate job that reports but doesn't block, since they depend on the public mock. Release builds strip `tests/` and `phpunit.xml.dist`.
 
 ### Names from before the rename
 
-Since WaaS Host 2.3.0 and WaaS Client 2.4.0, everything the plugins save or schedule is named `waas_*`: settings (`waas_api_key`, `waas_root_domain`, `waas_notification_settings_send_tenant_ready_email`, …), order, subscription and product meta (`waas_website_name`, `waas_tenant_state`, `_is_waas_product`, …) and scheduled jobs (`waas_run_store_jobs`, `waas_suspend_at_period_end`, …). When WaaS Host updates, it moves values saved under the old platform's names once, before anything reads them (`WaaSHost\Migrations\LegacyNames`); WaaS Client does the same for its two options.
+Since AnyPress Host 2.3.0 and AnyPress Client 2.4.0, everything the plugins save or schedule is named `waas_*`: settings (`waas_api_key`, `waas_root_domain`, `waas_notification_settings_send_tenant_ready_email`, …), order, subscription and product meta (`waas_website_name`, `waas_tenant_state`, `_is_waas_product`, …) and scheduled jobs (`waas_run_store_jobs`, `waas_suspend_at_period_end`, …). When AnyPress Host updates, it moves values saved under the old platform's names once, before anything reads them (`WaaSHost\Migrations\LegacyNames`); AnyPress Client does the same for its two options.
 
-The shop gives each store its wp-config constants as `WAAS_TENANT_ROLES`, `WAAS_PUBLIC_KEY` and `WAAS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS`, and the provisioning API sets `WAAS_IS_TENANT`. Stores built earlier have them only under the old prefix, so the shop also sends the old spelling and WaaS Client reads either, the new one first.
+The shop gives each store its wp-config constants as `WAAS_TENANT_ROLES`, `WAAS_PUBLIC_KEY` and `WAAS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS`, and the provisioning API sets `WAAS_IS_TENANT`. Stores built earlier have them only under the old prefix, so the shop also sends the old spelling and AnyPress Client reads either, the new one first.
 
 Two names stay: the update slugs and `Update URI` (`wpcs-waas-host`, `wpcs-waas-client`) are the installed plugins' identity, which the provisioning API and the release bucket use, so changing them would stop updates reaching existing sites.
 
 ## License
 
-GPL-3.0-or-later ([LICENCE](LICENCE)). WaaS Payments is GPL-2.0-or-later, as its own header says; that licence lets it be used under GPL-3.0 too, so the whole repository can be distributed under GPL-3.0.
+GPL-3.0-or-later ([LICENCE](LICENCE)). AnyPress Payments is GPL-2.0-or-later, as its own header says; that licence lets it be used under GPL-3.0 too, so the whole repository can be distributed under GPL-3.0.

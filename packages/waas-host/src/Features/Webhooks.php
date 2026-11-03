@@ -153,7 +153,7 @@ class Webhooks
         ];
 
         try {
-            $created = $this->provisioningApi->create_webhook_endpoint($url, self::EVENT_TYPES, (string) __('WaaS Host storefront', 'waas-host'));
+            $created = $this->provisioningApi->create_webhook_endpoint($url, self::EVENT_TYPES, (string) __('AnyPress Host storefront', 'waas-host'));
             $id = is_object($created) ? (string) ($created->id ?? '') : '';
             $secret = is_object($created) ? (string) ($created->secret ?? '') : '';
             if ($id === '' || strpos($secret, 'whsec_') !== 0) {
@@ -165,7 +165,7 @@ class Webhooks
             $record['registered_at'] = time();
         } catch (\Throwable $e) {
             $record['error'] = self::api_error($e);
-            error_log('WaaS Host: could not register the webhook endpoint ' . $url . ': ' . $record['error']);
+            error_log('AnyPress Host: could not register the webhook endpoint ' . $url . ': ' . $record['error']);
         }
 
         update_option(self::OPTION, $record, false);
@@ -268,7 +268,7 @@ class Webhooks
         }
 
         $commerce->update_subscription_meta($subscription_id, self::TENANT_FAILURE_META, ['action' => $action, 'at' => time()]);
-        error_log(sprintf('WaaS Host: the provisioning API reports that "%s" failed for the website of subscription %s', $action, $subscription_id));
+        error_log(sprintf('AnyPress Host: the provisioning API reports that "%s" failed for the website of subscription %s', $action, $subscription_id));
 
         do_action('waas_tenant_failed', $subscription_id, $action);
     }

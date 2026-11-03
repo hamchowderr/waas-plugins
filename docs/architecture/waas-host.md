@@ -1,6 +1,6 @@
-# WaaS Host
+# AnyPress Host
 
-WaaS Host runs on the storefront. It listens to the cart's subscription events, turns them into provisioning API calls run in the background, tracks each website's state, and gives customers their website page and one-click login. Paths are relative to `packages/waas-host/`.
+AnyPress Host runs on the storefront. It listens to the cart's subscription events, turns them into provisioning API calls run in the background, tracks each website's state, and gives customers their website page and one-click login. Paths are relative to `packages/waas-host/`.
 
 [Back to the overview](README.md)
 
@@ -225,7 +225,7 @@ Source: `src/Features/StoreJobs.php` (`enqueue`, `run`, `RETRY_DELAYS`, `retry`,
 
 ## Website states
 
-The state is kept in subscription meta and shown to the customer. The API has its own simpler status code (0 pending, 1 done, 2 failed, 3 removing) which WaaS Host reads when a webhook arrives and while polling.
+The state is kept in subscription meta and shown to the customer. The API has its own simpler status code (0 pending, 1 done, 2 failed, 3 removing) which AnyPress Host reads when a webhook arrives and while polling.
 
 ```mermaid
 stateDiagram-v2
@@ -256,7 +256,7 @@ Source: `src/Core/Tenant.php` (state names), `src/Features/TenantStatusService.p
 
 ## Webhooks
 
-The API tells WaaS Host when a website changes, so the customer doesn't wait on a poll. WaaS Host registers one endpoint for the storefront and acts on four events. The payload only names the website: its state is read from the API again by the poller's own code, so the HTTPS check, the Ready state and `waas_tenant_ready` behave as they do when polling.
+The API tells AnyPress Host when a website changes, so the customer doesn't wait on a poll. AnyPress Host registers one endpoint for the storefront and acts on four events. The payload only names the website: its state is read from the API again by the poller's own code, so the HTTPS check, the Ready state and `waas_tenant_ready` behave as they do when polling.
 
 ```mermaid
 sequenceDiagram
@@ -295,7 +295,7 @@ sequenceDiagram
 
 Sources: `src/Features/AdminSettings.php` (`render_waas_admin_page`), `src/Features/Webhooks.php` (`ensure_registered`), `src/Api/WebhookReceiver.php` (`verify`, `handle`, `dispatch`), `src/Features/TenantStatusService.php` (`process_subscription`, `recheck_soon`, `poll_recurrence`), `src/Core/SecretBox.php`.
 
-| Event | What WaaS Host does |
+| Event | What AnyPress Host does |
 |---|---|
 | `tenant.ready`, `tenant.restored` | Runs the poller's steps for that website now. If HTTPS doesn't answer 200 yet, one re-check 5 seconds later, then the poll. A website shown as removed that was restored outside the storefront (dashboard, API) goes back through those steps to Ready |
 | `tenant.deleted` | Once `GET /v1/tenants?externalId=` no longer has the website, it is shown as Removed on the account page, without its log-in, assistant, domain and email buttons |
@@ -303,13 +303,13 @@ Sources: `src/Features/AdminSettings.php` (`render_waas_admin_page`), `src/Featu
 | `tenant.failed` | Saved on the subscription (`_waas_tenant_api_failure`), logged, `waas_tenant_failed` fired, and shown in an admin notice until dismissed or the website is Ready. The state is left to the poll |
 | Anything else | Answered 200 and ignored. Suspend and resume start on the storefront, which already knows |
 
-- **Registering** happens when the Connection tab is saved and the API answers, from the tab's **Register** button, and in an hourly WP-Cron check that needs no admin (API settings in `wp-config.php`, a site that moved, an endpoint an older version registered for fewer events). Endpoints at the same URL that WaaS Host has no secret for are deleted first, so a lost answer doesn't leave extras behind.
+- **Registering** happens when the Connection tab is saved and the API answers, from the tab's **Register** button, and in an hourly WP-Cron check that needs no admin (API settings in `wp-config.php`, a site that moved, an endpoint an older version registered for fewer events). Endpoints at the same URL that AnyPress Host has no secret for are deleted first, so a lost answer doesn't leave extras behind.
 - **Answers:** 401 for a missing, stale or wrong signature, 400 for a body that isn't an event, 200 for everything else, a repeat included. The event id is remembered only once the event was handled, so a delivery that failed here is retried by the API.
 - **Polling:** the status cron runs every minute while an endpoint is registered and every five seconds while not. The cron run moves itself to the other schedule when that changes.
 
-## Every API call WaaS Host makes
+## Every API call AnyPress Host makes
 
-All calls go through `src/Core/ProvisioningApi.php` with `Authorization: Basic base64(key:secret)` from `src/Core/HttpService.php`. Websites are addressed by `externalId`, the UUID WaaS Host chose.
+All calls go through `src/Core/ProvisioningApi.php` with `Authorization: Basic base64(key:secret)` from `src/Core/HttpService.php`. Websites are addressed by `externalId`, the UUID AnyPress Host chose.
 
 | Endpoint | Method in `ProvisioningApi.php` | Used by |
 |---|---|---|
@@ -328,11 +328,11 @@ All calls go through `src/Core/ProvisioningApi.php` with `Authorization: Basic b
 | `GET`, `POST /v1/webhooks`, `DELETE /v1/webhooks/{id}` | `get_webhook_endpoints`, `create_webhook_endpoint`, `delete_webhook_endpoint` | Registering the webhook endpoint |
 | `GET /v1/plugins/{slug}/update` | `src/Updater/Updater.php` | Update checks |
 
-Two calls go elsewhere: `RolesController` downloads `roles.json` from the Production version's site, and the status check sends `HEAD https://<domain>` to the website itself. The API calls WaaS Host back only at `POST /wp-json/waas-host/v1/webhook` ([Webhooks](#webhooks)).
+Two calls go elsewhere: `RolesController` downloads `roles.json` from the Production version's site, and the status check sends `HEAD https://<domain>` to the website itself. The API calls AnyPress Host back only at `POST /wp-json/waas-host/v1/webhook` ([Webhooks](#webhooks)).
 
 ## Customer account API
 
-Customers can see and manage their websites from a front end on another domain. WaaS Host is the sign-in server: it issues short access tokens with OAuth 2 authorization code and PKCE. The contract is in [account-api.md](../account-api.md).
+Customers can see and manage their websites from a front end on another domain. AnyPress Host is the sign-in server: it issues short access tokens with OAuth 2 authorization code and PKCE. The contract is in [account-api.md](../account-api.md).
 
 ```mermaid
 sequenceDiagram

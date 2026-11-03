@@ -5,7 +5,7 @@ namespace WaaSClient\Features;
 use WaaSClient\Core\HttpService;
 
 /**
- * Talks to the storefront (WaaS Host) from the template website and turns its answers into plain notices:
+ * Talks to the storefront (AnyPress Host) from the template website and turns its answers into plain notices:
  * the "reload your roles" ping after roles change, and the Settings page's connection test.
  *
  * Each outcome is ['type' => success|warning|error, 'message' => string, 'code' => int, 'time' => int].
@@ -21,7 +21,7 @@ class StorefrontStatus
     public static function notify_storefront(HttpService $http, string $host_url): array
     {
         if ($host_url === '') {
-            $outcome = self::outcome('error', __('The storefront was not told: no storefront URL is set. Add it under WaaS Client > Settings.', 'waas-client'));
+            $outcome = self::outcome('error', __('The storefront was not told: no storefront URL is set. Add it under AnyPress Client > Settings.', 'waas-client'));
         } else {
             $outcome = self::interpret_roles_ping($http->request(self::UPDATE_ROUTE));
         }
@@ -31,7 +31,7 @@ class StorefrontStatus
         return $outcome;
     }
 
-    /** A harmless read of the storefront's WaaS Host API index; it does not refresh any roles. */
+    /** A harmless read of the storefront's AnyPress Host API index; it does not refresh any roles. */
     public static function test_connection(HttpService $http, string $host_url): array
     {
         if ($host_url === '') {
@@ -61,10 +61,10 @@ class StorefrontStatus
             return self::outcome('warning', __('The storefront reloaded its roles less than a minute ago, so it skipped this update. In a minute, click Refresh roles on any plan product on the storefront.', 'waas-client'), $code);
         }
         if (self::is_no_route($result)) {
-            return self::outcome('error', __('The storefront did not recognise the request. Check that WaaS Host is installed and active on it, and that the storefront URL is right.', 'waas-client'), $code);
+            return self::outcome('error', __('The storefront did not recognise the request. Check that AnyPress Host is installed and active on it, and that the storefront URL is right.', 'waas-client'), $code);
         }
         if ($code === 404) {
-            return self::outcome('error', __('The storefront was told, but could not load the roles. Check in WaaS that a template version is labelled Production and deployed, and that it has WaaS Client active with at least one role.', 'waas-client'), $code);
+            return self::outcome('error', __('The storefront was told, but could not load the roles. Check in the AnyPress dashboard that a template version is labelled Production and deployed, and that it has AnyPress Client active with at least one role.', 'waas-client'), $code);
         }
 
         /* translators: %d: HTTP status code */
@@ -85,15 +85,15 @@ class StorefrontStatus
             $routes = array_keys((array) ($body['routes'] ?? []));
             if (!in_array('/' . self::API_NAMESPACE . self::UPDATE_ROUTE, $routes, true)) {
                 /* translators: %s: storefront URL */
-                return self::outcome('warning', sprintf(__('%s answered and WaaS Host is active, but it does not accept role updates. Update WaaS Host on the storefront.', 'waas-client'), $host_url), $code);
+                return self::outcome('warning', sprintf(__('%s answered and AnyPress Host is active, but it does not accept role updates. Update AnyPress Host on the storefront.', 'waas-client'), $host_url), $code);
             }
 
             /* translators: %s: storefront URL */
-            return self::outcome('success', sprintf(__('Connected: %s answered and WaaS Host is active.', 'waas-client'), $host_url), $code);
+            return self::outcome('success', sprintf(__('Connected: %s answered and AnyPress Host is active.', 'waas-client'), $host_url), $code);
         }
         if ($code === 404) {
             /* translators: %s: storefront URL */
-            return self::outcome('error', sprintf(__('%s answered, but WaaS Host is not active there. Check the URL, and that WaaS Host is installed and active on the storefront.', 'waas-client'), $host_url), $code);
+            return self::outcome('error', sprintf(__('%s answered, but AnyPress Host is not active there. Check the URL, and that AnyPress Host is installed and active on the storefront.', 'waas-client'), $host_url), $code);
         }
         if ($code === 401 || $code === 403) {
             /* translators: 1: storefront URL, 2: HTTP status code */

@@ -60,7 +60,7 @@ class FluentCartSubscriptionEventsTest extends TestCase
 
         $this->events->paused($this->data());
 
-        $this->assertSame([['Website taken offline', 'Subscription #900 (subscription_paused)', 'info', 'WaaS']], $this->logs);
+        $this->assertSame([['Website taken offline', 'Subscription #900 (subscription_paused)', 'info', 'AnyPress']], $this->logs);
     }
 
     public function test_paused_then_active_again_resumes_the_store(): void

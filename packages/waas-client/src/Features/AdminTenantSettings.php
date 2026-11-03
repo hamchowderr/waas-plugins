@@ -2,10 +2,11 @@
 
 namespace WaaSClient\Features;
 
+use WaaSClient\Core\Brand;
 use WaaSClient\Core\HttpService;
 
 /**
- * WaaS Client's settings page, on the template website only (stores never show it): the storefront this
+ * AnyPress Client's settings page, on the template website only (stores never show it): the storefront this
  * template's plan roles are sent to.
  */
 class AdminTenantSettings
@@ -41,8 +42,8 @@ class AdminTenantSettings
     public function add_waas_admin_page()
     {
         add_menu_page(
-            __('WaaS Client', 'waas-client'),
-            __('WaaS Client', 'waas-client'),
+            Brand::plugin_name(),
+            Brand::plugin_name(),
             'manage_options',
             self::PAGE,
             [$this, 'render_waas_admin_tenant_page'],
@@ -52,7 +53,8 @@ class AdminTenantSettings
 
         add_submenu_page(
             self::PAGE,
-            __('WaaS Client settings', 'waas-client'),
+            /* translators: %s: the plugin's name */
+            sprintf(__('%s settings', 'waas-client'), Brand::plugin_name()),
             __('Settings', 'waas-client'),
             'manage_options',
             self::PAGE,
@@ -91,7 +93,7 @@ class AdminTenantSettings
         $last_ping = StorefrontStatus::last(StorefrontStatus::PING_OPTION);
 
         echo '<div class="wrap waas-client-admin">';
-        echo '<h1>' . esc_html__('WaaS Client settings', 'waas-client') . '</h1>';
+        echo '<h1>' . esc_html(sprintf(/* translators: %s: the plugin's name */ __('%s settings', 'waas-client'), Brand::plugin_name())) . '</h1>';
         settings_errors();
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- a flag this page sets on itself after the test, for the notice.
         if (isset($_GET['waas-tested']) && $last_test !== null) {
@@ -118,7 +120,7 @@ class AdminTenantSettings
         echo '<input type="hidden" name="action" value="' . esc_attr(self::TEST_ACTION) . '">';
         submit_button(__('Test connection', 'waas-client'), 'secondary', 'submit', false, $host_url === '' ? ['disabled' => 'disabled'] : []);
         echo '</form>';
-        echo '<p class="description">' . esc_html__('Checks that the storefront answers and has WaaS Host active. It does not change or reload anything.', 'waas-client') . '</p>';
+        echo '<p class="description">' . esc_html__('Checks that the storefront answers and has AnyPress Host active. It does not change or reload anything.', 'waas-client') . '</p>';
         echo '</td></tr>';
 
         echo '<tr><th scope="row">' . esc_html__('Last plan role update', 'waas-client') . '</th><td>';
@@ -126,7 +128,7 @@ class AdminTenantSettings
         echo '</td></tr>';
 
         echo '<tr><th scope="row">' . esc_html__('Where the storefront gets roles', 'waas-client') . '</th><td>';
-        echo '<p>' . esc_html__('The storefront always loads plan roles from the template version labelled Production in WaaS, not from whichever website sent the update. Changes you make here reach the storefront once this website\'s version is labelled Production and deployed.', 'waas-client') . '</p>';
+        echo '<p>' . esc_html__('The storefront always loads plan roles from the template version labelled Production in the AnyPress dashboard, not from whichever website sent the update. Changes you make here reach the storefront once this website\'s version is labelled Production and deployed.', 'waas-client') . '</p>';
         /* translators: %s: this website's address */
         echo '<p class="description">' . sprintf(esc_html__('This website: %s', 'waas-client'), '<code>' . esc_html(home_url()) . '</code>') . '</p>';
         echo '</td></tr>';
@@ -145,7 +147,7 @@ class AdminTenantSettings
         add_settings_section(
             'waas_admin_tenant_settings',
             __('Template website', 'waas-client'),
-            fn () => print('<p>' . esc_html__('This is a template website: customer websites are created as copies of it. Set up its plan roles under WaaS Client > Plan roles; each website gets the plugins of its plan\'s role.', 'waas-client') . '</p>'),
+            fn () => print('<p>' . esc_html__('This is a template website: customer websites are created as copies of it. Set up its plan roles under AnyPress Client > Plan roles; each website gets the plugins of its plan\'s role.', 'waas-client') . '</p>'),
             self::PAGE
         );
 
@@ -163,7 +165,7 @@ class AdminTenantSettings
                 'label_for' => 'waas_host_website_url',
                 'type' => 'text',
                 'placeholder' => 'https://shop.example.com',
-                'hint' => __('The storefront (with WaaS Host) that sells websites made from this template. When you change the plan roles, the storefront is told to reload them.', 'waas-client'),
+                'hint' => __('The storefront (with AnyPress Host) that sells websites made from this template. When you change the plan roles, the storefront is told to reload them.', 'waas-client'),
             ]
         );
     }

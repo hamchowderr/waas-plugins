@@ -1,6 +1,6 @@
-# Site editing API (WaaS Client)
+# Site editing API (AnyPress Client)
 
-WaaS Client 2.3.0 adds REST routes under `/wp-json/waas-client/v1/site` so an AI agent, through the AnyPress connector, can change a store's design and content. The AnyPress API calls them on the agent's behalf; nothing else can.
+AnyPress Client 2.3.0 adds REST routes under `/wp-json/waas-client/v1/site` so an AI agent, through the AnyPress connector, can change a store's design and content. The AnyPress API calls them on the agent's behalf; nothing else can.
 
 ## Who can call it
 

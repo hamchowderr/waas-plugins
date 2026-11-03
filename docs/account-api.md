@@ -1,6 +1,6 @@
 # Account API
 
-WaaS Host has a REST API for the customer's websites, so a front end of your own can show what the account page shows and do what it does: list the websites, sign in to one, change its address, set up its email sender, and choose a new name when the first one was taken.
+AnyPress Host has a REST API for the customer's websites, so a front end of your own can show what the account page shows and do what it does: list the websites, sign in to one, change its address, set up its email sender, and choose a new name when the first one was taken.
 
 Base URL: `https://<your storefront>/wp-json/waas-host/v1/account`
 

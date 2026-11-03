@@ -220,7 +220,7 @@ class UserWcTenantsCheckout
         } catch (\Throwable $e) {
             // Fail open: take the order. The name passed the storefront's own duplicate check above; if the API
             // later finds it taken, the customer is asked for a new one (NameConflicts).
-            error_log('WaaS Host: website name availability check failed, accepting "' . $website_name . '" unverified: ' . $e->getMessage());
+            error_log('AnyPress Host: website name availability check failed, accepting "' . $website_name . '" unverified: ' . $e->getMessage());
             $this->unverified[$website_name] = true;
             return null;
         }

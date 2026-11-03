@@ -9,7 +9,7 @@ if ( !defined( 'ABSPATH' ) )
     exit;
 
 /**
- * Updates for WaaS Host from our own channel (waas-hw4; see Updater). Also hands the storefront's
+ * Updates for AnyPress Host from our own channel (waas-hw4; see Updater). Also hands the storefront's
  * API credentials to our other plugins' updaters (waas-payments) through 'waas_update_credentials'.
  */
 class Module
@@ -22,7 +22,7 @@ class Module
 
         $updater = new Updater([
             'slug' => WAAS_HOST_SLUG,
-            'name' => 'WaaS Host',
+            'name' => 'AnyPress Host',
             'basename' => WAAS_HOST_BASENAME,
             'version' => WAAS_HOST_VERSION,
             'update_uri' => WAAS_HOST_UPDATE_URI,

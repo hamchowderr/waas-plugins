@@ -28,7 +28,7 @@ class WooCommerceProductData
     public function register_product_tabs($tabs)
     {
         $tabs['waas'] = [
-            'label' => __('WaaS', 'waas-host'),
+            'label' => __('AnyPress', 'waas-host'),
             'priority' => 50,
             'target' => self::PRODUCT_DATA_TAB_TARGET,
             'class'    => ['show_if_simple', 'show_if_subscription'],
@@ -44,7 +44,7 @@ class WooCommerceProductData
             <div id="<?php echo esc_attr(self::PRODUCT_DATA_TAB_TARGET); ?>" class="panel woocommerce_options_panel">
                 <div>
                     <p>
-                        <?php esc_html_e("Looks like your API credentials are not set up yet, or are incorrect. Use the link below to connect this storefront to the WaaS provisioning API.", 'waas-host') ?>
+                        <?php esc_html_e("Looks like your API credentials are not set up yet, or are incorrect. Use the link below to connect this storefront to the AnyPress API.", 'waas-host') ?>
                     </p>
                     <p>
                         <a href="<?php echo esc_url(admin_url('/admin.php?page=waas-admin-settings')); ?>">
@@ -158,8 +158,8 @@ class WooCommerceProductData
         $product_type_options[StoreProduct::IS_STORE_PRODUCT_META] = [
             "id"            => StoreProduct::IS_STORE_PRODUCT_META,
             "wrapper_class" => "show_if_simple show_if_subscription",
-            "label"         => __("WaaS product", 'waas-host'),
-            "description"   => __("Buying a WaaS product creates a website (store) for the customer.", 'waas-host'),
+            "label"         => __("AnyPress product", 'waas-host'),
+            "description"   => __("Buying an AnyPress product creates a website (store) for the customer.", 'waas-host'),
             "default"       => "no",
         ];
 

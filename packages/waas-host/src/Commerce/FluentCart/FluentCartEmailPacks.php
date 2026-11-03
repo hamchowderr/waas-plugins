@@ -330,7 +330,7 @@ class FluentCartEmailPacks
         $order_id = (int) $order->id;
         $attempts = (int) $this->store->get_order_meta($order, self::ORDER_ATTEMPTS_META) + 1;
         $this->store->update_order_meta($order, self::ORDER_ATTEMPTS_META, $attempts);
-        error_log(sprintf('WaaS Host: adding email packs for order %d (subscription %d) failed (try %d): %s', $order_id, $subscription_id, $attempts, $error));
+        error_log(sprintf('AnyPress Host: adding email packs for order %d (subscription %d) failed (try %d): %s', $order_id, $subscription_id, $attempts, $error));
 
         if ($attempts <= count(StoreJobs::RETRY_DELAYS)) {
             $delay = StoreJobs::RETRY_DELAYS[$attempts - 1];
@@ -367,7 +367,7 @@ class FluentCartEmailPacks
 
     private function note($order, string $title, string $detail, string $type = 'info'): void
     {
-        $order->addLog($title, $detail, $type, 'WaaS');
+        $order->addLog($title, $detail, $type, 'AnyPress');
     }
 
     public function show_failed_notice(): void

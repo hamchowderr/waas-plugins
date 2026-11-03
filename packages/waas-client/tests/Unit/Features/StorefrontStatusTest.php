@@ -54,7 +54,7 @@ class StorefrontStatusTest extends TestCase
             'reloaded' => [200, 'true', 'success', 'reloaded'],
             'rate limited' => [429, 'false', 'warning', 'less than a minute ago'],
             'production version failed' => [404, 'false', 'error', 'labelled Production'],
-            'no waas host' => [404, '{"code":"rest_no_route","message":"No route"}', 'error', 'WaaS Host'],
+            'no waas host' => [404, '{"code":"rest_no_route","message":"No route"}', 'error', 'AnyPress Host'],
             'server error' => [500, '', 'error', 'HTTP 500'],
             '200 but false' => [200, 'false', 'error', 'HTTP 200'],
         ];

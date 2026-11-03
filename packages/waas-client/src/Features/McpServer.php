@@ -71,7 +71,7 @@ class McpServer
             'anypress',
             self::ROUTE_NAMESPACE,
             self::ROUTE,
-            'AnyPress website',
+            sprintf('%s website', \WaaSClient\Core\Brand::name()),
             'Read and change this website\'s pages, starter patterns, colours and fonts, header, footer, menus and images. Every page change keeps a revision.',
             WAAS_CLIENT_VERSION,
             [\WP\MCP\Transport\HttpTransport::class],

@@ -76,7 +76,7 @@ class AdminLogin
     private function refuse(): void
     {
         wp_die(
-            esc_html__('This sign-in link has expired or was already used. Go back to the AnyPress dashboard and press "Log in to WordPress" again.', 'waas-client')
+            esc_html__('This sign-in link has expired or was already used. Go back to your dashboard and press "Log in to WordPress" again.', 'waas-client')
                 . ' <a href="' . esc_url(wp_login_url()) . '">' . esc_html__('Or log in with your password.', 'waas-client') . '</a>',
             esc_html__('Sign-in link expired', 'waas-client'),
             ['response' => 403]

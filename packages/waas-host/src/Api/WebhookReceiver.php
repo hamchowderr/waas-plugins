@@ -106,7 +106,7 @@ class WebhookReceiver
         return new WP_REST_Response(['received' => true, 'handled' => $handled], 200);
     }
 
-    /** Acts on one event. False for events WaaS Host leaves alone, and for stores it doesn't have. */
+    /** Acts on one event. False for events AnyPress Host leaves alone, and for stores it doesn't have. */
     public function dispatch(string $type, object $data): bool
     {
         if (!in_array($type, Webhooks::EVENT_TYPES, true)) {

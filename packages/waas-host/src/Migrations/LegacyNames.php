@@ -7,7 +7,7 @@ if (!defined('ABSPATH'))
     exit;
 
 /**
- * Moves what WaaS Host saved under the old platform's names (settings, order, subscription and product meta, and
+ * Moves what AnyPress Host saved under the old platform's names (settings, order, subscription and product meta, and
  * scheduled jobs) to the waas_ names it uses since 2.3.0. Runs once, before anything reads them; running it again
  * changes nothing.
  */

@@ -17,7 +17,7 @@ use WaaSClient\Features\RolesManager;
 class RolesManagerTest extends TestCase
 {
     private const PLUGINS = [
-        'waas-client/index.php' => ['Name' => 'WaaS Client'],
+        'waas-client/index.php' => ['Name' => 'AnyPress Client'],
         'shop/shop.php' => ['Name' => 'Shop'],
         'forms/forms.php' => ['Name' => 'Forms'],
         'seo/seo.php' => ['Name' => 'SEO'],

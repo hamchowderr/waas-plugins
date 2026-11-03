@@ -54,7 +54,7 @@ final class AnyPress_CRM
         // After FluentCRM's own triggers (priority 10): a cancellation caused by a refund gets no win-back emails.
         add_action('fluent_cart/subscription_canceled', [self::class, 'after_cancel_emails'], 99, 1);
 
-        // The day they cancel, WaaS Host's "stays online until" email also asks why, so it's the only email that day.
+        // The day they cancel, AnyPress Host's "stays online until" email also asks why, so it's the only email that day.
         add_filter('waas_suspend_scheduled_email_body', [self::class, 'ask_why_they_left'], 20, 1);
         add_filter('waas_suspend_scheduled_email_headers', [self::class, 'replies_to_support'], 20, 1);
 

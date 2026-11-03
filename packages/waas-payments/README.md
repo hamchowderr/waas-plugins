@@ -1,4 +1,4 @@
-# WaaS Payments
+# AnyPress Payments
 
 Card payments for FluentCart through Authorize.Net. The card is typed into Authorize.Net's hosted form (Accept.js / AcceptUI) and never reaches this site; the site only handles single-use tokens and Authorize.Net's references to saved cards.
 

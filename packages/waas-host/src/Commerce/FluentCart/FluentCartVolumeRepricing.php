@@ -346,7 +346,7 @@ class FluentCartVolumeRepricing
             $subscription_id,
             __('Volume discount needs a manual change', 'waas-host'),
             sprintf(
-                'The customer now has %s, so this plan should renew with %s off instead of %s, at %s. WaaS Host only re-prices plans billed by Stripe or by the store: change the price in %s by hand. The price is unchanged.',
+                'The customer now has %s, so this plan should renew with %s off instead of %s, at %s. AnyPress Host only re-prices plans billed by Stripe or by the store: change the price in %s by hand. The price is unchanged.',
                 $this->live_websites($sites),
                 $to,
                 $from,
@@ -359,7 +359,7 @@ class FluentCartVolumeRepricing
 
     private function failed(array $billing, string $from, string $to, int $sites, string $error): void
     {
-        error_log(sprintf('WaaS Host: changing the volume discount of subscription %d from %s to %s failed: %s', $billing['id'], $from, $to, $error));
+        error_log(sprintf('AnyPress Host: changing the volume discount of subscription %d from %s to %s failed: %s', $billing['id'], $from, $to, $error));
         $this->store->add_subscription_note(
             $billing['id'],
             __('Volume discount not changed', 'waas-host'),

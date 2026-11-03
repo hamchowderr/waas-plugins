@@ -122,7 +122,7 @@ foreach ($automations as $a) {
 }
 // Emails retired because another email goes out at the same moment (Beads waas-api-mi4): taken out of automations
 // installed before, and two whole automations unpublished. The receipt and "Your website is ready" cover the day of
-// purchase, WaaS Host's "stays online until" email asks why they cancelled, the AnyPress API's approval email welcomes
+// purchase, AnyPress Host's "stays online until" email asks why they cancelled, the AnyPress API's approval email welcomes
 // sellers and resellers, and FluentAffiliate's own sale email covers the first referral.
 $retiredEmails = [
     'Email: Website owner welcome' => 'Your website is on its way',

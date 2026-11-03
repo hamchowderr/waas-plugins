@@ -1,7 +1,7 @@
 // End-to-end test of the support, affiliate and community switches (`wp waas support|affiliate|community switch`
 // and their check-* / switch-* abilities) on WordPress Playground. Boots moving/blueprint.json (Fluent Support,
 // FluentAffiliate and FluentCommunity next to Awesome Support, SliceWP and BuddyPress, with background updates and
-// WP-Cron off) with WaaS Client from this checkout, seeds the source plugins (moving/seed.php), then for each switch
+// WP-Cron off) with AnyPress Client from this checkout, seeds the source plugins (moving/seed.php), then for each switch
 // runs the check, the dry run, the switch, the switch again, the undo and the switch again through the ability.
 //
 //   cd scripts/playground && npm ci
@@ -361,7 +361,7 @@ await check('with the Fluent plugin switched off (as on a moved site), the switc
     expect(!again.preflight.blockers.some((b) => b.includes('Fluent Support isn')), short(again.preflight));
 });
 
-await check('no PHP warnings or errors from WaaS Client', async () => {
+await check('no PHP warnings or errors from AnyPress Client', async () => {
     const log = await php(`$f = WP_CONTENT_DIR . '/debug.log'; echo json_encode(['log' => file_exists($f) ? file_get_contents($f) : '']);`);
     keep('debug.log', log.log);
     const ours = log.log.split('\n').filter((line) => /waas-client|WaaSClient/.test(line));

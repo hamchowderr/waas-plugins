@@ -1,5 +1,5 @@
-// Smoke test of WaaS Client on WordPress Playground (WordPress and PHP running inside Node: no Docker, no
-// database server). Boots WordPress with WaaS Client from this checkout, the AnyPress theme and the store
+// Smoke test of AnyPress Client on WordPress Playground (WordPress and PHP running inside Node: no Docker, no
+// database server). Boots WordPress with AnyPress Client from this checkout, the AnyPress theme and the store
 // template's starter pages, then calls the site-editing routes the AnyPress connector uses (signed with a
 // throwaway site key), the same actions as WordPress abilities, and the "AnyPress website" MCP server once the
 // owner switch turns on the MCP Adapter, and the dashboard's "Log in to WordPress" link (Api\AdminLogin), and checks the answers.
@@ -496,6 +496,27 @@ await check('MCP 2026-07-28: discover, every site ability is a tool, get-site ru
     expectStatus(discover, 200);
     expect(JSON.stringify(discover.data.result ?? {}).includes('AnyPress website'), `discover ${JSON.stringify(discover.data).slice(0, 300)}`);
     await mcpTools('2026-07-28');
+});
+
+await check("brand: AnyPress Client by default, the reseller's brand once waas_brand_name is set", async () => {
+    const names = async (brand) => {
+        const out = await cli.playground.run({
+            code: `<?php
+require '/wordpress/wp-load.php';
+require_once ABSPATH . 'wp-admin/includes/plugin.php';
+update_option('waas_brand_name', ${JSON.stringify(brand)});
+$all = apply_filters('all_plugins', get_plugins());
+$mine = $all[WAAS_CLIENT_BASENAME];
+echo json_encode(['name' => $mine['Name'], 'author' => $mine['Author'], 'menu' => WaaSClient\\Core\\Brand::plugin_name(), 'mcp' => WaaSClient\\Core\\Brand::name() . ' website']);
+`,
+        });
+        return JSON.parse(out.text.slice(out.text.indexOf('{')));
+    };
+    const plain = await names('');
+    expect(plain.name === 'AnyPress Client' && plain.menu === 'AnyPress Client' && plain.author === 'Otaku Solutions', `no brand: ${JSON.stringify(plain)}`);
+    const branded = await names('KnowBS');
+    expect(branded.name === 'KnowBS Client' && branded.menu === 'KnowBS Client' && branded.author === 'KnowBS' && branded.mcp === 'KnowBS website', `KnowBS: ${JSON.stringify(branded)}`);
+    await names('');
 });
 
 const failed = results.filter(([ok]) => !ok).length;

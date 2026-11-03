@@ -203,7 +203,7 @@ class AdminHome
                 "label" => __('Create your website plans', 'waas-host'),
                 "description" => defined('FLUENTCART_VERSION')
                     ? __('Each plan is a FluentCart subscription product. Buying one creates the customer\'s website.', 'waas-host')
-                    : __('A subscription product marked "WaaS product". Buying it creates the customer\'s website.', 'waas-host'),
+                    : __('A subscription product marked "AnyPress product". Buying it creates the customer\'s website.', 'waas-host'),
                 "action_label" => __('Add a plan', 'waas-host'),
                 "action_url" => self::new_plan_product_url(),
                 "is_done" => false,
@@ -611,9 +611,9 @@ class AdminHome
             $dns_set ? __('DNS records shown to customers', 'waas-host') : __('Customers get no DNS records to add', 'waas-host'),
             $dns_set ? '<span class="ap-pill is-ok">' . esc_html__('Set', 'waas-host') . '</span>' : $fix_addresses,
         ];
-        $versions = 'WaaS Host ' . (defined('WAAS_HOST_VERSION') ? WAAS_HOST_VERSION : '');
+        $versions = 'AnyPress Host ' . (defined('WAAS_HOST_VERSION') ? WAAS_HOST_VERSION : '');
         if (defined('WAAS_PAYMENTS_VERSION')) {
-            $versions .= ' · WaaS Payments ' . WAAS_PAYMENTS_VERSION;
+            $versions .= ' · AnyPress Payments ' . WAAS_PAYMENTS_VERSION;
         }
         $rows[] = [__('Versions', 'waas-host'), $versions, ''];
 

@@ -48,11 +48,11 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
 
     public function __construct(ProvisioningApi $provisioning_api, FluentCartStore $store)
     {
-        parent::__construct(__('WaaS Provisioning', 'waas-host'), self::KEY, 20);
+        parent::__construct(__('AnyPress websites', 'waas-host'), self::KEY, 20);
 
         $this->provisioning_api = $provisioning_api;
         $this->store = $store;
-        $this->description = __('Create a website for the customer when they subscribe to this product. When the subscription ends, the website is backed up and taken offline, then deleted after the grace period set in the WaaS settings. Or set Product type to Email pack to sell extra emails for a website.', 'waas-host');
+        $this->description = __('Create a website for the customer when they subscribe to this product. When the subscription ends, the website is backed up and taken offline, then deleted after the grace period set in the AnyPress settings. Or set Product type to Email pack to sell extra emails for a website.', 'waas-host');
         $this->disableGlobalSettings = true;
     }
 
@@ -172,7 +172,7 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
         return [
             'fields' => $fields,
             'button_require_list' => false,
-            'integration_title' => __('WaaS Provisioning', 'waas-host'),
+            'integration_title' => __('AnyPress websites', 'waas-host'),
         ];
     }
 
@@ -228,14 +228,14 @@ class WaasProvisioningIntegration extends BaseIntegrationManager
             $is_active = in_array($this->store->get_subscription_status($subscription_id), FluentCartStore::ACTIVE_STATUSES, true);
             // Feeds run in the background, so a cancel can be handled after the reactivation that followed it.
             if (!$is_revoke && $is_active) {
-                $order->addLog(__('Website kept', 'waas-host'), sprintf('Subscription #%d (%s): the subscription is active again', $subscription_id, $trigger), 'info', 'WaaS');
+                $order->addLog(__('Website kept', 'waas-host'), sprintf('Subscription #%d (%s): the subscription is active again', $subscription_id, $trigger), 'info', 'AnyPress');
                 return;
             }
             // A refund (revoke) leaves the subscription active, so refunding the order that bought it counts. A
             // renewal order refunded or cancelled while the subscription carries on doesn't: the customer keeps the
             // plan, as on WooCommerce, where only the parent order's refund ends the subscription.
             if ($is_revoke && $is_active && ($order->type ?? '') === 'renewal') {
-                $order->addLog(__('Website kept', 'waas-host'), sprintf('Subscription #%d (%s): a renewal order, and the subscription is still active', $subscription_id, $trigger), 'info', 'WaaS');
+                $order->addLog(__('Website kept', 'waas-host'), sprintf('Subscription #%d (%s): a renewal order, and the subscription is still active', $subscription_id, $trigger), 'info', 'AnyPress');
                 return;
             }
             // A customer's or admin's cancel keeps the website until the end of the period they paid for. A refund or

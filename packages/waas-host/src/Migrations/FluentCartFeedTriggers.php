@@ -6,7 +6,7 @@ use WaaSHost\Commerce\FluentCart\FluentCartStore;
 use WaaSHost\Commerce\FluentCart\WaasProvisioningIntegration;
 
 /**
- * One-time update of WaaS Provisioning feeds made before subscription_reactivated was a default trigger: feeds
+ * One-time update of AnyPress websites feeds made before subscription_reactivated was a default trigger: feeds
  * still on the old default set get it added, so a late payment after the subscription expired resumes the store
  * without editing every product. Feeds whose triggers were changed by hand are left as they are.
  *

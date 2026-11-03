@@ -20,7 +20,7 @@ class WaasEventNotes
         }
 
         if ($order) {
-            $order->addLog($title, $detail, 'info', 'WaaS');
+            $order->addLog($title, $detail, 'info', 'AnyPress');
         }
 
         return true;

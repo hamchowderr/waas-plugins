@@ -628,7 +628,7 @@ class FluentCartStore
     {
         $subscription = $this->find_subscription($subscription_id);
         if ($subscription) {
-            $subscription->addLog($title, $detail, $type, 'WaaS');
+            $subscription->addLog($title, $detail, $type, 'AnyPress');
         }
     }
 

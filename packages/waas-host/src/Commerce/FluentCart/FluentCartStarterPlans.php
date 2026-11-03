@@ -14,7 +14,7 @@ use WaaSHost\Features\PluginBootstrap;
 
 /**
  * Makes AnyPress's website plans as FluentCart products, so a storefront can sell on day one: one product per site
- * type and size, each with monthly and yearly prices and the WaaS Provisioning feed set to that role and size.
+ * type and size, each with monthly and yearly prices and the AnyPress websites feed set to that role and size.
  *
  * A seller gets them from the "Create my plans" setup step. A ready-made storefront (keys in wp-config) gets them
  * once, the first time its owner opens wp-admin, so its setup steps start with the plans already made.

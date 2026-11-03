@@ -268,7 +268,7 @@ class AdminRolesSettings
      * Role summary and warnings for the roles page.
      *
      * @param array    $roles      roles.json contents: slug => ['title' => ..., 'plugins' => [file, ...]]
-     * @param array    $wp_plugins installed plugins (get_plugins(), without WaaS Client), keyed by file
+     * @param array    $wp_plugins installed plugins (get_plugins(), without AnyPress Client), keyed by file
      * @param callable $is_active  fn (string $plugin_file): bool
      * @return array{counts: array<string,int>, inactive: array<string,string[]>, missing: array<string,string[]>, unassigned: string[]}
      *               inactive/missing map a plugin file to the role slugs that list it.

@@ -37,7 +37,7 @@ class Tenant
     public const NAME_CONFLICT_META = 'waas_name_conflict';
 
     /**
-     * wp-config constants that stores built before WaaS Client 2.4.0 read under the old platform's prefix. The shop sends
+     * wp-config constants that stores built before AnyPress Client 2.4.0 read under the old platform's prefix. The shop sends
      * each under both names until every store runs a newer client.
      */
     private const LEGACY_CONSTANTS = [
