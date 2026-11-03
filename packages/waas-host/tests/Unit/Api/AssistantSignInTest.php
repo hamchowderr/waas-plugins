@@ -62,7 +62,7 @@ class AssistantSignInTest extends TestCase
     public function test_the_default_assistant_opens_on_the_websites_own_domain(): void
     {
         $this->config = Mockery::mock(ConfigService::class);
-        $this->config->allows('get_assistant_url')->andReturn(ConfigService::ANYPRESS_ASSISTANT_URL);
+        $this->config->allows('get_assistant_url')->andReturn(ConfigService::ASSISTANT_ON_WEBSITE);
         $this->cart->meta[42][Tenant::BASE_DOMAIN_NAME_META] = 't-42.stores.example.com';
         $this->cart->meta[42][Tenant::DOMAIN_NAME_META] = 'Bakery.example';
         $next = 'https://bakery.example/.assistant/from-shop?handoff=abc';
@@ -75,9 +75,18 @@ class AssistantSignInTest extends TestCase
         $this->api->expects('site_handoff')->with('store-42', 'https://t-42.stores.example.com/.assistant')->andReturn($next);
         $this->assertSame(['redirect' => $next], $this->step());
 
-        // An answer for the panel's own address is not followed once the website's own was asked for.
-        $this->api->allows('site_handoff')->andReturn(ConfigService::ANYPRESS_ASSISTANT_URL . '/from-shop?handoff=abc');
+        // An answer for another address is not followed once the website's own was asked for.
+        $this->api->allows('site_handoff')->andReturn('https://assistant.anypress.io/from-shop?handoff=abc');
         $this->assertSame(502, $this->step()['status']);
+    }
+
+    public function test_the_assistant_on_the_website_waits_for_the_website_to_have_a_domain(): void
+    {
+        $this->config = Mockery::mock(ConfigService::class);
+        $this->config->allows('get_assistant_url')->andReturn(ConfigService::ASSISTANT_ON_WEBSITE);
+        $this->api->shouldNotReceive('site_handoff');
+
+        $this->assertSame(404, $this->step()['status']);
     }
 
     public function test_an_api_answer_for_another_address_is_not_followed(): void
