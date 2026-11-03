@@ -1,6 +1,6 @@
 <?php
-// Creates "Website plan (test)": a $1 monthly WP Swings subscription, marked as a WaaS product. Idempotent.
-use WaaSHost\Core\StoreProduct;
+// Creates "Website plan (test)": a $1 monthly WP Swings subscription, marked as an AnyPress product. Idempotent.
+use AnyPressHost\Core\StoreProduct;
 
 $title = 'Website plan (test)';
 $existing = get_posts(['post_type' => 'product', 'title' => $title, 'post_status' => 'any', 'numberposts' => 1]);
@@ -12,7 +12,7 @@ if ($existing) {
     $product->set_name($title);
     $product->set_slug('website-plan-test');
     $product->set_status('publish');
-    $product->set_description('Test plan for the WaaS end-to-end check. Not a real offer.');
+    $product->set_description('Test plan for the AnyPress end-to-end check. Not a real offer.');
     echo "product created\n";
 }
 $product->set_virtual(true);
@@ -28,11 +28,11 @@ $product->update_meta_data('wps_sfw_subscription_free_trial_number', '');
 $product->update_meta_data('wps_sfw_subscription_free_trial_interval', 'day');
 $id = $product->save();
 
-// waas-host: a base plan; keep a role already chosen in wp-admin, else the first role the API offers.
+// anypress-host: a base plan; keep a role already chosen in wp-admin, else the first role the API offers.
 $store_product = new StoreProduct($id);
-$store_product->store_is_waas_product(true);
+$store_product->store_is_anypress_product(true);
 $store_product->store_type(StoreProduct::PRODUCT_TYPE_BASE_PRODUCT);
-$roles = array_keys((array) get_option('waas-host-roles-options', []));
+$roles = array_keys((array) get_option('anypress-host-roles-options', []));
 if ((string) $store_product->get_role() === '' && $roles) {
     $store_product->update_role((string) $roles[0]);
 }

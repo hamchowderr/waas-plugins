@@ -1,9 +1,9 @@
 <?php
-// Read-only: the latest WP Swings subscriptions and what waas-host holds for each, one line each. No customer data.
+// Read-only: the latest WP Swings subscriptions and what anypress-host holds for each, one line each. No customer data.
 //   sh /opt/wpcli/x/setup.sh watch
-use WaaSHost\Commerce\Commerce;
-use WaaSHost\Core\Tenant;
-use WaaSHost\Features\TenantsSubscriptionManager;
+use AnyPressHost\Commerce\Commerce;
+use AnyPressHost\Core\Tenant;
+use AnyPressHost\Features\TenantsSubscriptionManager;
 
 $utc = fn ($t) => $t ? gmdate('Y-m-d H:i', (int) $t) . 'Z' : '-';
 $offset = (int) round((float) get_option('gmt_offset', 0) * 3600);
@@ -25,7 +25,7 @@ foreach ($ids as $id) {
         . ' state=' . ($meta(Tenant::TENANT_STATE) ?: '-')
         . ' suspend_at=' . $utc($meta(Tenant::TENANT_SUSPEND_AT_META))
         . ' delete_at=' . $utc($meta(Tenant::TENANT_DELETE_AT_META))
-        . ' held=' . ($meta('_waas_store_suspended') ?: '-')
+        . ' held=' . ($meta('_anypress_store_suspended') ?: '-')
         . ' cron_suspend=' . $utc(wp_next_scheduled(TenantsSubscriptionManager::SUSPEND_AT_PERIOD_END_HOOK, [$id]))
         . "\n";
 }

@@ -1,8 +1,8 @@
 {
-  "name": "waas-plugins-playground",
+  "name": "anypress-plugins-playground",
   "private": true,
   "type": "module",
-  "description": "Runs the WaaS plugins and AnyPress Export on WordPress Playground (WordPress in Node, no Docker) for end-to-end tests.",
+  "description": "Runs the AnyPress plugins and AnyPress Export on WordPress Playground (WordPress in Node, no Docker) for end-to-end tests.",
   "engines": {
     "node": ">=24.18"
   },

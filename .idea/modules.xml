@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/waas-wpcs.iml" filepath="$PROJECT_DIR$/.idea/waas-wpcs.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/anypress-wpcs.iml" filepath="$PROJECT_DIR$/.idea/anypress-wpcs.iml" />
     </modules>
   </component>
 </project>

@@ -47,7 +47,7 @@
    "product_ids": [],
    "run_multiple": "yes"
   },
-  "note": "Cancelled plans: a come-back offer after 30 days. The why-did-you-leave question rides in WaaS Host's \"stays online until\" email on the day they cancel (anypress-crm.php).",
+  "note": "Cancelled plans: a come-back offer after 30 days. The why-did-you-leave question rides in AnyPress Host's \"stays online until\" email on the day they cancel (anypress-crm.php).",
   "emails": [
    {
     "day": 30,

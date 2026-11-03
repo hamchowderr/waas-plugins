@@ -1,6 +1,6 @@
-// End-to-end test of the forms switch (`wp waas forms switch` and the check-forms / switch-forms abilities) on
+// End-to-end test of the forms switch (`wp anypress forms switch` and the check-forms / switch-forms abilities) on
 // WordPress Playground. Boots forms/blueprint.json (Contact Form 7 with Flamingo, WPForms Lite, Ninja Forms and Fluent
-// Forms, at the versions the site-moving research used) with WaaS Client from this checkout, seeds each source plugin
+// Forms, at the versions the site-moving research used) with AnyPress Client from this checkout, seeds each source plugin
 // with a realistic form, entries and pages (forms/seed-*.php), then runs the dry run, the switch, the switch again,
 // form submissions through Fluent Forms and the undo, and checks each step.
 //
@@ -8,7 +8,7 @@
 //   npm run forms             # run the checks, exit 1 on a failure
 //   npm run forms -- --serve  # same site, left running at http://127.0.0.1:9401 (admin / password)
 //
-// Needs packages/waas-client/vendor (composer install in packages/waas-client).
+// Needs packages/anypress-client/vendor (composer install in packages/anypress-client).
 // Playground stores the database in SQLite, not MariaDB: this checks the PHP and WordPress behaviour.
 
 import { randomBytes } from 'node:crypto';
@@ -20,7 +20,7 @@ import { validateBlueprintDeclaration, wpCLI } from '@wp-playground/blueprints';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '../..');
-const CLIENT = resolve(ROOT, 'packages/waas-client');
+const CLIENT = resolve(ROOT, 'packages/anypress-client');
 const WP = process.env.PLAYGROUND_WP || '7.1.3';
 const PHP = process.env.PLAYGROUND_PHP || '8.3';
 const PORT = Number(process.env.PLAYGROUND_PORT || 9401);
@@ -32,7 +32,7 @@ const REPORTS = process.env.FORMS_REPORT_DIR;
 const keep = (name, text) => REPORTS && (mkdirSync(REPORTS, { recursive: true }), writeFileSync(resolve(REPORTS, name), typeof text === 'string' ? text : JSON.stringify(text, null, 2)));
 
 if (!existsSync(resolve(CLIENT, 'vendor/autoload.php'))) {
-    console.error('packages/waas-client/vendor is missing: run composer install in packages/waas-client first.');
+    console.error('packages/anypress-client/vendor is missing: run composer install in packages/anypress-client first.');
     process.exit(1);
 }
 
@@ -73,7 +73,7 @@ const cli = await runCLI({
     php: PHP,
     port: PORT,
     blueprint,
-    mount: [{ hostPath: CLIENT, vfsPath: '/wordpress/wp-content/plugins/waas-client' }],
+    mount: [{ hostPath: CLIENT, vfsPath: '/wordpress/wp-content/plugins/anypress-client' }],
     verbosity: 'quiet',
 });
 const base = cli.serverUrl.replace(/\/$/, '');
@@ -204,7 +204,7 @@ const byType = (report) => Object.fromEntries(Object.entries(SEEDED).map(([type,
 let switched;
 
 await check('command and abilities are registered', async () => {
-    const help = await wp('wp help waas forms switch');
+    const help = await wp('wp help anypress forms switch');
     expect(help.includes('--dry-run') && help.includes('--undo'), `help: ${help.slice(0, 300)}`);
     const list = await fetch(`${base}/wp-json/wp-abilities/v1/abilities?category=anypress&per_page=100`, { headers: { 'x-test-user': `${USER_TOKEN}:admin` } }).then((r) => r.json());
     const names = list.map((a) => a.name);
@@ -214,9 +214,9 @@ await check('command and abilities are registered', async () => {
 });
 
 await check('the command needs an administrator', async () => {
-    const out = await wp('wp waas forms switch --dry-run');
+    const out = await wp('wp anypress forms switch --dry-run');
     expect(/administrator/i.test(out), `without --user: ${out.slice(0, 300)}`);
-    const editor = await wp('wp waas forms switch --dry-run --user=editor');
+    const editor = await wp('wp anypress forms switch --dry-run --user=editor');
     expect(/administrator/i.test(editor), `as editor: ${editor.slice(0, 300)}`);
 });
 
@@ -234,9 +234,9 @@ add_filter('wp_doing_ajax', '__return_true'); add_filter('wp_die_ajax_handler', 
 
 await check('dry run: lists every form and what it would drop, changes nothing', async () => {
     const before = await counts();
-    const report = await wp('wp waas forms switch --dry-run --format=json --user=admin');
+    const report = await wp('wp anypress forms switch --dry-run --format=json --user=admin');
     keep('dry-run.json', report);
-    keep('dry-run.txt', await wp('wp waas forms switch --dry-run --user=admin'));
+    keep('dry-run.txt', await wp('wp anypress forms switch --dry-run --user=admin'));
     const forms = byType(report);
     expect(report.dry_run === true && report.forms.length >= 3 && Object.values(forms).every(Boolean), short(report));
     expect(Object.values(forms).every((f) => f.status === 'will be converted'), short(report.forms.map((f) => f.status)));
@@ -253,7 +253,7 @@ await check('dry run: lists every form and what it would drop, changes nothing',
 });
 
 await check('switch: three forms converted, entries brought in', async () => {
-    switched = await wp('wp waas forms switch --format=json --user=admin');
+    switched = await wp('wp anypress forms switch --format=json --user=admin');
     keep('switch.json', switched);
     const forms = byType(switched);
     expect(switched.forms.every((f) => f.status === 'converted' && f.fluent_id > 0), short(switched.forms.map((f) => [f.source, f.status, f.lost])));
@@ -381,7 +381,7 @@ echo json_encode(['result' => $result, 'mail' => get_option('forms_test_mail')])
 
 await check('running it again changes nothing and makes no duplicates', async () => {
     const before = await counts();
-    const again = await wp('wp waas forms switch --format=json --user=admin');
+    const again = await wp('wp anypress forms switch --format=json --user=admin');
     const after = await counts();
     expect(again.forms.every((f) => f.status === 'already converted'), short(again.forms.map((f) => f.status)));
     expect(again.pages.length === 0 && again.widgets.length === 0, `switched again: ${short(again.pages)}`);
@@ -402,7 +402,7 @@ await check('abilities: check-forms is read-only, switch-forms needs an administ
 
 await check('undo puts the old shortcodes and blocks back exactly, keeps the Fluent Forms forms', async () => {
     const before = await counts();
-    const undo = await wp('wp waas forms switch --undo --format=json --user=admin');
+    const undo = await wp('wp anypress forms switch --undo --format=json --user=admin');
     keep('undo.json', undo);
     expect(undo.pages.length === 6 && undo.widgets.length === 1, `undo ${short(undo)}`);
     const now = await php(`echo json_encode(array_map(fn ($id) => get_post_field('post_content', $id), [
@@ -425,10 +425,10 @@ await check('switching again after undo reuses the same forms', async () => {
     expect(undo.status === 200 && undo.data.undo === true, `undo ability: HTTP ${undo.status} ${short(undo.data)}`);
 });
 
-await check('no PHP warnings or errors from WaaS Client', async () => {
+await check('no PHP warnings or errors from AnyPress Client', async () => {
     const log = await php(`$f = WP_CONTENT_DIR . '/debug.log'; echo json_encode(['log' => file_exists($f) ? file_get_contents($f) : '']);`);
     keep('debug.log', log.log);
-    const ours = log.log.split('\n').filter((line) => /waas-client|WaaSClient/.test(line));
+    const ours = log.log.split('\n').filter((line) => /anypress-client|AnyPressClient/.test(line));
     expect(!ours.length, ours.slice(0, 5).join('\n'));
 });
 

@@ -2,7 +2,7 @@
 /**
  * The shop's emails in the AnyPress look, through settings only (FluentCart and FluentCRM keep their own layouts, so
  * plugin updates don't break them): the AnyPress logo, the same colours as the AnyPress API's account emails, a footer
- * naming support@anypress.io, and FluentCart replies going there (crm.php already sends CRM replies there). WaaS
+ * naming support@anypress.io, and FluentCart replies going there (crm.php already sends CRM replies there). AnyPress
  * Host's own emails get the logo and address from anypress-shop.php. Run by the design step after design.php has copied the images; safe to run again.
  *   wp eval-file emails.php --user=admin
  */
@@ -56,7 +56,7 @@ if ( defined( 'FLUENTCRM' ) ) {
 	update_option( 'fluentcrm-global-settings', $ap_settings );
 
 	// The automation emails themselves: each is written as plain paragraphs (crm-emails.json), so put it in the
-	// AnyPress layout (the same as the API's account emails and WaaS Host's website emails) and send it as raw HTML,
+	// AnyPress layout (the same as the API's account emails and AnyPress Host's website emails) and send it as raw HTML,
 	// with the unsubscribe links in its own footer. The source text comes from crm-emails.json by subject, so running
 	// this again restyles from the original wording rather than wrapping twice.
 	$ap_sources = array();

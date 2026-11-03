@@ -16,7 +16,7 @@ case "${1:-}" in
   install)
     $WP core is-installed && { echo already installed; exit 0; }
     [ -n "${WP_ADMIN_PASSWORD:-}" ] || { echo WP_ADMIN_PASSWORD missing; exit 1; }
-    $WP core install --url="$URL" --title="WaaS Storefront Woo (test)" --admin_user=admin \
+    $WP core install --url="$URL" --title="AnyPress Storefront Woo (test)" --admin_user=admin \
       --admin_password="$WP_ADMIN_PASSWORD" --admin_email=admin@otakusolutions.io --skip-email
     $WP option update blog_public 0
     $WP rewrite structure '/%postname%/' --hard ;;
@@ -27,19 +27,19 @@ case "${1:-}" in
       $WP plugin is-installed $p || $WP plugin install $p
       $WP plugin activate $p
     done
-    $WP plugin install $X/waas-host.zip --activate --force
-    # Test-only: lets Cash on delivery pay for a subscription (see waas-test-storefront-cod-shim.php).
+    $WP plugin install $X/anypress-host.zip --activate --force
+    # Test-only: lets Cash on delivery pay for a subscription (see anypress-test-storefront-cod-shim.php).
     mkdir -p /var/www/html/wp-content/mu-plugins
-    cp $X/waas-test-storefront-cod-shim.php /var/www/html/wp-content/mu-plugins/
+    cp $X/anypress-test-storefront-cod-shim.php /var/www/html/wp-content/mu-plugins/
     chown -R 33:33 /var/www/html/wp-content/mu-plugins
     $WP plugin list ;;
   configure)
-    [ -n "${WAAS_API_KEY:-}" ] && [ -n "${WAAS_API_SECRET:-}" ] || { echo WAAS_API_KEY/SECRET missing; exit 1; }
-    $WP option update waas_api_base_url https://waas-api.otakusolutions.io
-    $WP option update waas_api_key "$WAAS_API_KEY" >/dev/null
-    $WP option update waas_api_secret "$WAAS_API_SECRET" >/dev/null
+    [ -n "${ANYPRESS_API_KEY:-}" ] && [ -n "${ANYPRESS_API_SECRET:-}" ] || { echo ANYPRESS_API_KEY/SECRET missing; exit 1; }
+    $WP option update anypress_api_base_url https://waas-api.otakusolutions.io
+    $WP option update anypress_api_key "$ANYPRESS_API_KEY" >/dev/null
+    $WP option update anypress_api_secret "$ANYPRESS_API_SECRET" >/dev/null
     echo api key and secret set
-    $WP option update waas_notification_settings_send_tenant_ready_email on
+    $WP option update anypress_notification_settings_send_tenant_ready_email on
     $WP eval-file $X/check.php
     $WP eval-file $X/roles.php ;;
   pages)
@@ -60,7 +60,7 @@ case "${1:-}" in
   check)
     $WP eval-file $X/check.php ;;
   watch)
-    # Read-only: subscription status, next payment date, and waas-host's store meta for the latest subscriptions.
+    # Read-only: subscription status, next payment date, and anypress-host's store meta for the latest subscriptions.
     $WP eval-file $X/watch.php ;;
   *) echo "unknown step"; exit 2 ;;
 esac

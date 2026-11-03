@@ -6,7 +6,7 @@
 #   scripts/test-env.sh wp ...  # run WP-CLI, e.g. scripts/test-env.sh wp plugin list
 #   scripts/test-env.sh down    # remove the containers and volumes
 #
-# Mounts packages/waas-host and packages/waas-payments from this checkout, plus FluentCart, WooCommerce
+# Mounts packages/anypress-host and packages/anypress-payments from this checkout, plus FluentCart, WooCommerce
 # and Subscriptions for WooCommerce from wordpress.org. Images come from
 # mirror.gcr.io because Docker Hub rate-limits shared addresses. When
 # HTTPS_PROXY is set (the cloud agent proxy), WordPress sends outbound HTTP
@@ -14,7 +14,7 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-WORK=${WAAS_TEST_ENV_DIR:-$ROOT/.test-env}
+WORK=${ANYPRESS_TEST_ENV_DIR:-$ROOT/.test-env}
 PLUGINS="fluent-cart woocommerce subscriptions-for-woocommerce"
 WP_IMAGE=mirror.gcr.io/library/wordpress:php8.3-apache
 CLI_IMAGE=mirror.gcr.io/library/wordpress:cli
@@ -28,7 +28,7 @@ proxy_port() {
 }
 
 wp_cli() {
-    docker run --rm --network host --volumes-from waas-wp --user 33:33 \
+    docker run --rm --network host --volumes-from anypress-wp --user 33:33 \
         -e AGENT_PROXY_PORT="$(proxy_port)" "${DB_ENV[@]}" "$CLI_IMAGE" wp "$@"
 }
 
@@ -60,20 +60,20 @@ if (getenv('AGENT_PROXY_PORT')) {
 PHP
     fi
 
-    (cd "$ROOT/packages/waas-host" && composer dump-autoload -q)
-    (cd "$ROOT/packages/waas-payments" && { [ -d vendor ] || composer install -q --no-dev; })
+    (cd "$ROOT/packages/anypress-host" && composer dump-autoload -q)
+    (cd "$ROOT/packages/anypress-payments" && { [ -d vendor ] || composer install -q --no-dev; })
 
-    docker rm -f waas-db waas-wp >/dev/null 2>&1 || true
-    docker run -d --name waas-db --network host -v waas-db-data:/var/lib/mysql \
+    docker rm -f anypress-db anypress-wp >/dev/null 2>&1 || true
+    docker run -d --name anypress-db --network host -v anypress-db-data:/var/lib/mysql \
         -e MARIADB_ROOT_PASSWORD=root -e MARIADB_DATABASE=wp -e MARIADB_USER=wp -e MARIADB_PASSWORD=wp \
         "$DB_IMAGE" >/dev/null
 
     local plugin_mounts=()
     for p in $PLUGINS; do plugin_mounts+=(-v "$WORK/plugins/$p:/var/www/html/wp-content/plugins/$p"); done
-    docker run -d --name waas-wp --network host -e AGENT_PROXY_PORT="$(proxy_port)" -e WORDPRESS_DEBUG=1 "${DB_ENV[@]}" \
-        -v waas-wp-html:/var/www/html \
-        -v "$ROOT/packages/waas-host:/var/www/html/wp-content/plugins/waas-host" \
-        -v "$ROOT/packages/waas-payments:/var/www/html/wp-content/plugins/waas-payments" \
+    docker run -d --name anypress-wp --network host -e AGENT_PROXY_PORT="$(proxy_port)" -e WORDPRESS_DEBUG=1 "${DB_ENV[@]}" \
+        -v anypress-wp-html:/var/www/html \
+        -v "$ROOT/packages/anypress-host:/var/www/html/wp-content/plugins/anypress-host" \
+        -v "$ROOT/packages/anypress-payments:/var/www/html/wp-content/plugins/anypress-payments" \
         -v "$WORK/mu-plugins:/var/www/html/wp-content/mu-plugins" \
         "${plugin_mounts[@]}" "${ca_mount[@]}" "$WP_IMAGE" >/dev/null
 
@@ -82,16 +82,16 @@ PHP
         sleep 2
     done
     if ! wp_cli core is-installed >/dev/null 2>&1; then
-        wp_cli core install --url=http://127.0.0.1 --title="WaaS Storefront (test)" \
+        wp_cli core install --url=http://127.0.0.1 --title="AnyPress Storefront (test)" \
             --admin_user=admin --admin_password=admin --admin_email=admin@example.com --skip-email
     fi
-    wp_cli plugin activate $PLUGINS waas-host waas-payments
+    wp_cli plugin activate $PLUGINS anypress-host anypress-payments
     echo "WordPress: http://127.0.0.1/wp-admin (admin / admin)"
 }
 
 down() {
-    docker rm -f waas-wp waas-db >/dev/null 2>&1 || true
-    docker volume rm waas-wp-html waas-db-data >/dev/null 2>&1 || true
+    docker rm -f anypress-wp anypress-db >/dev/null 2>&1 || true
+    docker volume rm anypress-wp-html anypress-db-data >/dev/null 2>&1 || true
 }
 
 case "${1:-}" in

@@ -1,13 +1,13 @@
-# Site editing API (WaaS Client)
+# Site editing API (AnyPress Client)
 
-WaaS Client 2.3.0 adds REST routes under `/wp-json/waas-client/v1/site` so an AI agent, through the AnyPress connector, can change a store's design and content. The AnyPress API calls them on the agent's behalf; nothing else can.
+AnyPress Client 2.3.0 adds REST routes under `/wp-json/anypress-client/v1/site` so an AI agent, through the AnyPress connector, can change a store's design and content. The AnyPress API calls them on the agent's behalf; nothing else can.
 
 ## Who can call it
 
-Every request carries an `X-Waas-Signature` header made with the store's **site key**, which the API gives the store's WordPress container as the `WAAS_SITE_KEY` environment variable (32 characters or more). Without that variable every route answers 401.
+Every request carries an `X-AnyPress-Signature` header made with the store's **site key**, which the API gives the store's WordPress container as the `ANYPRESS_SITE_KEY` environment variable (32 characters or more). Without that variable every route answers 401.
 
 ```
-X-Waas-Signature: t=<unix time>,n=<32 hex characters, new for each request>,s=<hex HMAC-SHA256>
+X-AnyPress-Signature: t=<unix time>,n=<32 hex characters, new for each request>,s=<hex HMAC-SHA256>
 ```
 
 The HMAC (key: the site key) is over these five lines joined by `\n`:
@@ -15,7 +15,7 @@ The HMAC (key: the site key) is over these five lines joined by `\n`:
 1. `t`
 2. `n`
 3. the HTTP method in capitals
-4. the route, e.g. `/waas-client/v1/site/pages/12`, plus, when there is a query, `?` and the query sorted by name, each name and value encoded as PHP's `rawurlencode` does (`/waas-client/v1/site/patterns?category=hero&search=big%20text`)
+4. the route, e.g. `/anypress-client/v1/site/pages/12`, plus, when there is a query, `?` and the query sorted by name, each name and value encoded as PHP's `rawurlencode` does (`/anypress-client/v1/site/patterns?category=hero&search=big%20text`)
 5. the hex SHA-256 of the request body (of the empty string when there is none)
 
 A signature is accepted within 5 minutes of `t`, and each `n` only once. Signed requests run as the store's first administrator.
@@ -53,9 +53,9 @@ A section is a top-level block of a page (the whitespace between blocks doesn't 
 
 ## Sign in with your website
 
-A store owner can connect an AI app to just their own website. On the connector's approve page they type the website's address, and the API sends them to `wp-admin/admin.php?page=waas-connect` on that website. The link is signed with the site key (`Core\ConnectLink`): HMAC-SHA256 over `waas-connect\n<request>\n<app>\n<to>\n<write>\n<back>\n<t>`.
+A store owner can connect an AI app to just their own website. On the connector's approve page they type the website's address, and the API sends them to `wp-admin/admin.php?page=anypress-connect` on that website. The link is signed with the site key (`Core\ConnectLink`): HMAC-SHA256 over `anypress-connect\n<request>\n<app>\n<to>\n<write>\n<back>\n<t>`.
 
-The page (`Features\ConnectPage`) is for administrators only; WordPress asks anyone signed out to sign in first. It names the app and what it may do. Allow or Cancel sends the owner to `back`, the API's answer URL, with `request`, `answer` (`allow`, `allow-read` or `deny`) and `s`, an HMAC-SHA256 over `waas-connect-answer\n<request>\n<answer>`.
+The page (`Features\ConnectPage`) is for administrators only; WordPress asks anyone signed out to sign in first. It names the app and what it may do. Allow or Cancel sends the owner to `back`, the API's answer URL, with `request`, `answer` (`allow`, `allow-read` or `deny`) and `s`, an HMAC-SHA256 over `anypress-connect-answer\n<request>\n<answer>`.
 
 The API then gives the app a token for this website only, which can use the site routes above and nothing else. A link that was changed, was signed by another website, or is past `t` is refused.
 

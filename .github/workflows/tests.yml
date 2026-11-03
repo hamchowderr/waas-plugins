@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [waas-host, waas-client, waas-payments, waas-updater, anypress-export]
+        package: [anypress-host, anypress-client, anypress-payments, anypress-updater, anypress-export]
         php: ["8.1", "8.3"]
     defaults:
       run:
@@ -50,11 +50,11 @@ jobs:
         run: scripts/release/test.sh
 
   js:
-    name: waas-payments checkout script tests
+    name: anypress-payments checkout script tests
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: packages/waas-payments
+        working-directory: packages/anypress-payments
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -68,12 +68,12 @@ jobs:
   contract:
     # Runs the plugin's real API client against the public Postman mock. It depends on an outside service,
     # so it reports but doesn't block a pull request.
-    name: waas-host contract tests (Postman mock)
+    name: anypress-host contract tests (Postman mock)
     runs-on: ubuntu-latest
     continue-on-error: true
     defaults:
       run:
-        working-directory: packages/waas-host
+        working-directory: packages/anypress-host
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -89,9 +89,9 @@ jobs:
         run: composer test -- --group mock
 
   playground:
-    # WaaS Client on real WordPress (WordPress Playground: WordPress and PHP in Node, no Docker) with the AnyPress
+    # AnyPress Client on real WordPress (WordPress Playground: WordPress and PHP in Node, no Docker) with the AnyPress
     # theme and the store template's starter pages, calling the AnyPress connector's site-editing routes.
-    name: waas-client on WordPress Playground
+    name: anypress-client on WordPress Playground
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -103,7 +103,7 @@ jobs:
           coverage: none
           tools: composer:v2
       - name: Composer install
-        working-directory: packages/waas-client
+        working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -149,9 +149,9 @@ jobs:
         run: npm run export
 
   playground-forms:
-    # The forms switch (wp waas forms switch and its abilities) on a WordPress Playground site with Contact Form 7,
+    # The forms switch (wp anypress forms switch and its abilities) on a WordPress Playground site with Contact Form 7,
     # Flamingo, WPForms Lite, Ninja Forms and Fluent Forms: converts, fixes, switches the pages, runs again, undoes.
-    name: waas-client forms switch on WordPress Playground
+    name: anypress-client forms switch on WordPress Playground
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -163,7 +163,7 @@ jobs:
           coverage: none
           tools: composer:v2
       - name: Composer install
-        working-directory: packages/waas-client
+        working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -179,10 +179,10 @@ jobs:
         run: npm run forms
 
   playground-shop-switch:
-    # The shop switch (wp waas shop switch and its abilities) on a WordPress Playground site with WooCommerce,
+    # The shop switch (wp anypress shop switch and its abilities) on a WordPress Playground site with WooCommerce,
     # FluentCart and the FluentCart Migrator add-on (downloaded from FluentCart's add-ons CDN): checks, switches,
     # runs again, undoes, and compares the two shops, with HPOS off and then on.
-    name: waas-client shop switch on WordPress Playground
+    name: anypress-client shop switch on WordPress Playground
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -194,7 +194,7 @@ jobs:
           coverage: none
           tools: composer:v2
       - name: Composer install
-        working-directory: packages/waas-client
+        working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -210,10 +210,10 @@ jobs:
         run: npm run shop-switch
 
   playground-crm-switch:
-    # The CRM switch (wp waas crm switch and its abilities) on a WordPress Playground site with WooCommerce, FluentCRM,
+    # The CRM switch (wp anypress crm switch and its abilities) on a WordPress Playground site with WooCommerce, FluentCRM,
     # MailPoet and the Newsletter plugin: checks, switches, runs again, undoes, and checks no email goes out, with
     # HPOS off and then on.
-    name: waas-client CRM switch on WordPress Playground
+    name: anypress-client CRM switch on WordPress Playground
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -225,7 +225,7 @@ jobs:
           coverage: none
           tools: composer:v2
       - name: Composer install
-        working-directory: packages/waas-client
+        working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -241,10 +241,10 @@ jobs:
         run: npm run crm-switch
 
   playground-moving:
-    # The support, affiliate and community switches (wp waas support|affiliate|community switch and their abilities)
+    # The support, affiliate and community switches (wp anypress support|affiliate|community switch and their abilities)
     # on a WordPress Playground site with Fluent Support, FluentAffiliate and FluentCommunity next to Awesome Support,
     # SliceWP and BuddyPress: checks, switches, runs again, undoes, and checks no email goes out.
-    name: waas-client support, affiliate and community switches on WordPress Playground
+    name: anypress-client support, affiliate and community switches on WordPress Playground
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -256,7 +256,7 @@ jobs:
           coverage: none
           tools: composer:v2
       - name: Composer install
-        working-directory: packages/waas-client
+        working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
         uses: actions/setup-node@v4

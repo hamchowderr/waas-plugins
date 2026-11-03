@@ -248,26 +248,26 @@ try {
 
 const dir = mkdtempSync(join(tmpdir(), 'anypress-export-'));
 let files = [];
-await check('the archive opens and holds waas.json, database.sql and wp-content', async () => {
+await check('the archive opens and holds anypress.json, database.sql and wp-content', async () => {
     writeFileSync(join(dir, 'export.tar.gz'), api.archive);
     execFileSync('tar', ['-xzf', 'export.tar.gz'], { cwd: dir });
     files = execFileSync('tar', ['-tzf', 'export.tar.gz'], { cwd: dir }).toString().trim().split('\n');
-    expect(files[0] === 'waas.json' && files[1] === 'database.sql', `first entries: ${files.slice(0, 3).join(', ')}`);
-    const site = JSON.parse(readFileSync(join(dir, 'waas.json'), 'utf8'));
+    expect(files[0] === 'anypress.json' && files[1] === 'database.sql', `first entries: ${files.slice(0, 3).join(', ')}`);
+    const site = JSON.parse(readFileSync(join(dir, 'anypress.json'), 'utf8'));
     expect(site.tablePrefix === 'wp_' && site.wordPressVersion === WP && site.multisite === false, JSON.stringify(site));
     expect(api.source?.home && api.source.sizeBytes === api.archive.length, `start sent ${JSON.stringify(api.source)}`);
 });
 
-await check('waas.json: per-table row counts and the preflight report', async () => {
-    const raw = readFileSync(join(dir, 'waas.json'), 'utf8');
+await check('anypress.json: per-table row counts and the preflight report', async () => {
+    const raw = readFileSync(join(dir, 'anypress.json'), 'utf8');
     const site = JSON.parse(raw);
     expect(site.tables?.wp_shop_log === EXTRA_ROWS, `wp_shop_log: ${site.tables?.wp_shop_log}`);
     expect(site.tables?.wp_big_rows === BIG_ROWS, `wp_big_rows: ${site.tables?.wp_big_rows}`);
     expect(site.tables?.wp_posts === expected.posts, `wp_posts: ${site.tables?.wp_posts}, wanted ${expected.posts}`);
     const report = site.preflight;
-    expect(report && Array.isArray(report.notes), 'no preflight in waas.json');
+    expect(report && Array.isArray(report.notes), 'no preflight in anypress.json');
     expect(report.configConstants.includes('GF_LICENSE_KEY'), `constants: ${report.configConstants}`);
-    expect(!raw.includes(LICENCE_VALUE), 'a wp-config value went into waas.json');
+    expect(!raw.includes(LICENCE_VALUE), 'a wp-config value went into anypress.json');
     expect(report.php?.extensions?.length > 0 && report.wordPressVersion === WP, 'no PHP extensions or WordPress version');
     expect(report.plugins.some((p) => p.file === 'anypress-export/anypress-export.php'), 'active plugins missing');
     expect(report.files?.complete && report.files.uploadsBytes >= BIG_FILE_BYTES, `files: ${JSON.stringify(report.files)}`);

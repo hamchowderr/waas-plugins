@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: AnyPress shop
- * Description: The shop's block styles (sketch panels, tick lists, size table) and two small shortcodes for the plan pages (the size switcher and the way back to the plans), and the AnyPress logo and support address in WaaS Host's emails. Installed by the shop's `design` step.
+ * Description: The shop's block styles (sketch panels, tick lists, size table) and two small shortcodes for the plan pages (the size switcher and the way back to the plans), and the AnyPress logo and support address in AnyPress Host's emails. Installed by the shop's `design` step.
  * Version: 1.1.0
  */
 
@@ -215,9 +215,9 @@ add_filter(
 );
 
 /**
- * WaaS Host's website emails: the AnyPress mark next to the name, the AnyPress colour strip, and support@anypress.io in
+ * AnyPress Host's website emails: the AnyPress mark next to the name, the AnyPress colour strip, and support@anypress.io in
  * the footer and Reply-To, as in the AnyPress API's account emails.
  */
-add_filter( 'waas_email_logo_url', static fn () => 'https://anypress.io/logo-512.png' );
-add_filter( 'waas_email_support_address', static fn () => 'support@anypress.io' );
-add_filter( 'waas_email_accent', static fn () => 'linear-gradient(90deg,#ffc75a,#ff7a2a,#ee2f5e,#d21fa4)' );
+add_filter( 'anypress_email_logo_url', static fn () => 'https://anypress.io/logo-512.png' );
+add_filter( 'anypress_email_support_address', static fn () => 'support@anypress.io' );
+add_filter( 'anypress_email_accent', static fn () => 'linear-gradient(90deg,#ffc75a,#ff7a2a,#ee2f5e,#d21fa4)' );

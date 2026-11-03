@@ -1,7 +1,7 @@
 <?php
-// Prints the waas-host API reachability and production version, without secrets.
-$http = new \WaaSHost\Core\HttpService(new \WaaSHost\Core\ConfigService());
-$svc = new \WaaSHost\Core\ProvisioningApi($http);
+// Prints the anypress-host API reachability and production version, without secrets.
+$http = new \AnyPressHost\Core\HttpService(new \AnyPressHost\Core\ConfigService());
+$svc = new \AnyPressHost\Core\ProvisioningApi($http);
 try {
     $ok = $svc->test_reachability();
     $svc->update_is_reachable($ok);
@@ -11,4 +11,4 @@ try {
 } catch (\Throwable $e) {
     echo 'error: ' . get_class($e) . ': ' . $e->getMessage() . "\n";
 }
-echo 'adapter: ' . (class_exists('\WaaSHost\Commerce\Commerce') ? get_class(\WaaSHost\Commerce\Commerce::adapter()) : 'n/a') . "\n";
+echo 'adapter: ' . (class_exists('\AnyPressHost\Commerce\Commerce') ? get_class(\AnyPressHost\Commerce\Commerce::adapter()) : 'n/a') . "\n";

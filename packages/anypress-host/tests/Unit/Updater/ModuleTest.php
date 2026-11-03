@@ -1,0 +1,85 @@
+<?php
+
+namespace Tests\Unit\Updater;
+
+use Brain\Monkey\Functions;
+use Tests\Unit\TestCase;
+use AnyPressHost\Core\ConfigService;
+use AnyPressHost\Updater\Module;
+use AnyPressHost\Updater\Updater;
+
+if (!defined('ANYPRESS_HOST_SLUG')) {
+    define('ANYPRESS_HOST_SLUG', 'anypress-host');
+    define('ANYPRESS_HOST_BASENAME', 'anypress-host/anypress-host.php');
+    define('ANYPRESS_HOST_UPDATE_URI', 'anypress-host');
+    define('ANYPRESS_HOST_VERSION', '2.2.7');
+}
+
+/**
+ * AnyPress Host's updates come only from our channel (the shared Updater, tested in
+ * packages/anypress-updater), and it lends the storefront's API credentials to anypress-payments.
+ */
+class ModuleTest extends TestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Functions\when('wp_parse_url')->alias('parse_url');
+        Functions\when('sanitize_url')->alias(function ($url) { return strpos($url, '://') === false ? 'http://' . $url : $url; });
+    }
+
+    private function config($base_url, $key, $secret): ConfigService
+    {
+        $config = \Mockery::mock(ConfigService::class);
+        $config->shouldReceive('get_api_base_url')->andReturn($base_url);
+        $config->shouldReceive('get_api_key')->andReturn($key);
+        $config->shouldReceive('get_api_secret')->andReturn($secret);
+        return $config;
+    }
+
+    public function test_credentials_come_from_the_api_settings(): void
+    {
+        $this->assertSame(
+            ['base_url' => 'https://waas-api.example.test', 'key' => 'key-id', 'secret' => 'not-a-secret'],
+            Module::credentials($this->config('https://waas-api.example.test', 'key-id', 'not-a-secret'))
+        );
+        $this->assertNull(Module::credentials($this->config(false, 'key-id', 'not-a-secret')));
+        $this->assertNull(Module::credentials($this->config('https://waas-api.example.test', '', 'not-a-secret')));
+        $this->assertNull(Module::credentials($this->config('https://waas-api.example.test', 'key-id', false)));
+    }
+
+    public function test_it_lends_the_credentials_to_our_other_plugins(): void
+    {
+        $captured = null;
+        Functions\when('add_filter')->alias(function ($hook, $callback) use (&$captured) {
+            if ($hook === 'anypress_update_credentials') {
+                $captured = $callback;
+            }
+            return true;
+        });
+
+        Module::init($this->config('https://waas-api.example.test', 'key-id', 'not-a-secret'));
+
+        $this->assertIsCallable($captured);
+        $this->assertSame('key-id', $captured(null)['key']);
+        $other = ['base_url' => 'https://elsewhere.test', 'key' => 'k', 'secret' => 's'];
+        $this->assertSame($other, $captured($other), 'Credentials another filter already supplied are kept.');
+    }
+
+    public function test_with_the_built_in_signing_key_the_update_hooks_are_registered_without_asking_the_api_yet(): void
+    {
+        Functions\expect('wp_remote_get')->never();
+        $this->assertNotEmpty(Updater::PUBLIC_KEYS);
+        $this->assertInstanceOf(Updater::class, Module::init($this->config('https://waas-api.example.test', 'key-id', 'not-a-secret')));
+
+        $this->assertNotFalse(has_filter('update_plugins_anypress-host'));
+        $this->assertNotFalse(has_filter('upgrader_pre_download'));
+        $this->assertNotFalse(has_filter('plugins_api'));
+    }
+
+    public function test_the_copy_of_the_shared_updater_is_in_sync(): void
+    {
+        exec(escapeshellarg(dirname(__DIR__, 5) . '/scripts/sync-updater.sh') . ' --check 2>&1', $out, $status);
+        $this->assertSame(0, $status, implode("\n", $out));
+    }
+}

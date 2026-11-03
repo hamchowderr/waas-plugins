@@ -8,7 +8,7 @@ X=/opt/wpcli/x
 WP="sh $X/wp"
 # The shop's compose sets these; the test storefront uses the defaults.
 URL=${SITE_URL:-https://storefront-test.otakusolutions.io}
-TITLE=${SITE_TITLE:-WaaS Storefront (test)}
+TITLE=${SITE_TITLE:-AnyPress Storefront (test)}
 case "${1:-}" in
   bootstrap)
     mkdir -p /opt/wpcli
@@ -25,8 +25,8 @@ case "${1:-}" in
     # wordpress.org plugins: install once, then just activate. Re-installing one that a newer release exists for
     # fails ("Destination folder already exists"); updating them is a separate step, done on purpose.
     # SHOP_PLUGINS (the shop's compose) adds the AnyPress store template's plugins, so the shop runs what it sells.
-    # FluentSMTP is how storefront-test sends; a storefront with the platform's relay (WAAS_MAIL_B64) doesn't need it.
-    smtp=fluent-smtp; [ -z "${WAAS_MAIL_B64:-}" ] || smtp=
+    # FluentSMTP is how storefront-test sends; a storefront with the platform's relay (ANYPRESS_MAIL_B64) doesn't need it.
+    smtp=fluent-smtp; [ -z "${ANYPRESS_MAIL_B64:-}" ] || smtp=
     for p in fluent-cart $smtp ${SHOP_PLUGINS:-}; do
       $WP plugin is-installed $p || $WP plugin install $p
       $WP plugin activate $p
@@ -45,18 +45,18 @@ case "${1:-}" in
     ! $WP plugin is-active wp-fusion-lite || $WP eval-file $X/wpfusion.php
     # The rest of the store template's presets that fit a shop (remote/defaults.php).
     [ -z "${SHOP_PLUGINS:-}" ] || $WP eval-file $X/defaults.php --user=admin
-    $WP plugin install $X/waas-host.zip --activate --force
-    [ ! -f $X/waas-payments.zip ] || $WP plugin install $X/waas-payments.zip --activate --force
+    $WP plugin install $X/anypress-host.zip --activate --force
+    [ ! -f $X/anypress-payments.zip ] || $WP plugin install $X/anypress-payments.zip --activate --force
     $WP plugin list ;;
   configure)
-    [ -n "${WAAS_API_KEY:-}" ] && [ -n "${WAAS_API_SECRET:-}" ] || { echo WAAS_API_KEY/SECRET missing; exit 1; }
-    $WP option update waas_api_base_url "${WAAS_API_URL:-https://waas-api.otakusolutions.io}"
-    $WP option update waas_api_key "$WAAS_API_KEY" >/dev/null
-    $WP option update waas_api_secret "$WAAS_API_SECRET" >/dev/null
+    [ -n "${ANYPRESS_API_KEY:-}" ] && [ -n "${ANYPRESS_API_SECRET:-}" ] || { echo ANYPRESS_API_KEY/SECRET missing; exit 1; }
+    $WP option update anypress_api_base_url "${ANYPRESS_API_URL:-https://waas-api.otakusolutions.io}"
+    $WP option update anypress_api_key "$ANYPRESS_API_KEY" >/dev/null
+    $WP option update anypress_api_secret "$ANYPRESS_API_SECRET" >/dev/null
     echo api key and secret set
-    $WP option update waas_notification_settings_send_tenant_ready_email on
+    $WP option update anypress_notification_settings_send_tenant_ready_email on
     # Email (password resets, orders, store-ready notices) through the platform's relay, like a store's.
-    if [ -n "${WAAS_MAIL_B64:-}" ]; then
+    if [ -n "${ANYPRESS_MAIL_B64:-}" ]; then
       mkdir -p /var/www/html/wp-content/mu-plugins && cp $X/waas-mail.php /var/www/html/wp-content/mu-plugins/ && echo mail relay on
     fi
     $WP eval-file $X/check.php ;;

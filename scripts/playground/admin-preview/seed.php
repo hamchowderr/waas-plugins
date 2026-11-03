@@ -1,7 +1,7 @@
 <?php
 // Test only: a storefront that sells websites, for previewing the AnyPress admin pages. Connected (the API calls are
 // answered here, so nothing leaves Playground), with its plans loaded and sample customers and websites in every
-// state. With WAAS_API_KEY and WAAS_API_SECRET in wp-config it is a ready-made storefront, which makes its website
+// state. With ANYPRESS_API_KEY and ANYPRESS_API_SECRET in wp-config it is a ready-made storefront, which makes its website
 // plans in FluentCart on the first wp-admin page view.
 add_filter('pre_http_request', function ($pre, $args, $url) {
     if (strpos($url, 'https://api.anypress.io/') !== 0) {
@@ -12,27 +12,27 @@ add_filter('pre_http_request', function ($pre, $args, $url) {
 }, 10, 3);
 
 add_action('init', function () {
-    if (get_option('waas_admin_preview_seeded') || !class_exists('\FluentCart\App\Models\Customer')) {
+    if (get_option('anypress_admin_preview_seeded') || !class_exists('\FluentCart\App\Models\Customer')) {
         return;
     }
-    update_option('waas_admin_preview_seeded', 1);
+    update_option('anypress_admin_preview_seeded', 1);
 
     update_option('blogname', 'Summit Sites');
-    update_option('waas_api_base_url', 'https://api.anypress.io');
-    update_option('waas_api_key', 'ak_live_7f3c9a21');
-    update_option('waas_api_secret', 'preview-secret');
-    update_option('waas_root_domain', 'anypress.site');
-    update_option('waas_dns_a_records', ['203.0.113.10']);
-    update_option('waas_dns_cname_target', 'stores.anypress.site');
-    update_option(\WaaSHost\Core\ProvisioningApi::CAN_REACH_API_OPTION_NAME, true);
+    update_option('anypress_api_base_url', 'https://api.anypress.io');
+    update_option('anypress_api_key', 'ak_live_7f3c9a21');
+    update_option('anypress_api_secret', 'preview-secret');
+    update_option('anypress_root_domain', 'anypress.site');
+    update_option('anypress_dns_a_records', ['203.0.113.10']);
+    update_option('anypress_dns_cname_target', 'stores.anypress.site');
+    update_option(\AnyPressHost\Core\ProvisioningApi::CAN_REACH_API_OPTION_NAME, true);
     // The AnyPress store template's roles (templates/anypress-store/roles.json), as "Load plans" stores them.
     $roles = [];
     foreach (['website' => 'Website', 'bookings' => 'Bookings', 'online-store' => 'Online store', 'community' => 'Community & courses', 'everything' => 'Everything', 'store' => 'Everything (before site types)'] as $slug => $title) {
         $roles[$slug] = (object) ['title' => $title, 'plugins' => []];
     }
-    update_option(\WaaSHost\Features\PluginBootstrap::ROLES_WP_OPTION, (object) $roles);
-    update_option(\WaaSHost\Features\Webhooks::OPTION, ['id' => 'wh_preview', 'secret' => 'preview', 'url' => home_url('/wp-json/waas-host/v1/webhook'), 'last_event_at' => time() - 240, 'error' => '']);
-    update_option('waas_volume_discount_enabled', 'on');
+    update_option(\AnyPressHost\Features\PluginBootstrap::ROLES_WP_OPTION, (object) $roles);
+    update_option(\AnyPressHost\Features\Webhooks::OPTION, ['id' => 'wh_preview', 'secret' => 'preview', 'url' => home_url('/wp-json/anypress-host/v1/webhook'), 'last_event_at' => time() - 240, 'error' => '']);
+    update_option('anypress_volume_discount_enabled', 'on');
 
     $now = time();
     $sites = [
@@ -52,12 +52,12 @@ add_action('init', function () {
             'currency' => 'USD', 'billing_interval' => 'monthly', 'recurring_amount' => 1200, 'recurring_total' => 1200,
             'status' => $state === 'Suspended' ? 'canceled' : 'active', 'next_billing_date' => gmdate('Y-m-d H:i:s', $now + 20 * 86400),
         ]);
-        $sub->updateMeta('waas_website_name', $name);
-        $sub->updateMeta('waas_domain_name', $slug . '.anypress.site');
-        $sub->updateMeta('waas_tenant_state', $state);
-        $sub->updateMeta('waas_tenant_external_id', 'preview-' . $i);
+        $sub->updateMeta('anypress_website_name', $name);
+        $sub->updateMeta('anypress_domain_name', $slug . '.anypress.site');
+        $sub->updateMeta('anypress_tenant_state', $state);
+        $sub->updateMeta('anypress_tenant_external_id', 'preview-' . $i);
         if ($failure) {
-            $sub->updateMeta('waas_store_job_failure', $failure);
+            $sub->updateMeta('anypress_store_job_failure', $failure);
         }
     }
 }, 99);

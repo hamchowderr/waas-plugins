@@ -1,6 +1,6 @@
 name: PR Preview - Publish
-# Adds a "Preview in WordPress Playground" button to the pull request: a throwaway storefront with WaaS Host,
-# FluentCart and the AnyPress theme, signed in as admin on WaaS Host's Getting started page. Playground in the browser only
+# Adds a "Preview in WordPress Playground" button to the pull request: a throwaway storefront with AnyPress Host,
+# FluentCart and the AnyPress theme, signed in as admin on AnyPress Host's Getting started page. Playground in the browser only
 # has SQLite, so FluentCart shows a "requires MySQL/MariaDB" notice there; it still installs its tables and its
 # pages open, but check real orders and payments on a store (MariaDB) or scripts/test-env.sh. GitHub runs this
 # file from main only, so changes to it take effect after they merge.
@@ -19,7 +19,7 @@ jobs:
       blueprint: |
         {
           "$schema": "https://playground.wordpress.net/blueprint-schema.json",
-          "landingPage": "/wp-admin/admin.php?page=waas-admin",
+          "landingPage": "/wp-admin/admin.php?page=anypress-admin",
           "preferredVersions": { "php": "8.3", "wp": "latest" },
           "steps": [
             { "step": "login", "username": "admin" },
@@ -30,7 +30,7 @@ jobs:
               "pluginData": { "resource": "wordpress.org/plugins", "slug": "fluent-cart" },
               "options": { "activate": true } },
             { "step": "installPlugin",
-              "pluginData": { "resource": "url", "url": "{{ARTIFACT_URL:waas-host}}" },
+              "pluginData": { "resource": "url", "url": "{{ARTIFACT_URL:anypress-host}}" },
               "options": { "activate": true } }
           ]
         }

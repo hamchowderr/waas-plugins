@@ -1,5 +1,5 @@
-// Smoke test of WaaS Client on WordPress Playground (WordPress and PHP running inside Node: no Docker, no
-// database server). Boots WordPress with WaaS Client from this checkout, the AnyPress theme and the store
+// Smoke test of AnyPress Client on WordPress Playground (WordPress and PHP running inside Node: no Docker, no
+// database server). Boots WordPress with AnyPress Client from this checkout, the AnyPress theme and the store
 // template's starter pages, then calls the site-editing routes the AnyPress connector uses (signed with a
 // throwaway site key), the same actions as WordPress abilities, and the "AnyPress website" MCP server once the
 // owner switch turns on the MCP Adapter, and the dashboard's "Log in to WordPress" link (Api\AdminLogin), and checks the answers.
@@ -8,7 +8,7 @@
 //   npm run smoke             # run the checks, exit 1 on a failure
 //   npm run serve             # same site, left running at http://127.0.0.1:9400 to look around (admin / password)
 //
-// Needs Node 24.18+ and packages/waas-client/vendor (composer install in packages/waas-client).
+// Needs Node 24.18+ and packages/anypress-client/vendor (composer install in packages/anypress-client).
 // Environment:
 //   PLAYGROUND_WP, PLAYGROUND_PHP   WordPress and PHP versions (default 7.1.3 and 8.3, what the store template uses)
 //   STARTER_PAGES                   local copy of anypress-patterns.php; default: the API repo's main branch
@@ -24,7 +24,7 @@ import { fileURLToPath } from 'node:url';
 import { runCLI } from '@wp-playground/cli';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const CLIENT = resolve(ROOT, 'packages/waas-client');
+const CLIENT = resolve(ROOT, 'packages/anypress-client');
 const WP = process.env.PLAYGROUND_WP || '7.1.3';
 const PHP = process.env.PLAYGROUND_PHP || '8.3';
 const PORT = Number(process.env.PLAYGROUND_PORT || 9400);
@@ -35,13 +35,13 @@ const THEME = resolve(ROOT, 'scripts/playground/preview-zips/anypress.zip');
 const MCP_ADAPTER = 'https://downloads.wordpress.org/plugin/mcp-adapter.0.7.1.zip';
 const STARTER_PAGES_URL =
     'https://raw.githubusercontent.com/hamchowderr/waas-provisioning-api/main/templates/anypress-store/mu-plugins/anypress-patterns.php';
-// A throwaway key for this test site only; real stores get theirs from the API as WAAS_SITE_KEY.
+// A throwaway key for this test site only; real stores get theirs from the API as ANYPRESS_SITE_KEY.
 const SITE_KEY = randomBytes(24).toString('hex');
 // Stands in for a signed-in user on the abilities checks: requests carrying it act as that user.
 const USER_TOKEN = randomBytes(24).toString('hex');
 
 if (!existsSync(resolve(CLIENT, 'vendor/autoload.php'))) {
-    console.error('packages/waas-client/vendor is missing: run composer install in packages/waas-client first.');
+    console.error('packages/anypress-client/vendor is missing: run composer install in packages/anypress-client first.');
     process.exit(1);
 }
 
@@ -56,28 +56,28 @@ const blueprint = {
     login: SERVE,
     steps: [
         { step: 'installTheme', themeData: { resource: 'literal', name: 'anypress.zip', contents: readFileSync(THEME) }, options: { activate: true } },
-        { step: 'activatePlugin', pluginPath: 'waas-client/index.php' },
+        { step: 'activatePlugin', pluginPath: 'anypress-client/anypress-client.php' },
         { step: 'installPlugin', pluginData: { resource: 'url', url: MCP_ADAPTER }, options: { activate: false } },
         { step: 'writeFile', path: '/wordpress/wp-content/mu-plugins/anypress-patterns.php', data: starterPages },
         // The business details a purchase leaves on a store, with the checkout's optional "what does your business do".
         {
             step: 'setSiteOptions',
             options: {
-                waas_store_owner: JSON.stringify({ name: 'Rosa Diaz', phone: '555-0100', city: 'Austin', state: 'TX', country: 'US', about: 'A small bakery: sourdough and cakes to order.' }),
-                waas_tenant_roles: ['website'],
+                anypress_store_owner: JSON.stringify({ name: 'Rosa Diaz', phone: '555-0100', city: 'Austin', state: 'TX', country: 'US', about: 'A small bakery: sourdough and cakes to order.' }),
+                anypress_tenant_roles: ['website'],
             },
         },
         {
             // Stores get the site key as an environment variable on their container; here a must-use plugin sets it.
             step: 'writeFile',
-            path: '/wordpress/wp-content/mu-plugins/waas-test-site-key.php',
-            data: `<?php putenv('WAAS_SITE_KEY=${SITE_KEY}');\n`,
+            path: '/wordpress/wp-content/mu-plugins/anypress-test-site-key.php',
+            data: `<?php putenv('ANYPRESS_SITE_KEY=${SITE_KEY}');\n`,
         },
         {
             // Test only: X-Test-User: <token>:<login> signs the request in as that user, and a contributor exists
             // (can't edit pages or styles) to check the abilities' permissions.
             step: 'writeFile',
-            path: '/wordpress/wp-content/mu-plugins/waas-test-users.php',
+            path: '/wordpress/wp-content/mu-plugins/anypress-test-users.php',
             data: `<?php
 add_action('init', function () {
     if (!get_user_by('login', 'contributor')) {
@@ -103,15 +103,15 @@ const cli = await runCLI({
     php: PHP,
     port: PORT,
     blueprint,
-    mount: [{ hostPath: CLIENT, vfsPath: '/wordpress/wp-content/plugins/waas-client' }],
+    mount: [{ hostPath: CLIENT, vfsPath: '/wordpress/wp-content/plugins/anypress-client' }],
     verbosity: 'quiet',
 });
 const base = cli.serverUrl.replace(/\/$/, '');
 console.log(`WordPress ${WP} on PHP ${PHP} at ${base}`);
 
-/** Calls a site route as the AnyPress API does: X-Waas-Signature over time, nonce, method, route and body hash. */
+/** Calls a site route as the AnyPress API does: X-AnyPress-Signature over time, nonce, method, route and body hash. */
 async function site(method, path, body, { sign = true } = {}) {
-    const route = `/waas-client/v1/site${path}`;
+    const route = `/anypress-client/v1/site${path}`;
     const json = body === undefined ? '' : JSON.stringify(body);
     const headers = { 'content-type': 'application/json' };
     if (sign) {
@@ -124,7 +124,7 @@ async function site(method, path, body, { sign = true } = {}) {
             .join('&');
         const signed = sorted ? `${pathname}?${sorted}` : pathname;
         const payload = [t, n, method, signed, createHash('sha256').update(json).digest('hex')].join('\n');
-        headers['x-waas-signature'] = `t=${t},n=${n},s=${createHmac('sha256', SITE_KEY).update(payload).digest('hex')}`;
+        headers['x-anypress-signature'] = `t=${t},n=${n},s=${createHmac('sha256', SITE_KEY).update(payload).digest('hex')}`;
     }
     // Pretty /wp-json/ links as stores use: with ?rest_route= WordPress counts rest_route as a query parameter,
     // which the signature then covers.
@@ -198,17 +198,17 @@ await check('unsigned requests are refused', async () => {
 await check('a reused signature is refused', async () => {
     const t = String(Math.floor(Date.now() / 1000));
     const n = randomBytes(16).toString('hex');
-    const payload = [t, n, 'GET', '/waas-client/v1/site', createHash('sha256').update('').digest('hex')].join('\n');
+    const payload = [t, n, 'GET', '/anypress-client/v1/site', createHash('sha256').update('').digest('hex')].join('\n');
     const header = `t=${t},n=${n},s=${createHmac('sha256', SITE_KEY).update(payload).digest('hex')}`;
-    const url = `${base}/wp-json/waas-client/v1/site`;
-    const first = await fetch(url, { headers: { 'x-waas-signature': header } });
-    const second = await fetch(url, { headers: { 'x-waas-signature': header } });
+    const url = `${base}/wp-json/anypress-client/v1/site`;
+    const first = await fetch(url, { headers: { 'x-anypress-signature': header } });
+    const second = await fetch(url, { headers: { 'x-anypress-signature': header } });
     expect(first.status === 200 && second.status === 401, `first ${first.status}, second ${second.status}`);
 });
 
 /** A "Log in to WordPress" link as the AnyPress API makes it (src/wplogin.ts): t, n, s over LOGIN and the route. */
 function loginLink(key = SITE_KEY, t = String(Math.floor(Date.now() / 1000))) {
-    const route = '/waas-client/v1/admin-login';
+    const route = '/anypress-client/v1/admin-login';
     const n = randomBytes(16).toString('hex');
     const payload = [t, n, 'LOGIN', route, createHash('sha256').update('').digest('hex')].join('\n');
     return `${base}/wp-json${route}?${new URLSearchParams({ t, n, s: createHmac('sha256', key).update(payload).digest('hex') })}`;
@@ -232,7 +232,7 @@ await check('log in to WordPress: a signed link signs in once and opens wp-admin
 
 await check('log in to WordPress: unsigned, wrong-key and old links are refused', async () => {
     for (const [what, link] of [
-        ['unsigned', `${base}/wp-json/waas-client/v1/admin-login`],
+        ['unsigned', `${base}/wp-json/anypress-client/v1/admin-login`],
         ['another key', loginLink(randomBytes(24).toString('hex'))],
         ['10 minutes old', loginLink(SITE_KEY, String(Math.floor(Date.now() / 1000) - 600))],
     ]) {
@@ -467,9 +467,9 @@ await check('MCP: the owner turns it on from Your plan', async () => {
 require '/wordpress/wp-load.php';
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
 wp_set_current_user(1);
-$_POST = $_REQUEST = ['mcp' => 'on', '_wpnonce' => wp_create_nonce('waas_client_mcp')];
-add_filter('wp_redirect', function () { echo json_encode(['on' => get_option('waas_client_mcp'), 'active' => is_plugin_active('mcp-adapter/mcp-adapter.php')]); return false; });
-(new WaaSClient\\Features\\McpServer())->save();
+$_POST = $_REQUEST = ['mcp' => 'on', '_wpnonce' => wp_create_nonce('anypress_client_mcp')];
+add_filter('wp_redirect', function () { echo json_encode(['on' => get_option('anypress_client_mcp'), 'active' => is_plugin_active('mcp-adapter/mcp-adapter.php')]); return false; });
+(new AnyPressClient\\Features\\McpServer())->save();
 `,
     });
     const state = JSON.parse(out.text.slice(out.text.indexOf('{')));
@@ -496,6 +496,27 @@ await check('MCP 2026-07-28: discover, every site ability is a tool, get-site ru
     expectStatus(discover, 200);
     expect(JSON.stringify(discover.data.result ?? {}).includes('AnyPress website'), `discover ${JSON.stringify(discover.data).slice(0, 300)}`);
     await mcpTools('2026-07-28');
+});
+
+await check("brand: AnyPress Client by default, the reseller's brand once anypress_brand_name is set", async () => {
+    const names = async (brand) => {
+        const out = await cli.playground.run({
+            code: `<?php
+require '/wordpress/wp-load.php';
+require_once ABSPATH . 'wp-admin/includes/plugin.php';
+update_option('anypress_brand_name', ${JSON.stringify(brand)});
+$all = apply_filters('all_plugins', get_plugins());
+$mine = $all[ANYPRESS_CLIENT_BASENAME];
+echo json_encode(['name' => $mine['Name'], 'author' => $mine['Author'], 'menu' => AnyPressClient\\Core\\Brand::plugin_name(), 'mcp' => AnyPressClient\\Core\\Brand::name() . ' website']);
+`,
+        });
+        return JSON.parse(out.text.slice(out.text.indexOf('{')));
+    };
+    const plain = await names('');
+    expect(plain.name === 'AnyPress Client' && plain.menu === 'AnyPress Client' && plain.author === 'Otaku Solutions', `no brand: ${JSON.stringify(plain)}`);
+    const branded = await names('KnowBS');
+    expect(branded.name === 'KnowBS Client' && branded.menu === 'KnowBS Client' && branded.author === 'KnowBS' && branded.mcp === 'KnowBS website', `KnowBS: ${JSON.stringify(branded)}`);
+    await names('');
 });
 
 const failed = results.filter(([ok]) => !ok).length;
