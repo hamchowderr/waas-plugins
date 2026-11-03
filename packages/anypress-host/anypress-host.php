@@ -36,14 +36,14 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 /**
  * @package AnyPressHost
- * @version 2.11.0
+ * @version 2.11.1
  */
 /*
 Plugin Name: AnyPress Host
 Plugin URI: https://github.com/hamchowderr/waas-plugins
 Description: Sells AnyPress websites from your storefront: creates, suspends and restores each customer's website through the AnyPress API, with FluentCart or WooCommerce (and WooCommerce Subscriptions) for billing.
 Author: Otaku Solutions
-Version: 2.11.0
+Version: 2.11.1
 Author URI: https://otakusolutions.io
 Update URI: anypress-host
 Requires at least: 6.4
@@ -56,7 +56,7 @@ Text Domain: anypress-host
 define( 'ANYPRESS_HOST_SLUG', 'anypress-host' );
 define( 'ANYPRESS_HOST_BASENAME', plugin_basename( __FILE__ ) );
 define( 'ANYPRESS_HOST_UPDATE_URI', 'anypress-host' );
-define( 'ANYPRESS_HOST_VERSION', '2.11.0' );
+define( 'ANYPRESS_HOST_VERSION', '2.11.1' );
 define( 'ANYPRESS_HOST_TEXTDOMAIN', 'anypress-host' );
 
 // Settings and data saved before the AnyPress names (2.11.0) move to them before anything reads them
