@@ -5,7 +5,7 @@ name: Release plugin
 # throwaway key and uploads nothing. Promote a tested beta to stable with the "Promote release" workflow.
 # "Tag and release plugin" calls it to publish a tag it has just made (tags it pushes start no workflow themselves).
 #
-# Secrets: ANYPRESS_RELEASE_SIGNING_KEY (ed25519 private key PEM), R2_RELEASES_ACCESS_KEY_ID and
+# Secrets: WAAS_RELEASE_SIGNING_KEY (ed25519 private key PEM), R2_RELEASES_ACCESS_KEY_ID and
 # R2_RELEASES_SECRET_ACCESS_KEY (an R2 token for the releases bucket only).
 # Variables: R2_ENDPOINT (https://<account id>.r2.cloudflarestorage.com), R2_RELEASES_BUCKET (default waas-releases).
 on:
@@ -86,7 +86,7 @@ jobs:
       - name: Sign
         id: sign
         env:
-          SIGNING_KEY: ${{ secrets.ANYPRESS_RELEASE_SIGNING_KEY }}
+          SIGNING_KEY: ${{ secrets.WAAS_RELEASE_SIGNING_KEY }}
         run: |
           umask 077
           key="$RUNNER_TEMP/release-key.pem"
@@ -94,7 +94,7 @@ jobs:
             echo "Dry run: signing with a throwaway key"
             openssl genpkey -algorithm ed25519 -out "$key"
           else
-            [ -n "$SIGNING_KEY" ] || { echo "::error::The ANYPRESS_RELEASE_SIGNING_KEY secret is not set"; exit 1; }
+            [ -n "$SIGNING_KEY" ] || { echo "::error::The WAAS_RELEASE_SIGNING_KEY secret is not set"; exit 1; }
             printf '%s\n' "$SIGNING_KEY" > "$key"
           fi
           echo "signature=$(scripts/release/sign.sh ${{ steps.tag.outputs.slug }} ${{ steps.tag.outputs.version }} ${{ steps.build.outputs.sha256 }} "$key")" >> "$GITHUB_OUTPUT"
