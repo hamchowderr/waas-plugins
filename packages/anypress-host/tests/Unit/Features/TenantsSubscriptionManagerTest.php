@@ -85,6 +85,19 @@ class TenantsSubscriptionManagerTest extends StoreJobsTestCase
         $this->assertSame('medium', $this->queue(901)[0]['args']['request']['size']);
     }
 
+    public function test_a_storefront_that_never_saved_the_role_setting_sends_administrator(): void
+    {
+        // A new seller's storefront has no saved role, and the setting's default is registered for wp-admin only.
+        $this->stub_new_store_functions();
+        unset($this->options[Tenant::DEFAULT_USER_ROLE]);
+        $this->manager->create_tenant_when_subscription_created(901, $this->purchase());
+        $this->api->expects('create_tenant')->once()->with(Mockery::on(fn ($args) => $args['wordpress_user_role'] === 'administrator'))
+            ->andReturn((object) ['externalId' => '5f0b7c3e-2d1a-4e8b-9c6f-0a1b2c3d4e5f', 'baseDomain' => 't-1.stores.waas.example', 'customDomain' => '']);
+        Actions\expectDone('anypress_tenant_linked_to_subscription')->once()->with(901);
+
+        $this->run_due(901);
+    }
+
     public function test_the_create_job_sends_the_chosen_external_id_and_links_the_store(): void
     {
         $this->stub_new_store_functions();

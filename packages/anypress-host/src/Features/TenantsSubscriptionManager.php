@@ -283,7 +283,8 @@ class TenantsSubscriptionManager
         if ($tenant === null) {
             $args = $store['request'];
             $args['external_id'] = $external_id;
-            $args['wordpress_user_role'] = get_option(Tenant::DEFAULT_USER_ROLE);
+            // The setting's 'administrator' default is registered for wp-admin only; jobs run from cron, so give it here too.
+            $args['wordpress_user_role'] = (string) get_option(Tenant::DEFAULT_USER_ROLE, 'administrator') ?: 'administrator';
             $args['php_constants']['ANYPRESS_PUBLIC_KEY'] = ['value' => base64_encode($public_key), 'isPrivate' => false];
             $args['php_constants']['ANYPRESS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS'] = [
                 'value' => apply_filters('anypress_remove_tenant_administrator_plugin_capabilities', true) ? "true" : "false",
