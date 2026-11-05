@@ -240,6 +240,36 @@ jobs:
         working-directory: scripts/playground
         run: npm run crm-switch
 
+  playground-phone:
+    # The phone receptionist's store routes (/site/phone/*) on a WordPress Playground site with FluentBooking and
+    # FluentCRM: services, open times, a phone booking, the same time refused, and the caller saved with tags.
+    name: anypress-client phone routes on WordPress Playground
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/anypress-client
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: Phone routes test
+        working-directory: scripts/playground
+        run: npm run phone
+
   playground-moving:
     # The support, affiliate and community switches (wp anypress support|affiliate|community switch and their abilities)
     # on a WordPress Playground site with Fluent Support, FluentAffiliate and FluentCommunity next to Awesome Support,

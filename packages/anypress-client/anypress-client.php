@@ -12,7 +12,7 @@ Plugin Name: AnyPress Client
 Plugin URI: https://github.com/hamchowderr/waas-plugins
 Description: Runs on each AnyPress website: one-click login from the storefront, turns plugins on or off to match the store's plan (roles), and lets the AnyPress connector edit the site's design and content.
 Author: Otaku Solutions
-Version: 2.13.1
+Version: 2.14.0
 Author URI: https://otakusolutions.io
 Update URI: anypress-client
 Requires at least: 6.9
@@ -25,12 +25,13 @@ Text Domain: anypress-client
 define( 'ANYPRESS_CLIENT_SLUG', 'anypress-client' );
 define( 'ANYPRESS_CLIENT_BASENAME', plugin_basename( __FILE__ ) );
 define( 'ANYPRESS_CLIENT_UPDATE_URI', 'anypress-client' );
-define( 'ANYPRESS_CLIENT_VERSION', '2.13.1' );
+define( 'ANYPRESS_CLIENT_VERSION', '2.14.0' );
 define( 'ANYPRESS_CLIENT_TEXTDOMAIN', 'anypress-client' );
 
 use AnyPressClient\Api\AdminLogin;
 use AnyPressClient\Api\SingleSignOnController;
 use AnyPressClient\Api\SiteAbilities;
+use AnyPressClient\Api\PhoneController;
 use AnyPressClient\Api\SiteController;
 use AnyPressClient\Core\Brand;
 use AnyPressClient\Core\DecryptionService;
@@ -87,7 +88,10 @@ if (!wp_doing_ajax()) {
 
     // Design and content for the AnyPress connector; answers only requests signed with the store's site key.
     // The same actions as WordPress abilities, for the signed-in user (WordPress's MCP Adapter, AI agents on the site).
-    new SiteAbilities(new SiteController());
+    $siteController = new SiteController();
+    new SiteAbilities($siteController);
+    // The phone receptionist: booking types, open times, phone bookings and callers in FluentCRM. Signed like the site routes.
+    new PhoneController($siteController);
     // "Sign in with your website": the page where a store owner allows an AI app to edit this website.
     new ConnectPage();
     // The same abilities as an MCP server, through WordPress's MCP Adapter, while the owner has it on (Your plan page).
