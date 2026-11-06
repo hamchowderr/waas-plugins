@@ -1,10 +1,10 @@
-# How AnyPress works, in plain words
+# How AnyPress Works, in Plain Words
 
 This page explains the whole system without the code words. It covers what each part is for, who uses it, and what happens when someone buys a website, logs in, stops paying or asks the assistant for a change. The other pages in this folder have the developer detail: file names, routes and settings.
 
 [Back to the overview](README.md)
 
-## A few words first
+## A Few Words First
 
 | Word | What it means here |
 |---|---|
@@ -15,8 +15,11 @@ This page explains the whole system without the code words. It covers what each 
 | **Server** | The machine the websites run on. Coolify starts and stops each website there, and each one gets its own WordPress and its own database. |
 | **Template** | The master copy every new website is made from. It already has the AnyPress theme, AnyPress Blocks, AnyPress Client and the Fluent plugins in it. |
 | **Plan** | What the owner paid for, such as Website, Bookings or Store. The plan decides which plugins are switched on. |
+| **Seller** | Someone who sells websites under their own name, from their own shop. |
+| **Reseller** | A seller with several shops on one monthly bill. Their websites carry the reseller's brand. |
+| **Dashboard** | app.anypress.io, where sellers, resellers and AnyPress see and manage everything. |
 
-## The whole system
+## The Whole System
 
 ```mermaid
 flowchart TB
@@ -71,11 +74,11 @@ Here is what each part does:
 
 Three rules hold the system together:
 
-1. **Only the shop and the AnyPress API talk to each other.** AnyPress Host asks the API for changes, and the API tells AnyPress Host when something is done. The websites never call the API themselves.
-2. **Every change to a website goes through the API.** The dashboard, the assistant, the phone receptionist and the automation apps all ask the API, and the API signs each request with that website's own key.
-3. **A website keeps working when the shop or the API is down.** Its visitors, its pages and its owner's login don't depend on either one.
+1. **The API is in charge of websites.** The shop, the dashboard, the assistant, the phone receptionist and the automation apps all ask the API to build or change a website, and the API tells the shop when something is done. The one exception is an AI app the owner connects to their website's own MCP server: it signs in to the website as a WordPress user.
+2. **Every website stands alone.** Each one has its own WordPress and its own database on the server, and the API signs every request to it with that website's own key. One website can't see another, and one going wrong doesn't touch the rest.
+3. **A website keeps working when the shop or the API is down.** Its pages, forms, bookings and orders keep working for visitors. Only new websites and changes made through the API wait until it is back.
 
-## Buying a website
+## Buying a Website
 
 ```mermaid
 sequenceDiagram
@@ -104,7 +107,7 @@ sequenceDiagram
 - If a step fails, the shop tries again after 1, 5, 15, 30 and 60 minutes. After the sixth failure it emails the admin, who can press **Retry**.
 - The owner's business details from checkout (name, phone, address, what the business does) go into the website, so the assistant and the receptionist know about the business from day one.
 
-## Logging in with one click
+## Logging In With One Click
 
 The shop and the website never share a password. When the website is made, the shop makes a matching pair of keys for it. The shop keeps one key and gives the other to the website.
 
@@ -132,7 +135,7 @@ sequenceDiagram
 - When anything is wrong, the website gives the same "no" without saying why, so nobody learns how to fake a link.
 - The dashboard has its own **Log in to WordPress** button, which works the same way with a link the AnyPress API signs.
 
-## The plan decides which plugins are on
+## The Plan Decides Which Plugins Are On
 
 Each plan has a list of plugins. For example, Website turns on Fluent Forms and FluentCRM, and Store adds FluentCart. The list is saved in the template, so every website has a copy.
 
@@ -149,7 +152,7 @@ flowchart LR
 - The owner can see their plan, and the plugins it includes, on **Dashboard > Your plan**.
 - The shop can stop owners installing or removing plugins themselves, so the plan stays as sold.
 
-## When payments stop, and start again
+## When Payments Stop, and Start Again
 
 ```mermaid
 stateDiagram-v2
@@ -169,7 +172,7 @@ stateDiagram-v2
 - **Paying again after deletion** brings the website back from its last backup, or builds a fresh one if no backup is left.
 - With AnyPress Payments (Authorize.Net), a renewal is never charged twice. If the bank doesn't answer, it looks the charge up the next day instead of charging again. FluentCart retries a declined card over the 7-day grace period and emails the owner a **Pay now** link.
 
-## How the shop hears back from the API
+## How the Shop Hears Back From the API
 
 When a website is ready, restored, deleted or gets a new address, the API tells the shop straight away with a signed message, called a webhook. The shop also checks in every minute, in case a message goes missing.
 
@@ -211,7 +214,7 @@ flowchart LR
 - A download that fails either check is thrown away before WordPress touches the installed plugin.
 - When a new template version becomes Production, the API moves every website onto it. If a website fails to move, the API puts it back on the old version.
 
-## Changing a website with AI
+## Changing a Website With AI
 
 There are three ways in, and they all use the same safe tools on the website. They can change pages, sections, colours, fonts, the header, the footer, menus and images, and nothing else: no plugins, no settings, no orders.
 
@@ -230,7 +233,7 @@ flowchart LR
 - WordPress keeps a revision of every change, so any change can be undone.
 - Each plan comes with a monthly number of assistant messages: 150, 300 or 600 for Small, Medium and Large.
 
-## The phone receptionist
+## The Phone Receptionist
 
 ```mermaid
 sequenceDiagram
@@ -255,7 +258,7 @@ sequenceDiagram
 - Urgent callers can be put through to the owner's mobile, or the receptionist takes a message.
 - Every call is logged and counted against the website's monthly minutes. When the minutes run out, it still answers and takes messages but doesn't book.
 
-## Moving an existing website in
+## Moving an Existing Website In
 
 ```mermaid
 flowchart LR
@@ -275,7 +278,7 @@ flowchart LR
 
 The rest of this page lists the features around those main parts, grouped by who they are for.
 
-## Inside every website
+## Inside Every Website
 
 What an owner gets without asking.
 
@@ -285,10 +288,10 @@ What an owner gets without asking.
 - **A CRM that's set up.** FluentCRM comes ready with tags for what people are interested in, have bought or used to buy, a contact form that feeds it, and draft follow-up emails the owner can switch on.
 - **The website assistant.** A chat beside the page editor that changes pages, colours, menus and images on request. It checks with the owner before anything visitors would see. Plans include 150, 300 or 600 messages a month by size.
 - **Room for AI apps.** On Your plan, the owner can switch on the website's own MCP server, so AI apps they trust can work on its pages. It only reaches pages and design, never settings or orders.
-- **My website.** On the shop's account page the owner logs in with one click, sees the address and email settings, and renames the website. If the name was taken, it asks for a new one.
+- **My website.** On the shop's account page the owner logs in with one click, adds their own domain and sets up their email sender. If the website's name was taken, it asks for a new one.
 - **A phone receptionist.** For local service businesses, it answers calls in the business's name, offers open times, books visits and saves each caller. Calls count against monthly minutes.
 
-## Selling websites
+## Selling Websites
 
 Sellers sell under their own name. Resellers run several shops on one bill.
 
@@ -301,7 +304,7 @@ Sellers sell under their own name. Resellers run several shops on one bill.
 - **Shops that keep up.** A seller's shop follows the template it started from, and every new AnyPress Host release is installed on every shop automatically.
 - **Team.** Owners of a seller account invite their team by email and choose who is an admin and who is a member.
 
-## Connecting other tools
+## Connecting Other Tools
 
 All of these live on the dashboard's Developers > Integrations page.
 
@@ -311,13 +314,27 @@ All of these live on the dashboard's Developers > Integrations page.
 - **n8n, Zapier and Make.** Ready-made apps for each. Workflows can create websites, change them, and start when something happens to one.
 - **Your own code.** The AnyPress API with a key and secret, SDKs for TypeScript and PHP, and webhooks that tell your app when a website is ready, restored or deleted.
 
-## Keeping it running
+## Keeping It Running
 
 The parts nobody sees until something goes wrong.
 
 - **Template versions.** Each change to the master copy becomes a new version. Making one Production moves every website onto it. A website that fails to move goes back to the version it was on.
-- **Fresh WordPress every night.** The WordPress images are refreshed each night, so websites pick up security fixes without anyone pressing a button.
+- **Fresh WordPress images.** The installer adds a nightly job that downloads the newest WordPress and database images, so new and restarted websites start on the latest security fixes.
 - **Retries and alerts.** Every job in the background tries again on its own. When one fails for good, AnyPress gets an email straight away, so a paid website is never left unbuilt.
 - **Watching the server.** The API watches the server's load and its own health, and outside monitors check them around the clock.
 - **Run it yourself.** The whole platform is open source. A one-command installer sets up the API, the database, DNS, the templates, a shop and the dashboard on your own server.
 - **Moving a site in.** The AnyPress Export plugin sends any WordPress site in with an import code. Switches then move its forms, shop, CRM, help desk, affiliates and community to the Fluent plugins, with a dry run and an undo.
+
+## For Developers
+
+The rest of this folder has the code-level detail behind each part of this page:
+
+| Part of this page | Developer page |
+|---|---|
+| The whole system, plans and updates | [How the Plugins Work](README.md) |
+| Buying, payments stopping, the shop hearing back | [AnyPress Host](anypress-host.md) |
+| One-click login, plan plugins, AI editing, the phone receptionist, moving a site in | [AnyPress Client](anypress-client.md) |
+| Card payments and renewals | [AnyPress Payments](anypress-payments.md) |
+| AI editing routes and MCP | [Site Editing API](../site-editing-api.md) |
+| My website on the shop | [Account API](../account-api.md) |
+| Signed updates | [Releases and Updates](../releases.md) |

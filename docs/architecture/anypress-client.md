@@ -1,16 +1,30 @@
 # AnyPress Client
 
-AnyPress Client lives inside the template that customer websites are copied from, so it is in every website. It does three things: checks one-click login tokens from the storefront, turns plugins on or off by plan role, and (on the template only) lets you edit the plan roles. It never calls the provisioning API. Paths are relative to `packages/anypress-client/`.
+AnyPress Client lives inside the template that customer websites are copied from, so it is in every website. Paths are relative to `packages/anypress-client/`.
+
+What it does:
+
+| Job | Where it runs | Section |
+|---|---|---|
+| Checks one-click login links from the storefront and the dashboard | Every website | [Checking a Login Token](#checking-a-login-token), [Log In to WordPress From the Dashboard](#log-in-to-wordpress-from-the-dashboard) |
+| Turns plugins on or off for the website's plan | Every website | [Plugins by Plan Role](#plugins-by-plan-role) |
+| Lets you edit the plan roles | The template only | [Two Modes](#two-modes-template-and-customer-website) |
+| Gives the AnyPress API, AI apps and WordPress's own AI tools a safe way to edit pages and design | Every website | [Site Tools, Abilities and MCP](#site-tools-abilities-and-mcp) |
+| Answers the phone receptionist: open times, bookings and callers | Every website | [Phone Receptionist Routes](#phone-receptionist-routes) |
+| Shows the website assistant beside the editor | Every website | [The Website Assistant Beside the Page](#the-website-assistant-beside-the-page) |
+| Moves forms, a WooCommerce shop, a CRM list, a help desk, affiliates or a community onto the Fluent plugins | Moved-in websites | [Moving Forms](#moving-forms-to-fluent-forms) and the sections after it |
+
+AnyPress Client calls the AnyPress API in one place only: the assistant's sign-in. Everything else the API asks of a website comes in as a request signed with that website's own site key.
 
 [Back to the overview](README.md)
 
-## Its name on a reseller's websites
+## Its Name on a Reseller's Websites
 
 On a reseller's websites the plugin goes by the reseller's brand instead of AnyPress: the plugins list shows "<brand> Client" with the reseller as author, and its menu, notices and the website's MCP server use the same name. The AnyPress API keeps the brand in the `anypress_brand_name` option, set when a website is built, restored or rolled back, and on every running website when the reseller's brand changes. Without the option the name is AnyPress Client. The plugin's folder, text domain and update address stay the same either way. Source: `src/Core/Brand.php`.
 
-## Two modes: template and customer website
+## Two Modes: Template and Customer Website
 
-The same plugin behaves differently depending on one environment variable, the "is tenant" flag, which the provisioning API sets to `true` on every customer website and nowhere else.
+The same plugin behaves differently depending on one environment variable, the "is tenant" flag, which the AnyPress API sets to `true` on every customer website and nowhere else.
 
 ```mermaid
 flowchart TB
@@ -24,7 +38,7 @@ flowchart TB
 
 Sources: `anypress-client.php`, `src/Features/PluginBootstrap.php`, `src/Features/AdminTenantSettings.php`, `src/Features/AdminRolesSettings.php`, `src/Features/CustomerPlanPage.php`.
 
-### What a customer website is given
+### What a Customer Website Is Given
 
 AnyPress Client reads everything it needs from the website itself. AnyPress Host puts the constants in its `POST /v1/tenants` request, and the API writes them into `wp-config.php`.
 
@@ -37,7 +51,7 @@ AnyPress Client reads everything it needs from the website itself. AnyPress Host
 | `anypress_host_website_url` | WordPress option | Set on the template, copied into each website | `CustomerPlanPage.php` |
 | `anypress-client-data/roles.json` | File | Shipped inside the template | `RolesManager.php`, `CustomerPlanPage.php` |
 
-## Plugins by plan role
+## Plugins by Plan Role
 
 On a customer website, on every `init`, `RolesManager` makes the active plugins match the website's plan.
 
@@ -64,7 +78,7 @@ Source: `src/Features/RolesManager.php` (`activate_enabled_plugins`, `plan_for`)
 
 How roles get from the template to the storefront is drawn in the overview: [Plan roles](README.md#plan-roles-which-plugins-a-website-gets).
 
-## Checking a login token
+## Checking a Login Token
 
 `GET /wp-json/anypress-client/v1/single_login/verify?token=...` is public, because the signed token is the credential. Every check must pass, and every failure gets the same 403 `anypress_single_login_failed`.
 
@@ -91,7 +105,36 @@ Sources: `src/Api/SingleSignOnController.php` (`verify_single_login`, `claims_ar
 - The username is the one AnyPress Host created the website with, built from the customer's name (`anypress-host/src/Features/SingleLoginService.php`).
 - The `anypress_sso_admin_url` filter can send the user somewhere other than wp-admin.
 
-## Talking to the storefront
+## Log In to WordPress From the Dashboard
+
+The dashboard's **Log in to WordPress** button works without the storefront. The AnyPress API signs a link to `GET /wp-json/anypress-client/v1/admin-login` with the website's site key. Opening it signs the browser in as the website's first administrator and goes to wp-admin. The link works once and only for a few minutes, and its signature covers a method no real request uses, so a signed site request can never be turned into a login. Source: `src/Api/AdminLogin.php`, checked by `src/Core/SignedRequest.php`.
+
+## Site Tools, Abilities and MCP
+
+Three ways in share one set of site tools, which change pages, sections, styles, the header, the footer, menus and images, and keep a revision of each change:
+
+| Way in | Who uses it | How it signs in |
+|---|---|---|
+| The site-editing REST routes (`/wp-json/anypress-client/v1/site/...`) | The AnyPress API, for the AnyPress connector, the website assistant and the automation apps | A request signed with the website's site key (`ANYPRESS_SITE_KEY`), checked by `src/Core/SignedRequest.php` |
+| WordPress abilities (`anypress/...`) | AI tools inside WordPress | The signed-in WordPress user's own capabilities |
+| The website's own MCP server (`/wp-json/mcp/anypress`) | AI apps the owner trusts | An application password for a WordPress user who can edit pages. The owner turns it on or off on the **Your plan** page. |
+
+Before an app reaches a website through the AnyPress API, the owner approves it on the website's **Sign in with your website** page (`wp-admin/admin.php?page=anypress-connect`, administrators only). Routes, safety rules and the ability list: [Site Editing API](../site-editing-api.md). Sources: `src/Api/SiteController.php`, `src/Api/SiteAbilities.php`, `src/Features/McpServer.php`, `src/Features/ConnectPage.php`, `src/Core/ConnectLink.php`.
+
+## Phone Receptionist Routes
+
+The phone receptionist asks the website, through the AnyPress API, for what it needs during a call. Only the AnyPress API can call these routes, signed with the site key like the site tools, and they run as the first administrator.
+
+| Route | What it does |
+|---|---|
+| `GET /wp-json/anypress-client/v1/site/phone/services` | The FluentBooking booking types the receptionist can offer |
+| `GET .../site/phone/services/{id}/times` | The open times for one booking type |
+| `POST .../site/phone/bookings` | Books a time through FluentBooking's own slot lock, so a phone booking can't take a time a web visitor just booked |
+| `POST .../site/phone/callers` | Saves the caller in FluentCRM with a note. A caller who gives no email is kept under `caller-<digits>@phone.invalid`, the same for every call from that number. |
+
+Source: `src/Api/PhoneController.php`. Tested by `scripts/playground/phone.mjs` (`npm run phone`).
+
+## Talking to the Storefront
 
 AnyPress Client only calls the storefront, and only from the template's admin pages.
 
@@ -118,7 +161,7 @@ sequenceDiagram
 
 Sources: `src/Features/StorefrontStatus.php`, `src/Core/HttpService.php`, `anypress-host/src/Api/RolesController.php`.
 
-## Moving forms to Fluent Forms
+## Moving Forms to Fluent Forms
 
 A website moved into AnyPress often has its forms in Contact Form 7, WPForms (Lite) or Ninja Forms. The forms switch moves them to Fluent Forms and switches the pages over. Run it with WP-CLI as an administrator, with Fluent Forms and the old form plugins active:
 
@@ -144,7 +187,7 @@ Running it again changes nothing that was already done: converted forms are skip
 
 The id map and each changed page's original content are kept in the `anypress_client_forms_switch` option (not autoloaded). Sources: `src/Forms/FormsSwitch.php`, `src/Forms/Migrators/`, `src/Forms/PageSwitcher.php`, `src/Forms/FormsCommand.php`, `src/Forms/FormsAbilities.php`. Tested end to end by `scripts/playground/forms.mjs` (`npm run forms`).
 
-## Moving a WooCommerce shop to FluentCart
+## Moving a WooCommerce Shop to FluentCart
 
 The shop switch copies a WooCommerce shop into FluentCart with the free FluentCart Migrator add-on, then adds what the add-on leaves out. The add-on is not on wordpress.org: it is on FluentCart's add-ons page (https://fluentcart.com/fluentcart-addons, zip at https://addons-cdn.fluentcart.com/fluent-cart-migrator.zip). Run it with WP-CLI as an administrator, with WooCommerce, FluentCart and the add-on active:
 
@@ -171,7 +214,7 @@ Running it again adds nothing twice: the add-on skips each step it has finished,
 
 The galleries before the switch, the copied zone and method ids and each merged customer (its row and the rows moved off it) are kept in the `anypress_client_shop_switch` option (not autoloaded). Sources: `src/Shop/ShopSwitch.php`, `src/Shop/GalleryImages.php`, `src/Shop/ShippingZones.php`, `src/Shop/CustomerMerge.php`, `src/Shop/ShopReview.php`, `src/Shop/ShopCompare.php`, `src/Shop/ShopCommand.php`, `src/Shop/ShopAbilities.php`. Tested end to end, with HPOS off and on, by `scripts/playground/shop-switch.mjs` (`npm run shop-switch`).
 
-## Bringing buyers and subscribers into FluentCRM
+## Bringing Buyers and Subscribers Into FluentCRM
 
 The CRM switch brings a website's WooCommerce buyers and email-list subscribers into FluentCRM (the free plugin, whose own importers cover only WordPress users, CSV files and a few hosted services; its WooCommerce importer needs FluentCRM Pro). Run it with WP-CLI as an administrator, with FluentCRM active:
 
@@ -201,7 +244,7 @@ What doesn't come across: order lines and history (FluentCRM free keeps none), c
 
 What the switch created, and each existing contact's values before it changed them, are kept in the `anypress_client_crm_switch` option (not autoloaded). Sources: `src/Crm/CrmSwitch.php`, `src/Crm/ContactPlan.php`, `src/Crm/WooBuyers.php`, `src/Crm/MailPoetSubscribers.php`, `src/Crm/NewsletterSubscribers.php`, `src/Crm/CrmWriter.php`, `src/Crm/CrmCommand.php`, `src/Crm/CrmAbilities.php`. Tested end to end, with HPOS off and on, by `scripts/playground/crm-switch.mjs` (`npm run crm-switch`).
 
-## Moving a help desk, an affiliate program or a community
+## Moving a Help Desk, an Affiliate Program or a Community
 
 Fluent Support, FluentAffiliate and FluentCommunity each have their own importer. Three switches run those importers and add what they leave to the person running them: a check first, a count of what the source holds next to what came across, no email while they run, one run at a time, and an undo. Run them with WP-CLI as an administrator, with the Fluent plugin active:
 
@@ -227,7 +270,7 @@ What doesn't come across: ticket tags, products and custom fields, and the help 
 
 What each switch added is kept in the `anypress_client_<switch>_import` option (not autoloaded). Sources: `src/Moving/NativeImport.php`, `src/Moving/SupportImport.php`, `src/Moving/AffiliateImport.php`, `src/Moving/CommunityImport.php`, `src/Moving/ImportCommand.php`, `src/Moving/ImportAbilities.php`. Tested end to end with Awesome Support, SliceWP and BuddyPress by `scripts/playground/moving.mjs` (`npm run moving`).
 
-## The website assistant beside the page
+## The Website Assistant Beside the Page
 
 Since 2.8.0 a store's administrators (anyone who can change its design, `edit_theme_options`) get an **Assistant** panel in the block editor and the Site Editor, opened from its star button in the editor's top bar, and an **Assistant** button in the admin bar that opens the page being viewed (or the Site Editor) with the panel open. The panel frames the website assistant's chat. Since 2.12.0 it is on the website's own domain, `https://<its domain>/.assistant/editor`, which the server's proxy sends to the assistant, so the owner never leaves their website and nothing names the platform (before, `https://assistant.anypress.io/editor`). `ANYPRESS_ASSISTANT_URL` changes it. The dot keeps it from hiding a page: WordPress never gives a page an address starting with one.
 

@@ -1,10 +1,10 @@
 # AnyPress Host
 
-AnyPress Host runs on the storefront. It listens to the cart's subscription events, turns them into provisioning API calls run in the background, tracks each website's state, and gives customers their website page and one-click login. Paths are relative to `packages/anypress-host/`.
+AnyPress Host runs on the storefront. It listens to the cart's subscription events, turns them into AnyPress API calls run in the background, tracks each website's state, and gives customers their website page and one-click login. Paths are relative to `packages/anypress-host/`.
 
 [Back to the overview](README.md)
 
-## Inside the plugin
+## Inside the Plugin
 
 Everything is wired in `anypress-host.php` when the plugin loads. One `ProvisioningApi` instance is shared by every part that talks to the API.
 
@@ -72,7 +72,7 @@ flowchart TB
 - Only the chosen adapter's `boot()` runs, so the other cart's hooks are never added.
 - All website state is kept in **subscription meta** through the adapter. There are no custom tables ([Where data lives](#where-data-lives)).
 
-## From cart events to website actions
+## From Cart Events to Website Actions
 
 Each cart reports subscription changes differently. The adapters translate them into a small set of `anypress_subscription_*` actions, and `TenantsSubscriptionManager` handles only those.
 
@@ -128,7 +128,7 @@ Sources: `src/Commerce/FluentCart/AnyPressProvisioningIntegration.php`, `src/Com
 - If a FluentCart remove trigger arrives but the subscription is active again, the website is kept.
 - `anypress_subscription_renewed` is only fired on FluentCart. It resumes a website that was suspended for a missed payment.
 
-### What each action does
+### What Each Action Does
 
 | Action | Handler in `TenantsSubscriptionManager.php` | Job, then API call |
 |---|---|---|
@@ -143,7 +143,7 @@ Sources: `src/Commerce/FluentCart/AnyPressProvisioningIntegration.php`, `src/Com
 | Grace period over | `delete_suspended_tenant` | `delete`: `DELETE /v1/tenants` |
 | `anypress_tenant_roles_changed` | `TenantsAddOnSubscriptionManager::update_tenant_roles` | `update_roles`: `PUT /v1/tenants` with the new roles constant |
 
-## Purchase to a ready website
+## Purchase to a Ready Website
 
 ```mermaid
 sequenceDiagram
@@ -153,7 +153,7 @@ sequenceDiagram
   participant CART as Cart
   participant TSM as TenantsSubscriptionManager
   participant JOBS as StoreJobs
-  participant API as Provisioning API
+  participant API as AnyPress API
   participant TSS as TenantStatusService
 
   C->>CK: Enter a website name
@@ -196,7 +196,7 @@ Sources: `src/Commerce/FluentCart/FluentCartCheckout.php`, `src/Features/UserWcT
 - The `POST /v1/tenants` body carries: name, WordPress username (from the customer's name) and email, the default user role, group and size, the roles, the public login key, whether to remove plugin rights from administrators, and the options `blogname`, `admin_email` and `anypress_store_owner` (JSON: the billing country, name, phone and address, which the store fills in as its business details, time zone and currency).
 - Every 1 minute a second cron copies each website's current domain from `GET /v1/tenants`, so the API stays the source of truth for domains. A `tenant.domains_changed` webhook does the same for one website at once. The same cron shows a live website the list no longer has as Removed (an empty list marks nothing), and brings one shown as Removed back once the list has it again, Done and not suspended.
 
-## The background job queue
+## The Background Job Queue
 
 API calls never run inside the cart's own hooks. Each subscription has a queue of jobs in its meta, and a runner works through it in the background.
 
@@ -223,7 +223,7 @@ flowchart TB
 
 Source: `src/Features/StoreJobs.php` (`enqueue`, `run`, `RETRY_DELAYS`, `retry`, sweep).
 
-## Website states
+## Website States
 
 The state is kept in subscription meta and shown to the customer. The API has its own simpler status code (0 pending, 1 done, 2 failed, 3 removing) which AnyPress Host reads when a webhook arrives and while polling.
 
@@ -264,7 +264,7 @@ sequenceDiagram
   actor A as Admin
   participant SET as AdminSettings
   participant WH as Webhooks
-  participant API as Provisioning API
+  participant API as AnyPress API
   participant WHR as WebhookReceiver
   participant TSS as TenantStatusService
   participant ST as Website
@@ -307,7 +307,7 @@ Sources: `src/Features/AdminSettings.php` (`render_anypress_admin_page`), `src/F
 - **Answers:** 401 for a missing, stale or wrong signature, 400 for a body that isn't an event, 200 for everything else, a repeat included. The event id is remembered only once the event was handled, so a delivery that failed here is retried by the API.
 - **Polling:** the status cron runs every minute while an endpoint is registered and every five seconds while not. The cron run moves itself to the other schedule when that changes.
 
-## Every API call AnyPress Host makes
+## Every API Call AnyPress Host Makes
 
 All calls go through `src/Core/ProvisioningApi.php` with `Authorization: Basic base64(key:secret)` from `src/Core/HttpService.php`. Websites are addressed by `externalId`, the UUID AnyPress Host chose.
 
@@ -330,7 +330,7 @@ All calls go through `src/Core/ProvisioningApi.php` with `Authorization: Basic b
 
 Two calls go elsewhere: `RolesController` downloads `roles.json` from the Production version's site, and the status check sends `HEAD https://<domain>` to the website itself. The API calls AnyPress Host back only at `POST /wp-json/anypress-host/v1/webhook` ([Webhooks](#webhooks)).
 
-## Customer account API
+## Customer Account API
 
 Customers can see and manage their websites from a front end on another domain. AnyPress Host is the sign-in server: it issues short access tokens with OAuth 2 authorization code and PKCE. The contract is in [account-api.md](../account-api.md).
 
@@ -363,7 +363,7 @@ Sources: `src/Api/AccountSignIn.php`, `src/Api/AccountTokens.php`, `src/Api/Acco
 - Tokens are stored only as HMACs in user meta. Each refresh rotates both tokens, and reusing an old refresh token ends that session. Changing the password ends every session.
 - Website routes need the signed-in user to own the subscription. Login links are limited to 10 a minute per user.
 
-## Where data lives
+## Where Data Lives
 
 | Data | Stored in |
 |---|---|

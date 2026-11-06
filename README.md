@@ -1,8 +1,8 @@
 # AnyPress Host, Client & Payments Plugins
 
-WordPress plugins for selling websites as a service: **AnyPress Host** runs on the storefront and creates, suspends and restores each customer's website through the AnyPress provisioning API; **AnyPress Client** runs on the template and on every customer website (one-click login, plan roles); **AnyPress Payments** adds card payments to FluentCart.
+WordPress plugins for selling websites as a service: **AnyPress Host** runs on the storefront and creates, suspends and restores each customer's website through the AnyPress API; **AnyPress Client** runs on the template and on every customer website (one-click login, plan roles); **AnyPress Payments** adds card payments to FluentCart.
 
-They are the WordPress side of [AnyPress](https://anypress.io) and are open source (GPL-3.0): the [provisioning API](https://github.com/hamchowderr/waas-provisioning-api) builds and runs the stores, and the [dashboard](https://github.com/hamchowderr/waas-dashboard) manages them. To run the whole platform yourself, see the API's [self-hosting guide](https://github.com/hamchowderr/waas-provisioning-api/blob/main/docs/self-hosting.md).
+They are the WordPress side of [AnyPress](https://anypress.io) and are open source (GPL-3.0): the [AnyPress API](https://github.com/hamchowderr/waas-provisioning-api) builds and runs the stores, and the [dashboard](https://github.com/hamchowderr/waas-dashboard) manages them. To run the whole platform yourself, see the API's [self-hosting guide](https://github.com/hamchowderr/waas-provisioning-api/blob/main/docs/self-hosting.md).
 
 How the three plugins work and fit together, with diagrams: [docs/architecture](docs/architecture/README.md).
 
@@ -16,15 +16,23 @@ How the three plugins work and fit together, with diagrams: [docs/architecture](
 - **My website** in FluentCart's customer portal (the subscription page on WooCommerce): status, one-click login, the customer's own domain, and sending the store's email from their own domain. Where the customer's DNS host supports Domain Connect, a **Connect automatically** button adds the DNS records for them.
 - Plan roles and snapshot groups per product.
 - **Email packs** (FluentCart): one-time products that add emails to one of the customer's websites, bought from a **Buy more emails** link on each website ([Email packs](#email-packs)).
-- Updates itself through the provisioning API, which serves signed releases.
+- Updates itself through the AnyPress API, which serves signed releases.
 
-**AnyPress Client** (in every store): one-click login from the storefront, plugin access by plan role (`roles.json`), and a site-editing API that lets the AnyPress connector change the store's pages, design, header, footer and menus for an AI agent.
+**AnyPress Client** (in every website):
+
+- One-click login from the storefront and from the dashboard.
+- Plugin access by plan role (`roles.json`).
+- Site tools that let the AnyPress connector, the website assistant and AI apps change the website's pages, design, header, footer and menus, as REST routes, WordPress abilities and the website's own MCP server ([Site Editing API](docs/site-editing-api.md)).
+- Routes for the phone receptionist: open times, bookings and callers.
+- The website assistant panel beside the block editor.
+- Switches that move a moved-in website's forms, WooCommerce shop, email lists, help desk, affiliates and community onto the Fluent plugins.
+- On a reseller's websites, the reseller's brand in its name (for example "KnowBS Client").
 
 **AnyPress Payments**: Authorize.Net card payments for FluentCart, including subscriptions charged on renewal.
 
-## Getting started
+## Getting Started
 
-You need a WordPress site to sell from (the **storefront**: WordPress 6.4 or newer, PHP 8.1 or newer) and a running provisioning API (to run one, see the [self-hosting guide](https://github.com/hamchowderr/waas-provisioning-api/blob/main/docs/self-hosting.md)). The API's operator gives you an **API key** and **API secret** for your storefront.
+You need a WordPress site to sell from (the **storefront**: WordPress 6.4 or newer, PHP 8.1 or newer) and a running AnyPress API (to run one, see the [self-hosting guide](https://github.com/hamchowderr/waas-provisioning-api/blob/main/docs/self-hosting.md)). The API's operator gives you an **API key** and **API secret** for your storefront.
 
 1. **Install a cart.** FluentCart 1.7 or newer (recommended), or WooCommerce with WP Swings' free Subscriptions for WooCommerce or the paid WooCommerce Subscriptions.
 2. **Install AnyPress Host** on the storefront (and **AnyPress Payments** if you want Authorize.Net card payments on FluentCart). Build the zips with Composer installed: `scripts/release/build.sh anypress-host <version> dist`, and `scripts/release/build.sh anypress-payments <version> dist` for AnyPress Payments. Upload them under **Plugins → Add New → Upload Plugin**.
@@ -34,9 +42,9 @@ You need a WordPress site to sell from (the **storefront**: WordPress 6.4 or new
 6. **Run cron every minute.** Websites are created in the background; on a quiet site WordPress's own cron waits for the next visitor. Define `DISABLE_WP_CRON` and run `wp action-scheduler run` and `wp cron event run --due-now` every minute from a real cron job. AnyPress Host starts each new website's build as soon as checkout ends (a signed request the storefront sends itself), so cron is the fallback; the storefront must be able to reach its own address over HTTPS.
 7. **Test it.** Buy the product: checkout asks for a website name, and a few minutes after payment the customer finds the website, with a one-click login, under **My website**.
 
-**AnyPress Client** is not installed on the storefront. It goes into the template the customers' websites are made from, and comes with every website. The provisioning API's [`templates/starter-fluentcart`](https://github.com/hamchowderr/waas-provisioning-api/tree/main/templates/starter-fluentcart) builds a starter template with it.
+**AnyPress Client** is not installed on the storefront. It goes into the template the customers' websites are made from, and comes with every website. The AnyPress API's [`templates/starter-fluentcart`](https://github.com/hamchowderr/waas-provisioning-api/tree/main/templates/starter-fluentcart) builds a starter template with it.
 
-## Storefront cart
+## Storefront Cart
 
 The Host plugin works with **FluentCart** 1.7 or newer (recommended) or with **WooCommerce** plus a subscriptions plugin. If both carts are active it uses FluentCart; the `anypress_commerce_adapter` filter can pick the other.
 
@@ -48,7 +56,7 @@ The Host plugin works with **FluentCart** 1.7 or newer (recommended) or with **W
 
 On both carts, checkout asks for a **Website name** whenever the cart holds an AnyPress product (on WooCommerce in block and classic checkout alike) and checks that the name is free. The website is created in the background a few minutes after payment.
 
-### When the subscription changes
+### When the Subscription Changes
 
 "Offline" means the website is backed up, then deleted after the grace period set in the plugin's settings. Paying again before the deletion brings it back.
 
@@ -69,7 +77,7 @@ Notes:
 - On WooCommerce, website data is stored through WooCommerce's order API, so it works with High-Performance Order Storage on or off.
 - Both carts fire the same actions, which developers can hook into: `anypress_subscription_created`, `anypress_subscription_suspended`, `anypress_subscription_reactivated`, `anypress_subscription_renewed`, `anypress_subscription_expired` and `anypress_subscription_canceled_until`.
 
-### Email packs
+### Email Packs
 
 On FluentCart, a website can buy more email than its plan sends each month. Pack emails never expire: the website uses them once its plan's monthly emails run out, and they let its paused FluentCRM campaigns send again.
 
@@ -77,15 +85,15 @@ On FluentCart, a website can buy more email than its plan sends each month. Pack
 
 **How a customer buys one.** Each website under **My website** that has a store gets a **Buy more emails** link: FluentCart's instant checkout for the pack, carrying the website's subscription id, e.g. `https://shop.example.com/?fluent-cart=instant_checkout&item_id=<pack variation id>&quantity=1&anypress_website=<subscription id>`. FluentCart passes `anypress_website` on to the checkout page, where it is kept in the cart, then on the order (`_anypress_email_pack_website`). The customer can change the quantity at checkout.
 
-**When the order is paid**, each pack line adds *emails per pack × quantity* to the website through the provisioning API (`POST /v1/tenants/email-packs`), with the reference `fluentcart-order-<order id>-<line id>`, so the API adds a line once however often it is sent. The order gets a note for each line with the emails added and the website's total bought in packs.
+**When the order is paid**, each pack line adds *emails per pack × quantity* to the website through the AnyPress API (`POST /v1/tenants/email-packs`), with the reference `fluentcart-order-<order id>-<line id>`, so the API adds a line once however often it is sent. The order gets a note for each line with the emails added and the website's total bought in packs.
 
 - The website must belong to the order's customer. If it doesn't, or it has been deleted, nothing is added and the order gets a note.
 - An order without a website (a pack bought from the shop page) goes to the customer's only live website. With none or several, nothing is added and the order gets a note for the shop owner to add the emails by hand.
 - If the API call fails, the order gets a note, the error is logged, and it is retried after 1, 5, 15, 30 and 60 minutes. After that the order is listed in an admin notice with a **Retry** link, and `anypress_email_packs_failed` fires. Retrying is safe: lines already added are skipped and the reference stops a line being added twice.
 
-## API base URL
+## API Base URL
 
-The Host plugin talks to the provisioning API at the **API URL** on the **Connection** tab of **AnyPress → Settings**, or the `ANYPRESS_API_BASE_URL` constant in `wp-config.php` (the constant wins). Without either, the plugin has no API and sells nothing. (The same constants under the old platform's prefix, from before the rename, still work.) The `anypress_settings_api_base_url` filter can change it.
+The Host plugin talks to the AnyPress API at the **API URL** on the **Connection** tab of **AnyPress → Settings**, or the `ANYPRESS_API_BASE_URL` constant in `wp-config.php` (the constant wins). Without either, the plugin has no API and sells nothing. (The same constants under the old platform's prefix, from before the rename, still work.) The `anypress_settings_api_base_url` filter can change it.
 
 ```php
 define('ANYPRESS_API_BASE_URL', 'https://api.example.com');
@@ -95,16 +103,16 @@ define('ANYPRESS_API_BASE_URL', 'https://api.example.com');
 
 The **API key** and **API secret** go on the same tab. **Website domain**, on the **Websites** tab, is the domain customers' websites are named under.
 
-## Website status
+## Website Status
 
-The provisioning API tells the storefront when a new website is ready, so the customer gets the "website ready" email and their login button as soon as the website answers over HTTPS.
+The AnyPress API tells the storefront when a new website is ready, so the customer gets the "website ready" email and their login button as soon as the website answers over HTTPS.
 
 - **Registration.** Saving the **Connection** tab, when the API answers, registers the storefront's address `https://<storefront>/wp-json/anypress-host/v1/webhook` with the API. The **Webhooks** section of that tab shows whether it is registered, and if not, why. **Register again** replaces the registration, for example after moving the site. With the API settings in `wp-config.php` there is nothing to save: the plugin registers itself within the hour, and does the same when the site's address or the API changes.
 - **What the API reports.** A website that is ready or restored, a website whose domains changed, and a change that still failed after the API's retries. The last one shows as an admin notice until you dismiss it or the website becomes ready. Every request is signed with a secret that is stored encrypted with the key from [Storefront secrets](#storefront-secrets).
 - **Checking as a backstop.** Websites being set up are still checked every minute. When the storefront isn't registered, they are checked every five seconds instead.
 - **Local and test sites.** The API only calls `https://` addresses it can reach from the internet, so a storefront on `http://` or a private address isn't registered and checks every five seconds.
 
-## Storefront secrets
+## Storefront Secrets
 
 Each store's one-click-login private key is stored encrypted on its subscription. The encryption key comes from `wp-config.php` on the storefront:
 
@@ -131,13 +139,13 @@ WooCommerce products keep their AnyPress settings through WooCommerce's product 
 
 AnyPress Host has a REST API for the signed-in customer's websites (`anypress-host/v1/account`): list them, sign in to one, change its address, set up its email sender, and choose a new name. Pages on the storefront call it with the login cookie; a front end on another domain signs the customer in with token sign-in (OAuth 2.0 with PKCE). How: [docs/account-api.md](docs/account-api.md).
 
-## Site editing API
+## Site Editing API
 
 AnyPress Client lets the AnyPress connector edit a store's design and content (`anypress-client/v1/site`): pages and their sections, the theme's patterns, colours and fonts, the header and footer, menus, revisions and images. Only the AnyPress API can call it, with requests signed by the store's own site key. The same actions are also WordPress abilities (category `anypress`) for a signed-in user with the right capabilities, so WordPress's MCP Adapter and AI agents on the site can use them. Stores come with the MCP Adapter installed but off; the owner can turn on an "AnyPress website" MCP server from the Your plan page. How: [docs/site-editing-api.md](docs/site-editing-api.md).
 
 ## Updates
 
-AnyPress Host and AnyPress Payments update from the provisioning API they're connected to, never from wordpress.org. Every release is signed, and a plugin only installs a release signed with a key built into it (`Updater::PUBLIC_KEYS` in `packages/anypress-updater`). The key built in today is AnyPress's release key. **If you run your own API**, either build the plugins with your own public key in that list and sign your releases with its private half, or set `ANYPRESS_UPDATE_CHANNEL` to `off` and install new zips by hand. In `wp-config.php`, `ANYPRESS_UPDATE_CHANNEL` picks `stable` (default), `beta` or `off`, and `ANYPRESS_AUTO_UPDATE` set to `patch` installs bug-fix releases automatically.
+AnyPress Host and AnyPress Payments update from the AnyPress API they're connected to, never from wordpress.org. Every release is signed, and a plugin only installs a release signed with a key built into it (`Updater::PUBLIC_KEYS` in `packages/anypress-updater`). The key built in today is AnyPress's release key. **If you run your own API**, either build the plugins with your own public key in that list and sign your releases with its private half, or set `ANYPRESS_UPDATE_CHANNEL` to `off` and install new zips by hand. In `wp-config.php`, `ANYPRESS_UPDATE_CHANNEL` picks `stable` (default), `beta` or `off`, and `ANYPRESS_AUTO_UPDATE` set to `patch` installs bug-fix releases automatically.
 
 AnyPress Client never updates by itself on customer websites: it comes with the template version, and a website gets a newer one by moving to a newer version.
 
@@ -147,11 +155,11 @@ To build a zip locally: `scripts/release/build.sh anypress-host <version> dist`.
 
 The rest of this page is for working on the plugins themselves.
 
-### Local development
+### Local Development
 
 Each plugin is a Composer package under `packages/` (`anypress-host`, `anypress-client`, `anypress-payments`, `anypress-export`, and the shared `anypress-updater`). Run `composer install` in the one you work on. The quickest way to see the Host plugin running is the test environment below.
 
-### Test environment
+### Test Environment
 
 On Linux with Docker, `scripts/test-env.sh up` starts a throwaway WordPress (MariaDB + WordPress in Docker) at http://127.0.0.1 with this checkout's Host and Payments plugins, FluentCart, WooCommerce and Subscriptions for WooCommerce active. Log in as admin / admin. `scripts/test-env.sh wp ...` runs WP-CLI; `scripts/test-env.sh down` removes it.
 
@@ -176,13 +184,13 @@ composer install
 composer test
 ```
 
-`anypress-host` also has contract tests (`tests/Contract`, group `mock`) that run the plugin's real API client against the provisioning API: by default the public Postman mock, or the server in `ANYPRESS_TEST_API_BASE_URL`, such as the local API. They need network access; run `vendor/bin/phpunit --exclude-group mock` to skip them.
+`anypress-host` also has contract tests (`tests/Contract`, group `mock`) that run the plugin's real API client against the AnyPress API: by default the public Postman mock, or the server in `ANYPRESS_TEST_API_BASE_URL`, such as the local API. They need network access; run `vendor/bin/phpunit --exclude-group mock` to skip them.
 
 Unit tests live in each package's `tests/Unit`. The `Tests` GitHub Actions workflow runs the unit tests of all four packages (host, client, payments, updater) on every pull request and on pushes to `main`, plus the Playground smoke test of AnyPress Client; the contract tests run there too, in a separate job that reports but doesn't block, since they depend on the public mock. Release builds strip `tests/` and `phpunit.xml.dist`.
 
 ### Names
 
-Everything the plugins install, save or schedule is named after AnyPress: the plugin folders and update slugs (`anypress-host`, `anypress-client`, `anypress-payments`), their REST routes (`/wp-json/anypress-host/v1`, `/wp-json/anypress-client/v1`), settings (`anypress_api_key`, `anypress_root_domain`, …), order, subscription and product meta (`anypress_website_name`, `anypress_tenant_state`, `_is_anypress_product`, …), scheduled jobs (`anypress_run_store_jobs`, …) and the wp-config constants a store is given (`ANYPRESS_TENANT_ROLES`, `ANYPRESS_PUBLIC_KEY`, `ANYPRESS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS`; the provisioning API sets `ANYPRESS_IS_TENANT` and `ANYPRESS_SITE_KEY`). A storefront that ran the plugin before it was called AnyPress Host gets its settings, meta and scheduled jobs moved once, on the first load of 2.11.1 (`AnyPressHost\Migrations\OldNames`).
+Everything the plugins install, save or schedule is named after AnyPress: the plugin folders and update slugs (`anypress-host`, `anypress-client`, `anypress-payments`), their REST routes (`/wp-json/anypress-host/v1`, `/wp-json/anypress-client/v1`), settings (`anypress_api_key`, `anypress_root_domain`, …), order, subscription and product meta (`anypress_website_name`, `anypress_tenant_state`, `_is_anypress_product`, …), scheduled jobs (`anypress_run_store_jobs`, …) and the wp-config constants a store is given (`ANYPRESS_TENANT_ROLES`, `ANYPRESS_PUBLIC_KEY`, `ANYPRESS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS`; the AnyPress API sets `ANYPRESS_IS_TENANT` and `ANYPRESS_SITE_KEY`). A storefront that ran the plugin before it was called AnyPress Host gets its settings, meta and scheduled jobs moved once, on the first load of 2.11.1 (`AnyPressHost\Migrations\OldNames`).
 
 ## License
 

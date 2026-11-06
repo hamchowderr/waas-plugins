@@ -6,11 +6,11 @@ Base URL: `https://<your storefront>/wp-json/anypress-host/v1/account`
 
 `{id}` in a path is the subscription id (the cart's own id: a FluentCart subscription or a WooCommerce subscription). It works the same on both carts.
 
-## Signing in
+## Signing In
 
 There are two ways to call the API as the customer.
 
-### On the storefront itself: cookie and nonce
+### On the Storefront Itself: Cookie and Nonce
 
 WordPress's normal REST authentication:
 
@@ -19,7 +19,7 @@ WordPress's normal REST authentication:
 
 Without a valid nonce WordPress treats the call as signed out, and it gets `401`. The API sends no CORS headers, so another domain's browser code can't call it.
 
-### From a front end on another domain: token sign-in
+### From a Front End on Another Domain: Token Sign-In
 
 A site on another domain (a headless front end, say) signs the customer in through the storefront with the OAuth 2.0 authorization-code flow and PKCE, then calls the API from its **server** with `Authorization: Bearer <access token>`. Tokens never go to the browser: keep them in an encrypted, httpOnly cookie or a server-side session. Access tokens only work on the account API routes, not on the rest of the storefront's API.
 

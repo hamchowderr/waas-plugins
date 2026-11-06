@@ -1,6 +1,6 @@
-# Releases and updates
+# Releases and Updates
 
-The plugins update from one channel only: the provisioning API they are connected to, which serves releases from its release bucket (`RELEASES_S3_BUCKET`). Nothing comes from GitHub, wordpress.org or the upstream project.
+The plugins update from one channel only: the AnyPress API they are connected to, which serves releases from its release bucket (`RELEASES_S3_BUCKET`). Nothing comes from GitHub, wordpress.org or the upstream project.
 
 | Plugin | Slug | Updates |
 |---|---|---|
@@ -8,7 +8,7 @@ The plugins update from one channel only: the provisioning API they are connecte
 | anypress-payments | `anypress-payments` | Storefront, from the channel, with anypress-host's API credentials. |
 | anypress-client | `anypress-client` | **Never by itself.** It comes with the store's template version; a store gets a newer one by moving to a newer version (`moveTenantToAVersion`). Its release zips are for template builds. |
 
-## How a site updates
+## How a Site Updates
 
 `packages/anypress-updater/src/Updater.php` is the updater. `scripts/sync-updater.sh` copies it into anypress-host and anypress-payments, each in its own namespace (`src/Updater/Updater.php`; don't edit those copies). CI fails when a copy is out of date.
 
@@ -36,7 +36,7 @@ Run **Release plugin** by hand with a tag name for a dry run: it builds the sele
 
 To hold one storefront at a release: `PUT /admin/products/<productId>/plugins/<slug>/pin` on the API (see its README). A pin never downgrades a site.
 
-## One-time setup (your own release key)
+## One-Time Setup (Your Own Release Key)
 
 To publish releases to your own API (for example from a fork), make your own key. Only the person who makes it keeps the private half.
 
