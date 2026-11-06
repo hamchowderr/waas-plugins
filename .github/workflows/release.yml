@@ -47,7 +47,7 @@ jobs:
       DRY_RUN: ${{ github.event_name != 'push' && !inputs.publish }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           # Called to publish: the tag, not the caller's branch.
