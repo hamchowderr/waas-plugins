@@ -273,8 +273,51 @@ flowchart LR
 - Each switch has a dry run that changes nothing and reports what it would do, and an undo. The old plugins and their data are never changed or deleted.
 - The CRM switch never sends emails while it runs, and only marks people as subscribed where they agreed to it.
 
-## Sellers and resellers
+The rest of this page lists the features around those main parts, grouped by who they are for.
 
-- A **seller** sells websites under their own name from their own shop. A **reseller** runs several shops and gets one monthly bill.
-- On a reseller's websites, AnyPress Client and the dashboard show the reseller's brand, for example "KnowBS Client".
-- The dashboard's **Sell** page has a sales kit. It includes a prospect finder, outreach emails sent from the seller's own mailbox, and draft FluentCRM and HighLevel automations.
+## Inside every website
+
+What an owner gets without asking.
+
+- **Its own address.** Every website starts at name.anypress.site. The owner can add their own domain. Where their DNS host supports it, one Connect automatically button adds the records for them. Otherwise the page lists the records to copy.
+- **Email that arrives.** Websites send mail through toSend, from their own mailbox at anypress.io, or from the owner's own domain once its records check out. Every email has the same clean AnyPress look. Sellers' websites carry their brand.
+- **Backups every night.** Every live website is backed up each night: its files and its database. Each night one backup is also restored into a throwaway copy and checked, so the backups are proven to work.
+- **A CRM that's set up.** FluentCRM comes ready with tags for what people are interested in, have bought or used to buy, a contact form that feeds it, and draft follow-up emails the owner can switch on.
+- **The website assistant.** A chat beside the page editor that changes pages, colours, menus and images on request. It checks with the owner before anything visitors would see. Plans include 150, 300 or 600 messages a month by size.
+- **Room for AI apps.** On Your plan, the owner can switch on the website's own MCP server, so AI apps they trust can work on its pages. It only reaches pages and design, never settings or orders.
+- **My website.** On the shop's account page the owner logs in with one click, sees the address and email settings, and renames the website. If the name was taken, it asks for a new one.
+- **A phone receptionist.** For local service businesses, it answers calls in the business's name, offers open times, books visits and saves each caller. Calls count against monthly minutes.
+
+## Selling websites
+
+Sellers sell under their own name. Resellers run several shops on one bill.
+
+- **Sign in with a code.** People sign in to the dashboard with their email. The email has a link and a 6-digit code, so it still works when a work mail filter opens the link first. Anyone invited to a team sees a Join button.
+- **Their own brand.** The dashboard, the emails and the plugin names show the seller's name, logo and colour, for example "KnowBS Client". Sellers can even give the dashboard their own address.
+- **Pick the plugins.** A seller can add plugins from wordpress.org, upload premium ones, or switch some off. Their choices go into every new version of their websites.
+- **Setup checklists.** Each shop sees what it has set up so far, ticked from what's really there. AnyPress sees everyone's progress and who is stuck.
+- **A sales kit.** The Sell page finds local businesses to approach, sends outreach from the seller's own mailbox, and adds ready email sequences to FluentCRM or HighLevel as drafts.
+- **One monthly bill.** Resellers pay wholesale, 40% off, on one Stripe invoice on the 1st of each month. With a card on file it's charged automatically.
+- **Shops that keep up.** A seller's shop follows the template it started from, and every new AnyPress Host release is installed on every shop automatically.
+- **Team.** Owners of a seller account invite their team by email and choose who is an admin and who is a member.
+
+## Connecting other tools
+
+All of these live on the dashboard's Developers > Integrations page.
+
+- **Integrations page.** One page lists every way in, for sellers and resellers: AI apps, automation apps and building your own, each with its setup steps.
+- **The AnyPress connector.** Claude and ChatGPT can create websites and edit their pages through the AnyPress connector (MCP), after the person signs in and allows it.
+- **HighLevel agencies.** An agency installs the AnyPress app and signs in to AnyPress from its main account, with no keys to copy. An agency without a shop gets one as it signs in. Each website belongs to the sub-account that made it, and triggers only fire there.
+- **n8n, Zapier and Make.** Ready-made apps for each. Workflows can create websites, change them, and start when something happens to one.
+- **Your own code.** The AnyPress API with a key and secret, SDKs for TypeScript and PHP, and webhooks that tell your app when a website is ready, restored or deleted.
+
+## Keeping it running
+
+The parts nobody sees until something goes wrong.
+
+- **Template versions.** Each change to the master copy becomes a new version. Making one Production moves every website onto it. A website that fails to move goes back to the version it was on.
+- **Fresh WordPress every night.** The WordPress images are refreshed each night, so websites pick up security fixes without anyone pressing a button.
+- **Retries and alerts.** Every job in the background tries again on its own. When one fails for good, AnyPress gets an email straight away, so a paid website is never left unbuilt.
+- **Watching the server.** The API watches the server's load and its own health, and outside monitors check them around the clock.
+- **Run it yourself.** The whole platform is open source. A one-command installer sets up the API, the database, DNS, the templates, a shop and the dashboard on your own server.
+- **Moving a site in.** The AnyPress Export plugin sends any WordPress site in with an import code. Switches then move its forms, shop, CRM, help desk, affiliates and community to the Fluent plugins, with a dry run and an undo.
