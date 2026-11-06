@@ -4,6 +4,7 @@ These pages explain how **AnyPress Host**, **AnyPress Client** and **AnyPress Pa
 
 | Page | What it covers |
 |---|---|
+| [How AnyPress works, in plain words](how-anypress-works.md) | The whole system without the code words: every part, buying, login, plans, payments, updates, AI editing, the phone receptionist, moving a site in |
 | This page | Where each plugin runs, a website's life from purchase to login, plan roles, updates |
 | [AnyPress Host](anypress-host.md) | Cart adapters, the background job queue, store states, every API call, the API's webhooks, the account API |
 | [AnyPress Client](anypress-client.md) | What runs on the template and in each store, plan-based plugins, one-click login checks |
