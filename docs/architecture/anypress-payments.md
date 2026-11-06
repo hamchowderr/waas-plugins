@@ -1,10 +1,10 @@
 # AnyPress Payments
 
-AnyPress Payments adds Authorize.Net card payments to FluentCart on the storefront, including subscriptions that the storefront charges on each renewal. Storefronts that can use FluentCart's own Stripe gateway do not need it. It does not talk to the provisioning API or to AnyPress Host directly: it marks FluentCart orders and subscriptions paid, and AnyPress Host reacts to those subscription events as usual. Paths are relative to `packages/anypress-payments/`.
+AnyPress Payments adds Authorize.Net card payments to FluentCart on the storefront, including subscriptions that the storefront charges on each renewal. Storefronts that can use FluentCart's own Stripe gateway do not need it. It does not talk to the AnyPress API or to AnyPress Host directly: it marks FluentCart orders and subscriptions paid, and AnyPress Host reacts to those subscription events as usual. Paths are relative to `packages/anypress-payments/`.
 
 [Back to the overview](README.md)
 
-## Inside the plugin
+## Inside the Plugin
 
 ```mermaid
 flowchart LR
@@ -61,7 +61,7 @@ Sources: `anypress-payments.php`, `src/Gateway/*.php`, `src/Driver/*.php`, `src/
 - Saved cards are Authorize.Net customer profiles (CIM). FluentCart, not Authorize.Net, runs the renewal schedule, so there is no Authorize.Net recurring billing (ARB) and no cron in this plugin (`src/Driver/AuthorizeNet/AuthorizeNetDriver.php`).
 - The gateway declares no gateway-billed subscription module, so FluentCart only offers it for subscriptions the storefront charges itself (`src/Gateway/AuthorizeNetGateway.php`).
 
-## First purchase
+## First Purchase
 
 ```mermaid
 sequenceDiagram
@@ -197,6 +197,6 @@ Sources: `src/Gateway/AuthorizeNetGateway.php` (`processRefund`), `src/Gateway/F
 
 - A partial refund of a charge that has not settled is refused, because Authorize.Net can only void the whole amount at that point.
 
-## Test and live
+## Test and Live
 
 Each mode has its own API login, transaction key, signature key and public client key. Which set is used follows FluentCart's store **Order Mode** (`src/Gateway/AuthorizeNetSettings.php`). Every charge and saved card remembers its mode, so a test card is never charged with live keys after the switch.

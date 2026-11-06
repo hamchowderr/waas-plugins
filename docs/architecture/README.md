@@ -1,18 +1,23 @@
-# How the plugins work
+# How the Plugins Work
 
-These pages explain how **AnyPress Host**, **AnyPress Client** and **AnyPress Payments** work, and how they fit together with the provisioning API. Each diagram is drawn from the code and names the files it comes from, so you can check it and keep it current.
+These pages explain how **AnyPress Host**, **AnyPress Client** and **AnyPress Payments** work, and how they fit together with the AnyPress API. Each diagram is drawn from the code and names the files it comes from, so you can check it and keep it current.
+
+**Where to start:** if you want the big picture, read [How AnyPress Works, in Plain Words](how-anypress-works.md) first. If you are changing a plugin, read this page, then that plugin's page. Each plugin page lists its source files under every diagram, so you can go straight to the code.
 
 | Page | What it covers |
 |---|---|
-| [How AnyPress works, in plain words](how-anypress-works.md) | The whole system without the code words: every part, buying, login, plans, payments, updates, AI editing, the phone receptionist, moving a site in |
+| [How AnyPress Works, in Plain Words](how-anypress-works.md) | The whole system without the code words: every part, buying, login, plans, payments, updates, AI editing, the phone receptionist, moving a site in, and what owners, sellers and builders get |
 | This page | Where each plugin runs, a website's life from purchase to login, plan roles, updates |
-| [AnyPress Host](anypress-host.md) | Cart adapters, the background job queue, store states, every API call, the API's webhooks, the account API |
-| [AnyPress Client](anypress-client.md) | What runs on the template and in each store, plan-based plugins, one-click login checks |
+| [AnyPress Host](anypress-host.md) | Cart adapters, the background job queue, website states, every API call, the API's webhooks, the account API |
+| [AnyPress Client](anypress-client.md) | What runs on the template and in each website: login checks, plan plugins, site tools and MCP, phone routes, the assistant panel, the moving switches |
 | [AnyPress Payments](anypress-payments.md) | Authorize.Net checkout, saved cards, renewals, webhooks, refunds |
+| [Site Editing API](../site-editing-api.md) | AnyPress Client's site tools: routes, safety rules, abilities, MCP |
+| [Account API](../account-api.md) | AnyPress Host's REST API for a customer's own websites |
+| [Releases and Updates](../releases.md) | How plugins are released, signed and updated |
 
 Paths are relative to `packages/` unless they start with `docs/` or `scripts/`.
 
-## Where each plugin runs
+## Where Each Plugin Runs
 
 ```mermaid
 flowchart TB
@@ -30,7 +35,7 @@ flowchart TB
   ANET["Authorize.Net"]
   TPL["Production template site<br/>serves roles.json"]
 
-  subgraph API["Provisioning API"]
+  subgraph API["AnyPress API"]
     direction LR
     REST["REST API v1<br/>key and secret login"] --> QUEUE["Job queue"] --> COOL["Coolify"]
   end
@@ -48,6 +53,7 @@ flowchart TB
   REST -.->|"signed webhooks<br/>ready, domains, failed"| HOST
   HOST -->|"downloads roles.json"| TPL
   COOL -->|"builds and runs"| STORE
+  REST -.->|"signed site requests:<br/>site tools, phone, dashboard login"| CLIENT
   HOST -.->|"update checks"| REST
   REST -.->|"reads signed releases"| R2
 ```
@@ -55,17 +61,17 @@ flowchart TB
 | Plugin | Runs on | Its job | Entry file |
 |---|---|---|---|
 | AnyPress Host | The storefront | Turns subscription events into API calls, tracks each website's state, gives customers one-click login | `anypress-host/anypress-host.php` |
-| AnyPress Client | The template and every customer website | Checks one-click login tokens, turns plugins on or off by plan role | `anypress-client/anypress-client.php` |
+| AnyPress Client | The template and every customer website | Checks one-click login links, turns plugins on or off by plan role, answers the API's signed site requests | `anypress-client/anypress-client.php` |
 | AnyPress Payments | The storefront, only when card payments go through Authorize.Net | A FluentCart payment method with saved cards and renewals | `anypress-payments/anypress-payments.php` |
 | anypress-updater | Copied into Host and Payments | Checks for, downloads and verifies signed updates | `anypress-updater/src/Updater.php` |
 
 Three things worth knowing up front:
 
-- **AnyPress Host is the only plugin that calls the provisioning API** (`anypress-host/src/Core/ProvisioningApi.php`). AnyPress Client never calls it, and AnyPress Payments only talks to Authorize.Net.
+- **AnyPress Host is the plugin that talks to the AnyPress API for the storefront** (`anypress-host/src/Core/ProvisioningApi.php`). AnyPress Payments only talks to Authorize.Net. AnyPress Client calls the API in one place only, the website assistant's sign-in; everything else the API asks of a website arrives as a request signed with the website's site key ([AnyPress Client](anypress-client.md#site-tools-abilities-and-mcp)).
 - **The API calls only AnyPress Host, and only with signed webhooks.** AnyPress Host registers its own endpoint and the API tells it when a website is ready, restored, has new domains or failed. A poll every minute stays on as a backstop, every five seconds if the endpoint couldn't be registered (`anypress-host/src/Features/Webhooks.php`, `anypress-host/src/Api/WebhookReceiver.php`, `anypress-host/src/Features/TenantStatusService.php`). See [AnyPress Host, webhooks](anypress-host.md#webhooks).
 - **AnyPress Client is not installed by the API.** It ships inside the template, so every website made from that template already has it, active.
 
-## A website's life, end to end
+## A Website's Life, End to End
 
 One purchase, from checkout to the customer logged in to their new website. Each plugin's page breaks its own part down further.
 
@@ -75,7 +81,7 @@ sequenceDiagram
   actor C as Customer
   participant CART as Cart on storefront
   participant HOST as AnyPress Host
-  participant API as Provisioning API
+  participant API as AnyPress API
   participant ST as New website (AnyPress Client)
 
   C->>CART: Checkout with a website name
@@ -101,7 +107,7 @@ sequenceDiagram
 
 Sources: `anypress-host/src/Commerce/FluentCart/FluentCartCheckout.php`, `anypress-host/src/Features/UserWcTenantsCheckout.php`, `anypress-host/src/Features/TenantsSubscriptionManager.php` (`create_tenant_when_subscription_created`, `job_create`), `anypress-host/src/Api/WebhookReceiver.php`, `anypress-host/src/Features/TenantStatusService.php`, `anypress-host/src/Features/Notifications.php`, `anypress-host/src/Api/SingleLogin.php`, `anypress-client/src/Api/SingleSignOnController.php`.
 
-## One-click login
+## One-Click Login
 
 The storefront and the website share no password and no session. At creation AnyPress Host makes an RSA key pair for the website, keeps the private half, and sends the public half to the API as a PHP constant. The API writes it into the website's `wp-config.php`. A login token is a small JSON claim set encrypted with the private key, which only the matching public key can open.
 
@@ -110,7 +116,7 @@ sequenceDiagram
   autonumber
   actor C as Customer
   participant HOST as AnyPress Host (storefront)
-  participant API as Provisioning API
+  participant API as AnyPress API
   participant CL as AnyPress Client (website)
 
   rect rgba(127,127,127,0.08)
@@ -140,7 +146,7 @@ sequenceDiagram
 - The API takes no part at login time. A suspended website cannot be logged in to, because the API's guard answers every request with the unavailable page.
 - Front ends on other domains (for example a headless account page) get the same link from `POST /wp-json/anypress-host/v1/account/websites/{id}/login` instead of a redirect ([AnyPress Host, account API](anypress-host.md#customer-account-api)).
 
-## Plan roles: which plugins a website gets
+## Plan Roles: Which Plugins a Website Gets
 
 A **plan role** is a name such as `basic` or `pro` that maps to a list of plugins. The list lives in one file, `roles.json`, on the template. The storefront only needs the role names (to pick one per product), and each website needs the plugin lists (to turn plugins on and off).
 
@@ -160,7 +166,7 @@ flowchart TB
     RC -->|"saves"| OPT --> FEED --> CREATE
   end
 
-  subgraph APISIDE["Provisioning API"]
+  subgraph APISIDE["AnyPress API"]
     VERS["GET /v1/versions<br/>which version is Production"]
     BUILD["Template version build<br/>copies anypress-client and roles.json"]
   end
@@ -183,9 +189,9 @@ flowchart TB
 - On a website, roles come from the roles constant and plugin lists from the local `roles.json`. If no role matches, nothing changes and the admin sees a notice (`anypress-client/src/Features/RolesManager.php`).
 - Adding or removing an add-on on WooCommerce changes the roles: AnyPress Host sends `PUT /v1/tenants` with the new roles constant, and the API restarts the website with it (`anypress-host/src/Features/TenantsAddOnSubscriptionManager.php`).
 
-## Updates and releases
+## Updates and Releases
 
-AnyPress Host and AnyPress Payments update themselves through the provisioning API. AnyPress Client does not: a website gets a newer AnyPress Client when it moves to a newer template version.
+AnyPress Host and AnyPress Payments update themselves through the AnyPress API. AnyPress Client does not: a website gets a newer AnyPress Client when it moves to a newer template version.
 
 ```mermaid
 flowchart LR
@@ -200,7 +206,7 @@ flowchart LR
 
   CI -->|"publish.sh, never overwrites"| R2[("Release bucket<br/>zip, manifest.json,<br/>channels/stable.json, beta.json")]
   PROMOTE["promote.yml<br/>beta to stable"] --> R2
-  R2 --> API["Provisioning API<br/>GET /v1/plugins/slug/update"]
+  R2 --> API["AnyPress API<br/>GET /v1/plugins/slug/update"]
 
   subgraph SITE["Storefront"]
     UP["Updater.php in AnyPress Host<br/>and AnyPress Payments"]

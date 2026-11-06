@@ -1,8 +1,8 @@
-# Site editing API (AnyPress Client)
+# Site Editing API (AnyPress Client)
 
 AnyPress Client 2.3.0 adds REST routes under `/wp-json/anypress-client/v1/site` so an AI agent, through the AnyPress connector, can change a store's design and content. The AnyPress API calls them on the agent's behalf; nothing else can.
 
-## Who can call it
+## Who Can Call It
 
 Every request carries an `X-AnyPress-Signature` header made with the store's **site key**, which the API gives the store's WordPress container as the `ANYPRESS_SITE_KEY` environment variable (32 characters or more). Without that variable every route answers 401.
 
@@ -51,7 +51,7 @@ A section is a top-level block of a page (the whitespace between blocks doesn't 
 - No route runs code, installs plugins or themes, or changes settings outside design and content.
 - WordPress keeps a revision of every page, header, footer, menu and style change. Before the first change to one that has no revision yet (a page from the template or a new draft), its current state is saved as a revision too, so that first change can be undone.
 
-## Sign in with your website
+## Sign In With Your Website
 
 A store owner can connect an AI app to just their own website. On the connector's approve page they type the website's address, and the API sends them to `wp-admin/admin.php?page=anypress-connect` on that website. The link is signed with the site key (`Core\ConnectLink`): HMAC-SHA256 over `anypress-connect\n<request>\n<app>\n<to>\n<write>\n<back>\n<t>`.
 
@@ -59,7 +59,7 @@ The page (`Features\ConnectPage`) is for administrators only; WordPress asks any
 
 The API then gives the app a token for this website only, which can use the site routes above and nothing else. A link that was changed, was signed by another website, or is past `t` is refused.
 
-## As WordPress abilities
+## As WordPress Abilities
 
 The same actions are registered as WordPress abilities (the Abilities API in WordPress 6.9 and later; stores run 7.1), in the category `anypress`, by `Api\SiteAbilities`. They run SiteController's code, so content is cleaned and revisions are kept as above. Unlike the signed routes, an ability acts as the signed-in user and needs that user's own capabilities: `edit_pages` (and `edit_post` for that page) for pages and patterns, `edit_theme_options` for styles, header, footer and menus, `upload_files` for images.
 
