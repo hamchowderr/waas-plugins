@@ -1,7 +1,7 @@
 # WordPress agent skills
 
 These are copies of every skill in [WordPress/agent-skills](https://github.com/WordPress/agent-skills) (GPL-2.0-or-later),
-taken at commit `eff37854`. They teach coding agents WordPress's own conventions; Claude Code loads them from this folder.
+taken at commit `7374e6f1`. They teach coding agents WordPress's own conventions; Claude Code loads them from this folder.
 
 | Skill | Use it for |
 |---|---|
@@ -13,6 +13,7 @@ taken at commit `eff37854`. They teach coding agents WordPress's own conventions
 | `wp-abilities-api` | Registering abilities (`wp_register_ability`) and their REST exposure |
 | `wp-abilities-audit` | Auditing a plugin's REST surface for abilities to add |
 | `wp-abilities-verify` | Checking abilities against their annotations, permissions and schemas |
+| `wp-ability-development` | Designing what an ability accepts, returns and does (its schemas and behaviour) |
 | `wp-block-themes` | Block themes: `theme.json`, templates, template parts, style variations (Ollie is one) |
 | `wp-patterns` | Block patterns and starter pages |
 | `wp-block-development` | Custom blocks: `block.json`, rendering, deprecations |
@@ -25,11 +26,4 @@ taken at commit `eff37854`. They teach coding agents WordPress's own conventions
 | `wp-playground` | WordPress Playground runs and previews |
 | `blueprint` | Playground Blueprint JSON |
 
-To update, from a checkout of WordPress/agent-skills (run in this repository's root):
-
-```shell
-node ../agent-skills/shared/scripts/skillpack-build.mjs --clean --targets=claude
-for s in $(ls ../agent-skills/dist/claude/.claude/skills); do rm -rf .claude/skills/$s && cp -R ../agent-skills/dist/claude/.claude/skills/$s .claude/skills/; done
-```
-
-Then update the commit above. Don't edit the copies; change them upstream.
+To update, run `.github/scripts/sync-wp-skills.sh` from this repository (it clones the latest WordPress/agent-skills, or pass the path of a checkout). It replaces every upstream skill, sets the commit above and prints any skill that is new (add a row to the table) or was removed upstream. The **Sync WordPress skills** workflow runs it every Monday and opens a pull request when something changed. Don't edit the copies; change them upstream.

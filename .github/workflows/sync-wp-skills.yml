@@ -1,0 +1,58 @@
+name: Sync WordPress skills
+
+# Once a week, checks WordPress/agent-skills for changes and opens a pull
+# request that refreshes the copies in .claude/skills.
+on:
+  schedule:
+    - cron: "17 14 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-wp-skills
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build and copy the latest skills
+        id: sync
+        run: .github/scripts/sync-wp-skills.sh | tee -a "$GITHUB_OUTPUT"
+      - name: Open or update the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT: ${{ steps.sync.outputs.commit }}
+          ADDED: ${{ steps.sync.outputs.added }}
+          REMOVED: ${{ steps.sync.outputs.removed }}
+        run: |
+          if [ -z "$(git status --porcelain .claude/skills)" ]; then
+            echo "The skills are up to date."
+            exit 0
+          fi
+          branch=chore/sync-wp-skills
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$branch"
+          git add .claude/skills
+          git commit -m "Sync WordPress skills to agent-skills $COMMIT"
+          git push --force origin "$branch"
+          {
+            echo "Refreshes \`.claude/skills\` from [WordPress/agent-skills](https://github.com/WordPress/agent-skills/commit/$COMMIT) at \`$COMMIT\`."
+            echo
+            if [ -n "$ADDED" ]; then echo "New skills to add to the table in \`.claude/skills/README.md\`: \`$ADDED\`."; echo; fi
+            if [ -n "$REMOVED" ]; then echo "Removed upstream, still here (delete them and their table rows): \`$REMOVED\`."; echo; fi
+            echo "Pull requests opened by this workflow don't start CI on their own: push a commit (such as the new table rows) to run the checks."
+          } > body.md
+          if gh pr view "$branch" --json state -q .state 2>/dev/null | grep -q OPEN; then
+            gh pr edit "$branch" --title "Sync WordPress skills ($COMMIT)" --body-file body.md
+          else
+            gh pr create --head "$branch" --title "Sync WordPress skills ($COMMIT)" --body-file body.md
+          fi
