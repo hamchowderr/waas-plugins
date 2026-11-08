@@ -42,6 +42,8 @@ putenv('ANYPRESS_IS_TENANT=true');
 putenv('ANYPRESS_SITE_KEY=${SITE_KEY}');
 define('ANYPRESS_API_URL', 'https://api.anypress.test');
 define('ANYPRESS_TENANT_ROLES', 'highlevel');
+// A reseller's site: WP Fusion and HighLevel go by its brand.
+if (!get_option('anypress_brand_name')) update_option('anypress_brand_name', 'KnowBS');
 add_filter('pre_http_request', function ($answer, $args, $url) {
     $json = function ($code, $body) {
         return ['response' => ['code' => $code, 'message' => ''], 'body' => wp_json_encode($body), 'headers' => [], 'cookies' => []];
@@ -62,7 +64,7 @@ add_filter('pre_http_request', function ($answer, $args, $url) {
     $path = substr($url, strlen('https://services.leadconnectorhq.com'));
     $log(['method' => $method, 'path' => $path, 'auth' => $args['headers']['Authorization'] ?? '', 'body' => isset($args['body']) && is_string($args['body']) ? json_decode($args['body'], true) : null]);
     if (strpos($path, '/locations/loc-test/tags') === 0) return $json(200, ['tags' => [['id' => 't1', 'name' => 'vip']]]);
-    if (strpos($path, '/locations/loc-test/customFields') === 0) return $json(200, ['customFields' => [['id' => 'f1', 'name' => 'Plan', 'fieldKey' => 'contact.plan', 'dataType' => 'TEXT']]]);
+    if (strpos($path, '/locations/loc-test/customFields') === 0) return $json(200, ['customFields' => [['id' => 'f1', 'name' => 'Plan', 'fieldKey' => 'contact.plan', 'dataType' => 'TEXT'], ['id' => 'f2', 'name' => 'UTM Campaign', 'fieldKey' => 'contact.utm_campaign', 'dataType' => 'TEXT']]]);
     if (strpos($path, '/contacts/?locationId') === 0 || strpos($path, '/contacts/lookup') === 0) return $json(200, ['contacts' => []]);
     if ($method === 'POST' && $path === '/contacts/') return $json(201, ['contact' => ['id' => 'contact-1']]);
     if (strpos($path, '/contacts/contact-1') === 0) return $json(200, ['contact' => ['id' => 'contact-1', 'tags' => []]]);
@@ -108,14 +110,21 @@ try {
     const synced = await php("echo wp_json_encode(['tags' => wpf_get_option('available_tags'), 'fields' => wpf_get_option('crm_fields')]);");
     check(JSON.stringify(synced.tags ?? {}).includes('vip'), "the sub-account's tags are loaded", synced);
     check(JSON.stringify(synced.fields ?? {}).includes('Plan'), "the sub-account's custom fields are loaded", synced);
+    const lead = await php("$f = wpf_get_option('contact_fields'); echo wp_json_encode(['source' => $f['utm_source'] ?? null, 'campaign' => $f['utm_campaign'] ?? null]);");
+    check(lead.source?.crm_field === 'source' && lead.source?.active && lead.campaign?.crm_field === 'f2' && lead.campaign?.active, "lead source goes to Source, and utm_campaign to the sub-account's UTM Campaign field", lead);
+    const brandedRun = await cli.playground.run({ code: "<?php define('WP_ADMIN', true); require '/wordpress/wp-load.php'; echo wp_json_encode(['crm' => wp_fusion()->crm->name, 'menu' => __('WP Fusion', 'wp-fusion-lite')]);" });
+    const branded = JSON.parse(brandedRun.text.trim() || 'null');
+    check(branded.crm === 'KnowBS CRM' && branded.menu === 'KnowBS Contact Sync', "WP Fusion and HighLevel go by the reseller's brand in wp-admin", branded);
 
     // A new WordPress user goes to the sub-account as a contact, with the tag.
-    await php("wp_insert_user(['user_login' => 'sam', 'user_email' => 'sam@example.com', 'user_pass' => wp_generate_password(), 'first_name' => 'Sam', 'last_name' => 'Rivera', 'role' => 'subscriber']); echo 'null';");
+    // The visitor came from an ad: WP Fusion's lead source cookie, as its tracking sets on the first visit.
+    await php("$_COOKIE['wpf_leadsource'] = wp_json_encode(['utm_source' => 'google', 'utm_campaign' => 'spring']); wp_insert_user(['user_login' => 'sam', 'user_email' => 'sam@example.com', 'user_pass' => wp_generate_password(), 'first_name' => 'Sam', 'last_name' => 'Rivera', 'role' => 'subscriber']); echo 'null';");
     const sent = (await requests()).filter((r) => !r.api);
     const created = sent.find((r) => r.method === 'POST' && r.path === '/contacts/');
     check(Boolean(created), 'a new user is sent to HighLevel as a contact', sent);
     check(created?.auth === 'Bearer token-test' && created?.body?.locationId === 'loc-test', "with the sub-account's token, in that sub-account", created);
     check(created?.body?.email === 'sam@example.com' && created?.body?.firstName === 'Sam', 'with their email and name', created?.body);
+    check(created?.body?.source === 'google' && JSON.stringify(created?.body?.customFields ?? []).includes('spring'), 'with where they came from (Source google, UTM Campaign spring)', created?.body);
     const tagged = sent.some((r) => r.path.startsWith('/contacts/contact-1') && JSON.stringify(r.body ?? {}).includes('website user')) || JSON.stringify(created?.body?.tags ?? []).includes('website user');
     check(tagged, 'the contact is tagged "website user"', sent);
     check(sent.every((r) => r.auth === 'Bearer token-test'), 'every HighLevel call carries the token', sent.map((r) => r.auth));

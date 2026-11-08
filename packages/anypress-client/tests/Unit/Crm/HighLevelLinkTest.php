@@ -160,4 +160,56 @@ class HighLevelLinkTest extends TestCase
         $this->assertArrayNotHasKey('crm', $this->wpf);
         $this->assertGreaterThan(time() + 3000, $this->options[HighLevelLink::RETRY_OPTION]);
     }
+
+    public function test_brands_wp_fusion_and_highlevel_on_a_reseller_site(): void
+    {
+        $this->options['anypress_brand_name'] = 'KnowBS';
+        Functions\when('__')->returnArg();
+        Functions\when('is_admin')->justReturn(true);
+        $link = $this->link();
+
+        $crm = (object) ['slug' => 'highlevel', 'name' => 'HighLevel'];
+        $link->brand_crm($crm);
+        $this->assertSame('KnowBS CRM', $crm->name);
+        $other = (object) ['slug' => 'activecampaign', 'name' => 'ActiveCampaign'];
+        $link->brand_crm($other);
+        $this->assertSame('ActiveCampaign', $other->name);
+
+        $this->assertSame('KnowBS Contact Sync Settings', $link->brand_text('WP Fusion Settings', 'WP Fusion Settings', 'wp-fusion-lite'));
+        $this->assertSame('WP Fusion Settings', $link->brand_text('WP Fusion Settings', 'WP Fusion Settings', 'default'));
+    }
+
+    public function test_maps_lead_source_to_custom_fields_of_the_same_name(): void
+    {
+        $this->options[HighLevelLink::OPTION] = ['location_id' => 'loc-1', 'token' => 't', 'expires' => time() + 86000];
+        $this->wpf = [
+            'crm' => 'highlevel',
+            'crm_fields' => ['Custom Fields' => ['f1' => 'UTM Campaign', 'f2' => 'utm-medium', 'f3' => 'Plan']],
+            'contact_fields' => ['utm_term' => ['crm_field' => 'kept', 'active' => true]],
+        ];
+        $crm = new class () {
+            public function sync()
+            {
+                return true;
+            }
+        };
+        $settings = new class ($this->wpf) {
+            public $values;
+            public function __construct(array &$values)
+            {
+                $this->values = &$values;
+            }
+            public function set($key, $value): void
+            {
+                $this->values[$key] = $value;
+            }
+        };
+        Functions\when('wp_fusion')->justReturn((object) ['settings' => $settings, 'crm' => $crm]);
+
+        $this->link()->sync();
+        $this->assertSame('f1', $this->wpf['contact_fields']['utm_campaign']['crm_field']);
+        $this->assertSame('f2', $this->wpf['contact_fields']['utm_medium']['crm_field']);
+        $this->assertSame('kept', $this->wpf['contact_fields']['utm_term']['crm_field']);
+        $this->assertArrayNotHasKey('gclid', $this->wpf['contact_fields']);
+    }
 }

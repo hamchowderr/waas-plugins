@@ -2,6 +2,7 @@
 
 namespace AnyPressClient\Crm;
 
+use AnyPressClient\Core\Brand;
 use AnyPressClient\Core\SignedRequest;
 use AnyPressClient\Features\EditorAssistant;
 use AnyPressClient\Features\PluginBootstrap;
@@ -32,6 +33,11 @@ class HighLevelLink
     /** Wait after a failed check; a site with no sub-account yet waits RETRY_UNLINKED. */
     public const RETRY_FAILED = 15 * 60;
     public const RETRY_UNLINKED = 3600;
+    /**
+     * Lead source details WP Fusion keeps from a visitor's first visit (its lead source tracking), sent to the
+     * sub-account's custom field of the same name when it has one (utm_source goes to HighLevel's own Source).
+     */
+    public const LEAD_FIELDS = ['utm_campaign', 'utm_medium', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'original_ref', 'landing_page'];
 
     /** @var callable(string, array): (array|\WP_Error) */
     private $post;
@@ -47,6 +53,13 @@ class HighLevelLink
         add_action(self::SYNC_EVENT, [$this, 'sync']);
         add_filter('wpf_get_setting_highlevel_token', [$this, 'token']);
         add_filter('wpf_get_setting_highlevel_location_id', [$this, 'location_id']);
+        // On a reseller's site, WP Fusion and HighLevel go by the reseller's brand in wp-admin.
+        if (Brand::reseller() !== '') {
+            add_action('wp_fusion_init_crm', [$this, 'brand_crm']);
+            if (is_admin()) {
+                add_filter('gettext', [$this, 'brand_text'], 10, 3);
+            }
+        }
     }
 
     /** A store of the HighLevel site type, with a site key to sign with. */
@@ -151,6 +164,8 @@ class HighLevelLink
             'billing_state' => ['state', 'State', false],
             'billing_postcode' => ['postalCode', 'Postal Code', false],
             'billing_country' => ['country', 'Country', false],
+            // Lead source tracking: where the visitor first came from.
+            'utm_source' => ['source', 'Source', true],
         ] as $meta => [$crmField, $label, $active]) {
             $fields[$meta] = array_merge((array) ($fields[$meta] ?? []), ['crm_field' => $crmField, 'crm_label' => $label, 'active' => $active]);
         }
@@ -168,7 +183,10 @@ class HighLevelLink
         wp_schedule_single_event(time() + 30, self::SYNC_EVENT);
     }
 
-    /** Loads the sub-account's tags and custom fields into WP Fusion, as its Refresh button does. */
+    /**
+     * Loads the sub-account's tags and custom fields into WP Fusion, as its Refresh button does, then maps the lead
+     * source details to the sub-account's custom fields named after them (utm_campaign, "UTM Campaign"...).
+     */
     public function sync(): void
     {
         if (!$this->ours() || !function_exists('wp_fusion') || !isset(wp_fusion()->crm) || !is_callable([wp_fusion()->crm, 'sync'])) {
@@ -177,7 +195,52 @@ class HighLevelLink
         $result = wp_fusion()->crm->sync();
         if (is_wp_error($result)) {
             error_log('AnyPress Client: WP Fusion HighLevel sync: ' . $result->get_error_message()); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- the store's log is where this is looked into.
+            return;
         }
+        $custom = (array) (((array) wpf_get_option('crm_fields', []))['Custom Fields'] ?? []);
+        $fields = (array) wpf_get_option('contact_fields', []);
+        $changed = false;
+        foreach (self::LEAD_FIELDS as $meta) {
+            if (!empty($fields[$meta]['crm_field'])) {
+                continue;
+            }
+            foreach ($custom as $id => $label) {
+                if (self::key((string) $label) === $meta) {
+                    $fields[$meta] = array_merge((array) ($fields[$meta] ?? []), ['crm_field' => (string) $id, 'crm_label' => (string) $label, 'active' => true]);
+                    $changed = true;
+                    break;
+                }
+            }
+        }
+        if ($changed) {
+            wp_fusion()->settings->set('contact_fields', $fields);
+        }
+    }
+
+    /** "UTM Campaign", "utm-campaign" and "utm_campaign" all read as utm_campaign. */
+    private static function key(string $label): string
+    {
+        return trim((string) preg_replace('/[^a-z0-9]+/', '_', strtolower($label)), '_');
+    }
+
+    /** HighLevel is called "<brand> CRM" in WP Fusion on a reseller's site. */
+    public function brand_crm($crm): void
+    {
+        if (is_object($crm) && ($crm->slug ?? '') === 'highlevel') {
+            /* translators: %s: the reseller's brand */
+            $crm->name = sprintf(__('%s CRM', 'anypress-client'), Brand::reseller());
+        }
+    }
+
+    /** "WP Fusion" reads "<brand> Contact Sync" in wp-admin on a reseller's site (WP Fusion Lite's own text only). */
+    public function brand_text($translation, $text, $domain)
+    {
+        if ($domain !== 'wp-fusion-lite' || !is_string($translation) || strpos($translation, 'WP Fusion') === false) {
+            return $translation;
+        }
+
+        /* translators: %s: the reseller's brand */
+        return str_replace('WP Fusion', sprintf(__('%s Contact Sync', 'anypress-client'), Brand::reseller()), $translation);
     }
 
     /** WP Fusion is set to HighLevel and this site has a link: the token and sub-account are ours to give. */
