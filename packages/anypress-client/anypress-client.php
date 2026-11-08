@@ -12,7 +12,7 @@ Plugin Name: AnyPress Client
 Plugin URI: https://github.com/hamchowderr/waas-plugins
 Description: Runs on each AnyPress website: one-click login from the storefront, turns plugins on or off to match the store's plan (roles), and lets the AnyPress connector edit the site's design and content.
 Author: Otaku Solutions
-Version: 2.14.0
+Version: 2.15.0
 Author URI: https://otakusolutions.io
 Update URI: anypress-client
 Requires at least: 6.9
@@ -25,7 +25,7 @@ Text Domain: anypress-client
 define( 'ANYPRESS_CLIENT_SLUG', 'anypress-client' );
 define( 'ANYPRESS_CLIENT_BASENAME', plugin_basename( __FILE__ ) );
 define( 'ANYPRESS_CLIENT_UPDATE_URI', 'anypress-client' );
-define( 'ANYPRESS_CLIENT_VERSION', '2.14.0' );
+define( 'ANYPRESS_CLIENT_VERSION', '2.15.0' );
 define( 'ANYPRESS_CLIENT_TEXTDOMAIN', 'anypress-client' );
 
 use AnyPressClient\Api\AdminLogin;
@@ -59,10 +59,15 @@ use AnyPressClient\Moving\SupportImport;
 use AnyPressClient\Shop\ShopAbilities;
 use AnyPressClient\Shop\ShopCommand;
 use AnyPressClient\Shop\ShopSwitch;
+use AnyPressClient\Crm\HighLevelLink;
 
 // A converted form's conditional confirmations while Fluent Forms Pro is off. Forms are sent through admin-ajax,
 // so this is set up on every request; it only does any work when a converted form is sent.
 new ConditionalConfirmations();
+
+// A HighLevel agency's site: WP Fusion connected to the site's own sub-account with a token from the AnyPress API.
+// On every request (admin-ajax too), since WP Fusion reads the token wherever it sends a contact.
+new HighLevelLink();
 
 if (!wp_doing_ajax()) {
     define("ANYPRESS_PLUGIN_DIR_URI", plugin_dir_url(__FILE__));
