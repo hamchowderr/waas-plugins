@@ -15,6 +15,7 @@ How the three plugins work and fit together, with diagrams: [docs/architecture](
 - Creates the website when the subscription starts; suspends, backs up and deletes it when the subscription ends (after the paid period, then a grace period); resumes or restores it if the customer comes back.
 - **My website** in FluentCart's customer portal (the subscription page on WooCommerce): status, one-click login, the customer's own domain, and sending the store's email from their own domain. Where the customer's DNS host supports Domain Connect, a **Connect automatically** button adds the DNS records for them.
 - Plan roles and snapshot groups per product.
+- **Domains** (FluentCart): customers buy a new domain for their website at your checkout, in your brand and at your price; it is registered in their name, set up for the website and renewed with its yearly subscription ([Domains](#domains)).
 - **Email packs** (FluentCart): one-time products that add emails to one of the customer's websites, bought from a **Buy more emails** link on each website ([Email packs](#email-packs)).
 - Updates itself through the AnyPress API, which serves signed releases.
 
@@ -90,6 +91,18 @@ On FluentCart, a website can buy more email than its plan sends each month. Pack
 - The website must belong to the order's customer. If it doesn't, or it has been deleted, nothing is added and the order gets a note.
 - An order without a website (a pack bought from the shop page) goes to the customer's only live website. With none or several, nothing is added and the order gets a note for the shop owner to add the emails by hand.
 - If the API call fails, the order gets a note, the error is logged, and it is retried after 1, 5, 15, 30 and 60 minutes. After that the order is listed in an admin notice with a **Retry** link, and `anypress_email_packs_failed` fires. Retrying is safe: lines already added are skipped and the reference stops a line being added twice.
+
+### Domains
+
+On FluentCart, customers can buy a new domain for a website without leaving your shop. Turn it on under **AnyPress → Settings → Domains** (**Sell domains**), and set what to add to each year's price. It needs FluentCart and a payment method that takes subscriptions. Your storefront must be allowed to sell domains on the AnyPress API: a reseller's storefronts are, and pay for each domain on the reseller's monthly bill.
+
+**How a customer buys one.** Each live website under **My website** gets a **Get a new domain** panel. The customer searches for a name, sees what each one costs a year (the AnyPress price plus your amount; a first year that costs more is added as a first-year fee), picks one and fills in who it belongs to. **Continue to checkout** checks the name again and opens FluentCart's checkout for a yearly subscription called *Domain &lt;name&gt;*.
+
+**When the order is paid**, the AnyPress API registers the domain in the customer's name with WHOIS privacy on, points it at the website and makes it the website's address (`POST /v1/tenants/domains/buy`, reference `fluentcart-order-<order id>-domain`). **Each renewal** renews it for another year (`POST /v1/tenants/domains/bought/renew`, reference `fluentcart-renewal-<renewal order id>`). A cancelled subscription lets the domain expire at the end of its year.
+
+- Failed calls are retried after 1, 5, 15, 30 and 60 minutes, then listed in an admin notice with a **Retry** link, and `anypress_domain_failed` fires.
+- If the name was taken before the order was paid, the order gets a note to refund it, and nothing is charged for the domain.
+- `anypress_domain_price` filters the yearly price shown and charged (cents, from the AnyPress price in cents).
 
 ## API Base URL
 

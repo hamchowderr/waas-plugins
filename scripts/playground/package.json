@@ -18,7 +18,8 @@
     "editor": "node editor-assistant.mjs",
     "moving": "node moving.mjs",
     "phone": "node phone.mjs",
-    "highlevel": "node highlevel.mjs"
+    "highlevel": "node highlevel.mjs",
+    "domains": "node domains.mjs"
   },
   "dependencies": {
     "@wp-playground/cli": "3.1.59"
