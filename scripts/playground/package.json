@@ -17,7 +17,8 @@
     "emails": "node email-preview.mjs",
     "editor": "node editor-assistant.mjs",
     "moving": "node moving.mjs",
-    "phone": "node phone.mjs"
+    "phone": "node phone.mjs",
+    "highlevel": "node highlevel.mjs"
   },
   "dependencies": {
     "@wp-playground/cli": "3.1.59"
