@@ -28,9 +28,11 @@ class FluentCartPortal
     private FluentCartStore $store;
     private UserAccountSubscriptionsSettings $domain_settings;
     private ?FluentCartEmailPacks $email_packs;
+    private ?FluentCartDomains $domains;
 
-    public function __construct(FluentCartAdapter $adapter, FluentCartStore $store, UserAccountSubscriptionsSettings $domain_settings, ?FluentCartEmailPacks $email_packs = null)
+    public function __construct(FluentCartAdapter $adapter, FluentCartStore $store, UserAccountSubscriptionsSettings $domain_settings, ?FluentCartEmailPacks $email_packs = null, ?FluentCartDomains $domains = null)
     {
+        $this->domains = $domains;
         $this->adapter = $adapter;
         $this->store = $store;
         $this->domain_settings = $domain_settings;
@@ -224,6 +226,9 @@ class FluentCartPortal
         // The domain and email settings, once the website is up (they change a running website).
         if ($status === Tenant::READY && !empty($this->adapter->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META))) {
             $this->domain_settings->render_edit_domain($subscription_id);
+        }
+        if ($this->domains) {
+            $this->domains->render_section($subscription_id);
         }
         $this->render_email_pack_links($subscription_id);
         echo '</section>';

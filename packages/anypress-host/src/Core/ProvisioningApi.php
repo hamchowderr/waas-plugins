@@ -251,6 +251,45 @@ class ProvisioningApi
         ]);
     }
 
+    /**
+     * Domains to buy for a name or an exact domain, with what each costs the storefront (cents, USD).
+     *
+     * @throws \Exception
+     */
+    public function search_domains(string $query): array
+    {
+        $response = $this->httpService->get('/v1/tenants/domains/search?query=' . rawurlencode($query));
+
+        return isset($response->results) && is_array($response->results) ? $response->results : [];
+    }
+
+    /**
+     * Registers a domain the storefront has been paid for. `reference` is the shop order, so a repeat buys nothing more.
+     *
+     * @throws \Exception
+     */
+    public function buy_paid_domain($external_id, string $domain_name, array $contact, string $reference)
+    {
+        return $this->httpService->post('/v1/tenants/domains/buy?externalId=' . rawurlencode((string) $external_id), [
+            'domainName' => $domain_name,
+            'contact' => $contact,
+            'reference' => $reference,
+        ]);
+    }
+
+    /**
+     * Renews a domain paid for at the storefront for one more year. `reference` is the renewal order.
+     *
+     * @throws \Exception
+     */
+    public function renew_paid_domain($external_id, string $domain_name, string $reference)
+    {
+        return $this->httpService->post('/v1/tenants/domains/bought/renew?externalId=' . rawurlencode((string) $external_id), [
+            'domainName' => $domain_name,
+            'reference' => $reference,
+        ]);
+    }
+
     public function add_tenant_domain($args)
     {
         $this->httpService->post('/v1/tenants/domains?externalId=' . $args['external_id'], [

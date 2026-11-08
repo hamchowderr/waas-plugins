@@ -73,6 +73,7 @@ class AdminSettings
             'access' => $managed ? null : [__('Customer access', 'anypress-host'), 'anypress-admin-access'],
             'cancellations' => [__('Cancellations', 'anypress-host'), 'anypress-admin-cancellations'],
             'discount' => [__('Volume discount', 'anypress-host'), 'anypress-admin-discount'],
+            'domains' => [__('Domains', 'anypress-host'), 'anypress-admin-domains'],
             'emails' => [__('Emails', 'anypress-host'), ''],
         ]);
     }
@@ -462,6 +463,14 @@ class AdminSettings
             'default' => TenantsSubscriptionManager::DEFAULT_DELETION_GRACE_DAYS,
             'sanitize_callback' => fn ($value) => max(1, absint($value)),
         ]);
+        // Off by default: turning it on offers domains to every customer.
+        register_setting('anypress-admin-domains', \AnyPressHost\Commerce\FluentCart\FluentCartDomains::ENABLED_OPTION, [
+            'default' => ''
+        ]);
+        register_setting('anypress-admin-domains', \AnyPressHost\Commerce\FluentCart\FluentCartDomains::EXTRA_OPTION, [
+            'default' => 0,
+            'sanitize_callback' => fn ($value) => min(1000, absint($value)),
+        ]);
         // Off by default: turning it on changes prices on the live shop.
         register_setting('anypress-admin-discount', VolumeDiscount::ENABLED_OPTION, [
             'default' => ''
@@ -618,6 +627,31 @@ class AdminSettings
             'label' => __('Discount website plans for customers with several live websites', 'anypress-host'),
             'tiers' => true,
             'hint' => __('Applied at checkout to signed-in customers and to anyone using an existing customer\'s email, on the first payment and every renewal. When a customer moves to another tier, their other plans get the new price from their next renewal, with no charge now (plans billed by Stripe or by the store; others get a note on the subscription to change by hand). Needs FluentCart.', 'anypress-host'),
+        ]);
+
+        $this->add_domain_settings();
+    }
+
+    private function add_domain_settings(): void
+    {
+        add_settings_section(
+            'anypress_domains',
+            __('Domains', 'anypress-host'),
+            fn () => print('<p>' . esc_html__('Customers can buy their own domain on their Website page, at your checkout and in your brand. It is registered in their name, set up for their website, and renews every year with its subscription. Prices are in US dollars.', 'anypress-host') . '</p>'),
+            'anypress-admin-domains'
+        );
+
+        $this->add_field(\AnyPressHost\Commerce\FluentCart\FluentCartDomains::ENABLED_OPTION, __('Sell domains', 'anypress-host'), 'anypress-admin-domains', 'anypress_domains', [
+            'type' => 'checkbox',
+            'label' => __('Offer domains on the customer\'s Website page', 'anypress-host'),
+            'hint' => __('Each domain is charged to your AnyPress account at its AnyPress price when it is registered and each time it renews. Needs FluentCart and a payment method that takes subscriptions.', 'anypress-host'),
+        ]);
+        $this->add_field(\AnyPressHost\Commerce\FluentCart\FluentCartDomains::EXTRA_OPTION, __('Add to each year\'s price', 'anypress-host'), 'anypress-admin-domains', 'anypress_domains', [
+            'type' => 'number',
+            'class_name' => 'small-text',
+            'min' => 0,
+            'suffix' => __('dollars', 'anypress-host'),
+            'hint' => __('Your margin on top of the AnyPress price, which already includes registration. 0 sells domains at the AnyPress price.', 'anypress-host'),
         ]);
     }
 

@@ -90,11 +90,23 @@ class AccountStyles
 .anypress-acct .anypress-choose-website-name{margin-top:14px}
 .anypress-acct .anypress-choose-website-name label{display:flex;flex-direction:column;gap:6px;font-weight:600;margin:10px 0}
 .anypress-acct .anypress-choose-website-name input[type=text]{padding:10px 12px;font-size:15px;border:1px solid rgba(0,0,0,.25);border-radius:8px;font-weight:400;max-width:420px}
+.anypress-acct-form input[type=search]{width:100%;padding:10px 12px;font-size:15px;border:1px solid rgba(0,0,0,.25);border-radius:8px;font-weight:400}
+.anypress-acct-domain-buy{margin-top:14px}
+.anypress-acct-domain-list{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:8px}
+.anypress-acct-domain-list label{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:12px 14px;border:1px solid rgba(0,0,0,.18);border-radius:10px;cursor:pointer}
+.anypress-acct-domain-list label:has(input:checked){border:1.5px solid #141414;box-shadow:3px 3px 0 #ffc75a}
+.anypress-acct-domain-list strong{overflow-wrap:anywhere}
+.anypress-acct-domain-list span{margin-left:auto;font-variant-numeric:tabular-nums;opacity:.8}
+.anypress-acct-contact{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:8px 0 18px}
+.anypress-acct-contact label{display:flex;flex-direction:column;gap:6px;font-weight:600}
+.anypress-acct-contact label.is-wide{grid-column:1/-1}
+.anypress-acct-contact small{font-weight:400;opacity:.7}
+.anypress-acct-contact input{width:100%;padding:10px 12px;font-size:15px;border:1px solid rgba(0,0,0,.25);border-radius:8px;font-weight:400}
 .anypress-acct-emails{margin:14px 0 0;opacity:.85}
 .anypress-acct-notice{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;border:1.5px solid #141414;border-radius:16px;box-shadow:5px 5px 0 #ffc75a;padding:16px 20px;margin-bottom:18px;background:#fff;font-size:15px}
 .anypress-acct-notice p{margin:0;flex:1 1 260px;overflow-wrap:anywhere}
 .anypress-acct-notice .anypress-acct-actions{margin-top:0}
-@media (max-width:600px){.anypress-acct-panel>summary small{flex-basis:100%;padding-left:32px}.anypress-acct-site{padding:18px 16px}.anypress-acct-panel-body{padding-left:0}.anypress-acct-actions>*,.anypress-acct-form>.anypress-acct-btn{flex:1 1 100%;text-align:center}.anypress-acct .anypress-choose-website-name>.anypress-acct-btn{display:flex;width:100%}.anypress-acct table.anypress-mail-records{display:block;overflow-x:auto}}
+@media (max-width:600px){.anypress-acct-contact{grid-template-columns:1fr}.anypress-acct-domain-buy>.anypress-acct-btn{width:100%}.anypress-acct-panel>summary small{flex-basis:100%;padding-left:32px}.anypress-acct-site{padding:18px 16px}.anypress-acct-panel-body{padding-left:0}.anypress-acct-actions>*,.anypress-acct-form>.anypress-acct-btn{flex:1 1 100%;text-align:center}.anypress-acct .anypress-choose-website-name>.anypress-acct-btn{display:flex;width:100%}.anypress-acct table.anypress-mail-records{display:block;overflow-x:auto}}
 CSS;
     }
 }
