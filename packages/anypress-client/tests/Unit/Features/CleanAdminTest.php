@@ -54,6 +54,7 @@ class CleanAdminTest extends TestCase
             'upgrade' => '<a href="https://fluentforms.com/pricing" style="color:red">Upgrade to Pro</a>',
             'review' => '<a href="https://wordpress.org/support/plugin/fluentform/reviews/">Rate us</a>',
             'docs' => '<a href="https://fluentforms.com/docs">Docs</a>',
+            'check' => '<a href="#">Check Update</a>',
         ];
         $clean = new CleanAdmin();
         $this->assertSame(['settings', 'docs'], array_keys($clean->plugin_links($links, 'fluentform/fluentform.php')));

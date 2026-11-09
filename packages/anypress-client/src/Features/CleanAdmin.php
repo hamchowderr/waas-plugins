@@ -19,10 +19,11 @@ class CleanAdmin
     public const UPSELL_MENU = '/\b(upgrade|go pro|get pro|pro features|premium|pricing|licen[cs]es?|add-?ons|extensions|try [a-z]+!?|[a-z]+ sale|deals?)\b/i';
 
     /** Plugins screen links that sell something or ask for a review. */
-    public const UPSELL_LINK = '/\b(upgrade|go pro|get pro|unlock pro|pro version|premium|pricing|buy|review|rate us|rate it|add-?ons)\b/i';
+    public const UPSELL_LINK = '/\b(upgrade|go pro|get pro|unlock pro|pro version|premium|pricing|buy|review|rate us|rate it|add-?ons|check update)\b/i';
 
     /** Screens a store owner never needs. */
     public const HIDDEN_SCREENS = [
+        'index.php' => ['update-core.php'],
         'tools.php' => ['action-scheduler', 'theme-editor.php', 'plugin-editor.php'],
         'themes.php' => ['theme-editor.php'],
         'plugins.php' => ['plugin-editor.php'],
@@ -62,6 +63,7 @@ class CleanAdmin
         add_filter('site_transient_update_plugins', [$this, 'hide_managed_updates']);
         add_filter('wp_get_update_data', [$this, 'update_counts'], PHP_INT_MAX);
         add_filter('admin_footer_text', [$this, 'footer_text'], PHP_INT_MAX);
+        add_filter('update_footer', '__return_empty_string', PHP_INT_MAX);
         add_action('admin_head', [$this, 'hide_in_page_upsells']);
     }
 
