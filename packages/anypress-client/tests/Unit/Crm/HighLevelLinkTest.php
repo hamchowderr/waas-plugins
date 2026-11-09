@@ -161,6 +161,38 @@ class HighLevelLinkTest extends TestCase
         $this->assertGreaterThan(time() + 3000, $this->options[HighLevelLink::RETRY_OPTION]);
     }
 
+    public function test_check_now_asks_the_api_whatever_was_kept(): void
+    {
+        // Untied while it waited: a fresh token kept, and a wait set.
+        $this->options[HighLevelLink::OPTION] = ['location_id' => 'loc-1', 'token' => 'old', 'expires' => time() + 86000];
+        $this->options[HighLevelLink::RETRY_OPTION] = time() + 3000;
+        $this->answer = ['crm' => null];
+        $this->assertSame(['linked' => false, 'locationId' => null, 'connected' => false], $this->link()->check_now());
+        $this->assertCount(1, $this->posts);
+        $this->assertArrayNotHasKey(HighLevelLink::OPTION, $this->options);
+
+        // Tied: connected straight away, not after the hour's wait.
+        $this->answer = $this->linked();
+        $this->assertSame(['linked' => true, 'locationId' => 'loc-1', 'connected' => true], $this->link()->check_now());
+        $this->assertCount(2, $this->posts);
+        $this->assertSame('loc-1', $this->wpf['highlevel_location_id']);
+    }
+
+    public function test_check_now_only_answers_the_api(): void
+    {
+        if (!class_exists('WP_REST_Request')) {
+            eval('class WP_REST_Request { function get_header($n) {} function get_method() {} function get_route() {} function get_query_params() {} function get_body() {} }');
+        }
+        $request = \Mockery::mock(\WP_REST_Request::class, [
+            'get_header' => 't=' . time() . ',n=' . str_repeat('0', 32) . ',s=' . str_repeat('0', 64),
+            'get_method' => 'POST',
+            'get_route' => '/anypress-client/v1/site/crm-link',
+            'get_query_params' => [],
+            'get_body' => '',
+        ]);
+        $this->assertInstanceOf(\WP_Error::class, $this->link()->authorize($request));
+    }
+
     public function test_brands_wp_fusion_and_highlevel_on_a_reseller_site(): void
     {
         $this->options['anypress_brand_name'] = 'KnowBS';
