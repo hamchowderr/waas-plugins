@@ -6,6 +6,9 @@ use AnyPressClient\Core\Brand;
 use AnyPressClient\Core\SignedRequest;
 use AnyPressClient\Features\EditorAssistant;
 use AnyPressClient\Features\PluginBootstrap;
+use WP_Error;
+use WP_REST_Request;
+use WP_REST_Server;
 
 /**
  * WP Fusion on a HighLevel agency's sites, connected to the site's own HighLevel sub-account with nobody pressing
@@ -15,6 +18,9 @@ use AnyPressClient\Features\PluginBootstrap;
  *
  * Only on stores of the "highlevel" site type with a site key. WP Fusion set up for another CRM by the owner is
  * left alone. When the API can't be reached the site keeps working: WP Fusion's calls wait for the next check.
+ *
+ * The API can also tell the site to check right away (POST anypress-client/v1/site/crm-link, signed with the site
+ * key), for when a site is tied to a sub-account, or untied, after it was made.
  */
 class HighLevelLink
 {
@@ -22,6 +28,8 @@ class HighLevelLink
     /** The tag every user of the site gets in HighLevel. */
     public const USER_TAG = 'website user';
     public const API_ROUTE = '/apps/site/crm-link';
+    /** The site's own route where the API tells it to check now. */
+    public const ROUTE = '/site/crm-link';
     /** {location_id, token, expires} from the API's last good answer. */
     public const OPTION = 'anypress_highlevel_link';
     /** Unix time before which no new check is made after a failed or empty one. */
@@ -51,6 +59,7 @@ class HighLevelLink
         add_action('init', [$this, 'schedule']);
         add_action(self::CHECK_EVENT, [$this, 'check']);
         add_action(self::SYNC_EVENT, [$this, 'sync']);
+        add_action('rest_api_init', [$this, 'register_rest_routes']);
         add_filter('wpf_get_setting_highlevel_token', [$this, 'token']);
         add_filter('wpf_get_setting_highlevel_location_id', [$this, 'location_id']);
         // On a reseller's site, WP Fusion and HighLevel go by the reseller's brand in wp-admin.
@@ -80,6 +89,44 @@ class HighLevelLink
         }
     }
 
+    public function register_rest_routes(): void
+    {
+        register_rest_route(PluginBootstrap::API_V1_NAMESPACE, self::ROUTE, [
+            'methods' => WP_REST_Server::CREATABLE,
+            'callback' => [$this, 'check_now'],
+            'permission_callback' => [$this, 'authorize'],
+        ]);
+    }
+
+    /** Only the AnyPress API, signing with this site's key. */
+    public function authorize(WP_REST_Request $request)
+    {
+        $signed = SignedRequest::verify(
+            SignedRequest::key(),
+            $request->get_header(SignedRequest::HEADER),
+            $request->get_method(),
+            SignedRequest::route($request->get_route(), (array) $request->get_query_params()),
+            (string) $request->get_body()
+        );
+
+        return $signed ? true : new WP_Error('anypress_site_unauthorized', 'This request is not signed by AnyPress.', ['status' => 401]);
+    }
+
+    /**
+     * Asks the API now, whatever was kept or however long the last empty answer said to wait, and answers what the
+     * site has: {linked, locationId, connected}. connected: WP Fusion is set to HighLevel and reads this link.
+     */
+    public function check_now(): array
+    {
+        $link = $this->check(true);
+
+        return [
+            'linked' => $link !== null,
+            'locationId' => $link['location_id'] ?? null,
+            'connected' => $link !== null && $this->ours(),
+        ];
+    }
+
     /** WP Fusion's HighLevel token: the API's, renewed first when it is about to end. */
     public function token($value)
     {
@@ -103,15 +150,17 @@ class HighLevelLink
 
     /**
      * Asks the API for the sub-account and a token when the one kept is about to end (or there is none), keeps the
-     * answer, and connects WP Fusion the first time. Returns the link kept, or null.
+     * answer, and connects WP Fusion the first time. Returns the link kept, or null. $force asks even when the
+     * token kept is fresh or a wait is set (the API's check-now).
      */
-    public function check(): ?array
+    public function check($force = false): ?array
     {
+        $force = $force === true;
         $link = $this->link();
-        if ($link && $link['expires'] - time() >= self::RENEW_BEFORE) {
+        if (!$force && $link && $link['expires'] - time() >= self::RENEW_BEFORE) {
             return $link;
         }
-        if ((int) get_option(self::RETRY_OPTION, 0) > time()) {
+        if (!$force && (int) get_option(self::RETRY_OPTION, 0) > time()) {
             return $link;
         }
 

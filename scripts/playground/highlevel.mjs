@@ -1,7 +1,9 @@
 // AnyPress Client's HighLevel link (src/Crm/HighLevelLink.php) on WordPress Playground with WP Fusion Lite: on a
 // HighLevel site, the store asks the AnyPress API (signed with its site key) for its sub-account and token, connects
 // WP Fusion to HighLevel by itself, loads the sub-account's tags and fields, and a new WordPress user is sent to the
-// sub-account as a contact tagged "website user". The API and HighLevel are played here; every request is recorded.
+// sub-account as a contact tagged "website user". The API can tell the store to check now (a signed POST to
+// /site/crm-link), for a site tied or untied after it was made. The API and HighLevel are played here; every request
+// is recorded.
 //
 //   cd scripts/playground && npm ci
 //   npm run highlevel        # run the checks, exit 1 on a failure
@@ -57,6 +59,7 @@ add_filter('pre_http_request', function ($answer, $args, $url) {
         $ok = \\AnyPressClient\\Core\\SignedRequest::verify(getenv('ANYPRESS_SITE_KEY'), $args['headers']['X-AnyPress-Signature'] ?? '', 'POST', '/apps/site/crm-link', $args['body']);
         $log(['api' => true, 'signed' => $ok, 'body' => json_decode($args['body'], true)]);
         if (!$ok) return $json(403, ['message' => 'not signed']);
+        if (get_option('anypress_test_untied')) return $json(200, ['crm' => null]);
         return $json(200, ['crm' => 'highlevel', 'locationId' => 'loc-test', 'accessToken' => 'token-test', 'expiresAt' => gmdate('c', time() + 86000)]);
     }
     if (strpos($url, 'https://services.leadconnectorhq.com/') !== 0) return $answer;
@@ -134,6 +137,22 @@ try {
     // A token about to end is renewed from the API before WP Fusion uses it.
     const renewed = await php("$l = get_option('anypress_highlevel_link'); $l['expires'] = time() + 60; update_option('anypress_highlevel_link', $l); wpf_get_option('highlevel_token'); echo wp_json_encode(get_option('anypress_highlevel_link')['expires'] - time());");
     check(renewed > 3 * 3600, 'a token about to end is renewed from the API', renewed);
+
+    // The API's check-now: a signed POST to the store's /site/crm-link asks the API straight away, whatever was kept.
+    const checkNow = (sign) => php(`$body = ''; $route = '/anypress-client/v1/site/crm-link'; $r = new WP_REST_Request('POST', $route);${sign ? " $r->set_header('X-AnyPress-Signature', \\AnyPressClient\\Core\\SignedRequest::sign(getenv('ANYPRESS_SITE_KEY'), 'POST', $route, $body));" : ''} $res = rest_do_request($r); echo wp_json_encode(['status' => $res->get_status(), 'data' => $res->get_data()]);`);
+    const unsigned = await checkNow(false);
+    check(unsigned.status === 401, 'check-now refuses a request not signed by the API', unsigned);
+    const askedBefore = (await requests()).filter((r) => r.api).length;
+    const now = await checkNow(true);
+    check(now.status === 200 && now.data?.linked && now.data?.connected && now.data?.locationId === 'loc-test', 'check-now answers the link and that WP Fusion uses it', now);
+    check((await requests()).filter((r) => r.api).length === askedBefore + 1, 'check-now asked the API even with a fresh token kept', askedBefore);
+    // Untied from the sub-account, then a wait set by the empty answer: check-now still asks.
+    await php("update_option('anypress_test_untied', 1); echo 'null';");
+    const untied = await checkNow(true);
+    check(untied.data?.linked === false && untied.data?.connected === false, 'untied: the link is dropped', untied);
+    await php("delete_option('anypress_test_untied'); echo 'null';");
+    const retied = await checkNow(true);
+    check(retied.data?.linked && retied.data?.connected, 'tied again: connected at once, without the hour wait', retied);
 } finally {
     await cli[Symbol.asyncDispose]?.();
     await cli.server?.close?.();
