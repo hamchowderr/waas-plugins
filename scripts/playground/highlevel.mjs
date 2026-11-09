@@ -153,6 +153,12 @@ try {
     await php("delete_option('anypress_test_untied'); echo 'null';");
     const retied = await checkNow(true);
     check(retied.data?.linked && retied.data?.connected, 'tied again: connected at once, without the hour wait', retied);
+
+    // A store made before HighLevel sites had their own plugins: the template connected WP Fusion to FluentCRM.
+    // The link takes over from that, and check-now says which CRM WP Fusion is on.
+    await php("wp_fusion()->settings->set_multiple(['crm' => 'fluentcrm', 'connection_configured' => true]); echo 'null';");
+    const before2 = await checkNow(true);
+    check(before2.data?.crm === 'highlevel' && before2.data?.connected, 'a store on its own FluentCRM is moved to HighLevel, and check-now says so', before2);
 } finally {
     await cli[Symbol.asyncDispose]?.();
     await cli.server?.close?.();

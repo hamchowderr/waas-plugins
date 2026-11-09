@@ -147,6 +147,19 @@ class HighLevelLinkTest extends TestCase
         $this->assertSame('their-token', $this->link()->token('their-token'));
     }
 
+    public function test_takes_over_from_the_stores_own_fluentcrm(): void
+    {
+        // A store made before HighLevel sites had their own plugins: WP Fusion connected to FluentCRM by the template.
+        $this->wpf = ['crm' => 'fluentcrm', 'connection_configured' => true, 'contact_fields' => ['billing_address_2' => ['crm_field' => 'address_line_2', 'active' => false]]];
+        $this->answer = $this->linked();
+        $this->link()->check();
+        $this->assertSame('highlevel', $this->wpf['crm']);
+        $this->assertSame('loc-1', $this->wpf['highlevel_location_id']);
+        $this->assertArrayNotHasKey('billing_address_2', $this->wpf['contact_fields'], "FluentCRM's field map is not kept");
+        $this->assertSame('firstName', $this->wpf['contact_fields']['first_name']['crm_field']);
+        $this->assertSame([HighLevelLink::SYNC_EVENT], $this->scheduled);
+    }
+
     public function test_waits_after_a_failed_or_empty_answer(): void
     {
         $this->answer = null;
@@ -167,13 +180,13 @@ class HighLevelLinkTest extends TestCase
         $this->options[HighLevelLink::OPTION] = ['location_id' => 'loc-1', 'token' => 'old', 'expires' => time() + 86000];
         $this->options[HighLevelLink::RETRY_OPTION] = time() + 3000;
         $this->answer = ['crm' => null];
-        $this->assertSame(['linked' => false, 'locationId' => null, 'connected' => false], $this->link()->check_now());
+        $this->assertSame(['linked' => false, 'locationId' => null, 'connected' => false, 'crm' => null], $this->link()->check_now());
         $this->assertCount(1, $this->posts);
         $this->assertArrayNotHasKey(HighLevelLink::OPTION, $this->options);
 
         // Tied: connected straight away, not after the hour's wait.
         $this->answer = $this->linked();
-        $this->assertSame(['linked' => true, 'locationId' => 'loc-1', 'connected' => true], $this->link()->check_now());
+        $this->assertSame(['linked' => true, 'locationId' => 'loc-1', 'connected' => true, 'crm' => 'highlevel'], $this->link()->check_now());
         $this->assertCount(2, $this->posts);
         $this->assertSame('loc-1', $this->wpf['highlevel_location_id']);
     }

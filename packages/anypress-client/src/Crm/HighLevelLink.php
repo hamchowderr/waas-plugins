@@ -25,6 +25,8 @@ use WP_REST_Server;
 class HighLevelLink
 {
     public const SITE_TYPE = 'highlevel';
+    /** The CRM the store template connects WP Fusion to by itself; a HighLevel link replaces it. */
+    public const TAKES_OVER_FROM = 'fluentcrm';
     /** The tag every user of the site gets in HighLevel. */
     public const USER_TAG = 'website user';
     public const API_ROUTE = '/apps/site/crm-link';
@@ -114,16 +116,20 @@ class HighLevelLink
 
     /**
      * Asks the API now, whatever was kept or however long the last empty answer said to wait, and answers what the
-     * site has: {linked, locationId, connected}. connected: WP Fusion is set to HighLevel and reads this link.
+     * site has: {linked, locationId, connected, crm}. connected: WP Fusion is set to HighLevel and reads this link.
      */
     public function check_now(): array
     {
         $link = $this->check(true);
 
+        $crm = function_exists('wpf_get_option') ? wpf_get_option('crm') : null;
+
         return [
             'linked' => $link !== null,
             'locationId' => $link['location_id'] ?? null,
             'connected' => $link !== null && $this->ours(),
+            // The CRM WP Fusion sends contacts to (null without WP Fusion or a CRM), so "not connected" says why.
+            'crm' => is_string($crm) && $crm !== '' ? $crm : null,
         ];
     }
 
@@ -192,17 +198,21 @@ class HighLevelLink
 
     /**
      * WP Fusion set to HighLevel for this sub-account, as its Connect button leaves it, with new users sent as
-     * contacts and the default field map. Once: an owner who set WP Fusion up for another CRM keeps it.
+     * contacts and the default field map. Once: an owner who set WP Fusion up for another CRM keeps it. The site's
+     * own FluentCRM is not such a choice: stores made before HighLevel sites had their own plugin set got WP Fusion
+     * connected to FluentCRM automatically, and a site tied to a sub-account sends its contacts there instead.
      */
     public function connect(string $location): void
     {
         if (!function_exists('wp_fusion') || !function_exists('wpf_get_option')) {
             return;
         }
-        if (wpf_get_option('connection_configured')) {
+        $crm = wpf_get_option('crm');
+        if (wpf_get_option('connection_configured') && $crm !== self::TAKES_OVER_FROM) {
             return;
         }
-        $fields = (array) wpf_get_option('contact_fields', []);
+        // FluentCRM's field map names FluentCRM's fields; HighLevel starts from its own.
+        $fields = $crm === self::TAKES_OVER_FROM ? [] : (array) wpf_get_option('contact_fields', []);
         foreach ([
             'user_email' => ['email', 'Email', true],
             'first_name' => ['firstName', 'First Name', true],
