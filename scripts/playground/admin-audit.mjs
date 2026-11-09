@@ -25,6 +25,7 @@ const org = [...list('PLUGINS'), ...list('OFF_PLUGINS').filter(([s]) => s === 'l
 const steps = [
     { step: 'installTheme', themeData: { resource: 'literal', name: 'anypress.zip', contents: readFileSync(resolve(HERE, 'preview-zips/anypress.zip')) }, options: { activate: true } },
     ...org.map(([slug, version]) => ({ step: 'installPlugin', pluginData: { resource: 'url', url: `https://downloads.wordpress.org/plugin/${slug}.${version}.zip` } })),
+    { step: 'installPlugin', pluginData: { resource: 'url', url: `https://github.com/hamchowderr/anypress-blocks/releases/download/v${build.match(/BLOCKS_VERSION=\$\{BLOCKS_VERSION:-([0-9.]+)\}/)[1]}/anypress-blocks.zip` } },
     { step: 'installPlugin', pluginData: { resource: 'literal', name: 'fluent-toolkit.zip', contents: readFileSync(`${API}/templates/anypress-store/plugins/fluent-toolkit-2.1.4.zip`) } },
 ];
 // The template's own mu-plugin (telemetry and upgrade nags off, install dates set on the first run), as on a store.

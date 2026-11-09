@@ -26,6 +26,9 @@ class CleanAdminTest extends TestCase
         $cache = new \ReflectionProperty(CleanAdmin::class, 'managed');
         $cache->setAccessible(true);
         $cache->setValue(null, null);
+        $planned = new \ReflectionProperty(CleanAdmin::class, 'planned');
+        $planned->setAccessible(true);
+        $planned->setValue(null, null);
         Functions\when('wp_strip_all_tags')->alias(fn ($s) => trim(strip_tags((string) $s)));
         Functions\when('wp_doing_cron')->justReturn(false);
         Functions\when('is_admin')->justReturn(false);
@@ -56,6 +59,37 @@ class CleanAdminTest extends TestCase
         $this->assertSame(['settings', 'docs'], array_keys($clean->plugin_links($links, 'fluentform/fluentform.php')));
         // The owner's own plugin keeps everything.
         $this->assertSame($links, $clean->plugin_links($links, 'shortcodes-ultimate/shortcodes-ultimate.php'));
+    }
+
+    public function test_a_highlevel_site_does_not_list_the_other_site_types_plugins(): void
+    {
+        Functions\when('get_option')->justReturn(['highlevel']);
+        $plugins = [
+            'leadconnector/leadconnector.php' => ['Name' => 'LeadConnector'],
+            'fluentform/fluentform.php' => ['Name' => 'Fluent Forms'],
+            'automatorwp/automatorwp.php' => ['Name' => 'AutomatorWP'],
+            'mcp-adapter/mcp-adapter.php' => ['Name' => 'MCP Adapter'],
+            'shortcodes-ultimate/shortcodes-ultimate.php' => ['Name' => 'Shortcodes Ultimate'],
+        ];
+        $this->assertSame(
+            ['leadconnector/leadconnector.php', 'mcp-adapter/mcp-adapter.php', 'shortcodes-ultimate/shortcodes-ultimate.php'],
+            array_keys((new CleanAdmin())->hide_unplanned_plugins($plugins))
+        );
+    }
+
+    public function test_without_a_site_type_every_plugin_is_listed(): void
+    {
+        Functions\when('get_option')->justReturn(['no-such-type']);
+        $plugins = ['fluentform/fluentform.php' => [], 'leadconnector/leadconnector.php' => []];
+        $this->assertSame($plugins, (new CleanAdmin())->hide_unplanned_plugins($plugins));
+    }
+
+    public function test_included_plugins_lose_add_ons_and_auto_update_links(): void
+    {
+        $clean = new CleanAdmin();
+        $this->assertSame([], $clean->plugin_links(['<a href="#">Add-ons</a>'], 'automatorwp/automatorwp.php'));
+        $this->assertSame('', $clean->auto_update_html('<a>Enable auto-updates</a>', 'automatorwp/automatorwp.php'));
+        $this->assertSame('<a>Enable auto-updates</a>', $clean->auto_update_html('<a>Enable auto-updates</a>', 'shortcodes-ultimate/shortcodes-ultimate.php'));
     }
 
     public function test_updates_are_not_offered_for_the_included_plugins(): void

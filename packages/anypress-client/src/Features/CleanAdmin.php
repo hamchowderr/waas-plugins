@@ -19,7 +19,7 @@ class CleanAdmin
     public const UPSELL_MENU = '/\b(upgrade|go pro|get pro|pro features|premium|pricing|licen[cs]es?|add-?ons|extensions|try [a-z]+!?|[a-z]+ sale|deals?)\b/i';
 
     /** Plugins screen links that sell something or ask for a review. */
-    public const UPSELL_LINK = '/\b(upgrade|go pro|get pro|unlock pro|pro version|premium|pricing|buy|review|rate us|rate it)\b/i';
+    public const UPSELL_LINK = '/\b(upgrade|go pro|get pro|unlock pro|pro version|premium|pricing|buy|review|rate us|rate it|add-?ons)\b/i';
 
     /** Screens a store owner never needs. */
     public const HIDDEN_SCREENS = [
@@ -30,6 +30,9 @@ class CleanAdmin
 
     /** @var string[]|null plugin folders (or single-file plugins) the template manages */
     private static ?array $managed = null;
+
+    /** @var string[]|null plugin folders this store's site type turns on (null: no site type found, hide nothing) */
+    private static ?array $planned = null;
 
     public function __construct()
     {
@@ -53,6 +56,9 @@ class CleanAdmin
         add_filter('plugin_row_meta', [$this, 'plugin_links'], PHP_INT_MAX, 2);
         // A plugin's own plugin_action_links_<file> filter runs after the general one, so filter that too.
         add_action('load-plugins.php', [$this, 'plugin_links_per_plugin']);
+        // Included plugins this site type doesn't use stay off and out of the Plugins screen.
+        add_filter('all_plugins', [$this, 'hide_unplanned_plugins'], PHP_INT_MAX);
+        add_filter('plugin_auto_update_setting_html', [$this, 'auto_update_html'], PHP_INT_MAX, 2);
         add_filter('site_transient_update_plugins', [$this, 'hide_managed_updates']);
         add_filter('wp_get_update_data', [$this, 'update_counts'], PHP_INT_MAX);
         add_filter('admin_footer_text', [$this, 'footer_text'], PHP_INT_MAX);
@@ -69,6 +75,47 @@ class CleanAdmin
         $files = is_array($roles) ? RolesManager::managed_plugins($roles) : [];
 
         return self::$managed = array_values(array_unique(array_map(static fn ($file) => explode('/', $file)[0], $files)));
+    }
+
+    /** The folders of the plugins this store's site type turns on (and the MCP Adapter), or null when no site type matches. */
+    public static function planned_folders(): ?array
+    {
+        if (self::$planned !== null) {
+            return self::$planned === ['*'] ? null : self::$planned;
+        }
+        $roles = file_exists(AdminRolesSettings::ROLES_FILE_PATH) ? json_decode((string) file_get_contents(AdminRolesSettings::ROLES_FILE_PATH), true) : null;
+        $user_roles = array_values(array_filter(array_map('strval', (array) get_option(PluginBootstrap::TENANT_ROLES, []))));
+        $plan = is_array($roles) ? RolesManager::plan_for($user_roles, $roles) : ['matched' => []];
+        if ($plan['matched'] === []) {
+            self::$planned = ['*'];
+
+            return null;
+        }
+        $files = array_merge($plan['plugins'], [McpServer::PLUGIN]);
+
+        return self::$planned = array_values(array_unique(array_map(static fn ($file) => explode('/', $file)[0], $files)));
+    }
+
+    /** On the Plugins screen: no rows for included plugins this site type doesn't use (they are off and can't be used here). */
+    public function hide_unplanned_plugins($plugins)
+    {
+        $planned = self::planned_folders();
+        if (!is_array($plugins) || $planned === null) {
+            return $plugins;
+        }
+        foreach (array_keys($plugins) as $file) {
+            if (self::is_managed((string) $file) && !in_array(explode('/', (string) $file)[0], $planned, true)) {
+                unset($plugins[$file]);
+            }
+        }
+
+        return $plugins;
+    }
+
+    /** The store's version keeps the included plugins up to date, so their rows don't offer auto-updates. */
+    public function auto_update_html($html, $plugin_file)
+    {
+        return self::is_managed((string) $plugin_file) ? '' : $html;
     }
 
     /** Whether a plugin file (as WordPress names it, e.g. fluent-crm/fluent-crm.php) comes with the website. */
@@ -222,13 +269,13 @@ class CleanAdmin
         }
         ?>
         <style>
-            .rank-math-unlock-pro-notice, .rank-math-unlock-pro-box, .ff_card_pro, .ff_upgrade_btn_large, .rank-math-pro-cta, .rank-math-anniversary-wrapper, .fct-congrats-modal,
+            .rank-math-unlock-pro-notice, .rank-math-unlock-pro-box, .ff_card_pro, .ff_upgrade_btn_large, .fls_dash_promo, .rank-math-pro-cta, .rank-math-anniversary-wrapper, .fct-congrats-modal,
             #wpbody a[href*="/pricing"], #wpbody a[href*="rankmath.com/pro"], #wpbody a[href*="utm_medium=upgrade"] { display: none !important; }
             body.el-popup-parent--hidden { overflow: auto !important; }
         </style>
         <script>
         (function () {
-            var sell = /^\s*(upgrade( to pro| now)?|go pro|get pro|buy pro|buy now|unlock( with)? pro|unlock|leave a review|write a review|rate us|review [\w ]+ on wordpress\.org\.?|try [a-z]+!?)\s*$/i;
+            var sell = /^\s*(upgrade( to pro| now)?|go pro|get pro|buy pro|buy now|unlock( with)? pro|unlock|leave a review|write a review|rate us|review [\w ]+ on wordpress\.org\.?|try [a-z]+!?)\s*(\(opens in a new (window|tab)\))?\s*$/i;
             function tidy(root) {
                 (root.querySelectorAll ? root : document).querySelectorAll('#wpbody a, #wpbody button').forEach(function (el) {
                     if (!el.dataset.anypressSeen && sell.test(el.textContent || '')) {
@@ -257,6 +304,10 @@ class CleanAdmin
     /** Whether the current screen belongs to one of the included plugins (a page=<slug> it registered). */
     private function on_managed_screen(): bool
     {
+        global $pagenow;
+        if ($pagenow === 'index.php' && empty($_GET['page'])) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- reading which screen this is.
+            return true; // the Dashboard home, where the included plugins put their widgets
+        }
         $page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- reading which screen this is.
         if ($page === '') {
             return false;
