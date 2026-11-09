@@ -332,10 +332,11 @@ class AdminRolesSettings
                 return validate_file($plugin_file) === 0 && file_exists(WP_PLUGIN_DIR . '/' . $plugin_file);
             }));
 
-            $data[$role_slug] = [
+            // Keep the role's other settings (ownPlugins, about) as the template set them.
+            $data[$role_slug] = array_merge((array) $data[$role_slug], [
                 'title' => $data[$role_slug]['title'] ?? $role_slug,
                 'plugins' => $filtered_activated_plugins_files
-            ];
+            ]);
         }
 
         $encoded_data = wp_json_encode((object) $data);

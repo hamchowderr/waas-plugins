@@ -62,6 +62,11 @@ class RolesManager
         $enabled_plugins = McpServer::with_switch($plan['plugins']);
         $all_plugins = array_keys(get_plugins());
         $disabled_plugins = array_diff($all_plugins, $enabled_plugins);
+        if ($plan['own_plugins']) {
+            // A site type that lets the owner add plugins (HighLevel sites): only the template's own plugins follow the
+            // plan; plugins the owner installed stay as the owner set them.
+            $disabled_plugins = array_intersect($disabled_plugins, self::managed_plugins($roles_plugins));
+        }
 
         $plugins_requiring_enabling = array_values(array_filter($enabled_plugins, fn ($plugin) => !is_plugin_active($plugin)));
         activate_plugins($plugins_requiring_enabling);
@@ -73,13 +78,16 @@ class RolesManager
     /**
      * Which of the website's roles exist in roles.json, which don't, and the plugins the found ones turn on.
      *
-     * @return array{matched: string[], missing: string[], plugins: string[]}
+     * own_plugins: one of the found roles lets the owner add plugins of their own ("ownPlugins": true in roles.json).
+     *
+     * @return array{matched: string[], missing: string[], plugins: string[], own_plugins: bool}
      */
     public static function plan_for(array $user_roles, array $roles_plugins): array
     {
         $matched = [];
         $missing = [];
         $plugins = [];
+        $own_plugins = false;
 
         foreach ($user_roles as $user_role) {
             if (!isset($roles_plugins[$user_role]) || !is_array($roles_plugins[$user_role])) {
@@ -88,9 +96,23 @@ class RolesManager
             }
             $matched[] = $user_role;
             $plugins = array_merge($plugins, array_filter((array) ($roles_plugins[$user_role]['plugins'] ?? []), 'is_string'));
+            $own_plugins = $own_plugins || ($roles_plugins[$user_role]['ownPlugins'] ?? false) === true;
         }
 
-        return ['matched' => $matched, 'missing' => $missing, 'plugins' => array_values(array_unique($plugins))];
+        return ['matched' => $matched, 'missing' => $missing, 'plugins' => array_values(array_unique($plugins)), 'own_plugins' => $own_plugins];
+    }
+
+    /** The plugins the template manages: every plugin any role in roles.json lists, and the MCP Adapter. */
+    public static function managed_plugins(array $roles_plugins): array
+    {
+        $managed = [McpServer::PLUGIN];
+        foreach ($roles_plugins as $role) {
+            if (is_array($role)) {
+                $managed = array_merge($managed, array_filter((array) ($role['plugins'] ?? []), 'is_string'));
+            }
+        }
+
+        return array_values(array_unique($managed));
     }
 
     public function get_roles_from_constant()
