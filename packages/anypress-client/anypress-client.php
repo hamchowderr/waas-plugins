@@ -41,6 +41,7 @@ use AnyPressClient\Features\PluginBootstrap;
 use AnyPressClient\Features\RolesManager;
 use AnyPressClient\Features\AdminTenantSettings;
 use AnyPressClient\Features\CustomerPlanPage;
+use AnyPressClient\Features\CleanAdmin;
 use AnyPressClient\Features\ConnectPage;
 use AnyPressClient\Features\McpServer;
 use AnyPressClient\Features\EditorAssistant;
@@ -143,5 +144,7 @@ if (!wp_doing_ajax()) {
         new AdminRolesSettings($host_http_service);
     } else {
         new CustomerPlanPage();
+        // A clean wp-admin: no upgrade, review or setup asks from the plugins that come with the website.
+        new CleanAdmin();
     }
 }

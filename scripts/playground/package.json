@@ -19,7 +19,8 @@
     "moving": "node moving.mjs",
     "phone": "node phone.mjs",
     "highlevel": "node highlevel.mjs",
-    "domains": "node domains.mjs"
+    "domains": "node domains.mjs",
+    "admin-audit": "node admin-audit.mjs"
   },
   "dependencies": {
     "@wp-playground/cli": "3.1.59"
