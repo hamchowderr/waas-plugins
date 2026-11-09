@@ -14,6 +14,11 @@ const OUT = process.env.SHOTS || '/tmp/admin-audit';
 mkdirSync(OUT, { recursive: true });
 const AGED = process.argv.includes('--aged');
 const CLIENT = process.argv.includes('--client');
+// A store is always one of the template's site types (CLAUDE.md): SITE_TYPE=highlevel, website, bookings...
+if (CLIENT && !process.env.SITE_TYPE) {
+    console.error('Set SITE_TYPE to one of the site types in roles.json (e.g. SITE_TYPE=highlevel).');
+    process.exit(2);
+}
 const build = readFileSync(`${API}/templates/anypress-store/build.sh`, 'utf8');
 const list = (name) => build.match(new RegExp(`^${name}="\\n([\\s\\S]*?)\\n"`, 'm'))[1].trim().split('\n').map((l) => l.trim().split(/\s+/));
 const org = [...list('PLUGINS'), ...list('OFF_PLUGINS').filter(([s]) => s === 'leadconnector')];
@@ -36,7 +41,9 @@ if (CLIENT) {
     // every plugin stays on and every screen can be checked.
     steps.push({ step: 'mkdir', path: '/wordpress/wp-content/plugins/anypress-client-data' });
     steps.push({ step: 'writeFile', path: '/wordpress/wp-content/plugins/anypress-client-data/roles.json', data: readFileSync(`${API}/templates/anypress-store/roles.json`, 'utf8') });
-    steps.push({ step: 'writeFile', path: '/wordpress/wp-content/mu-plugins/0-anypress-store-env.php', data: "<?php putenv('ANYPRESS_IS_TENANT=true');" });
+    // SITE_TYPE=highlevel (or website...): a store sold as that site type, so only its plugins are on.
+    const define = process.env.SITE_TYPE ? ` define('ANYPRESS_TENANT_ROLES', ${JSON.stringify(process.env.SITE_TYPE)});` : '';
+    steps.push({ step: 'writeFile', path: '/wordpress/wp-content/mu-plugins/0-anypress-store-env.php', data: `<?php putenv('ANYPRESS_IS_TENANT=true');${define}` });
     steps.push({ step: 'activatePlugin', pluginPath: 'anypress-client/anypress-client.php' });
 }
 const cli = await runCLI({
@@ -68,6 +75,15 @@ try {
     report.firstLanding = page.url();
     const menu = await page.$$eval('#adminmenu a', (as) => as.map((a) => ({ text: a.innerText.trim().replace(/\s+/g, ' '), href: a.href, top: !a.closest('.wp-submenu') })));
     report.menu = menu;
+    if (CLIENT && process.env.SITE_TYPE) {
+        // The site type's plugins, and only those, are on (AnyPress Client and the owner's own aside).
+        const roles = JSON.parse(readFileSync(`${API}/templates/anypress-store/roles.json`, 'utf8'));
+        const want = [...new Set(process.env.SITE_TYPE.split(',').flatMap((t) => roles[t].plugins))].sort();
+        const active = JSON.parse(await php("echo wp_json_encode(array_values(get_option('active_plugins')));")).filter((f) => f !== 'anypress-client/anypress-client.php').sort();
+        report.sitePlugins = { want, active, ok: JSON.stringify(want) === JSON.stringify(active) };
+        console.log(report.sitePlugins.ok ? 'ok   only the site type\'s plugins are on' : `FAIL plugins on: ${active.join(', ')}; want ${want.join(', ')}`);
+        if (!report.sitePlugins.ok) process.exitCode = 1;
+    }
     if (!menu.length) writeFileSync(`${OUT}/landing.html`, await page.content());
     const only = (process.env.ONLY || '').split(',').filter(Boolean);
     const urls = [...new Set(menu.map((m) => m.href.split('#')[0]))].filter((u) => u.includes('/wp-admin/') && (!only.length || only.some((o) => u.includes(o))));
