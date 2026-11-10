@@ -4,31 +4,21 @@ namespace AnyPressClient\Features;
 
 /**
  * Lets AI apps work on the website over MCP, through WordPress's own MCP Adapter plugin (wordpress.org/plugins/mcp-adapter).
- * Stores come with the adapter installed but off; the owner turns it on or off on the "Your plan" page, and the plan
- * keeps it that way (RolesManager adds it to the plan's plugins while it is on).
+ * Stores come with the adapter installed, and the plan always keeps it on (RolesManager adds it to the plan's plugins).
  *
- * While it is on, the website has an "AnyPress website" MCP server at /wp-json/mcp/anypress whose tools are the site
- * abilities (SiteAbilities), one tool each. An app signs in as a WordPress user (an application password) and can only
- * do what that user may: the abilities check the user's own capabilities, and the server only lets in users who can
- * edit pages.
+ * The website has an "AnyPress website" MCP server at /wp-json/mcp/anypress whose tools are the site abilities
+ * (SiteAbilities), one tool each. An app signs in as a WordPress user (an application password) and can only do what
+ * that user may: the abilities check the user's own capabilities, and the server only lets in users who can edit pages.
  */
 class McpServer
 {
-    public const OPTION = 'anypress_client_mcp';
     public const PLUGIN = 'mcp-adapter/mcp-adapter.php';
-    public const ACTION = 'anypress_client_mcp';
     public const ROUTE_NAMESPACE = 'mcp';
     public const ROUTE = 'anypress';
 
     public function __construct()
     {
         add_action('mcp_adapter_init', [$this, 'create_server']);
-        add_action('admin_post_' . self::ACTION, [$this, 'save']);
-    }
-
-    public static function is_on(): bool
-    {
-        return get_option(self::OPTION, '0') === '1';
     }
 
     /** Whether this website has the adapter plugin at all (stores made before it came with the template don't). */
@@ -38,14 +28,14 @@ class McpServer
     }
 
     /**
-     * The plan's plugins plus the adapter while the owner has it on.
+     * The plan's plugins plus the adapter, which is always on where it is installed.
      *
      * @param string[] $plugins
      * @return string[]
      */
-    public static function with_switch(array $plugins): array
+    public static function with_adapter(array $plugins): array
     {
-        if (self::is_on() && self::is_installed() && !in_array(self::PLUGIN, $plugins, true)) {
+        if (self::is_installed() && !in_array(self::PLUGIN, $plugins, true)) {
             $plugins[] = self::PLUGIN;
         }
 
@@ -84,60 +74,24 @@ class McpServer
         );
     }
 
-    /** The "Your plan" page's Turn on / Turn off button. */
-    public function save(): void
-    {
-        if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('Only administrators can change this.', 'anypress-client'), 403);
-        }
-        check_admin_referer(self::ACTION);
-
-        $on = isset($_POST['mcp']) && sanitize_key(wp_unslash($_POST['mcp'])) === 'on';
-        update_option(self::OPTION, $on ? '1' : '0');
-
-        // The plan turns it on or off on the next page load; do it now too, so the next page already shows it.
-        if (self::is_installed()) {
-            require_once ABSPATH . 'wp-admin/includes/plugin.php';
-            if ($on) {
-                activate_plugin(self::PLUGIN);
-            } else {
-                deactivate_plugins(self::PLUGIN);
-            }
-        }
-
-        wp_safe_redirect(admin_url('index.php?page=' . CustomerPlanPage::PAGE . '#ai-apps'));
-        exit;
-    }
-
     /** The "AI apps" section of the "Your plan" page. */
     public static function render_section(): void
     {
         if (!self::is_installed()) {
             return;
         }
-        $on = self::is_on();
 ?>
         <h2 id="ai-apps"><?php esc_html_e('AI apps (MCP)', 'anypress-client'); ?></h2>
-        <?php if ($on) : ?>
-            <p><?php esc_html_e('AI apps can work on this website through WordPress\'s MCP Adapter. They can read and change pages, design, header, footer and menus, and add images, and only as far as the WordPress user they sign in as is allowed to. Every page change is saved as a revision you can go back to.', 'anypress-client'); ?></p>
-            <p>
-                <?php esc_html_e('Server address:', 'anypress-client'); ?>
-                <code><?php echo esc_html(self::url()); ?></code>
-            </p>
-            <p><?php echo wp_kses(sprintf(
-                /* translators: %s: link to the user's profile, where application passwords are made */
-                __('The app signs in with your username and an application password. Make one for each app in <a href="%s">your profile</a>, and revoke it there to stop that app.', 'anypress-client'),
-                esc_url(admin_url('profile.php#application-passwords-section'))
-            ), ['a' => ['href' => []]]); ?></p>
-        <?php else : ?>
-            <p><?php esc_html_e('Turn this on to let AI apps that speak MCP (the Model Context Protocol) work on this website\'s pages and design through WordPress\'s MCP Adapter. It is off until you turn it on.', 'anypress-client'); ?></p>
-        <?php endif; ?>
-        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-            <input type="hidden" name="action" value="<?php echo esc_attr(self::ACTION); ?>">
-            <input type="hidden" name="mcp" value="<?php echo esc_attr($on ? 'off' : 'on'); ?>">
-            <?php wp_nonce_field(self::ACTION); ?>
-            <p><button type="submit" class="button<?php echo $on ? '' : ' button-primary'; ?>"><?php $on ? esc_html_e('Turn off', 'anypress-client') : esc_html_e('Turn on', 'anypress-client'); ?></button></p>
-        </form>
+        <p><?php esc_html_e('AI apps can work on this website through WordPress\'s MCP Adapter. They can read and change pages, design, header, footer and menus, and add images, and only as far as the WordPress user they sign in as is allowed to. Every page change is saved as a revision you can go back to.', 'anypress-client'); ?></p>
+        <p>
+            <?php esc_html_e('Server address:', 'anypress-client'); ?>
+            <code><?php echo esc_html(self::url()); ?></code>
+        </p>
+        <p><?php echo wp_kses(sprintf(
+            /* translators: %s: link to the user's profile, where application passwords are made */
+            __('The app signs in with your username and an application password. Make one for each app in <a href="%s">your profile</a>, and revoke it there to stop that app.', 'anypress-client'),
+            esc_url(admin_url('profile.php#application-passwords-section'))
+        ), ['a' => ['href' => []]]); ?></p>
 <?php
     }
 }

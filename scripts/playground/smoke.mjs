@@ -455,25 +455,21 @@ async function mcpTools(version) {
     expect(!call.data.result?.isError && JSON.stringify(call.data.result).includes('Playground Store'), `get-site: ${JSON.stringify(call.data).slice(0, 300)}`);
 }
 
-await check('MCP: no server while the owner has it off', async () => {
-    const res = await mcp('initialize', {});
-    expectStatus(res, 404);
-});
-
-await check('MCP: the owner turns it on from Your plan', async () => {
-    // What the Turn on button posts: the McpServer::save handler, as an administrator with a valid nonce.
+await check('MCP: the plan turns the adapter on by itself, with no switch', async () => {
+    // What a store's page load does (RolesManager on init): a store with a plan, here the website site type.
     const out = await cli.playground.run({
         code: `<?php
 require '/wordpress/wp-load.php';
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
-wp_set_current_user(1);
-$_POST = $_REQUEST = ['mcp' => 'on', '_wpnonce' => wp_create_nonce('anypress_client_mcp')];
-add_filter('wp_redirect', function () { echo json_encode(['on' => get_option('anypress_client_mcp'), 'active' => is_plugin_active('mcp-adapter/mcp-adapter.php')]); return false; });
-(new AnyPressClient\\Features\\McpServer())->save();
+putenv('ANYPRESS_IS_TENANT=true');
+wp_mkdir_p(AnyPressClient\\Features\\AdminRolesSettings::ROLES_FILE_DIR_PATH);
+file_put_contents(AnyPressClient\\Features\\AdminRolesSettings::ROLES_FILE_PATH, json_encode(['website' => ['title' => 'Website', 'plugins' => ['anypress-client/anypress-client.php']]]));
+(new AnyPressClient\\Features\\RolesManager())->activate_enabled_plugins();
+echo json_encode(['active' => is_plugin_active('mcp-adapter/mcp-adapter.php')]);
 `,
     });
     const state = JSON.parse(out.text.slice(out.text.indexOf('{')));
-    expect(state.on === '1' && state.active === true, `after Turn on: ${out.text.slice(0, 200)}`);
+    expect(state.active === true, `MCP Adapter after a store page load: ${out.text.slice(0, 200)}`);
 });
 
 await check('MCP: refused when signed out, or without edit_pages', async () => {
