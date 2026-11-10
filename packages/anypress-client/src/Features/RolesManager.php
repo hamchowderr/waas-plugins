@@ -58,8 +58,8 @@ class RolesManager
             add_action('admin_notices', $this->get_anypress_unknown_roles_admin_notice($plan['missing'], array_keys($roles_plugins), false));
         }
 
-        // Plus the MCP Adapter while the owner has it on (Your plan page).
-        $enabled_plugins = McpServer::with_switch($plan['plugins']);
+        // Plus the MCP Adapter, always on.
+        $enabled_plugins = McpServer::with_adapter($plan['plugins']);
         $all_plugins = array_keys(get_plugins());
         $disabled_plugins = array_diff($all_plugins, $enabled_plugins);
         if ($plan['own_plugins']) {

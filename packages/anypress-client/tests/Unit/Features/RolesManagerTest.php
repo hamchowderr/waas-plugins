@@ -25,7 +25,6 @@ class RolesManagerTest extends TestCase
 
     private array $active = [];
     private array $site_roles = [];
-    private string $mcp = '0';
 
     protected function setUp(): void
     {
@@ -36,7 +35,7 @@ class RolesManagerTest extends TestCase
         }
 
         $this->active = ['anypress-client/anypress-client.php', 'shop/shop.php', 'forms/forms.php'];
-        Functions\when('get_option')->alias(fn ($name, $default = false) => $name === PluginBootstrap::TENANT_ROLES ? $this->site_roles : ($name === McpServer::OPTION ? $this->mcp : $default));
+        Functions\when('get_option')->alias(fn ($name, $default = false) => $name === PluginBootstrap::TENANT_ROLES ? $this->site_roles : $default);
         Functions\when('get_plugins')->alias(fn () => self::PLUGINS + (McpServer::is_installed() ? [McpServer::PLUGIN => ['Name' => 'MCP Adapter']] : []));
         Functions\when('is_plugin_active')->alias(fn ($file) => in_array($file, $this->active, true));
     }
@@ -141,12 +140,11 @@ class RolesManagerTest extends TestCase
         $this->assertSame(['x.php', 'y.php', 'z.php'], $plan['plugins']);
     }
 
-    public function test_mcp_adapter_stays_on_while_the_owner_has_it_on(): void
+    public function test_mcp_adapter_is_always_on(): void
     {
         $this->writeRoles(['pro' => ['title' => 'Pro', 'plugins' => ['shop/shop.php', 'forms/forms.php']]]);
         $this->site_roles = ['pro'];
         $this->installAdapter();
-        $this->mcp = '1';
 
         Functions\expect('activate_plugins')->once()->with([McpServer::PLUGIN]);
         Functions\expect('deactivate_plugins')->once()->with(\Mockery::on(fn ($files) => array_values($files) === []));
@@ -154,27 +152,13 @@ class RolesManagerTest extends TestCase
         $this->run_manager();
     }
 
-    public function test_mcp_adapter_is_turned_off_when_the_owner_has_not_turned_it_on(): void
+    public function test_mcp_adapter_is_added_only_when_installed(): void
     {
-        $this->writeRoles(['pro' => ['title' => 'Pro', 'plugins' => ['shop/shop.php', 'forms/forms.php']]]);
-        $this->site_roles = ['pro'];
-        $this->installAdapter();
-        $this->active[] = McpServer::PLUGIN;
-
-        Functions\expect('activate_plugins')->once()->with([]);
-        Functions\expect('deactivate_plugins')->once()->with(\Mockery::on(fn ($files) => array_values($files) === [McpServer::PLUGIN]));
-
-        $this->run_manager();
-    }
-
-    public function test_mcp_switch_needs_the_adapter_installed(): void
-    {
-        $this->mcp = '1';
-        $this->assertSame(['shop/shop.php'], McpServer::with_switch(['shop/shop.php']));
+        $this->assertSame(['shop/shop.php'], McpServer::with_adapter(['shop/shop.php']));
 
         $this->installAdapter();
-        $this->assertSame(['shop/shop.php', McpServer::PLUGIN], McpServer::with_switch(['shop/shop.php']));
-        $this->assertSame([McpServer::PLUGIN], McpServer::with_switch([McpServer::PLUGIN]));
+        $this->assertSame(['shop/shop.php', McpServer::PLUGIN], McpServer::with_adapter(['shop/shop.php']));
+        $this->assertSame([McpServer::PLUGIN], McpServer::with_adapter([McpServer::PLUGIN]));
     }
 
     private function installAdapter(): void
