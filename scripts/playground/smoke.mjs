@@ -31,6 +31,8 @@ const PORT = Number(process.env.PLAYGROUND_PORT || 9400);
 const SERVE = process.argv.includes('--serve');
 // The AnyPress theme, as new stores get it (the preview zip, kept at the latest release).
 const THEME = resolve(ROOT, 'scripts/playground/preview-zips/anypress.zip');
+// AnyPress Blocks, which every store has (carousel, popup, counter...): the preview zip too.
+const BLOCKS = resolve(ROOT, 'scripts/playground/preview-zips/anypress-blocks.zip');
 // WordPress's MCP Adapter, as the store template ships it: installed, off until the owner turns it on.
 const MCP_ADAPTER = 'https://downloads.wordpress.org/plugin/mcp-adapter.0.7.1.zip';
 const STARTER_PAGES_URL =
@@ -57,6 +59,7 @@ const blueprint = {
     steps: [
         { step: 'installTheme', themeData: { resource: 'literal', name: 'anypress.zip', contents: readFileSync(THEME) }, options: { activate: true } },
         { step: 'activatePlugin', pluginPath: 'anypress-client/anypress-client.php' },
+        { step: 'installPlugin', pluginData: { resource: 'literal', name: 'anypress-blocks.zip', contents: readFileSync(BLOCKS) }, options: { activate: true } },
         { step: 'installPlugin', pluginData: { resource: 'url', url: MCP_ADAPTER }, options: { activate: false } },
         { step: 'writeFile', path: '/wordpress/wp-content/mu-plugins/anypress-patterns.php', data: starterPages },
         // The business details a purchase leaves on a store, with the checkout's optional "what does your business do".
@@ -353,10 +356,10 @@ await check('abilities: listed with all three safety hints', async () => {
     const list = await res.json();
     expect(res.status === 200 && Array.isArray(list), `HTTP ${res.status}: ${JSON.stringify(list).slice(0, 300)}`);
     for (const a of list) abilities.set(a.name, a);
-    // 18 site-editing abilities, plus check-forms and switch-forms (the forms switch, tested by forms.mjs),
+    // 22 site-editing abilities, plus check-forms and switch-forms (the forms switch, tested by forms.mjs),
     // check-shop and switch-shop (shop-switch.mjs), check-crm and switch-crm (crm-switch.mjs), and check- and switch-
     // support, affiliate and community (moving.mjs).
-    expect(list.length === 30, `${list.length} abilities: ${list.map((a) => a.name).join(', ')}`);
+    expect(list.length === 34, `${list.length} abilities: ${list.map((a) => a.name).join(', ')}`);
     const unsure = list.filter((a) => ['readonly', 'destructive', 'idempotent'].some((k) => typeof a.meta?.annotations?.[k] !== 'boolean'));
     expect(!unsure.length, `missing hints: ${unsure.map((a) => a.name).join(', ')}`);
 });
@@ -397,6 +400,80 @@ await check('abilities: styles, patterns and header', async () => {
     expect(patterns.status === 200 && patterns.data.length >= 4, `find-patterns: HTTP ${patterns.status}`);
     const header = await ability('anypress/get-site-part', { area: 'header' });
     expectStatus(header, 200);
+});
+
+await check('library: pattern categories name the kits and shared sections', async () => {
+    const res = await site('GET', '/patterns/categories');
+    expectStatus(res, 200);
+    const names = res.data.map((c) => c.name);
+    expect(names.includes('anypress/pages'), `no starter pages in ${names.join(', ')}`);
+    expect(names.filter((n) => n.startsWith('anypress/kit-')).length >= 16, `kit categories: ${names.filter((n) => n.startsWith('anypress/kit-')).join(', ')}`);
+    expect(names.some((n) => n.startsWith('anypress/blocks-')), 'no anypress/blocks-* categories');
+    const ridge = res.data.find((c) => c.name === 'anypress/kit-home-services');
+    expect(ridge?.patterns > 0 && /Ridge/.test(ridge.label), `home services kit: ${JSON.stringify(ridge)}`);
+});
+
+await check('library: AnyPress Blocks are listed with their settings and an example pattern', async () => {
+    const res = await site('GET', '/blocks');
+    expectStatus(res, 200);
+    const carousel = res.data.find((b) => b.name === 'anypress/carousel');
+    expect(carousel && carousel.settings?.perView?.type === 'number', `carousel: ${JSON.stringify(carousel)}`);
+    expect(carousel.usedIn?.length > 0, 'carousel has no example pattern');
+    const popup = res.data.find((b) => b.name === 'anypress/popup');
+    expect(popup, `blocks: ${res.data.map((b) => b.name).join(', ')}`);
+    expect(!res.data.some((b) => !b.name.startsWith('anypress/')), 'lists blocks that are not AnyPress Blocks');
+});
+
+await check('library: style variations list kits, palettes, fonts and section styles', async () => {
+    const res = await site('GET', '/styles/variations');
+    expectStatus(res, 200);
+    const kinds = (kind) => res.data.variations.filter((v) => v.kind === kind);
+    expect(kinds('kit').length >= 16, `kits: ${kinds('kit').map((v) => v.slug).join(', ')}`);
+    expect(kinds('colors').length >= 6 && kinds('fonts').length >= 4, `colors ${kinds('colors').length}, fonts ${kinds('fonts').length}`);
+    expect(kinds('kit').every((v) => v.colors?.primary), 'a kit without its colours');
+    const classes = res.data.blockStyles.map((s) => s.className);
+    expect(classes.includes('is-style-section-dark'), `block styles: ${classes.join(', ')}`);
+});
+
+await check('library: switching on a kit, then a palette, keeps a revision', async () => {
+    const kit = await site('POST', '/styles/variations/kit-ridge');
+    expectStatus(kit, 200);
+    expect(kit.data.applied?.kind === 'kit', `applied ${JSON.stringify(kit.data.applied)}`);
+    const list = await site('GET', '/styles/variations');
+    const ridge = list.data.variations.find((v) => v.slug === 'kit-ridge');
+    expect(ridge?.active === true, `Ridge not on: ${JSON.stringify(ridge)}`);
+    const palette = Object.values(kit.data.palette).flat();
+    expect(palette.find((c) => c.slug === 'primary')?.color?.toLowerCase() === ridge.colors.primary.toLowerCase(), `palette is not the kit's: ${JSON.stringify(kit.data.palette).slice(0, 200)}`);
+    const fontsBefore = JSON.stringify(kit.data.siteChanges.styles.typography ?? null);
+    const forest = await site('POST', '/styles/variations/forest');
+    expectStatus(forest, 200);
+    const after = await site('GET', '/styles/variations');
+    expect(after.data.variations.find((v) => v.slug === 'forest')?.active === true, 'forest palette not on');
+    expect(JSON.stringify(forest.data.siteChanges.styles.typography ?? null) === fontsBefore, 'a palette changed the fonts');
+    const fonts = await site('POST', '/styles/variations/editorial');
+    expect(fonts.status === 200 && fonts.data.applied?.kind === 'fonts', `editorial: ${JSON.stringify(fonts.data).slice(0, 200)}`);
+    const both = await site('GET', '/styles/variations');
+    const on = both.data.variations.filter((v) => v.active).map((v) => v.slug);
+    expect(on.includes('forest') && on.includes('editorial'), `on after a palette and a font set: ${on.join(', ')}`);
+    const missing = await site('POST', '/styles/variations/no-such-look');
+    expectStatus(missing, 404);
+    const revisions = await cli.playground.run({
+        code: `<?php require '/wordpress/wp-load.php'; echo count(wp_get_post_revisions(WP_Theme_JSON_Resolver::get_user_global_styles_post_id()));`,
+    });
+    expect(Number(revisions.text.trim()) >= 2, `global styles revisions: ${revisions.text}`);
+});
+
+await check('abilities: library tools, and a contributor may not switch the look', async () => {
+    const categories = await ability('anypress/list-pattern-categories');
+    expect(categories.status === 200 && categories.data.length > 16, `list-pattern-categories: HTTP ${categories.status}`);
+    const blocks = await ability('anypress/list-blocks');
+    expect(blocks.status === 200 && blocks.data.some((b) => b.name === 'anypress/popup'), `list-blocks: HTTP ${blocks.status}`);
+    const looks = await ability('anypress/list-style-variations');
+    expect(looks.status === 200 && looks.data.variations.length > 16, `list-style-variations: HTTP ${looks.status}`);
+    const apply = await ability('anypress/apply-style-variation', { slug: 'kit-hearth' });
+    expect(apply.status === 200 && apply.data.applied?.slug === 'kit-hearth', `apply-style-variation: HTTP ${apply.status} ${JSON.stringify(apply.data).slice(0, 200)}`);
+    const contributor = await ability('anypress/apply-style-variation', { slug: 'kit-ridge' }, { as: 'contributor' });
+    expect(contributor.status === 403, `contributor: HTTP ${contributor.status}`);
 });
 
 /**

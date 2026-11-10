@@ -62,7 +62,7 @@ class McpServer
             self::ROUTE_NAMESPACE,
             self::ROUTE,
             sprintf('%s website', \AnyPressClient\Core\Brand::name()),
-            'Read and change this website\'s pages, starter patterns, colours and fonts, header, footer, menus and images. Every page change keeps a revision.',
+            'Read and change this website\'s pages, patterns and kits, interactive blocks, looks, colours and fonts, header, footer, menus and images. Every page change keeps a revision.',
             ANYPRESS_CLIENT_VERSION,
             [\WP\MCP\Transport\HttpTransport::class],
             \WP\MCP\Infrastructure\ErrorHandling\ErrorLogMcpErrorHandler::class,
