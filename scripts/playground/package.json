@@ -23,6 +23,8 @@
     "admin-audit": "node admin-audit.mjs",
     "support": "node support.mjs",
     "products": "node products.mjs",
+    "courses": "node courses.mjs",
+    "circle": "node circle.mjs",
     "languages": "node languages.mjs"
   },
   "dependencies": {

@@ -5,8 +5,8 @@ namespace AnyPressClient\Moving;
 use WP_CLI;
 
 /**
- * `wp anypress support switch`, `wp anypress affiliate switch` and `wp anypress community switch`: one command per Fluent
- * plugin importer (see NativeImport).
+ * `wp anypress support switch`, `wp anypress affiliate switch`, `wp anypress community switch`,
+ * `wp anypress course switch` and `wp anypress circle switch`: one command per switch (see NativeImport).
  */
 class ImportCommand
 {
@@ -25,6 +25,10 @@ class ImportCommand
      * agents. affiliate: AffiliateWP, Affiliates Manager, Solid Affiliate, SliceWP or Ultimate Affiliate Pro
      * affiliates, referrals, customers, payouts and visits (into an empty FluentAffiliate only). community:
      * BuddyPress or BuddyBoss groups, members, posts, comments and reactions (into an empty FluentCommunity only).
+     * course: LearnDash courses with their lessons, topics, students and progress, as FluentCommunity courses.
+     * circle: a Circle community through Circle's Admin API: discussion spaces with their members and moderators,
+     * space groups, topics, posts, comments and replies, course spaces as courses with their sections, lessons and
+     * students, members as WordPress users (into an empty FluentCommunity).
      *
      * It checks first, holds back email while it runs, then shows what the source holds next to what came across.
      * The source plugin and its data are never changed. Run it as an administrator (--user=<admin login>).
@@ -33,6 +37,10 @@ class ImportCommand
      *
      * [--from=<source>]
      * : The source plugin, when more than one is active (see the dry run for the names).
+     *
+     * [--token=<token>]
+     * : circle only: the Circle community's Admin V2 API token. Or set CIRCLE_API_TOKEN, which keeps it out of the
+     * shell history. Used for this run only, never saved.
      *
      * [--dry-run]
      * : Only check and report what the switch would do. Changes nothing.
@@ -54,6 +62,8 @@ class ImportCommand
      *     wp anypress support switch --user=admin --dry-run
      *     wp anypress affiliate switch --user=admin --from=slicewp
      *     wp anypress community switch --user=admin --undo
+     *     wp anypress course switch --user=admin --dry-run
+     *     CIRCLE_API_TOKEN=... wp anypress circle switch --user=admin --dry-run
      *
      * @subcommand switch
      */
@@ -67,6 +77,8 @@ class ImportCommand
         $format = WP_CLI\Utils\get_flag_value($assoc_args, 'format', 'table') === 'json' ? 'json' : 'table';
         $from = (string) WP_CLI\Utils\get_flag_value($assoc_args, 'from', '');
 
+        $token = (string) WP_CLI\Utils\get_flag_value($assoc_args, 'token', (string) getenv('CIRCLE_API_TOKEN'));
+        $this->import->configure(array_intersect_key(['token' => $token], $this->import->inputs()));
         $report = $undo ? $this->import->undo($dry_run) : $this->import->run($dry_run, $from);
         if (is_wp_error($report)) {
             $data = $report->get_error_data();

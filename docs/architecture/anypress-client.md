@@ -12,7 +12,7 @@ What it does:
 | Gives the AnyPress API, AI apps and WordPress's own AI tools a safe way to edit pages and design | Every website | [Site Tools, Abilities and MCP](#site-tools-abilities-and-mcp) |
 | Answers the phone receptionist: open times, bookings and callers | Every website | [Phone Receptionist Routes](#phone-receptionist-routes) |
 | Shows the website assistant beside the editor | Every website | [The Website Assistant Beside the Page](#the-website-assistant-beside-the-page) |
-| Moves forms, a WooCommerce shop, a CRM list, a help desk, affiliates or a community onto the Fluent plugins | Moved-in websites | [Moving Forms](#moving-forms-to-fluent-forms) and the sections after it |
+| Moves forms, a WooCommerce shop, a CRM list, a help desk, affiliates, a community (also from Circle) or LearnDash courses onto the Fluent plugins | Moved-in websites | [Moving Forms](#moving-forms-to-fluent-forms) and the sections after it |
 
 AnyPress Client calls the AnyPress API in one place only: the assistant's sign-in. Everything else the API asks of a website comes in as a request signed with that website's own site key.
 
@@ -269,6 +269,63 @@ The source plugin and its data are never changed: none of the importers' "delete
 What doesn't come across: ticket tags, products and custom fields, and the help desk's settings, templates and canned replies; affiliate program settings, and creatives (FluentAffiliate Pro); private messages, friendships, forums and extended profile fields. Help Scout, Zendesk and Freshdesk need an API key and come in through Fluent Support's own import screen. bbPress, PeepSo, wpForo and Ultimate Member, and WP Support Plus, KB Support, YITH WooCommerce Affiliates, Affiliate for WooCommerce and Easy Affiliate, are named in the check when active: the Fluent plugins have no importer for them.
 
 What each switch added is kept in the `anypress_client_<switch>_import` option (not autoloaded). Sources: `src/Moving/NativeImport.php`, `src/Moving/SupportImport.php`, `src/Moving/AffiliateImport.php`, `src/Moving/CommunityImport.php`, `src/Moving/ImportCommand.php`, `src/Moving/ImportAbilities.php`. Tested end to end with Awesome Support, SliceWP and BuddyPress by `scripts/playground/moving.mjs` (`npm run moving`).
+
+## Moving LearnDash Courses
+
+FluentCommunity has no LearnDash importer of its own yet, so the course switch builds the courses through FluentCommunity's own course admin routes (the ones behind its course editor). It works like the switches above: a check first, a count of what LearnDash holds next to what came across, no email while it runs, one run at a time, and an undo.
+
+```sh
+wp anypress course switch --user=admin --dry-run     # check and count; changes nothing
+wp anypress course switch --user=admin               # do it
+wp anypress course switch --user=admin --undo        # take it back out
+```
+
+The abilities are `anypress/check-course` and `anypress/switch-course` (with `{"undo": true}` to undo); both need an administrator.
+
+LearnDash doesn't need to be active. A store of the community site type turns it off, and LearnDash keeps everything the switch needs in WordPress itself: its courses, lessons, topics and quizzes are posts, the course builder's order and section headings are course settings, and enrolments and progress are user meta. The switch reads those.
+
+| LearnDash | FluentCommunity |
+|---|---|
+| A course | A self-paced course with the same title. Its excerpt (or the start of its text) is the description and its text the course details. Open courses are public, every other price type private. Published stays published; anything else is a draft. |
+| Section headings | Sections, holding the lessons (and their topics) that follow each heading. |
+| Lessons with topics (no headings) | Each lesson becomes a section: the lesson's own text, if it has any, is its first lesson, and its topics the lessons after it. |
+| Lessons without topics (no headings) | One section, "Lessons", holding them all. |
+| A lesson or topic | A lesson with the same title, text, featured image and status, comments on. A lesson video becomes an embed at the top. |
+| Students | Everyone enrolled one by one, through a LearnDash group, or on the course's access list; for an open course, everyone who started it. They are enrolled the way FluentCommunity enrols them. |
+| Progress | The lessons and topics each student finished and the courses they completed, recorded as FluentCommunity records them, without its "lesson completed" events, so old progress starts no automation. |
+
+Courses already in FluentCommunity are left alone. What doesn't come across: quizzes, assignments and certificates; prices and how access is sold (sell the courses with FluentCart); drip schedules and prerequisites; LearnDash groups as such (their members become students); LearnDash shortcodes and blocks inside lessons, which show as text. An automation set to start when someone joins a course starts for each student the switch enrols, so the check says to pause those first.
+
+Undo deletes the courses the switch made, with their sections, lessons, students and progress (through FluentCommunity's own course delete), and the member profiles FluentCommunity made for those students. Sources: `src/Moving/CourseImport.php` (on `NativeImport`). Tested end to end on a store of the community site type, with the FluentCommunity the store template installs and the newest one, by `scripts/playground/courses.mjs` (`npm run courses`).
+
+## Moving a Circle Community
+
+Circle is a hosted service, not a WordPress plugin, and has no export file, so the Circle switch reads the community through Circle's Admin API v2 with the community's own Admin V2 token (Circle: Settings, Developers, Tokens; Circle's Business plan and higher have the Admin API). The token is used for that run only: it isn't saved, logged or shown. Circle is only read. Circle publishes no PHP library for its Admin API, so `src/Moving/CircleApi.php` calls it with the WordPress HTTP API, 100 records a page, waiting and trying again when Circle says to slow down. Like the switches above, it checks first, counts what Circle holds next to what came across, sends no email while it runs, runs once, and has an undo. It only brings a community into an empty FluentCommunity.
+
+```sh
+CIRCLE_API_TOKEN=... wp anypress circle switch --user=admin --dry-run   # check and count; changes nothing
+CIRCLE_API_TOKEN=... wp anypress circle switch --user=admin             # do it (or --token=...)
+wp anypress circle switch --user=admin --undo                           # take it back out
+```
+
+The abilities are `anypress/check-circle` and `anypress/switch-circle`, each with a `token` input (and `{"undo": true}` to undo); both need an administrator.
+
+Every call counts against the Circle plan's monthly Admin API allowance (5,000 on Business, 30,000 on Scale), so the check says about how many calls the switch will make. For a big community, run it with WP-CLI so a web request doesn't time out half way. Course students are enrolled the way FluentCommunity enrols them, so an automation set to start when someone joins a course starts for each of them; the check says to pause those first.
+
+| Circle | FluentCommunity |
+|---|---|
+| A space group | A space group with the same name, in the same order. |
+| A discussion space | A space in its group. A public space is public; a private one is private, or secret when it is hidden from non-members. When members can't post, only admins and moderators can. |
+| An active member | A WordPress subscriber with a community profile (their Circle headline as the bio), or the user the site already has with that email. No email is sent; members set a password with "Lost your password?". |
+| A space member or moderator | A member or moderator of the space. |
+| A topic | A topic, offered in the spaces Circle offers it in. |
+| A post | A post with the same title, text (Circle's HTML, made safe), author, date and topics. A post by someone who has left Circle is shown as the admin's. |
+| A comment or reply | A comment, by the same person on the same date. FluentCommunity shows one level of replies, so a reply to a reply goes under the comment it belongs to. |
+| A course space (2.24.0) | A self-paced course with the same name and privacy, made through FluentCommunity's own course admin routes as the LearnDash switch makes them. Its sections and lessons come in Circle's order, each lesson with its text (made safe), draft or published. Its members are enrolled as students, after the lessons, so publishing a lesson notifies nobody. |
+
+What doesn't come across: who liked what (Circle's API gives only the number of likes); chat, event, image and members spaces; course progress (Circle's API can't read which lessons a student finished, so students start each course from the beginning), lesson videos and files uploaded to Circle, lesson order rules and drip schedules; direct messages; passwords; profile photos, custom profile fields, member tags, paywalls and access groups. Images and files in posts stay on Circle's servers.
+
+Undo deletes what the switch made: the courses (through FluentCommunity's own course delete, with their sections, lessons and students), the users it made (users already on the site stay, and only lose the Circle mark), spaces, space groups, topics, posts, comments and the community profiles made for the members. Sources: `src/Moving/CircleImport.php` (on `NativeImport`), `src/Moving/CircleApi.php`, `src/Moving/CirclePeople.php`. Tested end to end on a store of the community site type, with the FluentCommunity the store template installs and the newest one, against a fake Circle Admin API with Circle's own response shapes, by `scripts/playground/circle.mjs` (`npm run circle`).
 
 ## The Website Assistant Beside the Page
 

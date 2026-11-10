@@ -5,7 +5,7 @@ namespace AnyPressClient\Moving;
 use AnyPressClient\Api\SiteAbilities;
 
 /**
- * The support, affiliate and community switches as WordPress abilities, next to the site-editing ones (same
+ * The support, affiliate, community, course and Circle switches as WordPress abilities, next to the site-editing ones (same
  * category, so the AnyPress website MCP server offers them too): check-<key> says what a switch would do and changes
  * nothing; switch-<key> does it, or with undo takes it back out. Both need an administrator (manage_options), and run
  * as the signed-in user.
@@ -36,11 +36,15 @@ class ImportAbilities
             'support' => __('help desk tickets from Awesome Support, SupportCandy or JS Help Desk into Fluent Support (replies, attachments, customers and agents)', 'anypress-client'),
             'affiliate' => __('affiliates from AffiliateWP, Affiliates Manager, Solid Affiliate, SliceWP or Ultimate Affiliate Pro into an empty FluentAffiliate (groups, referrals, customers, payouts and visits)', 'anypress-client'),
             'community' => __('a BuddyPress or BuddyBoss community into an empty FluentCommunity (groups as spaces with their members, posts, comments and reactions)', 'anypress-client'),
+            'course' => __('LearnDash courses into FluentCommunity courses (lessons and topics as sections and lessons, students, and the lessons each student finished)', 'anypress-client'),
+            'circle' => __('a Circle community into an empty FluentCommunity, through Circle\'s Admin API with the community\'s Admin V2 token (discussion spaces with their members and moderators, space groups, topics, posts, comments and replies, and course spaces as courses with their sections, lessons and students; members become WordPress users)', 'anypress-client'),
         ][$import->key()] ?? '';
         $labels = [
             'support' => [__('Check the support switch', 'anypress-client'), __('Bring help desk tickets into Fluent Support', 'anypress-client')],
             'affiliate' => [__('Check the affiliate switch', 'anypress-client'), __('Bring affiliates into FluentAffiliate', 'anypress-client')],
             'community' => [__('Check the community switch', 'anypress-client'), __('Bring a BuddyPress community into FluentCommunity', 'anypress-client')],
+            'course' => [__('Check the course switch', 'anypress-client'), __('Bring LearnDash courses into FluentCommunity', 'anypress-client')],
+            'circle' => [__('Check the Circle switch', 'anypress-client'), __('Bring a Circle community into FluentCommunity', 'anypress-client')],
         ][$import->key()];
 
         wp_register_ability(SiteAbilities::CATEGORY . '/check-' . $import->key(), [
@@ -50,12 +54,12 @@ class ImportAbilities
             'category' => SiteAbilities::CATEGORY,
             'input_schema' => [
                 'type' => 'object',
-                'properties' => ['from' => $from],
+                'properties' => ['from' => $from] + $import->inputs(),
                 'additionalProperties' => false,
                 'default' => [],
             ],
             'output_schema' => ['type' => 'object'],
-            'execute_callback' => fn ($input = null) => $import->run(true, self::from($input)),
+            'execute_callback' => fn ($input = null) => self::configured($import, $input)->run(true, self::from($input)),
             'permission_callback' => $permission,
             'meta' => [
                 'show_in_rest' => true,
@@ -74,12 +78,12 @@ class ImportAbilities
                 'properties' => [
                     'from' => $from,
                     'undo' => ['type' => 'boolean', 'default' => false, 'description' => 'Take the switch back out instead.'],
-                ],
+                ] + $import->inputs(),
                 'additionalProperties' => false,
                 'default' => [],
             ],
             'output_schema' => ['type' => 'object'],
-            'execute_callback' => fn ($input = null) => is_array($input) && !empty($input['undo']) ? $import->undo() : $import->run(false, self::from($input)),
+            'execute_callback' => fn ($input = null) => is_array($input) && !empty($input['undo']) ? $import->undo() : self::configured($import, $input)->run(false, self::from($input)),
             'permission_callback' => $permission,
             'meta' => [
                 'show_in_rest' => true,
@@ -89,6 +93,14 @@ class ImportAbilities
                 'annotations' => ['readonly' => false, 'destructive' => false, 'idempotent' => true],
             ],
         ]);
+    }
+
+    /** Hands the switch its own input (such as a token) for this call. */
+    private static function configured(NativeImport $import, $input): NativeImport
+    {
+        $import->configure(is_array($input) ? array_intersect_key($input, $import->inputs()) : []);
+
+        return $import;
     }
 
     private static function from($input): string
