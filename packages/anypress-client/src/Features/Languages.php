@@ -314,7 +314,7 @@ class Languages
                 ];
             }
         } else {
-            foreach ($state['languages'] as $index => $locale) {
+            foreach ($state['languages'] ?: [self::default_locale()] as $index => $locale) {
                 $languages[] = ['locale' => $locale, 'name' => $known[$locale] ?? $locale, 'default' => $index === 0];
             }
         }
