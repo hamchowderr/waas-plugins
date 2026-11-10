@@ -12,7 +12,7 @@ What it does:
 | Gives the AnyPress API, AI apps and WordPress's own AI tools a safe way to edit pages and design | Every website | [Site Tools, Abilities and MCP](#site-tools-abilities-and-mcp) |
 | Answers the phone receptionist: open times, bookings and callers | Every website | [Phone Receptionist Routes](#phone-receptionist-routes) |
 | Shows the website assistant beside the editor | Every website | [The Website Assistant Beside the Page](#the-website-assistant-beside-the-page) |
-| Moves forms, a WooCommerce shop, a CRM list, a help desk, affiliates or a community onto the Fluent plugins | Moved-in websites | [Moving Forms](#moving-forms-to-fluent-forms) and the sections after it |
+| Moves forms, a WooCommerce shop, a CRM list, a help desk, affiliates, a community or LearnDash courses onto the Fluent plugins | Moved-in websites | [Moving Forms](#moving-forms-to-fluent-forms) and the sections after it |
 
 AnyPress Client calls the AnyPress API in one place only: the assistant's sign-in. Everything else the API asks of a website comes in as a request signed with that website's own site key.
 
@@ -269,6 +269,34 @@ The source plugin and its data are never changed: none of the importers' "delete
 What doesn't come across: ticket tags, products and custom fields, and the help desk's settings, templates and canned replies; affiliate program settings, and creatives (FluentAffiliate Pro); private messages, friendships, forums and extended profile fields. Help Scout, Zendesk and Freshdesk need an API key and come in through Fluent Support's own import screen. bbPress, PeepSo, wpForo and Ultimate Member, and WP Support Plus, KB Support, YITH WooCommerce Affiliates, Affiliate for WooCommerce and Easy Affiliate, are named in the check when active: the Fluent plugins have no importer for them.
 
 What each switch added is kept in the `anypress_client_<switch>_import` option (not autoloaded). Sources: `src/Moving/NativeImport.php`, `src/Moving/SupportImport.php`, `src/Moving/AffiliateImport.php`, `src/Moving/CommunityImport.php`, `src/Moving/ImportCommand.php`, `src/Moving/ImportAbilities.php`. Tested end to end with Awesome Support, SliceWP and BuddyPress by `scripts/playground/moving.mjs` (`npm run moving`).
+
+## Moving LearnDash Courses
+
+FluentCommunity has no LearnDash importer of its own yet, so the course switch builds the courses through FluentCommunity's own course admin routes (the ones behind its course editor). It works like the switches above: a check first, a count of what LearnDash holds next to what came across, no email while it runs, one run at a time, and an undo.
+
+```sh
+wp anypress course switch --user=admin --dry-run     # check and count; changes nothing
+wp anypress course switch --user=admin               # do it
+wp anypress course switch --user=admin --undo        # take it back out
+```
+
+The abilities are `anypress/check-course` and `anypress/switch-course` (with `{"undo": true}` to undo); both need an administrator.
+
+LearnDash doesn't need to be active. A store of the community site type turns it off, and LearnDash keeps everything the switch needs in WordPress itself: its courses, lessons, topics and quizzes are posts, the course builder's order and section headings are course settings, and enrolments and progress are user meta. The switch reads those.
+
+| LearnDash | FluentCommunity |
+|---|---|
+| A course | A self-paced course with the same title. Its excerpt (or the start of its text) is the description and its text the course details. Open courses are public, every other price type private. Published stays published; anything else is a draft. |
+| Section headings | Sections, holding the lessons (and their topics) that follow each heading. |
+| Lessons with topics (no headings) | Each lesson becomes a section: the lesson's own text, if it has any, is its first lesson, and its topics the lessons after it. |
+| Lessons without topics (no headings) | One section, "Lessons", holding them all. |
+| A lesson or topic | A lesson with the same title, text, featured image and status, comments on. A lesson video becomes an embed at the top. |
+| Students | Everyone enrolled one by one, through a LearnDash group, or on the course's access list; for an open course, everyone who started it. They are enrolled the way FluentCommunity enrols them. |
+| Progress | The lessons and topics each student finished and the courses they completed, recorded as FluentCommunity records them, without its "lesson completed" events, so old progress starts no automation. |
+
+Courses already in FluentCommunity are left alone. What doesn't come across: quizzes, assignments and certificates; prices and how access is sold (sell the courses with FluentCart); drip schedules and prerequisites; LearnDash groups as such (their members become students); LearnDash shortcodes and blocks inside lessons, which show as text. An automation set to start when someone joins a course starts for each student the switch enrols, so the check says to pause those first.
+
+Undo deletes the courses the switch made, with their sections, lessons, students and progress (through FluentCommunity's own course delete), and the member profiles FluentCommunity made for those students. Sources: `src/Moving/CourseImport.php` (on `NativeImport`). Tested end to end on a store of the community site type, with the FluentCommunity the store template installs and the newest one, by `scripts/playground/courses.mjs` (`npm run courses`).
 
 ## The Website Assistant Beside the Page
 

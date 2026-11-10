@@ -5,7 +5,7 @@ namespace AnyPressClient\Moving;
 use AnyPressClient\Api\SiteAbilities;
 
 /**
- * The support, affiliate and community switches as WordPress abilities, next to the site-editing ones (same
+ * The support, affiliate, community and course switches as WordPress abilities, next to the site-editing ones (same
  * category, so the AnyPress website MCP server offers them too): check-<key> says what a switch would do and changes
  * nothing; switch-<key> does it, or with undo takes it back out. Both need an administrator (manage_options), and run
  * as the signed-in user.
@@ -36,11 +36,13 @@ class ImportAbilities
             'support' => __('help desk tickets from Awesome Support, SupportCandy or JS Help Desk into Fluent Support (replies, attachments, customers and agents)', 'anypress-client'),
             'affiliate' => __('affiliates from AffiliateWP, Affiliates Manager, Solid Affiliate, SliceWP or Ultimate Affiliate Pro into an empty FluentAffiliate (groups, referrals, customers, payouts and visits)', 'anypress-client'),
             'community' => __('a BuddyPress or BuddyBoss community into an empty FluentCommunity (groups as spaces with their members, posts, comments and reactions)', 'anypress-client'),
+            'course' => __('LearnDash courses into FluentCommunity courses (lessons and topics as sections and lessons, students, and the lessons each student finished)', 'anypress-client'),
         ][$import->key()] ?? '';
         $labels = [
             'support' => [__('Check the support switch', 'anypress-client'), __('Bring help desk tickets into Fluent Support', 'anypress-client')],
             'affiliate' => [__('Check the affiliate switch', 'anypress-client'), __('Bring affiliates into FluentAffiliate', 'anypress-client')],
             'community' => [__('Check the community switch', 'anypress-client'), __('Bring a BuddyPress community into FluentCommunity', 'anypress-client')],
+            'course' => [__('Check the course switch', 'anypress-client'), __('Bring LearnDash courses into FluentCommunity', 'anypress-client')],
         ][$import->key()];
 
         wp_register_ability(SiteAbilities::CATEGORY . '/check-' . $import->key(), [
