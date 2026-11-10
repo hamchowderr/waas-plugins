@@ -75,6 +75,7 @@ check(opened.body?.ticket?.messages?.[0]?.content?.includes('Something went wron
 const stored = await php(`$t = \\FluentSupport\\App\\Models\\Ticket::find(${Number(id) || 0}); echo json_encode(['title' => $t->title, 'email' => $t->customer->email, 'mailbox' => (int) $t->mailbox_id, 'status' => $t->status]);`);
 const row = JSON.parse(stored || '{}');
 check(row.title === 'Booking page error' && row.email === dana.email && row.mailbox > 0, 'it is in Fluent Support under the customer, in the mailbox', stored);
+check(opened.body?.ticket?.status === row.status && row.status === 'new', 'open answers the stored status', `${opened.body?.ticket?.status} / ${row.status}`);
 
 const listed = await desk({ action: 'list', customer: dana });
 check(listed.status === 200 && listed.body?.tickets?.length === 1 && listed.body.tickets[0].id === id, 'list shows their ticket', JSON.stringify(listed.body));
