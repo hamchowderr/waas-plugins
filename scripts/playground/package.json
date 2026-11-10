@@ -20,7 +20,8 @@
     "phone": "node phone.mjs",
     "highlevel": "node highlevel.mjs",
     "domains": "node domains.mjs",
-    "admin-audit": "node admin-audit.mjs"
+    "admin-audit": "node admin-audit.mjs",
+    "support": "node support.mjs"
   },
   "dependencies": {
     "@wp-playground/cli": "3.1.59"

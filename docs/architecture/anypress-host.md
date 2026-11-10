@@ -40,6 +40,7 @@ flowchart TB
     PORTAL["My website page<br/>FluentCartPortal, SubscriptionDetails"]
     ACC["Account REST API<br/>src/Api/Account*"]
     WHR["WebhookReceiver<br/>anypress-host/v1/webhook"]
+    SUP["SupportDesk<br/>anypress-host/v1/support"]
     SL["SingleLogin<br/>login redirect"]
     ROLES["RolesController<br/>refresh plan roles"]
     ADM["AdminSettings, AdminHome, AdminNotices"]
@@ -306,6 +307,17 @@ Sources: `src/Features/AdminSettings.php` (`render_anypress_admin_page`), `src/F
 - **Registering** happens when the Connection tab is saved and the API answers, from the tab's **Register** button, and in an hourly WP-Cron check that needs no admin (API settings in `wp-config.php`, a site that moved, an endpoint an older version registered for fewer events). Endpoints at the same URL that AnyPress Host has no secret for are deleted first, so a lost answer doesn't leave extras behind.
 - **Answers:** 401 for a missing, stale or wrong signature, 400 for a body that isn't an event, 200 for everything else, a repeat included. The event id is remembered only once the event was handled, so a delivery that failed here is retried by the API.
 - **Polling:** the status cron runs every minute while an endpoint is registered and every five seconds while not. The cron run moves itself to the other schedule when that changes.
+
+## Support Desk
+
+When Fluent Support is active, the storefront can be the support desk for the people the AnyPress API signs in: website owners, sellers and resellers asking for help from an AI app, the website assistant or the dashboard. The API files and reads their tickets with `POST /wp-json/anypress-host/v1/support`.
+
+- The request is signed exactly like a webhook (`webhook-id`, `webhook-timestamp`, `webhook-signature`, checked by `WebhookReceiver::verify` with the same secret), so only the API this storefront is connected to can call it. Each signed request works once.
+- The body is `{"action", "customer": {"email", "name"}, "ticketId", "title", "content"}` with `action` one of `open`, `list`, `get`, `reply` and `close`. A customer only ever reaches their own tickets: another customer's ticket answers 404.
+- Tickets are made through Fluent Support's own PHP API (`FluentSupportApi('tickets')->createTicket`), and replies and closing through its ticket services, so its emails, activity log and automations run as they do for a ticket from the portal. Answers carry the ticket's number, title, status, dates, portal link and, for one ticket, its messages as plain text (`you` or `support`), never agents' notes.
+- Once, while an admin is in wp-admin, a **Support** page with Fluent Support's customer portal is made and set as its portal page, unless Fluent Support already has one.
+
+Which storefront is the desk is the API's choice (`SUPPORT_DESK_URL`). Sources: `src/Api/SupportDesk.php`; Playground check `scripts/playground/support.mjs`.
 
 ## Every API Call AnyPress Host Makes
 
