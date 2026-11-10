@@ -153,7 +153,7 @@ class CourseImport extends NativeImport
      *
      * @return array LearnDash lesson or topic id => FluentCommunity lesson id.
      */
-    private static function build_outline(int $course_id, array $sections): array
+    public static function build_outline(int $course_id, array $sections): array
     {
         $lessons = [];
         foreach ($sections as $section) {
@@ -212,7 +212,7 @@ class CourseImport extends NativeImport
      *
      * @param bool $must Throw when the route refuses; otherwise return [] for it.
      */
-    private static function call(string $method, string $path, array $body = [], bool $must = true): array
+    public static function call(string $method, string $path, array $body = [], bool $must = true): array
     {
         $request = new WP_REST_Request($method, self::ROUTE . $path);
         if ($body) {

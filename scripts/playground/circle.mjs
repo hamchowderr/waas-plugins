@@ -3,9 +3,9 @@
 // store template's version, and AnyPress Client from this checkout with ANYPRESS_TENANT_ROLES community. Circle's Admin
 // API is played by circle/fake-circle.php (Circle's published v2 response shapes, answered inside WordPress), so no
 // Circle account or token is needed. Checks: the check without a token, with a wrong one and with the right one; an
-// editor is refused; the switch brings spaces, groups, members, moderators, topics, posts (two pages) and comments with
-// their replies; the token is saved nowhere; no email is sent; it runs once; undo takes out only what it added; the
-// command runs it again.
+// editor is refused; the switch brings spaces, groups, members, moderators, topics, posts (two pages), comments with
+// their replies, and a course space as a course with its sections, lessons and students; the token is saved nowhere;
+// no email is sent; it runs once; undo takes out only what it added; the command runs it again.
 //
 //   cd scripts/playground && npm ci
 //   npm run circle            # exit 1 on a failure
@@ -166,12 +166,20 @@ const state = () =>
     echo json_encode([
         'spaces' => $spaces,
         'groups' => $wpdb->get_col("SELECT title FROM {$p}fcom_spaces WHERE type = 'space_group' ORDER BY id"),
-        'posts' => (int) $wpdb->get_var("SELECT COUNT(*) FROM {$p}fcom_posts"),
+        'posts' => (int) $wpdb->get_var("SELECT COUNT(*) FROM {$p}fcom_posts WHERE type NOT IN ('course_section', 'course_lesson')"),
         'comments' => (int) $wpdb->get_var("SELECT COUNT(*) FROM {$p}fcom_post_comments"),
         'topics' => $wpdb->get_col("SELECT title FROM {$p}fcom_terms WHERE taxonomy_name = 'post_topic' ORDER BY title"),
         'hello' => $hello, 'hello_topics' => $topic('Hello everyone'), 'rules_topics' => $topic('House rules'), 'old_by' => (int) $old,
         'comment_rows' => $comments, 'users' => $users, 'leaks' => $leaks,
         'mail' => (int) get_option('circle_test_mail', 0), 'calls' => (int) get_option('circle_test_calls', 0),
+        'course' => (function () use ($wpdb, $p) {
+            $c = $wpdb->get_row("SELECT id, title, privacy, status FROM {$p}fcom_spaces WHERE type = 'course'", ARRAY_A);
+            if (!$c) return null;
+            $c['sections'] = $wpdb->get_col($wpdb->prepare("SELECT title FROM {$p}fcom_posts WHERE space_id = %d AND type = 'course_section' ORDER BY priority, id", $c['id']));
+            $c['lessons'] = $wpdb->get_results($wpdb->prepare("SELECT l.title, l.status, l.message_rendered AS body, l.message, s.title AS section FROM {$p}fcom_posts l LEFT JOIN {$p}fcom_posts s ON s.id = l.parent_id WHERE l.space_id = %d AND l.type = 'course_lesson' ORDER BY s.priority, s.id, l.priority, l.id", $c['id']), ARRAY_A);
+            $c['students'] = $wpdb->get_col($wpdb->prepare("SELECT u.user_email FROM {$p}fcom_space_user su JOIN {$wpdb->users} u ON u.ID = su.user_id WHERE su.space_id = %d AND su.role = 'student' ORDER BY u.user_email", $c['id']));
+            return $c;
+        })(),
         'editor_ok' => (bool) get_user_by('login', 'editor'),
         'fluent_community' => is_plugin_active('fluent-community/fluent-community.php'),
     ]);`);
@@ -199,8 +207,8 @@ await check('with the token the check counts the Circle community and warns abou
     const res = await ability('check-circle', { token: TOKEN }, { method: 'GET' });
     const p = res.data.preflight;
     expect(res.status === 200 && p.ready, short(res));
-    expect(JSON.stringify(p.sources.circle.counts) === JSON.stringify({ spaces: 2, members: 4, posts: 123, comments: 2 }), short(p.sources));
-    expect(p.warnings.some((w) => w.includes('Admin API calls')) && p.warnings.some((w) => w.includes('only discussion spaces')), short(p.warnings));
+    expect(JSON.stringify(p.sources.circle.counts) === JSON.stringify({ spaces: 2, members: 4, posts: 123, comments: 2, courses: 1, lessons: 3 }), short(p.sources));
+    expect(p.warnings.some((w) => w.includes('Admin API calls')) && p.warnings.some((w) => w.includes('only discussion and course spaces')) && p.warnings.some((w) => w.includes('lesson progress')), short(p.warnings));
     expect(res.data.lost.some((l) => l.startsWith('Likes')), short(res.data.lost));
     const after = await state();
     expect(after.spaces.length === 0 && after.posts === 0 && after.calls - calls_before <= 5, short(after));
@@ -218,6 +226,7 @@ await check('the switch brings the Circle community across', async () => {
     expect(res.status === 200 && report.dry_run === false, short(res));
     expect(row(report, 'spaces').added === 2 && row(report, 'posts').added === 123 && row(report, 'posts').missing === 0, short(report.compare));
     expect(row(report, 'comments').added === 4 && row(report, 'members').added >= 3, short(report.compare));
+    expect(row(report, 'courses').added === 1 && row(report, 'lessons').added === 3 && row(report, 'lessons').missing === 0, short(report.compare));
     expect(report.fixed.some((f) => f.includes('same email')) && report.fixed.some((f) => f.includes('left Circle')) && report.fixed.some((f) => f.includes('Admin API calls')), short(report.fixed));
 });
 
@@ -248,6 +257,16 @@ await check('posts keep their author, date, topics and safe HTML; comments keep 
     expect(c[0].parent_id === null && c[1].parent_id == c[0].id && c[2].parent_id == c[0].id && c[3].parent_id === null && c[3].user_id == 1, short(c));
 });
 
+await check('the course space is a FluentCommunity course with its sections, lessons and students', async () => {
+    const { course } = after;
+    expect(course && course.title === 'Starter Course' && course.privacy === 'private', short(course));
+    expect(course.sections.join() === 'Getting Started,Going Further', short(course.sections));
+    expect(course.lessons.map((l) => `${l.section}/${l.title}/${l.status}`).join() === 'Getting Started/Welcome to the course/published,Getting Started/Setting up/published,Going Further/Advanced work/draft', short(course.lessons));
+    const body = course.lessons[0].body || course.lessons[0].message || '';
+    expect(body.includes('here') && !body.includes('<script'), short(course.lessons[0]));
+    expect(course.students.join() === 'grace@example.com,katherine@example.com', short(course.students));
+});
+
 await check('the token is saved nowhere and no email was sent', async () => {
     expect(after.leaks === 0 && after.mail === 0, short({ leaks: after.leaks, mail: after.mail }));
 });
@@ -259,17 +278,17 @@ await check('it runs once', async () => {
 
 await check('undo takes out only what the switch added', async () => {
     const dry = await wp('wp anypress circle switch --user=admin --undo --dry-run --format=json');
-    expect(dry.removed.spaces === 2 && dry.removed.posts === 123 && dry.removed.users === 3, short(dry));
+    expect(dry.removed.spaces === 2 && dry.removed.posts === 123 && dry.removed.users === 3 && dry.removed.courses === 1 && dry.removed.lessons === 3, short(dry));
     const res = await ability('switch-circle', { undo: true });
     expect(res.status === 200 && res.data.undo, short(res));
     const now = await state();
-    expect(now.spaces.length === 0 && now.groups.length === 0 && now.posts === 0 && now.comments === 0 && now.topics.length === 0, short(now));
+    expect(now.spaces.length === 0 && now.groups.length === 0 && now.posts === 0 && now.comments === 0 && now.topics.length === 0 && now.course === null, short(now));
     expect(now.users['grace@example.com'] === null && now.users['ada@example.com'] && now.users['ada@example.com'].circle === '' && now.editor_ok, short(now.users));
 });
 
 await check('the command runs it again with --token', async () => {
     const res = await wp(`wp anypress circle switch --user=admin --token=${TOKEN} --format=json`);
-    expect(row(res, 'posts').added === 123 && row(res, 'spaces').added === 2, short(res.compare));
+    expect(row(res, 'posts').added === 123 && row(res, 'spaces').added === 2 && row(res, 'courses').added === 1, short(res.compare));
     const now = await state();
     expect(now.leaks === 0 && now.mail === 0, short(now));
 });

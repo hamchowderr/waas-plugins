@@ -37,7 +37,7 @@ class ImportAbilities
             'affiliate' => __('affiliates from AffiliateWP, Affiliates Manager, Solid Affiliate, SliceWP or Ultimate Affiliate Pro into an empty FluentAffiliate (groups, referrals, customers, payouts and visits)', 'anypress-client'),
             'community' => __('a BuddyPress or BuddyBoss community into an empty FluentCommunity (groups as spaces with their members, posts, comments and reactions)', 'anypress-client'),
             'course' => __('LearnDash courses into FluentCommunity courses (lessons and topics as sections and lessons, students, and the lessons each student finished)', 'anypress-client'),
-            'circle' => __('a Circle community into an empty FluentCommunity, through Circle\'s Admin API with the community\'s Admin V2 token (discussion spaces with their members and moderators, space groups, topics, posts, comments and replies; members become WordPress users)', 'anypress-client'),
+            'circle' => __('a Circle community into an empty FluentCommunity, through Circle\'s Admin API with the community\'s Admin V2 token (discussion spaces with their members and moderators, space groups, topics, posts, comments and replies, and course spaces as courses with their sections, lessons and students; members become WordPress users)', 'anypress-client'),
         ][$import->key()] ?? '';
         $labels = [
             'support' => [__('Check the support switch', 'anypress-client'), __('Bring help desk tickets into Fluent Support', 'anypress-client')],

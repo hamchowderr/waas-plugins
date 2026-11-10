@@ -9,7 +9,8 @@
  * The community: two space groups; a public discussion space (Welcome) with 3 posts, a private hidden one (Insiders)
  * with 120 posts, so the posts list takes two pages, and a chat space that doesn't come across. Four active members:
  * ada@example.com already has a WordPress user on the site; a post and a comment are by someone who left Circle (no
- * email). Comments on the first post: a comment, a reply, a reply to the reply, and a second comment.
+ * email). Comments on the first post: a comment, a reply, a reply to the reply, and a second comment. A private course
+ * space (Starter Course) has two sections and three lessons (one a draft), and two members.
  */
 
 const CIRCLE_TEST_TOKEN = 'circle-test-token';
@@ -27,6 +28,7 @@ function circle_test_data(): array
     $spaces = [
         ['id' => 101, 'name' => 'Welcome', 'slug' => 'welcome', 'space_type' => 'basic', 'is_private' => false, 'is_hidden_from_non_members' => false, 'is_post_disabled' => false, 'space_group' => ['id' => 1, 'name' => 'Start Here']],
         ['id' => 102, 'name' => 'Insiders', 'slug' => 'insiders', 'space_type' => 'basic', 'is_private' => true, 'is_hidden_from_non_members' => true, 'is_post_disabled' => true, 'space_group' => ['id' => 2, 'name' => 'Members Only']],
+        ['id' => 104, 'name' => 'Starter Course', 'slug' => 'starter-course', 'space_type' => 'course', 'is_private' => true, 'is_hidden_from_non_members' => false, 'is_draft' => false, 'space_group' => ['id' => 2, 'name' => 'Members Only'], 'course_setting' => ['course_type' => 'self_paced']],
         ['id' => 103, 'name' => 'Lounge Chat', 'slug' => 'lounge-chat', 'space_type' => 'chat', 'is_private' => false, 'space_group' => ['id' => 1, 'name' => 'Start Here']],
     ];
     $post = fn ($id, $space, $author, $name, $body, $date, $topics = []) => [
@@ -63,6 +65,8 @@ function circle_test_data(): array
         ['space_id' => 101, 'community_member_id' => 13, 'moderator' => false, 'status' => 'active'],
         ['space_id' => 102, 'community_member_id' => 11, 'moderator' => true, 'status' => 'active'],
         ['space_id' => 102, 'community_member_id' => 14, 'moderator' => false, 'status' => 'active'],
+        ['space_id' => 104, 'community_member_id' => 12, 'moderator' => false, 'status' => 'active'],
+        ['space_id' => 104, 'community_member_id' => 14, 'moderator' => false, 'status' => 'active'],
     ];
     foreach ($space_members as $i => $row) {
         $space_members[$i]['id'] = 900 + $i;
@@ -77,6 +81,13 @@ function circle_test_data(): array
         'space_members' => $space_members,
         'posts' => $posts,
         'comments' => $comments,
+        // As Circle lists them (in the course's order): sections, then lessons with their section.
+        'course_sections' => [['id' => 701, 'name' => 'Getting Started', 'space_id' => 104], ['id' => 702, 'name' => 'Going Further', 'space_id' => 104]],
+        'course_lessons' => [
+            ['id' => 801, 'name' => 'Welcome to the course', 'status' => 'published', 'section_id' => 701, 'space_id' => 104, 'body_html' => '<p>Start <em>here</em>.</p><script>alert(1)</script>', 'is_comments_enabled' => true],
+            ['id' => 802, 'name' => 'Setting up', 'status' => 'published', 'section_id' => 701, 'space_id' => 104, 'body_html' => '<p>Install the tools.</p>', 'is_comments_enabled' => true],
+            ['id' => 803, 'name' => 'Advanced work', 'status' => 'draft', 'section_id' => 702, 'space_id' => 104, 'body_html' => '<p>Coming soon.</p>', 'is_comments_enabled' => false],
+        ],
     ];
 }
 

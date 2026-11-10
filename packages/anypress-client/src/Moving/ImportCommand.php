@@ -27,7 +27,8 @@ class ImportCommand
      * BuddyPress or BuddyBoss groups, members, posts, comments and reactions (into an empty FluentCommunity only).
      * course: LearnDash courses with their lessons, topics, students and progress, as FluentCommunity courses.
      * circle: a Circle community through Circle's Admin API: discussion spaces with their members and moderators,
-     * space groups, topics, posts, comments and replies, members as WordPress users (into an empty FluentCommunity).
+     * space groups, topics, posts, comments and replies, course spaces as courses with their sections, lessons and
+     * students, members as WordPress users (into an empty FluentCommunity).
      *
      * It checks first, holds back email while it runs, then shows what the source holds next to what came across.
      * The source plugin and its data are never changed. Run it as an administrator (--user=<admin login>).
