@@ -16,8 +16,8 @@ use FluentCommunity\Modules\Migrations\Helpers\BPMigratorHelper;
  * Admin V2 token (Circle's Business plan and higher; Settings, Developers, Tokens). Circle has no export file, so
  * this reads it list by list: space groups become FluentCommunity space groups, discussion spaces become spaces with
  * their members and moderators, active members become WordPress users with a community profile (matched by email to
- * users the site already has), topics stay topics, and posts come across with their comments and replies, by the same
- * people and with their dates. FluentCommunity's own models write it, as its BuddyPress importer does.
+ * users the site already has), topics stay topics, posts come across with their comments and replies, by the same
+ * people and with their dates, and course spaces become courses with their sections, lessons and students. FluentCommunity's own models write it, as its BuddyPress importer does.
  *
  * The token is used for this run only: it isn't saved, logged or shown. Circle is only read; nothing changes there.
  */
@@ -34,6 +34,9 @@ class CircleImport extends NativeImport
         'activities' => 'fcom_user_activities',
         'notifications' => 'fcom_notifications',
     ];
+
+    /** Posts that aren't course sections or lessons (FluentCommunity keeps those in the posts table too). */
+    private const NOT_COURSE = "type NOT IN ('course_section', 'course_lesson')";
 
     private string $token = '';
     private ?CircleApi $api = null;
@@ -99,13 +102,17 @@ class CircleImport extends NativeImport
                 try {
                     $spaces = $this->api()->all('spaces');
                     $basic = array_values(array_filter($spaces, fn ($space) => ($space['space_type'] ?? '') === 'basic'));
+                    $courses = array_values(array_filter($spaces, fn ($space) => ($space['space_type'] ?? '') === 'course'));
                     $this->found['spaces'] = $basic;
-                    $this->found['other_spaces'] = count($spaces) - count($basic);
+                    $this->found['courses'] = $courses;
+                    $this->found['other_spaces'] = count($spaces) - count($basic) - count($courses);
                     $this->found['counts'] = [
                         'spaces' => count($basic),
                         'members' => $this->api()->count('community_members'),
                         'posts' => $this->api()->count('posts', ['status' => 'published']),
                         'comments' => $this->api()->count('comments'),
+                        'courses' => count($courses),
+                        'lessons' => $courses ? $this->api()->count('course_lessons') : 0,
                     ];
                     $this->found['found'] = true;
                 } catch (\RuntimeException $error) {
@@ -127,8 +134,10 @@ class CircleImport extends NativeImport
         return [
             'spaces' => self::count('fcom_spaces', "type = 'community'"),
             'members' => self::count('fcom_xprofile'),
-            'posts' => self::count('fcom_posts'),
+            'posts' => self::count('fcom_posts', self::NOT_COURSE),
             'comments' => self::count('fcom_post_comments'),
+            'courses' => self::count('fcom_spaces', "type = 'course'"),
+            'lessons' => self::count('fcom_posts', "type = 'course_lesson'"),
         ];
     }
 
@@ -147,7 +156,7 @@ class CircleImport extends NativeImport
             return [];
         }
         $counts = $this->found['counts'];
-        $calls = 4 + 3 * $counts['spaces'] + (int) ceil($counts['members'] / 100) + (int) ceil($counts['posts'] / 100) + (int) ceil($counts['comments'] / 100);
+        $calls = 4 + ($counts['courses'] ? 1 : 0) + 3 * ($counts['spaces'] + $counts['courses']) + (int) ceil($counts['lessons'] / 100) + (int) ceil($counts['members'] / 100) + (int) ceil($counts['posts'] / 100) + (int) ceil($counts['comments'] / 100);
         $warnings = [sprintf(
             /* translators: %d: a number of calls. */
             __('The switch reads Circle with about %d Admin API calls, which count against the Circle plan\'s monthly allowance (5,000 on Business, 30,000 on Scale). Checking again costs a few calls each time.', 'anypress-client'),
@@ -156,9 +165,12 @@ class CircleImport extends NativeImport
         if (!empty($this->found['other_spaces'])) {
             $warnings[] = sprintf(
                 /* translators: %d: a number of spaces. */
-                _n('%d Circle space is a chat, event, course, image or members space: only discussion spaces come across.', '%d Circle spaces are chat, event, course, image or members spaces: only discussion spaces come across.', (int) $this->found['other_spaces'], 'anypress-client'),
+                _n('%d Circle space is a chat, event, image or members space: only discussion and course spaces come across.', '%d Circle spaces are chat, event, image or members spaces: only discussion and course spaces come across.', (int) $this->found['other_spaces'], 'anypress-client'),
                 (int) $this->found['other_spaces']
             );
+        }
+        if ($counts['courses']) {
+            $warnings[] = __('Students are enrolled in the courses the way FluentCommunity enrols them, so an automation set to start when someone joins a course starts for each of them: pause those first. Circle\'s API can\'t read lesson progress, so students start each course from the beginning.', 'anypress-client');
         }
         if ($counts['members'] + $counts['posts'] + $counts['comments'] > 5000) {
             $warnings[] = __('This is a big community: run it with WP-CLI (wp anypress circle switch) so a web request doesn\'t time out half way.', 'anypress-client');
@@ -262,6 +274,11 @@ class CircleImport extends NativeImport
             }
         }
 
+        $added['courses'] = [];
+        foreach ($this->found['courses'] as $course) {
+            $this->import_course($course, $people, $added, $save);
+        }
+
         $save();
         if ($added['matched']) {
             /* translators: %d: a number of members. */
@@ -282,6 +299,58 @@ class CircleImport extends NativeImport
         }
 
         return $added;
+    }
+
+    /**
+     * A Circle course space becomes a self-paced FluentCommunity course, made through FluentCommunity's own course
+     * admin routes as the LearnDash switch makes them: its sections and lessons in Circle's order, then its members
+     * enrolled as students (after the lessons, so publishing a lesson notifies nobody).
+     */
+    private function import_course(array $space, CirclePeople $people, array &$added, callable $save): void
+    {
+        $title = sanitize_text_field((string) ($space['name'] ?? ''));
+        $made = CourseImport::call('POST', '', [
+            'title' => $title,
+            // FluentCommunity needs a description; Circle's API has none for a space but its locked page's text.
+            'description' => sanitize_textarea_field((string) ($space['locked_page_description'] ?? '')) ?: $title,
+            'privacy' => empty($space['is_private']) ? 'public' : (empty($space['is_hidden_from_non_members']) ? 'private' : 'secret'),
+            'course_type' => 'self_paced',
+            'status' => empty($space['is_draft']) ? 'published' : 'draft',
+        ]);
+        $course_id = (int) ($made['course']['id'] ?? 0);
+        if (!$course_id) {
+            throw new \RuntimeException(sprintf('FluentCommunity made no course for "%s".', esc_html($title)));
+        }
+        // Recorded at once, so undo finds the course even if a later step stops the run.
+        $added['courses'][(int) $space['id']] = $course_id;
+        $save();
+
+        $sections = [];
+        foreach ($this->api()->all('course_sections', ['space_id' => $space['id']]) as $section) {
+            $sections[(int) $section['id']] = ['title' => sanitize_text_field((string) ($section['name'] ?? '')), 'lessons' => []];
+        }
+        foreach ($this->api()->all('course_lessons', ['space_id' => $space['id']]) as $lesson) {
+            $section = (int) ($lesson['section_id'] ?? 0);
+            if (!isset($sections[$section])) {
+                $sections[$section] = ['title' => __('Lessons', 'anypress-client'), 'lessons' => []];
+            }
+            $sections[$section]['lessons'][] = [
+                'title' => sanitize_text_field((string) ($lesson['name'] ?? '')),
+                'status' => ($lesson['status'] ?? '') === 'published' ? 'published' : 'draft',
+                'body' => self::html($lesson['body_html'] ?? ''),
+                'image' => 0,
+                'post' => (int) $lesson['id'],
+            ];
+        }
+        CourseImport::build_outline($course_id, array_values($sections));
+
+        foreach ($this->api()->all('space_members', ['space_id' => $space['id'], 'status' => 'active']) as $row) {
+            $user = $people->user((array) ($row['community_member'] ?? []) + ['id' => $row['community_member_id'] ?? 0]);
+            if (!$user || !CourseImport::call('POST', "/{$course_id}/students", ['user_id' => $user], false)) {
+                $added['skipped']++;
+            }
+        }
+        $save();
     }
 
     /**
@@ -404,7 +473,7 @@ class CircleImport extends NativeImport
 
     protected function compare_keys(): array
     {
-        return ['spaces' => 'spaces', 'members' => 'members', 'posts' => 'posts', 'comments' => 'comments'];
+        return ['spaces' => 'spaces', 'members' => 'members', 'posts' => 'posts', 'comments' => 'comments', 'courses' => 'courses', 'lessons' => 'lessons'];
     }
 
     protected function remove(array $state, bool $dry_run): array
@@ -413,14 +482,25 @@ class CircleImport extends NativeImport
         $p = $wpdb->prefix;
         $from = (array) ($state['from'] ?? []);
         $upto = (array) ($state['upto'] ?? []);
-        $removed = [];
+        $removed = ['courses' => 0, 'lessons' => 0];
+        // Courses through FluentCommunity's own course delete, which takes their sections, lessons and students.
+        foreach (array_map('intval', (array) ($state['courses'] ?? [])) as $course_id) {
+            if (!self::count('fcom_spaces', "id = %d AND type = 'course'", [$course_id])) {
+                continue;
+            }
+            $removed['courses']++;
+            $removed['lessons'] += self::count('fcom_posts', "space_id = %d AND type = 'course_lesson'", [$course_id]);
+            if (!$dry_run) {
+                CourseImport::call('DELETE', "/{$course_id}");
+            }
+        }
         $first_post = (int) ($from['posts'] ?? 0);
         $last_post = (int) ($upto['posts'] ?? self::max_id('fcom_posts'));
         if (!$dry_run && $last_post > $first_post) {
             $wpdb->query($wpdb->prepare("DELETE FROM {$p}fcom_term_feed WHERE post_id > %d AND post_id <= %d", $first_post, $last_post)); // phpcs:ignore WordPress.DB.PreparedSQL
         }
         foreach (self::RANGES as $key => $table) {
-            $removed[$key] = self::delete_range($table, (int) ($from[$key] ?? 0), (int) ($upto[$key] ?? self::max_id($table)), $dry_run);
+            $removed[$key] = self::delete_range($table, (int) ($from[$key] ?? 0), (int) ($upto[$key] ?? self::max_id($table)), $dry_run, 'id', $key === 'posts' ? self::NOT_COURSE : '');
         }
         $spaces = array_map('intval', (array) ($state['spaces'] ?? []));
         $removed['spaces'] = self::delete_in('fcom_spaces', 'id', $spaces, $dry_run, "type = 'community'");
@@ -463,7 +543,8 @@ class CircleImport extends NativeImport
     {
         return [
             __('Likes: Circle\'s API gives how many likes a post had, not who liked it.', 'anypress-client'),
-            __('Chat, event, course and image spaces, direct messages, and members\' passwords (members set a new one with "Lost your password?").', 'anypress-client'),
+            __('Chat, event and image spaces, direct messages, and members\' passwords (members set a new one with "Lost your password?").', 'anypress-client'),
+            __('Course progress (Circle\'s API can\'t read which lessons a student finished), lesson videos and files uploaded to Circle, lesson order rules, and drip schedules.', 'anypress-client'),
             __('Profile photos, custom profile fields, member tags, paywalls and access groups.', 'anypress-client'),
             __('Images and files in posts stay on Circle\'s servers: they show as long as Circle keeps them. Upload the ones that matter again.', 'anypress-client'),
         ];

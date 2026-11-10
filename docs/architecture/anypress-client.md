@@ -310,7 +310,7 @@ wp anypress circle switch --user=admin --undo                           # take i
 
 The abilities are `anypress/check-circle` and `anypress/switch-circle`, each with a `token` input (and `{"undo": true}` to undo); both need an administrator.
 
-Every call counts against the Circle plan's monthly Admin API allowance (5,000 on Business, 30,000 on Scale), so the check says about how many calls the switch will make. For a big community, run it with WP-CLI so a web request doesn't time out half way.
+Every call counts against the Circle plan's monthly Admin API allowance (5,000 on Business, 30,000 on Scale), so the check says about how many calls the switch will make. For a big community, run it with WP-CLI so a web request doesn't time out half way. Course students are enrolled the way FluentCommunity enrols them, so an automation set to start when someone joins a course starts for each of them; the check says to pause those first.
 
 | Circle | FluentCommunity |
 |---|---|
@@ -321,10 +321,11 @@ Every call counts against the Circle plan's monthly Admin API allowance (5,000 o
 | A topic | A topic, offered in the spaces Circle offers it in. |
 | A post | A post with the same title, text (Circle's HTML, made safe), author, date and topics. A post by someone who has left Circle is shown as the admin's. |
 | A comment or reply | A comment, by the same person on the same date. FluentCommunity shows one level of replies, so a reply to a reply goes under the comment it belongs to. |
+| A course space (2.24.0) | A self-paced course with the same name and privacy, made through FluentCommunity's own course admin routes as the LearnDash switch makes them. Its sections and lessons come in Circle's order, each lesson with its text (made safe), draft or published. Its members are enrolled as students, after the lessons, so publishing a lesson notifies nobody. |
 
-What doesn't come across: who liked what (Circle's API gives only the number of likes); chat, event, course, image and members spaces; direct messages; passwords; profile photos, custom profile fields, member tags, paywalls and access groups. Images and files in posts stay on Circle's servers.
+What doesn't come across: who liked what (Circle's API gives only the number of likes); chat, event, image and members spaces; course progress (Circle's API can't read which lessons a student finished, so students start each course from the beginning), lesson videos and files uploaded to Circle, lesson order rules and drip schedules; direct messages; passwords; profile photos, custom profile fields, member tags, paywalls and access groups. Images and files in posts stay on Circle's servers.
 
-Undo deletes what the switch made: the users it made (users already on the site stay, and only lose the Circle mark), spaces, space groups, topics, posts, comments and the community profiles made for the members. Sources: `src/Moving/CircleImport.php` (on `NativeImport`), `src/Moving/CircleApi.php`, `src/Moving/CirclePeople.php`. Tested end to end on a store of the community site type, with the FluentCommunity the store template installs and the newest one, against a fake Circle Admin API with Circle's own response shapes, by `scripts/playground/circle.mjs` (`npm run circle`).
+Undo deletes what the switch made: the courses (through FluentCommunity's own course delete, with their sections, lessons and students), the users it made (users already on the site stay, and only lose the Circle mark), spaces, space groups, topics, posts, comments and the community profiles made for the members. Sources: `src/Moving/CircleImport.php` (on `NativeImport`), `src/Moving/CircleApi.php`, `src/Moving/CirclePeople.php`. Tested end to end on a store of the community site type, with the FluentCommunity the store template installs and the newest one, against a fake Circle Admin API with Circle's own response shapes, by `scripts/playground/circle.mjs` (`npm run circle`).
 
 ## The Website Assistant Beside the Page
 
