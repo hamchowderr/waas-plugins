@@ -69,6 +69,7 @@ async function desk(body, { id = `sup_${randomUUID()}`, signature } = {}) {
 const dana = { email: 'dana@example.com', name: 'Dana Florist' };
 const opened = await desk({ action: 'open', customer: dana, title: 'Booking page error', content: 'Since this morning it says "Something went wrong".\n\n---\nWebsite: Rose Florist' });
 check(opened.status === 201 && opened.body?.ticket?.id > 0, 'open files a ticket', JSON.stringify(opened.body));
+check(opened.body?.ticket?.status === 'new', 'open answers the ticket as new', JSON.stringify(opened.body?.ticket?.status));
 const id = opened.body?.ticket?.id;
 check(opened.body?.ticket?.messages?.[0]?.content?.includes('Something went wrong'), 'the ticket keeps the message as text', JSON.stringify(opened.body?.ticket));
 
