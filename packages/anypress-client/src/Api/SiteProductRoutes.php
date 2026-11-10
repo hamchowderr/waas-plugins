@@ -63,7 +63,7 @@ trait SiteProductRoutes
         }
         $existing = $source ? $this->product_from($source) : null;
         if ($existing) {
-            return ['url' => $source, 'status' => 'exists'] + $this->product_summary($existing);
+            return $this->product_result($source, 'exists', $existing);
         }
 
         $data = \FluentCartMigrator\Classes\Dto\ProductData::make([
@@ -87,7 +87,17 @@ trait SiteProductRoutes
         }
         $images = $this->product_images($id, $title, (array) ($input['images'] ?? []));
 
-        return ['url' => $source ?: null, 'status' => 'created', 'images' => $images] + $this->product_summary(get_post($id));
+        return ['images' => $images] + $this->product_result($source ?: null, 'created', get_post($id));
+    }
+
+    /** One product's result: whether it was added, and the product as the shop has it (its own status as productStatus). */
+    private function product_result(?string $source, string $result, $post): array
+    {
+        $summary = $this->product_summary($post);
+        $summary['productStatus'] = $summary['status'];
+        $summary['status'] = $result;
+
+        return ['url' => $source] + $summary;
     }
 
     /** One variation a price, or one per variant; prices come as amounts ("19.99") and are stored in cents. */

@@ -171,7 +171,7 @@ await check('adds a simple and a three-variant product as drafts', async () => {
     const res = await site('POST', '/products', { products });
     expect(res.status === 200, short(res));
     first = res.data.results;
-    expect(first.length === 2 && first.every((r) => r.status === 'created' && r.status !== 'failed'), short(first));
+    expect(first.length === 2 && first.every((r) => r.status === 'created' && r.productStatus === 'draft'), short(first));
 });
 
 await check('the products are FluentCart drafts with prices in cents, variations, categories, photos and their source', async () => {
@@ -214,7 +214,7 @@ await check('lists the products with where each came from', async () => {
 
 await check('a product asked for as published is published', async () => {
     const res = await site('POST', '/products', { products: [{ title: 'Gift Card', status: 'publish', variants: [{ price: '25' }] }] });
-    expect(res.status === 200 && res.data.results[0].status === 'created' && res.data.results[0].images === 0, short(res));
+    expect(res.status === 200 && res.data.results[0].status === 'created' && res.data.results[0].productStatus === 'publish' && res.data.results[0].images === 0, short(res));
     const status = await php(`echo json_encode([get_post_status(${res.data.results[0].id})]);`);
     expect(status[0] === 'publish', short(status));
 });
