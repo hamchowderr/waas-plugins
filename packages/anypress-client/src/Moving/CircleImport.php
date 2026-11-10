@@ -176,12 +176,14 @@ class CircleImport extends NativeImport
             $added['from'][$key] = self::max_id($table);
         }
         $added['profiles_before'] = array_map('intval', $wpdb->get_col("SELECT user_id FROM {$wpdb->prefix}fcom_xprofile")); // phpcs:ignore WordPress.DB.PreparedSQL
-        $save = function () use (&$added, $state) {
+        $people = new CirclePeople();
+        $save = function () use (&$added, $state, $people) {
+            $added['users'] = $people->made;
+            $added['matched'] = $people->matched;
             update_option($this->option(), array_merge($state, $added), false);
         };
         $save();
 
-        $people = new CirclePeople($added);
         foreach ($this->api()->all('community_members') as $member) {
             $people->user($member);
         }
@@ -251,7 +253,7 @@ class CircleImport extends NativeImport
 
         foreach ($people->profiles() as $user_id => $headline) {
             // Only on users made here, whose profile FluentCommunity fills from the WordPress bio.
-            if ($headline !== '' && in_array($user_id, $added['users'], true)) {
+            if ($headline !== '' && in_array($user_id, $people->made, true)) {
                 update_user_meta($user_id, 'description', $headline);
             }
             $user = User::find($user_id);
@@ -260,6 +262,7 @@ class CircleImport extends NativeImport
             }
         }
 
+        $save();
         if ($added['matched']) {
             /* translators: %d: a number of members. */
             $added['fixed'][] = sprintf(_n('%d Circle member already had a WordPress user with the same email, and was matched to it.', '%d Circle members already had WordPress users with the same email, and were matched to them.', count($added['matched']), 'anypress-client'), count($added['matched']));

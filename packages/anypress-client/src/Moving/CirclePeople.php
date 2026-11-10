@@ -5,25 +5,22 @@ namespace AnyPressClient\Moving;
 /**
  * Circle members as WordPress users, for the Circle switch: a member whose email the site already has is matched to
  * that user; anyone else gets a new subscriber with a random password (no email is sent: the switch holds email back,
- * and members set their own password with "Lost your password?"). New and matched users are recorded in the switch's
- * state as they are made, so undo finds them even after a run that stopped half way.
+ * and members set their own password with "Lost your password?"). The switch saves $made and $matched in its state
+ * as it goes, so undo finds them even after a run that stopped half way.
  */
 class CirclePeople
 {
     /** Posts and comments by someone who left Circle (no email), shown as the person running the switch. */
     public int $stand_ins = 0;
 
-    /** @var array The switch's state: 'users' (made here) and 'matched' (already there), by reference. */
-    private array $state;
+    /** @var int[] Users made here. */
+    public array $made = [];
+    /** @var int[] Users that were already on the site. */
+    public array $matched = [];
     /** @var int[] lower-case email => user id */
     private array $by_email = [];
     /** @var string[] user id => Circle headline */
     private array $headlines = [];
-
-    public function __construct(array &$state)
-    {
-        $this->state = &$state;
-    }
 
     /** The user for a Circle member record (id, email, name, first_name, last_name, headline), or 0 without an email. */
     public function user(array $member): int
@@ -38,13 +35,13 @@ class CirclePeople
         $existing = get_user_by('email', $email);
         if ($existing) {
             $id = (int) $existing->ID;
-            $this->state['matched'][] = $id;
+            $this->matched[] = $id;
         } else {
             $id = $this->make($email, $member);
             if (!$id) {
                 return 0;
             }
-            $this->state['users'][] = $id;
+            $this->made[] = $id;
         }
         update_user_meta($id, CircleImport::MEMBER_META, (int) ($member['id'] ?? 0));
         $this->by_email[$email] = $id;

@@ -48,23 +48,23 @@ class CircleApi
     private function get(string $path, array $query): array
     {
         $url = add_query_arg(array_map('rawurlencode', array_map('strval', $query)), self::BASE . ltrim($path, '/'));
-        for ($try = 0; ; $try++) {
+        $try = 0;
+        do {
             $this->requests++;
             $response = wp_remote_get($url, [
                 'timeout' => 30,
                 'headers' => ['Authorization' => 'Bearer ' . $this->token, 'Accept' => 'application/json'],
             ]);
             if (is_wp_error($response)) {
-                throw new \RuntimeException(sprintf('Circle could not be reached (%s).', $response->get_error_message()));
+                throw new \RuntimeException(esc_html(sprintf('Circle could not be reached (%s).', $response->get_error_message())));
             }
             $status = (int) wp_remote_retrieve_response_code($response);
             // Circle allows 2,000 calls per 5 minutes; on 429 it says when to try again.
-            if (($status === 429 || $status >= 500) && $try < 3) {
-                sleep(min(60, max(1, (int) wp_remote_retrieve_header($response, 'retry-after') ?: 5 * ($try + 1))));
-                continue;
+            $again = ($status === 429 || $status >= 500) && $try++ < 3;
+            if ($again) {
+                sleep(min(60, max(1, (int) wp_remote_retrieve_header($response, 'retry-after') ?: 5 * $try)));
             }
-            break;
-        }
+        } while ($again);
         if ($status === 401) {
             throw new \RuntimeException('Circle did not accept the token. Make an Admin V2 token in Circle under Settings, Developers, Tokens.');
         }
@@ -72,11 +72,11 @@ class CircleApi
             throw new \RuntimeException('Circle refused: the community\'s plan has no Admin API (it comes with Business and higher plans), or its monthly allowance is used up.');
         }
         if ($status !== 200) {
-            throw new \RuntimeException(sprintf('Circle answered %d for %s.', $status, strtok($path, '?')));
+            throw new \RuntimeException(esc_html(sprintf('Circle answered %d for %s.', $status, $path)));
         }
         $data = json_decode((string) wp_remote_retrieve_body($response), true);
         if (!is_array($data)) {
-            throw new \RuntimeException(sprintf('Circle sent something that isn\'t JSON for %s.', $path));
+            throw new \RuntimeException(esc_html(sprintf('Circle sent something that is not JSON for %s.', $path)));
         }
 
         return $data;
