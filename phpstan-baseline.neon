@@ -100,7 +100,7 @@ parameters:
 			message: '#^Call to function method_exists\(\) with ''Flamingo_Inbound…'' and ''count'' will always evaluate to false\.$#'
 			identifier: function.impossibleType
 			count: 1
-			path: packages/anypress-client/src/Forms/FormsSwitch.php
+			path: packages/anypress-client/src/Forms/FormEntries.php
 
 		-
 			message: '#^Variable \$status might not be defined\.$#'
