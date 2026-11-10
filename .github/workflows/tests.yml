@@ -330,3 +330,39 @@ jobs:
       - name: Support, affiliate and community switch test
         working-directory: scripts/playground
         run: npm run moving
+
+  playground-support:
+    # AnyPress Host's support desk on a WordPress Playground storefront with Fluent Support: the API's signed calls open,
+    # list, read, reply to and close a customer's tickets, other customers can't see them, used or badly signed requests
+    # are refused, and the Support page is made once. Run with the Fluent Support the shop has and the newest one.
+    name: anypress-host support desk on WordPress Playground (Fluent Support ${{ matrix.fluent-support }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        fluent-support: ["2.4.7", "2.5.0"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/anypress-host
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: Support desk test
+        working-directory: scripts/playground
+        env:
+          FLUENT_SUPPORT: ${{ matrix.fluent-support }}
+        run: npm run support
