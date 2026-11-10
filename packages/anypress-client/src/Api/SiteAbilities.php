@@ -30,7 +30,7 @@ class SiteAbilities
     {
         wp_register_ability_category(self::CATEGORY, [
             'label' => __('Website design and content', 'anypress-client'),
-            'description' => __('Read and change this website\'s pages, starter patterns, colours and fonts, header, footer, menus and images.', 'anypress-client'),
+            'description' => __('Read and change this website\'s pages, patterns and kits, interactive blocks, looks, colours and fonts, header, footer, menus and images.', 'anypress-client'),
         ]);
     }
 
@@ -139,8 +139,20 @@ class SiteAbilities
             'find-patterns' => [
                 'run' => ['read', 'list_patterns', 'edit_pages'],
                 'label' => 'Find patterns',
-                'description' => 'Ready-made sections and pages from the theme and this website. Category anypress/pages lists the starter pages.',
+                'description' => 'Ready-made sections and pages from the theme and this website. Category anypress/pages lists the starter pages; list-pattern-categories names the rest, the kits\' sections (anypress/kit-*) and the shared AnyPress Blocks sections (anypress/blocks-*) among them.',
                 'input' => $object(['category' => ['type' => 'string'], 'search' => ['type' => 'string']]) + ['default' => []],
+                'output' => 'array',
+            ],
+            'list-pattern-categories' => [
+                'run' => ['read', 'list_pattern_categories', 'edit_pages'],
+                'label' => 'List the pattern categories',
+                'description' => 'Every pattern category with how many patterns it has: starter pages, each kit\'s sections (a kit is sections plus a matching look in list-style-variations), the shared AnyPress Blocks sections, headers and footers.',
+                'output' => 'array',
+            ],
+            'list-blocks' => [
+                'run' => ['read', 'list_blocks', 'edit_pages'],
+                'label' => 'List the interactive blocks',
+                'description' => 'The blocks this website has beyond WordPress\'s own (AnyPress Blocks: carousel, popup, counter, countdown, map...), each with its settings (block attributes) and patterns that use it; read one with get-pattern to see its markup.',
                 'output' => 'array',
             ],
             'get-pattern' => [
@@ -153,6 +165,17 @@ class SiteAbilities
                 'run' => ['read', 'get_styles', 'edit_theme_options'],
                 'label' => 'Read the colours and fonts',
                 'description' => 'The colour palette, fonts, font sizes and spacing sizes to use in blocks (by slug), the current styles, and this website\'s own style changes.',
+            ],
+            'list-style-variations' => [
+                'run' => ['read', 'list_style_variations', 'edit_theme_options'],
+                'label' => 'List the theme\'s looks',
+                'description' => 'The theme\'s style variations by kind: kit (a whole look made for one kind of business, matching its kit pattern category), style, colors (a palette) and fonts (a font set), with their colours and fonts and which is on; plus the section and block styles, added to a block as className is-style-<slug>.',
+            ],
+            'apply-style-variation' => [
+                'run' => ['edit', 'apply_style_variation', 'edit_theme_options'],
+                'label' => 'Switch on a look',
+                'description' => 'Switches on a style variation from list-style-variations, as Styles in the Site Editor does: a kit or style replaces the website\'s colours, fonts and styles; colors or fonts change only those. The previous styles are kept as a revision.',
+                'input' => $object(['slug' => ['type' => 'string', 'pattern' => '^[a-z0-9_-]+$']], ['slug']),
             ],
             'update-styles' => [
                 'run' => ['edit', 'update_styles', 'edit_theme_options'],

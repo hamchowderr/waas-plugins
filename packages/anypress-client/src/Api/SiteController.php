@@ -23,6 +23,7 @@ class SiteController
 {
     use SiteDesignRoutes;
     use SiteProductRoutes;
+    use SiteLibraryRoutes;
 
     public const ROUTE = '/site';
     private const ID = '(?P<id>\d+)';
@@ -48,6 +49,10 @@ class SiteController
             ['/pages/' . self::ID . '/revisions', WP_REST_Server::READABLE, 'list_revisions'],
             ['/pages/' . self::ID . '/revisions/(?P<revision>\d+)/restore', WP_REST_Server::CREATABLE, 'restore_revision'],
             ['/patterns', WP_REST_Server::READABLE, 'list_patterns'],
+            ['/patterns/categories', WP_REST_Server::READABLE, 'list_pattern_categories'],
+            ['/blocks', WP_REST_Server::READABLE, 'list_blocks'],
+            ['/styles/variations', WP_REST_Server::READABLE, 'list_style_variations'],
+            ['/styles/variations/(?P<slug>[a-z0-9_-]+)', WP_REST_Server::CREATABLE, 'apply_style_variation'],
             ['/patterns/(?P<name>[a-z0-9_-]+/[a-z0-9_-]+)', WP_REST_Server::READABLE, 'get_pattern'],
             ['/styles', WP_REST_Server::READABLE, 'get_styles'],
             ['/styles', WP_REST_Server::EDITABLE, 'update_styles'],

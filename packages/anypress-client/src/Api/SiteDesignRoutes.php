@@ -93,7 +93,7 @@ trait SiteDesignRoutes
         if (is_wp_error($saved)) {
             return $saved;
         }
-        \WP_Theme_JSON_Resolver::clean_cached_data();
+        wp_clean_theme_json_cache();
 
         return $this->get_styles();
     }

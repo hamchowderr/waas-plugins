@@ -36,6 +36,10 @@ A signature is accepted within 5 minutes of `t`, and each `n` only once. Signed 
 | POST | `/site/pages/{id}/revisions/{revision}/restore` | Puts a revision back |
 | GET | `/site/patterns?category=&search=` | Patterns the Site Editor offers |
 | GET | `/site/patterns/{theme}/{name}` | One pattern's block markup |
+| GET | `/site/patterns/categories` | Pattern categories (starter pages, each kit's sections, shared sections) with how many patterns each has |
+| GET | `/site/blocks` | The interactive blocks beyond WordPress's own (AnyPress Blocks), with their settings and patterns that use them |
+| GET | `/site/styles/variations` | The theme's style variations (kits, other looks, palettes, font sets, and which are on), and the section and block styles (`is-style-<slug>`) |
+| POST | `/site/styles/variations/{slug}` | Switches a variation on, as Styles in the Site Editor does: a kit or look replaces the site's styles, a palette or font set changes only those; the old styles stay as a revision |
 | GET | `/site/styles` | The theme's colours, fonts, font sizes and spacing, the resulting styles, and the site's own changes |
 | PATCH | `/site/styles` | Merges `{ settings?, styles? }` (theme.json form) into the site's changes, as Styles in the Site Editor does |
 | GET, PUT | `/site/parts/header`, `/site/parts/footer` | The header or footer as blocks; PUT `{ content }` saves the site's own copy |
@@ -73,7 +77,9 @@ The same actions are registered as WordPress abilities (the Abilities API in Wor
 | `anypress/get-page`, `create-page`, `update-page` | Read, add or change a page |
 | `anypress/add-page-section`, `replace-page-section`, `remove-page-section` | Change one section of a page |
 | `anypress/list-page-revisions`, `restore-page-revision` | Earlier versions of a page, and undo |
-| `anypress/find-patterns`, `get-pattern` | Starter pages and sections, and their markup |
+| `anypress/find-patterns`, `get-pattern`, `list-pattern-categories` | Starter pages, kit and shared sections, and their markup |
+| `anypress/list-blocks` | The interactive blocks (AnyPress Blocks) and their settings |
+| `anypress/list-style-variations`, `apply-style-variation` | The theme's looks (kits, palettes, font sets), section styles, and switching a look on |
 | `anypress/get-styles`, `update-styles` | Colours, fonts and sizes, and changing them |
 | `anypress/get-site-part`, `update-site-part` | The header or footer |
 | `anypress/list-menus`, `update-menu` | Navigation menus |
