@@ -16,11 +16,13 @@ use WP_REST_Server;
  * request must carry a signature made with the store's site key (Core\SignedRequest), and runs as the store's
  * first administrator. Content goes through WordPress's block parser and post HTML filter; nothing here runs code,
  * installs anything or changes settings outside design and content. WordPress saves a revision of every change.
- * The design routes (patterns, styles, header and footer, menus, images) are in the SiteDesignRoutes trait.
+ * The design routes (patterns, styles, header and footer, menus, images) are in the SiteDesignRoutes trait, and the
+ * shop's products (FluentCart, written by its own importer) in SiteProductRoutes.
  */
 class SiteController
 {
     use SiteDesignRoutes;
+    use SiteProductRoutes;
 
     public const ROUTE = '/site';
     private const ID = '(?P<id>\d+)';
@@ -54,6 +56,8 @@ class SiteController
             ['/menus', WP_REST_Server::READABLE, 'list_menus'],
             ['/menus/' . self::ID, WP_REST_Server::EDITABLE, 'update_menu'],
             ['/media', WP_REST_Server::CREATABLE, 'add_media'],
+            ['/products', WP_REST_Server::READABLE, 'list_products'],
+            ['/products', WP_REST_Server::CREATABLE, 'add_products'],
             ['/business', WP_REST_Server::READABLE, 'get_business'],
             ['/business', WP_REST_Server::EDITABLE, 'update_business'],
             ['/business/undo', WP_REST_Server::CREATABLE, 'undo_business'],

@@ -42,6 +42,10 @@ A signature is accepted within 5 minutes of `t`, and each `n` only once. Signed 
 | GET | `/site/menus` | Navigation menus |
 | PUT | `/site/menus/{id}` | `{ content, title? }`, navigation-link blocks |
 | POST | `/site/media` | Copies an image from a public https link `{ url, alt? }` into the media library |
+| GET | `/site/products` | The shop's FluentCart products, newest first: id, title, status, link and the address each was added from |
+| POST | `/site/products` | Adds 1 to 20 products `{ products: [{ title, description?, excerpt?, url?, status?, images?, categories?, variants?: [{ title?, sku?, price, compareAtPrice?, available? }] }] }` to FluentCart, as drafts unless `status` is `publish`. Prices are amounts such as `"19.99"`. Up to 10 https photos go into the media library and the product's gallery. A product whose `url` was added before is left as it is. Each result has `status` (`created`, `exists` or `failed` with a `reason`), the product's `id`, `link` and `productStatus` (`draft` or `publish`), and how many `images` came in |
+
+The product routes need FluentCart on the site, and use FluentCart's own importer from its FluentCart Migrator add-on, which stores ship installed but switched off: the add-on's code is loaded for the request only and the add-on stays off.
 
 A section is a top-level block of a page (the whitespace between blocks doesn't count). Read a page first: its outline numbers the sections from 0.
 
