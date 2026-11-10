@@ -70,6 +70,23 @@ abstract class NativeImport
         return [];
     }
 
+    /** Input this switch takes besides "from" (name => JSON schema), such as the source's API token. */
+    public function inputs(): array
+    {
+        return [];
+    }
+
+    /** Takes that input for this run. Kept in memory only, never saved. */
+    public function configure(array $input): void
+    {
+    }
+
+    /** Why the source can't be read, such as a missing token, or '' to say none of the sources is active. */
+    protected function source_problem(): string
+    {
+        return '';
+    }
+
     /** What the importer doesn't bring across, for this source. */
     abstract protected function lost(string $source): array;
 
@@ -119,13 +136,13 @@ abstract class NativeImport
             $report['blockers'][] = sprintf(__('"%1$s" isn\'t a source this switch knows. Use one of: %2$s.', 'anypress-client'), $from, implode(', ', array_keys($report['sources'])));
         } elseif ($from !== '' && !in_array($from, $found, true)) {
             /* translators: %s: a plugin name. */
-            $report['blockers'][] = sprintf(__('%s isn\'t active on this website.', 'anypress-client'), $report['sources'][$from]['name']);
+            $report['blockers'][] = $this->source_problem() ?: sprintf(__('%s isn\'t active on this website.', 'anypress-client'), $report['sources'][$from]['name']);
         } elseif ($from === '' && count($found) > 1) {
             /* translators: %s: the list of sources. */
             $report['blockers'][] = sprintf(__('More than one source is active (%s). Pick one with "from".', 'anypress-client'), implode(', ', $found));
         } elseif (!$found) {
             /* translators: %s: the list of plugin names. */
-            $report['blockers'][] = sprintf(__('None of these is active, so there is nothing to bring across: %s.', 'anypress-client'), implode(', ', array_column($report['sources'], 'name')));
+            $report['blockers'][] = $this->source_problem() ?: sprintf(__('None of these is active, so there is nothing to bring across: %s.', 'anypress-client'), implode(', ', array_column($report['sources'], 'name')));
         } else {
             $report['source'] = $from !== '' ? $from : $found[0];
         }

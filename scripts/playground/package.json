@@ -22,7 +22,8 @@
     "domains": "node domains.mjs",
     "admin-audit": "node admin-audit.mjs",
     "support": "node support.mjs",
-    "products": "node products.mjs"
+    "products": "node products.mjs",
+    "circle": "node circle.mjs"
   },
   "dependencies": {
     "@wp-playground/cli": "3.1.59"
