@@ -2,7 +2,6 @@
 
 namespace AnyPressPayments\Gateway;
 
-use FluentCart\App\Helpers\Helper;
 use FluentCart\App\Modules\PaymentMethods\Core\AbstractPaymentGateway;
 use FluentCart\App\Services\Payments\PaymentInstance;
 use AnyPressPayments\Driver\AuthorizeNet\AuthorizeNetClient;
@@ -246,258 +245,22 @@ class AuthorizeNetGateway extends AbstractPaymentGateway
 
     public function fields(): array
     {
-        return [
-            'notice'       => [
-                'value' => $this->modeNotice(),
-                'label' => __('Authorize.Net', 'anypress-payments'),
-                'type'  => 'notice',
-            ],
-            'payment_mode' => [
-                'type'   => 'tabs',
-                'schema' => [
-                    [
-                        'type'   => 'tab',
-                        'label'  => __('Live credentials', 'anypress-payments'),
-                        'value'  => 'live',
-                        'schema' => $this->credentialFields('live'),
-                    ],
-                    [
-                        'type'   => 'tab',
-                        'label'  => __('Test credentials', 'anypress-payments'),
-                        'value'  => 'test',
-                        'schema' => $this->credentialFields('test'),
-                    ],
-                ],
-            ],
-            'webhook_info' => [
-                'value' => $this->webhookInfo(),
-                'label' => __('Webhook', 'anypress-payments'),
-                'type'  => 'html_attr',
-            ],
-        ];
+        /** @var AuthorizeNetSettings $settings */
+        $settings = $this->settings;
+
+        return (new AuthorizeNetSettingsFields($settings))->fields();
     }
 
-    private function credentialFields(string $mode): array
-    {
-        $where = $mode === 'test'
-            ? __('Sandbox account (sandbox.authorize.net)', 'anypress-payments')
-            : __('Live account (account.authorize.net)', 'anypress-payments');
-        $path = __('Account > Settings > Security Settings > API Credentials and Keys', 'anypress-payments');
-
-        return [
-            $mode . '_status'          => [
-                'value' => $this->statusInfo($mode),
-                'label' => __('Status', 'anypress-payments'),
-                'type'  => 'html_attr',
-            ],
-            $mode . '_api_login_id'    => [
-                'value'       => '',
-                'label'       => __('API Login ID', 'anypress-payments'),
-                'type'        => 'text',
-                'placeholder' => __('API Login ID', 'anypress-payments'),
-                /* translators: 1: which Authorize.Net account, 2: menu path */
-                'tooltip'     => sprintf(__('%1$s: %2$s.', 'anypress-payments'), $where, $path),
-            ],
-            $mode . '_transaction_key' => [
-                'value'       => '',
-                'label'       => __('Transaction Key', 'anypress-payments'),
-                'type'        => 'password',
-                'placeholder' => __('Transaction Key', 'anypress-payments'),
-                /* translators: 1: which Authorize.Net account, 2: menu path */
-                'tooltip'     => sprintf(__('%1$s: %2$s > New Transaction Key.', 'anypress-payments'), $where, $path),
-            ],
-            $mode . '_signature_key'   => [
-                'value'       => '',
-                'label'       => __('Signature Key (optional)', 'anypress-payments'),
-                'type'        => 'password',
-                'placeholder' => __('Signature Key', 'anypress-payments'),
-                /* translators: 1: which Authorize.Net account, 2: menu path */
-                'tooltip'     => sprintf(__('%1$s: %2$s > New Signature Key. Lets refunds and voids made in Authorize.Net show up here.', 'anypress-payments'), $where, $path),
-            ],
-        ];
-    }
-
-    /** Which keys the store is using, like FluentCart's renderStoreModeNotice (Core/AbstractPaymentGateway.php:419). */
-    private function modeNotice(): string
-    {
-        $mode = $this->settings->getMode();
-        $settingsLink = '<a href="' . esc_url(admin_url('admin.php?page=fluent-cart#/settings/store-settings/')) . '">' . esc_html__('Store Settings', 'anypress-payments') . '</a>';
-
-        if ($mode === 'test') {
-            $text = '<span class="text-warning-500">' . esc_html__('Your store is in test mode: cards are charged in the Authorize.Net sandbox with the test credentials. No real money moves.', 'anypress-payments') . '</span>';
-        } else {
-            $text = '<span class="text-success-500">' . esc_html__('Your store is in live mode: cards are charged with the live credentials.', 'anypress-payments') . '</span>';
-        }
-
-        /* translators: %s: link to FluentCart's Store Settings */
-        $how = sprintf(esc_html__('Switch with Order Mode in %s.', 'anypress-payments'), $settingsLink);
-
-        return '<div class="mt-5">' . $text . ' ' . $how . '</div>';
-    }
-
-    /** One line about a mode's credentials: connected to which account, or what's wrong. */
-    private function statusInfo(string $mode): string
-    {
-        $login = $this->settings->getApiLoginId($mode);
-        $error = $this->settings->forMode('error', $mode);
-        $merchant = $this->settings->forMode('merchant_name', $mode);
-        $verifiedAt = (int) $this->settings->forMode('verified_at', $mode);
-        $inUse = $mode === $this->settings->getMode();
-
-        if ($login === '') {
-            $line = $inUse
-                ? '<strong style="color:#b32d2e">' . esc_html__('Not set up. Card payments are off until these are filled in.', 'anypress-payments') . '</strong>'
-                : esc_html__('Not set up.', 'anypress-payments');
-        } elseif ($error !== '') {
-            /* translators: %s: Authorize.Net's error message */
-            $line = '<strong style="color:#b32d2e">' . esc_html(sprintf(__('Not connected: %s', 'anypress-payments'), $error)) . '</strong>';
-        } elseif ($this->settings->getPublicClientKey($mode) !== '') {
-            $name = $merchant !== '' ? $merchant : $login;
-            /* translators: %s: the merchant's name at Authorize.Net */
-            $line = '<strong style="color:#00a32a">' . esc_html(sprintf(__('Connected to %s', 'anypress-payments'), $name)) . '</strong>';
-            if ($verifiedAt) {
-                /* translators: %s: date and time */
-                $line .= ' · ' . esc_html(sprintf(__('checked %s', 'anypress-payments'), wp_date(get_option('date_format') . ' ' . get_option('time_format'), $verifiedAt)));
-            }
-            if ($mode === 'live' && $this->settings->forMode('account_test_mode', $mode) === 'yes') {
-                $line .= '<br><strong style="color:#b32d2e">' . esc_html__('This Authorize.Net account is in Test Mode, so its charges are not real. Turn Test Mode off in the Merchant Interface (Account > Settings > Test Mode).', 'anypress-payments') . '</strong>';
-            }
-        } else {
-            $line = esc_html__('Saved but not checked yet. Save again to check the credentials with Authorize.Net.', 'anypress-payments');
-        }
-
-        $parts = ['<p>' . $line . '</p>'];
-        if ($inUse) {
-            $parts[] = '<p>' . esc_html__('The store uses these credentials now.', 'anypress-payments') . '</p>';
-        }
-
-        $webhook = $this->settings->forMode('webhook_status', $mode);
-        $last = AuthorizeNetSettings::lastWebhookAt($mode);
-        if ($webhook !== '' || $last) {
-            $line = esc_html($webhook);
-            if ($last) {
-                /* translators: %s: how long ago, e.g. "5 mins" */
-                $line .= ($line !== '' ? ' ' : '') . esc_html(sprintf(__('Last notification received %s ago.', 'anypress-payments'), human_time_diff($last)));
-            }
-            $parts[] = '<p>' . $line . '</p>';
-        }
-
-        return implode('', $parts);
-    }
-
-    /** What the settings page says about the webhook. */
-    private function webhookInfo(): string
-    {
-        return '<p>' . esc_html__('With a Signature Key, saving these settings registers a webhook with Authorize.Net, so refunds and voids made in Authorize.Net, and payments it confirms late, show up in FluentCart. Payments work without it.', 'anypress-payments') . '</p>'
-            . '<p>' . esc_html__('Webhook URL:', 'anypress-payments') . ' <code>' . esc_html(Webhook::url()) . '</code></p>';
-    }
-
-    /** The store mode, for the static settings hooks (no settings instance there). */
-    private static function storeMode(): string
-    {
-        return (new AuthorizeNetSettings())->getMode();
-    }
-
-    /**
-     * Checks the credentials with Authorize.Net before activating
-     * (called from AbstractPaymentGateway::updateSettings, Core/AbstractPaymentGateway.php:138-150).
-     * The store's current mode needs credentials; the other mode's are checked when filled in.
-     */
+    /** Called from AbstractPaymentGateway::updateSettings (Core/AbstractPaymentGateway.php:138-150). */
     public static function validateSettings($data): array
     {
-        $data = AuthorizeNetSettings::migrateLegacy((array) $data);
-        $current = self::storeMode();
-
-        foreach (AuthorizeNetSettings::MODES as $mode) {
-            $loginId = trim((string) ($data[$mode . '_api_login_id'] ?? ''));
-            $key = (string) Helper::decryptKey($data[$mode . '_transaction_key'] ?? '');
-            $label = $mode === 'test' ? __('test', 'anypress-payments') : __('live', 'anypress-payments');
-
-            if ($loginId === '' && $key === '' && $mode !== $current) {
-                continue;
-            }
-
-            if ($loginId === '' || $key === '') {
-                /* translators: %s: "test" or "live" */
-                return ['status' => 'failed', 'message' => sprintf(__('Enter the %s API Login ID and Transaction Key.', 'anypress-payments'), $label)];
-            }
-
-            $result = self::makeDriver($loginId, $key, $mode === 'test')->verifyCredentials();
-            if (!$result->success) {
-                $title = $mode === 'test' ? __('Test credentials', 'anypress-payments') : __('Live credentials', 'anypress-payments');
-                /* translators: 1: "Test credentials" or "Live credentials", 2: Authorize.Net's error */
-                return ['status' => 'failed', 'message' => sprintf(__('%1$s: %2$s', 'anypress-payments'), $title, $result->message)];
-            }
-        }
-
-        return ['status' => 'success', 'message' => __('Authorize.Net credentials verified.', 'anypress-payments')];
+        return AuthorizeNetSettingsSave::validate($data);
     }
 
-    /**
-     * Encrypts the keys, checks each mode's credentials with Authorize.Net, stores the account's
-     * Public Client Key (the hosted card form needs it) and registers the webhook
-     * (Core/AbstractPaymentGateway.php:152).
-     */
+    /** Called from AbstractPaymentGateway::updateSettings (Core/AbstractPaymentGateway.php:152). */
     public static function beforeSettingsUpdate($data, $oldSettings): array
     {
-        $data = AuthorizeNetSettings::migrateLegacy((array) $data);
-        // Shown, never stored.
-        unset($data['webhook_info'], $data['notice'], $data['test_status'], $data['live_status']);
-
-        foreach (AuthorizeNetSettings::MODES as $mode) {
-            $data[$mode . '_api_login_id'] = sanitize_text_field(trim((string) ($data[$mode . '_api_login_id'] ?? '')));
-            $key = (string) Helper::decryptKey($data[$mode . '_transaction_key'] ?? '');
-            $data[$mode . '_transaction_key'] = Helper::encryptKey($key);
-            $signatureKey = trim((string) Helper::decryptKey($data[$mode . '_signature_key'] ?? ''));
-            $data[$mode . '_signature_key'] = Helper::encryptKey($signatureKey);
-            foreach (['public_client_key', 'merchant_name', 'account_test_mode', 'verified_at', 'error'] as $field) {
-                $data[$mode . '_' . $field] = '';
-            }
-
-            if ($data[$mode . '_api_login_id'] === '' || $key === '') {
-                $data[$mode . '_webhook_status'] = '';
-                continue;
-            }
-
-            $driver = self::makeDriver($data[$mode . '_api_login_id'], $key, $mode === 'test');
-            $result = $driver->verifyCredentials();
-            if (!$result->success) {
-                $data[$mode . '_error'] = $result->message;
-                continue;
-            }
-
-            $data[$mode . '_public_client_key'] = (string) ($result->data['public_client_key'] ?? '');
-            $data[$mode . '_merchant_name'] = (string) ($result->data['merchant_name'] ?? '');
-            $data[$mode . '_account_test_mode'] = !empty($result->data['is_test_mode']) ? 'yes' : 'no';
-            $data[$mode . '_verified_at'] = (string) time();
-
-            if ($signatureKey !== '') {
-                $data[$mode . '_webhook_status'] = self::registerWebhook($driver);
-            }
-        }
-
-        return $data;
-    }
-
-    /** Registers (or updates) this site's webhook with Authorize.Net; returns what to show. */
-    private static function registerWebhook(GatewayDriver $driver): string
-    {
-        $url = Webhook::url();
-        if (strpos($url, '?') !== false) {
-            return __('Webhook not registered: Authorize.Net needs a webhook URL without "?". Turn on pretty permalinks (Settings > Permalinks), then save again.', 'anypress-payments');
-        }
-
-        if (!$driver instanceof AuthorizeNetDriver) {
-            return '';
-        }
-
-        $result = $driver->registerWebhook($url, Webhook::EVENT_TYPES);
-
-        return $result->success
-            /* translators: %s: date and time */
-            ? sprintf(__('Webhook registered with Authorize.Net on %s.', 'anypress-payments'), gmdate('Y-m-d H:i') . ' UTC')
-            /* translators: %s: why the webhook could not be registered */
-            : sprintf(__('Webhook not registered: %s', 'anypress-payments'), $result->message);
+        return AuthorizeNetSettingsSave::beforeUpdate($data);
     }
 
     public function getEnqueueScriptSrc($hasSubscription = 'no'): array
