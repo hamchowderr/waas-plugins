@@ -14,6 +14,18 @@ on:
       commit:
         description: 'Commit on main to tag (the newest on main when empty)'
         required: false
+  # "Release on merge" calls it for each plugin whose version a merge raised.
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+      notes:
+        type: string
+        required: true
+      commit:
+        type: string
+        required: false
 
 permissions:
   contents: write

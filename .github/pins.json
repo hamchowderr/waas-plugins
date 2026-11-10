@@ -1,0 +1,31 @@
+{
+  "$comment": "Every pinned version in this repository. The Update pins workflow moves them to the newest release; waas-provisioning-api/.github/pins/README.md explains the format.",
+  "pins": [
+    {
+      "name": "AnyPress theme (Playground previews)",
+      "source": "github:hamchowderr/anypress-theme",
+      "asset": "anypress.zip",
+      "download": "scripts/playground/preview-zips/anypress.zip",
+      "places": [
+        { "file": "scripts/playground/preview-zips/README.md", "match": "`anypress\\.zip`: AnyPress theme (?<version>[0-9][^ ]*) " }
+      ]
+    },
+    {
+      "name": "AnyPress Blocks (Playground previews)",
+      "source": "github:hamchowderr/anypress-blocks",
+      "asset": "anypress-blocks.zip",
+      "download": "scripts/playground/preview-zips/anypress-blocks.zip",
+      "places": [
+        { "file": "scripts/playground/preview-zips/README.md", "match": "`anypress-blocks\\.zip`: AnyPress Blocks (?<version>[0-9][^ ,]*)" }
+      ]
+    },
+    {
+      "name": "AnyPress theme (shop design)",
+      "source": "github:hamchowderr/anypress-theme",
+      "asset": "anypress.zip",
+      "places": [
+        { "file": "scripts/test-storefront/remote/setup.sh", "match": "THEME_VERSION=(?<version>[0-9][^\\s]*)\\n\\s*THEME_SHA256=(?<sha>[0-9a-f]{64})" }
+      ]
+    }
+  ]
+}

@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+  # The Update pins workflow starts it on its pull request's branch this way.
+  workflow_dispatch:
 jobs:
   unit:
     name: ${{ matrix.package }} unit tests (PHP ${{ matrix.php }})

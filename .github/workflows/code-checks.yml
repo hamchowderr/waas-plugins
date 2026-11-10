@@ -4,7 +4,16 @@ on:
   push:
     branches:
       - main
+  # The Update pins workflow starts it on its pull request's branch this way.
+  workflow_dispatch:
 jobs:
+  pins:
+    # Fails when a pinned version (.github/pins.json) is behind an AnyPress release.
+    name: Pins
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hamchowderr/waas-provisioning-api/.github/pins@main
   coding-standards:
     # WordPress Coding Standards (security, database, translation, best practice), PSR-12 layout and
     # PHP 8.1 compatibility, from phpcs.xml.dist. Errors fail the check; warnings are listed.
