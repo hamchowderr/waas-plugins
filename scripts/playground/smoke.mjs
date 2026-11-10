@@ -360,8 +360,8 @@ await check('abilities: listed with all three safety hints', async () => {
     // 23 site-editing abilities and 1 guide (an MCP resource), plus check-forms and switch-forms (the forms switch, tested by forms.mjs),
     // check-shop and switch-shop (shop-switch.mjs), check-crm and switch-crm (crm-switch.mjs), and check- and switch-
     // support, affiliate and community (moving.mjs), check-course and switch-course (courses.mjs), and check-circle and
-    // switch-circle (circle.mjs).
-    expect(list.length === 40, `${list.length} abilities: ${list.map((a) => a.name).join(', ')}`);
+    // switch-circle (circle.mjs), and get-languages and translate-page (languages.mjs).
+    expect(list.length === 42, `${list.length} abilities: ${list.map((a) => a.name).join(', ')}`);
     const unsure = list.filter((a) => ['readonly', 'destructive', 'idempotent'].some((k) => typeof a.meta?.annotations?.[k] !== 'boolean'));
     expect(!unsure.length, `missing hints: ${unsure.map((a) => a.name).join(', ')}`);
 });

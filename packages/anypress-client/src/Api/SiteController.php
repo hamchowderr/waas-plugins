@@ -17,13 +17,15 @@ use WP_REST_Server;
  * first administrator. Content goes through WordPress's block parser and post HTML filter; nothing here runs code,
  * installs anything or changes settings outside design and content. WordPress saves a revision of every change.
  * The design routes (patterns, styles, header and footer, menus, images) are in the SiteDesignRoutes trait, and the
- * shop's products (FluentCart, written by its own importer) in SiteProductRoutes.
+ * shop's products (FluentCart, written by its own importer) in SiteProductRoutes. SiteLanguageRoutes turns the
+ * website's languages on or off and makes a page's copy in another language.
  */
 class SiteController
 {
     use SiteDesignRoutes;
     use SiteProductRoutes;
     use SiteLibraryRoutes;
+    use SiteLanguageRoutes;
 
     public const ROUTE = '/site';
     private const ID = '(?P<id>\d+)';
@@ -46,6 +48,7 @@ class SiteController
             ['/pages/' . self::ID . '/sections', WP_REST_Server::CREATABLE, 'insert_section'],
             ['/pages/' . self::ID . '/sections/' . self::SECTION, WP_REST_Server::EDITABLE, 'replace_section'],
             ['/pages/' . self::ID . '/sections/' . self::SECTION, WP_REST_Server::DELETABLE, 'remove_section'],
+            ['/pages/' . self::ID . '/translations', WP_REST_Server::CREATABLE, 'translate_page'],
             ['/pages/' . self::ID . '/revisions', WP_REST_Server::READABLE, 'list_revisions'],
             ['/pages/' . self::ID . '/revisions/(?P<revision>\d+)/restore', WP_REST_Server::CREATABLE, 'restore_revision'],
             ['/patterns', WP_REST_Server::READABLE, 'list_patterns'],
@@ -64,6 +67,8 @@ class SiteController
             ['/media', WP_REST_Server::CREATABLE, 'add_media'],
             ['/products', WP_REST_Server::READABLE, 'list_products'],
             ['/products', WP_REST_Server::CREATABLE, 'add_products'],
+            ['/languages', WP_REST_Server::READABLE, 'get_languages'],
+            ['/languages', WP_REST_Server::EDITABLE, 'update_languages'],
             ['/business', WP_REST_Server::READABLE, 'get_business'],
             ['/business', WP_REST_Server::EDITABLE, 'update_business'],
             ['/business/undo', WP_REST_Server::CREATABLE, 'undo_business'],
@@ -139,7 +144,7 @@ class SiteController
 
     public function list_pages(): array
     {
-        $pages = get_posts(['post_type' => 'page', 'post_status' => ['publish', 'draft', 'private', 'pending'], 'numberposts' => 200, 'orderby' => 'menu_order title', 'order' => 'ASC']);
+        $pages = get_posts(['post_type' => 'page', 'post_status' => ['publish', 'draft', 'private', 'pending'], 'numberposts' => 200, 'orderby' => 'menu_order title', 'order' => 'ASC', 'lang' => '']);
 
         return array_map([$this, 'page_summary'], $pages);
     }
@@ -296,7 +301,7 @@ class SiteController
             'status' => $page->post_status,
             'link' => $page->post_status === 'publish' ? get_permalink($page) : get_preview_post_link($page),
             'modified' => $this->time($page),
-        ];
+        ] + $this->page_languages($page);
     }
 
     private function page_details($page): array

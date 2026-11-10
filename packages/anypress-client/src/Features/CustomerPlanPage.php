@@ -150,6 +150,8 @@ class CustomerPlanPage
             <?php if (HighLevelLink::applies()) : $this->render_highlevel();
             endif; ?>
 
+            <?php Languages::render_section(); ?>
+
             <?php McpServer::render_section(); ?>
 
             <?php if ($storefront !== '' && !$plan['own_plugins']) : ?>
