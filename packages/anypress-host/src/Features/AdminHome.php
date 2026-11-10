@@ -4,8 +4,6 @@ namespace AnyPressHost\Features;
 
 use AnyPressHost\Commerce\Commerce;
 use AnyPressHost\Core\ConfigService;
-use AnyPressHost\Core\StoreProduct;
-use AnyPressHost\Core\Tenant;
 
 /**
  * The AnyPress menu and its Overview page: setup steps until the storefront is ready, then what the seller needs
@@ -27,60 +25,7 @@ class AdminHome
         add_action('admin_menu', [$this, 'add_anypress_admin_page'], 11);
         add_filter('fluent_toolkit/unified_apps', [$this, 'add_fluent_toolkit_app']);
 
-        add_filter('anypress_getting_started_checklist', [$this, 'check_api_creds']);
-        add_filter('anypress_getting_started_checklist', [$this, 'check_required_plugins']);
-        add_filter('anypress_getting_started_checklist', [$this, 'check_tenant_roles']);
-        add_filter('anypress_getting_started_checklist', [$this, 'check_woo_anypress_product']);
-    }
-
-    public function check_api_creds($checklist_items)
-    {
-        $checklist_items['api_credentials']['is_done'] = $this->config_service->check_credentials();
-        if (ConfigService::has_constant('API_KEY') && ConfigService::has_constant('API_SECRET')) {
-            $checklist_items['api_credentials']['description'] = __('Connected for you when this storefront was made.', 'anypress-host');
-        }
-        return $checklist_items;
-    }
-
-    public function check_required_plugins($checklist_items)
-    {
-        // Is WooCommerce installed and active?
-        $woocommerce_active = is_plugin_active('woocommerce/woocommerce.php');
-
-        $subs_for_wc_active = is_plugin_active('subscriptions-for-woocommerce/subscriptions-for-woocommerce.php');
-        $wc_subs_active = is_plugin_active('woocommerce-subscriptions/woocommerce-subscriptions.php');
-
-        // FluentCart has subscriptions built in; WooCommerce needs one of the two subscription plugins.
-        $fluentcart_active = defined('FLUENTCART_VERSION');
-
-        $checklist_items['required_plugins_installed']['is_done'] = $fluentcart_active || ($woocommerce_active && ($subs_for_wc_active || $wc_subs_active));
-
-        return $checklist_items;
-    }
-
-    public function check_tenant_roles($checklist_items)
-    {
-        $roles = get_option(PluginBootstrap::ROLES_WP_OPTION);
-        $checklist_items['setup_tenant_roles']['is_done'] = $roles && count(array_keys((array) $roles)) > 0;
-
-        return $checklist_items;
-    }
-
-    public function check_woo_anypress_product($checklist_items)
-    {
-        // WooCommerce products only; other carts' adapters mark this item done through the same filter.
-        if (!function_exists('wc_get_product')) {
-            return $checklist_items;
-        }
-
-        $products = get_posts([
-            'post_type' => 'product',
-            'meta_query' => [StoreProduct::get_anypress_product_meta_query()],
-        ]);
-
-        $checklist_items['create_woo_anypress_product']['is_done'] = count($products) > 0;
-
-        return $checklist_items;
+        new GettingStartedChecklist($config_service);
     }
 
     /** The AnyPress ribbon for the admin menu, as a data URI (WordPress shows it as an image). */
@@ -152,16 +97,6 @@ class AdminHome
         return $apps;
     }
 
-    /** Where the store owner creates a plan product: the active cart's product editor. */
-    private static function new_plan_product_url(): string
-    {
-        if (defined('FLUENTCART_VERSION')) {
-            return admin_url('admin.php?page=fluent-cart#/products');
-        }
-
-        return admin_url('post-new.php?post_type=product');
-    }
-
     /**
      * The AnyPress dashboard, where sellers run their websites. Empty for a storefront on another provisioning API,
      * which has no such dashboard. Filter: anypress_dashboard_url.
@@ -173,42 +108,6 @@ class AdminHome
         $url = (string) apply_filters('anypress_dashboard_url', $url);
 
         return $url === '' ? '' : untrailingslashit($url) . $path;
-    }
-
-    public static function default_checklist(): array
-    {
-        return [
-            "api_credentials" => [
-                "label" => __('Connect to AnyPress', 'anypress-host'),
-                "description" => __('Paste the API key and secret for this storefront. They are on the API keys page of your AnyPress dashboard.', 'anypress-host'),
-                "action_label" => __('Connect', 'anypress-host'),
-                "action_url" => AdminSettings::url('connection'),
-                "is_done" => false,
-            ],
-            "required_plugins_installed" => [
-                "label" => __('Install a cart', 'anypress-host'),
-                "description" => __('FluentCart, or WooCommerce with WooCommerce Subscriptions (or Subscriptions for WooCommerce), takes the orders and the renewals.', 'anypress-host'),
-                "action_label" => __('Add FluentCart', 'anypress-host'),
-                "action_url" => admin_url('plugin-install.php?s=fluentcart&tab=search&type=term'),
-                "is_done" => false,
-            ],
-            "setup_tenant_roles" => [
-                "label" => __('Load your plans', 'anypress-host'),
-                "description" => __('Each plan decides which plugins a website gets. The plans are set up on your template website and loaded from there.', 'anypress-host'),
-                "action_label" => __('Load plans', 'anypress-host'),
-                "action_url" => \AnyPressHost\Api\RolesController::get_refresh_url(),
-                "is_done" => false,
-            ],
-            "create_woo_anypress_product" => [
-                "label" => __('Create your website plans', 'anypress-host'),
-                "description" => defined('FLUENTCART_VERSION')
-                    ? __('Each plan is a FluentCart subscription product. Buying one creates the customer\'s website.', 'anypress-host')
-                    : __('A subscription product marked "AnyPress product". Buying it creates the customer\'s website.', 'anypress-host'),
-                "action_label" => __('Add a plan', 'anypress-host'),
-                "action_url" => self::new_plan_product_url(),
-                "is_done" => false,
-            ],
-        ];
     }
 
     /** The storefront's name, its website domain, and buttons, above every AnyPress page. */
@@ -236,7 +135,7 @@ class AdminHome
                 <?php endif; ?>
                 <?php
                 // The cart can make the plans for the seller, or open them once they exist (FluentCartStarterPlans).
-                [$plan_label, $plan_url] = (array) apply_filters('anypress_plan_button', [__('Add a website plan', 'anypress-host'), self::new_plan_product_url()]) + ['', ''];
+                [$plan_label, $plan_url] = (array) apply_filters('anypress_plan_button', [__('Add a website plan', 'anypress-host'), GettingStartedChecklist::new_plan_product_url()]) + ['', ''];
                 ?>
                 <a class="ap-btn is-ink" href="<?php echo esc_url($plan_url); ?>"><?php echo esc_html($plan_label); ?></a>
             </div>
@@ -262,161 +161,20 @@ class AdminHome
         return in_array($page, [self::SLUG, AdminSettings::SLUG], true);
     }
 
-    /**
-     * Websites this storefront sold, newest first: subscription id => [name, domain, state, failed].
-     *
-     * @return array<int|string, array{name: string, domain: string, state: string}>
-     */
-    public static function websites(): array
-    {
-        $commerce = Commerce::adapter();
-        if ($commerce === null) {
-            return [];
-        }
-
-        $websites = [];
-        foreach ($commerce->find_subscriptions_by_meta(Tenant::WEBSITE_NAME_META, ['']) as $subscription_id => $name) {
-            $failed = $commerce->get_subscription_meta($subscription_id, StoreJobs::FAILURE_META);
-            $websites[$subscription_id] = [
-                'name' => (string) $name,
-                'domain' => (string) $commerce->get_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META),
-                'state' => is_array($failed) && $failed ? Tenant::FAILED : (string) $commerce->get_subscription_meta($subscription_id, Tenant::TENANT_STATE),
-            ];
-        }
-        uksort($websites, fn ($a, $b) => is_numeric($a) && is_numeric($b) ? (int) $b <=> (int) $a : strcmp((string) $b, (string) $a));
-
-        return $websites;
-    }
-
-    /** Which count a website's state goes into on the Overview: live, building, failed or offline. */
-    public static function state_group(string $state): string
-    {
-        switch ($state) {
-            case Tenant::READY:
-                return 'live';
-            case Tenant::FAILED:
-            case Tenant::NEEDS_NEW_NAME:
-                return 'failed';
-            case Tenant::SUSPENDED:
-            case Tenant::DELETED:
-                return 'offline';
-            default:
-                return 'building';
-        }
-    }
-
-    /** A website's state as a pill: what the seller should read, not the API's internal name. */
-    public static function state_pill(string $state): string
-    {
-        $labels = [
-            'live' => __('Live', 'anypress-host'),
-            'building' => __('Building', 'anypress-host'),
-            'failed' => $state === Tenant::NEEDS_NEW_NAME ? __('Needs a new name', 'anypress-host') : __('Failed', 'anypress-host'),
-            'offline' => $state === Tenant::DELETED ? __('Deleted', 'anypress-host') : __('Offline', 'anypress-host'),
-        ];
-        $group = self::state_group($state);
-        $class = ['live' => 'is-ok', 'building' => 'is-warn', 'failed' => 'is-bad', 'offline' => ''][$group];
-
-        return '<span class="ap-pill ' . esc_attr($class) . '">' . esc_html($labels[$group]) . '</span>';
-    }
-
-    /**
-     * What needs the seller: store jobs that kept failing (Try again) and changes the API reports it could not
-     * finish (Dismiss once checked).
-     *
-     * @return array<int, array{subscription_id: int|string, title: string, detail: string, actions: array<string, string>}>
-     */
-    public static function needs_attention(): array
-    {
-        $commerce = Commerce::adapter();
-        if ($commerce === null) {
-            return [];
-        }
-
-        $items = [];
-        foreach ($commerce->find_subscriptions_by_meta(StoreJobs::FAILURE_META, ['']) as $subscription_id => $failure) {
-            if (!is_array($failure) || !$failure) {
-                continue;
-            }
-            $items[] = [
-                'subscription_id' => $subscription_id,
-                'title' => self::website_label($subscription_id),
-                'detail' => sprintf(
-                    /* translators: 1: date and time, 2: number of tries, 3: the API's error message */
-                    __('Couldn\'t be set up or updated. Last try %1$s, after %2$d tries: %3$s', 'anypress-host'),
-                    wp_date('j M H:i', (int) ($failure['at'] ?? 0)),
-                    (int) ($failure['attempts'] ?? 0),
-                    (string) ($failure['error'] ?? '')
-                ),
-                'actions' => [
-                    __('Try again', 'anypress-host') => wp_nonce_url(
-                        admin_url('admin-post.php?action=' . StoreJobs::RETRY_ACTION . '&subscription_id=' . rawurlencode((string) $subscription_id)),
-                        StoreJobs::RETRY_ACTION . '_' . $subscription_id
-                    ),
-                ],
-            ];
-        }
-        foreach ($commerce->find_subscriptions_by_meta(Webhooks::TENANT_FAILURE_META, ['']) as $subscription_id => $failure) {
-            if (!is_array($failure) || !$failure) {
-                continue;
-            }
-            $items[] = [
-                'subscription_id' => $subscription_id,
-                'title' => self::website_label($subscription_id),
-                'detail' => sprintf(
-                    /* translators: 1: what the API was doing, such as "restore", 2: date and time */
-                    __('The API couldn\'t finish "%1$s" (%2$s). Check the website in the AnyPress dashboard, then dismiss this.', 'anypress-host'),
-                    (string) ($failure['action'] ?? ''),
-                    wp_date('j M H:i', (int) ($failure['at'] ?? 0))
-                ),
-                'actions' => [
-                    __('Dismiss', 'anypress-host') => wp_nonce_url(
-                        admin_url('admin-post.php?action=' . Webhooks::DISMISS_FAILURE_ACTION . '&subscription_id=' . rawurlencode((string) $subscription_id)),
-                        Webhooks::DISMISS_FAILURE_ACTION . '_' . $subscription_id
-                    ),
-                ],
-            ];
-        }
-
-        return $items;
-    }
-
-    /** "Order #12 · shop.example.com", or the website name while it has no address yet. */
-    private static function website_label($subscription_id): string
-    {
-        $commerce = Commerce::require_adapter();
-        $domain = (string) $commerce->get_subscription_meta($subscription_id, Tenant::DOMAIN_NAME_META);
-        $name = $domain !== '' ? $domain : (string) $commerce->get_subscription_meta($subscription_id, Tenant::WEBSITE_NAME_META);
-
-        /* translators: 1: subscription number, 2: the website's address */
-        return sprintf(__('Subscription #%1$s · %2$s', 'anypress-host'), $subscription_id, $name);
-    }
-
-    /** The subscription in the cart's own admin, where it has one. */
-    public static function admin_subscription_url($subscription_id): string
-    {
-        $commerce = Commerce::adapter();
-        if ($commerce !== null && method_exists($commerce, 'get_admin_subscription_url')) {
-            return (string) $commerce->get_admin_subscription_url($subscription_id);
-        }
-
-        return '';
-    }
-
     public function render_anypress_admin_page()
     {
-        $checklist_items = apply_filters('anypress_getting_started_checklist', self::default_checklist());
+        $checklist_items = apply_filters('anypress_getting_started_checklist', GettingStartedChecklist::default_checklist());
         $done = count(array_filter($checklist_items, fn ($item) => !empty($item['is_done'])));
         $total = count($checklist_items);
 
         $has_credentials = $this->config_service->check_credentials();
         $reachable = $has_credentials && get_option(\AnyPressHost\Core\ProvisioningApi::CAN_REACH_API_OPTION_NAME, false);
-        $websites = self::websites();
-        $attention = self::needs_attention();
+        $websites = AdminWebsites::websites();
+        $attention = AdminWebsites::needs_attention();
         $dashboard = $this->dashboard_url();
         $counts = ['live' => 0, 'building' => 0, 'failed' => 0, 'offline' => 0];
         foreach ($websites as $website) {
-            $counts[self::state_group($website['state'])]++;
+            $counts[AdminWebsites::state_group($website['state'])]++;
         }
 ?>
         <div class="wrap ap-admin">
@@ -494,7 +252,7 @@ class AdminHome
                             <h2><?php esc_html_e('Needs attention', 'anypress-host'); ?></h2>
                             <div class="ap-attn">
                                 <?php foreach ($attention as $item) :
-                                    $order_url = self::admin_subscription_url($item['subscription_id']); ?>
+                                    $order_url = AdminWebsites::admin_subscription_url($item['subscription_id']); ?>
                                     <div class="ap-attn-item">
                                         <div><strong><?php echo esc_html($item['title']); ?></strong><p><?php echo esc_html($item['detail']); ?></p></div>
                                         <div class="ap-btns">
@@ -530,7 +288,7 @@ class AdminHome
                                 </tr></thead>
                                 <tbody>
                                 <?php foreach (array_slice($websites, 0, self::RECENT_ORDERS, true) as $subscription_id => $website) :
-                                    $order_url = self::admin_subscription_url($subscription_id); ?>
+                                    $order_url = AdminWebsites::admin_subscription_url($subscription_id); ?>
                                     <tr>
                                         <td class="ap-c-site"><?php echo esc_html($website['name']); ?>
                                             <small><?php
@@ -538,9 +296,9 @@ class AdminHome
                                                 echo esc_html(($website['domain'] !== '' ? $website['domain'] . ' · ' : '') . sprintf(__('subscription #%s', 'anypress-host'), $subscription_id));
                                             ?></small></td>
                                         <td class="ap-c-cust"><?php echo esc_html(Commerce::require_adapter()->get_customer_name($subscription_id)); ?></td>
-                                        <td class="ap-c-status"><?php echo self::state_pill($website['state']); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in state_pill(). ?></td>
+                                        <td class="ap-c-status"><?php echo AdminWebsites::state_pill($website['state']); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in state_pill(). ?></td>
                                         <td class="ap-c-act"><span class="ap-btns">
-                                            <?php if ($website['domain'] !== '' && self::state_group($website['state']) === 'live') : ?>
+                                            <?php if ($website['domain'] !== '' && AdminWebsites::state_group($website['state']) === 'live') : ?>
                                                 <a class="ap-btn is-sm" href="<?php echo esc_url('https://' . $website['domain']); ?>" target="_blank" rel="noopener"><?php esc_html_e('Visit', 'anypress-host'); ?></a>
                                             <?php endif; ?>
                                             <?php if ($order_url !== '') : ?>
