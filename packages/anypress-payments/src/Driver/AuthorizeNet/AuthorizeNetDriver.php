@@ -54,7 +54,7 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
     {
         $transaction = [
             'transactionType' => 'authCaptureTransaction',
-            'amount'          => self::formatAmount($request->amount),
+            'amount'          => AuthorizeNetFields::formatAmount($request->amount),
             'payment'         => [
                 'opaqueData' => [
                     'dataDescriptor' => $request->tokenDescriptor,
@@ -72,16 +72,16 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
         }
 
         $order = array_filter([
-            'invoiceNumber' => self::limit($request->invoiceNumber, 20),
-            'description'   => self::limit($request->description, 255),
+            'invoiceNumber' => AuthorizeNetFields::limit($request->invoiceNumber, 20),
+            'description'   => AuthorizeNetFields::limit($request->description, 255),
         ]);
         if ($order) {
             $transaction['order'] = $order;
         }
 
         $customer = array_filter([
-            'id'    => self::limit($request->customerId, 20),
-            'email' => self::limit($request->customerEmail, 255),
+            'id'    => AuthorizeNetFields::limit($request->customerId, 20),
+            'email' => AuthorizeNetFields::limit($request->customerEmail, 255),
         ]);
         if ($customer) {
             $transaction['customer'] = $customer;
@@ -97,7 +97,7 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
         }
 
         $response = $this->client->send('createTransactionRequest', ['transactionRequest' => $transaction]);
-        $result = $this->transactionResult($response);
+        $result = AuthorizeNetResponses::transactionResult($response);
 
         if (!$request->savePaymentMethod || !$result->success) {
             return $result;
@@ -122,7 +122,7 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
     {
         $transaction = [
             'transactionType' => 'authCaptureTransaction',
-            'amount'          => self::formatAmount($request->amount),
+            'amount'          => AuthorizeNetFields::formatAmount($request->amount),
             'profile'         => [
                 'customerProfileId' => $request->customerRef,
                 'paymentProfile'    => ['paymentProfileId' => $request->methodRef],
@@ -130,8 +130,8 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
         ];
 
         $order = array_filter([
-            'invoiceNumber' => self::limit($request->invoiceNumber, 20),
-            'description'   => self::limit($request->description, 255),
+            'invoiceNumber' => AuthorizeNetFields::limit($request->invoiceNumber, 20),
+            'description'   => AuthorizeNetFields::limit($request->description, 255),
         ]);
         if ($order) {
             $transaction['order'] = $order;
@@ -143,13 +143,13 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
             $transaction['subsequentAuthInformation'] = ['originalNetworkTransId' => $request->originalNetworkTransactionId];
         }
 
-        return $this->transactionResult($this->client->send('createTransactionRequest', ['transactionRequest' => $transaction]));
+        return AuthorizeNetResponses::transactionResult($this->client->send('createTransactionRequest', ['transactionRequest' => $transaction]));
     }
 
     public function savePaymentMethod(SavePaymentMethodRequest $request): DriverResult
     {
         $paymentProfile = [];
-        $billTo = self::billTo($request->billing);
+        $billTo = AuthorizeNetFields::billTo($request->billing);
         if ($billTo) {
             $paymentProfile['billTo'] = $billTo;
         }
@@ -162,21 +162,21 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
 
         // liveMode checks the card with a $0 authorization, which Authorize.Net only runs
         // with a full billing address; without one, testMode checks the format only.
-        $validationMode = self::isCompleteAddress($billTo) ? 'liveMode' : 'testMode';
+        $validationMode = AuthorizeNetFields::isCompleteAddress($billTo) ? 'liveMode' : 'testMode';
 
         if ($request->customerRef === '') {
             $response = $this->client->send('createCustomerProfileRequest', [
                 'profile'        => array_filter([
-                    'merchantCustomerId' => self::limit($request->customerId, 20),
-                    'email'              => self::limit($request->customerEmail, 255),
+                    'merchantCustomerId' => AuthorizeNetFields::limit($request->customerId, 20),
+                    'email'              => AuthorizeNetFields::limit($request->customerEmail, 255),
                     'paymentProfiles'    => [$paymentProfile],
                 ]),
                 'validationMode' => $validationMode,
             ]);
 
-            $existing = self::duplicateId($response);
+            $existing = AuthorizeNetResponses::duplicateId($response);
             if ($existing === '') {
-                return $this->savedResult($response, (string) ($response['customerProfileId'] ?? ''), self::lastId($response['customerPaymentProfileIdList'] ?? []), $response['validationDirectResponseList'][0] ?? '');
+                return AuthorizeNetResponses::savedResult($response, (string) ($response['customerProfileId'] ?? ''), AuthorizeNetResponses::lastId($response['customerPaymentProfileIdList'] ?? []), $response['validationDirectResponseList'][0] ?? '');
             }
 
             // The customer already has a profile (an earlier subscription): add the card to it.
@@ -192,11 +192,11 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
 
         // The same card is already saved: Authorize.Net names the existing payment profile.
         $methodRef = (string) ($response['customerPaymentProfileId'] ?? '');
-        if ($methodRef !== '' && self::apiErrorCode($response) === self::ERROR_DUPLICATE) {
+        if ($methodRef !== '' && AuthorizeNetResponses::apiErrorCode($response) === self::ERROR_DUPLICATE) {
             $response['messages']['resultCode'] = 'Ok';
         }
 
-        return $this->savedResult($response, $request->customerRef, $methodRef, $response['validationDirectResponse'] ?? '');
+        return AuthorizeNetResponses::savedResult($response, $request->customerRef, $methodRef, $response['validationDirectResponse'] ?? '');
     }
 
     public function saveFromCharge(string $transactionId, string $customerRef): DriverResult
@@ -209,12 +209,12 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
         $response = $this->client->send('createCustomerProfileFromTransactionRequest', $fields);
 
         // The customer already has a profile: add the card to it.
-        $existing = $customerRef === '' ? self::duplicateId($response) : '';
+        $existing = $customerRef === '' ? AuthorizeNetResponses::duplicateId($response) : '';
         if ($existing !== '') {
             return $this->saveFromCharge($transactionId, $existing);
         }
 
-        return $this->savedResult($response, (string) ($response['customerProfileId'] ?? $customerRef), self::lastId($response['customerPaymentProfileIdList'] ?? []));
+        return AuthorizeNetResponses::savedResult($response, (string) ($response['customerProfileId'] ?? $customerRef), AuthorizeNetResponses::lastId($response['customerPaymentProfileIdList'] ?? []));
     }
 
     public function deleteSavedPaymentMethod(string $customerRef, string $methodRef): DriverResult
@@ -225,15 +225,15 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
         ]);
 
         if (is_wp_error($response)) {
-            return DriverResult::failure(self::unreachable($response), 'http_error');
+            return DriverResult::failure(AuthorizeNetResponses::unreachable($response), 'http_error');
         }
 
         // Already deleted counts as deleted.
-        if (self::isOk($response) || self::apiErrorCode($response) === self::ERROR_NOT_FOUND) {
+        if (AuthorizeNetResponses::isOk($response) || AuthorizeNetResponses::apiErrorCode($response) === self::ERROR_NOT_FOUND) {
             return DriverResult::success('');
         }
 
-        return self::apiFailure($response);
+        return AuthorizeNetResponses::apiFailure($response);
     }
 
     public function chargeStatus(string $transactionId): DriverResult
@@ -241,18 +241,18 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
         $response = $this->client->send('getTransactionDetailsRequest', ['transId' => $transactionId]);
 
         if (is_wp_error($response)) {
-            return DriverResult::failure(self::unreachable($response), 'http_error');
+            return DriverResult::failure(AuthorizeNetResponses::unreachable($response), 'http_error');
         }
 
-        if (!self::isOk($response)) {
-            return self::apiFailure($response);
+        if (!AuthorizeNetResponses::isOk($response)) {
+            return AuthorizeNetResponses::apiFailure($response);
         }
 
         $transaction = $response['transaction'] ?? [];
         $status = (string) ($transaction['transactionStatus'] ?? '');
 
         return DriverResult::success($transactionId, $status, [
-            'state'              => self::stateOf($status),
+            'state'              => AuthorizeNetResponses::stateOf($status),
             'transaction_status' => $status,
             'transaction_type'   => (string) ($transaction['transactionType'] ?? ''),
             'amount'             => (int) round(((float) ($transaction['settleAmount'] ?? $transaction['authAmount'] ?? 0)) * 100),
@@ -284,14 +284,14 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
         ]);
 
         if (is_wp_error($response)) {
-            return DriverResult::failure(self::unreachable($response), 'http_error');
+            return DriverResult::failure(AuthorizeNetResponses::unreachable($response), 'http_error');
         }
 
-        if (!self::isOk($response)) {
-            return self::apiFailure($response);
+        if (!AuthorizeNetResponses::isOk($response)) {
+            return AuthorizeNetResponses::apiFailure($response);
         }
 
-        $invoiceNumber = self::limit($invoiceNumber, 20);
+        $invoiceNumber = AuthorizeNetFields::limit($invoiceNumber, 20);
         foreach ((array) ($response['transactions'] ?? []) as $transaction) {
             if (
                 (string) ($transaction['invoiceNumber'] ?? '') !== $invoiceNumber
@@ -303,7 +303,7 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
             $status = (string) ($transaction['transactionStatus'] ?? '');
 
             return DriverResult::success((string) $transaction['transId'], $status, [
-                'state'              => self::stateOf($status),
+                'state'              => AuthorizeNetResponses::stateOf($status),
                 'transaction_status' => $status,
                 'card_last4'         => substr((string) ($transaction['accountNumber'] ?? ''), -4),
                 'card_brand'         => (string) ($transaction['accountType'] ?? ''),
@@ -318,40 +318,12 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
     {
         $profile = $response['profileResponse'] ?? [];
 
-        $existing = self::duplicateId($profile);
+        $existing = AuthorizeNetResponses::duplicateId($profile);
         if ($existing !== '') {
             return $this->saveFromCharge($transactionId, $existing);
         }
 
-        return $this->savedResult($profile, (string) ($profile['customerProfileId'] ?? ''), self::lastId($profile['customerPaymentProfileIdList'] ?? []));
-    }
-
-    /**
-     * @param array|\WP_Error $response
-     */
-    private function savedResult($response, string $customerRef, string $methodRef, string $directResponse = ''): DriverResult
-    {
-        if (is_wp_error($response)) {
-            return DriverResult::failure(self::unreachable($response), 'http_error');
-        }
-
-        $fields = $directResponse !== '' ? str_getcsv($directResponse, ',', '"', '\\') : [];
-
-        if (!self::isOk($response) || $customerRef === '' || $methodRef === '') {
-            // A failed $0 check explains itself in the direct response (field 4: reason text).
-            if (isset($fields[3]) && ($fields[0] ?? '') !== '1' && $fields[3] !== '') {
-                return DriverResult::failure((string) $fields[3], (string) ($fields[2] ?? ''));
-            }
-            return self::apiFailure($response);
-        }
-
-        // Direct response fields 51 and 52: masked card number and card type.
-        return DriverResult::success('', '', [
-            'customer_ref' => $customerRef,
-            'method_ref'   => $methodRef,
-            'card_last4'   => substr((string) ($fields[50] ?? ''), -4),
-            'card_brand'   => (string) ($fields[51] ?? ''),
-        ]);
+        return AuthorizeNetResponses::savedResult($profile, (string) ($profile['customerProfileId'] ?? ''), AuthorizeNetResponses::lastId($profile['customerPaymentProfileIdList'] ?? []));
     }
 
     public function refund(RefundRequest $request): DriverResult
@@ -360,10 +332,10 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
             return DriverResult::failure(__('This payment has no Authorize.Net transaction ID to refund.', 'anypress-payments'), 'missing_charge_id');
         }
 
-        $refund = $this->transactionResult($this->client->send('createTransactionRequest', [
+        $refund = AuthorizeNetResponses::transactionResult($this->client->send('createTransactionRequest', [
             'transactionRequest' => [
                 'transactionType' => 'refundTransaction',
-                'amount'          => self::formatAmount($request->amount),
+                'amount'          => AuthorizeNetFields::formatAmount($request->amount),
                 'payment'         => [
                     'creditCard' => [
                         'cardNumber'     => $request->cardLast4,
@@ -386,7 +358,7 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
             );
         }
 
-        $void = $this->transactionResult($this->client->send('createTransactionRequest', [
+        $void = AuthorizeNetResponses::transactionResult($this->client->send('createTransactionRequest', [
             'transactionRequest' => [
                 'transactionType' => 'voidTransaction',
                 'refTransId'      => $request->chargeId,
@@ -405,7 +377,7 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
         $response = $this->client->send('getMerchantDetailsRequest', []);
 
         if (is_wp_error($response)) {
-            return DriverResult::failure(self::unreachable($response), 'http_error');
+            return DriverResult::failure(AuthorizeNetResponses::unreachable($response), 'http_error');
         }
 
         if (($response['messages']['resultCode'] ?? '') !== 'Ok') {
@@ -442,10 +414,10 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
     {
         $webhooks = $this->client->rest('GET', 'webhooks');
         if (is_wp_error($webhooks)) {
-            return DriverResult::failure(self::unreachable($webhooks), 'http_error');
+            return DriverResult::failure(AuthorizeNetResponses::unreachable($webhooks), 'http_error');
         }
         if (isset($webhooks['status'], $webhooks['reason'])) {
-            return self::restFailure($webhooks);
+            return AuthorizeNetResponses::restFailure($webhooks);
         }
 
         $body = [
@@ -468,176 +440,12 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
             : $this->client->rest('POST', 'webhooks', $body);
 
         if (is_wp_error($response)) {
-            return DriverResult::failure(self::unreachable($response), 'http_error');
+            return DriverResult::failure(AuthorizeNetResponses::unreachable($response), 'http_error');
         }
         if (empty($response['webhookId'])) {
-            return self::restFailure($response);
+            return AuthorizeNetResponses::restFailure($response);
         }
 
         return DriverResult::success((string) $response['webhookId'], (string) ($response['status'] ?? ''));
-    }
-
-    /** An error from the Webhooks REST API ({status, reason, message, details}). */
-    private static function restFailure($response): DriverResult
-    {
-        $message = (string) ($response['message'] ?? '');
-        foreach ((array) ($response['details'] ?? []) as $detail) {
-            $message .= ' ' . (string) ($detail['message'] ?? '');
-        }
-
-        // Authorize.Net answers a generic error when the account has no Signature Key.
-        if (($response['reason'] ?? '') === 'INVALID_DATA' && empty($response['details'])) {
-            $message = __('Authorize.Net would not create the webhook. Check that the account has a Signature Key (Account > Settings > Security Settings > API Credentials and Keys).', 'anypress-payments');
-        }
-
-        return DriverResult::failure(trim($message) ?: __('Authorize.Net did not accept the webhook.', 'anypress-payments'), (string) ($response['reason'] ?? ''));
-    }
-
-    /**
-     * @param array|\WP_Error $response
-     */
-    private function transactionResult($response): DriverResult
-    {
-        if (is_wp_error($response)) {
-            return DriverResult::failure(self::unreachable($response), 'http_error');
-        }
-
-        $transaction = $response['transactionResponse'] ?? [];
-        $responseCode = (string) ($transaction['responseCode'] ?? '');
-        $transactionId = (string) ($transaction['transId'] ?? '');
-
-        if ($responseCode === self::APPROVED && ($response['messages']['resultCode'] ?? '') === 'Ok') {
-            return DriverResult::success(
-                $transactionId,
-                (string) ($transaction['messages'][0]['description'] ?? ''),
-                [
-                    'card_last4' => substr((string) ($transaction['accountNumber'] ?? ''), -4),
-                    'card_brand' => (string) ($transaction['accountType'] ?? ''),
-                    'auth_code'  => (string) ($transaction['authCode'] ?? ''),
-                    'avs_result' => (string) ($transaction['avsResultCode'] ?? ''),
-                    'cvv_result' => (string) ($transaction['cvvResultCode'] ?? ''),
-                    'network_trans_id' => (string) ($transaction['networkTransId'] ?? ''),
-                ],
-                $responseCode
-            );
-        }
-
-        if ($responseCode === self::HELD_FOR_REVIEW) {
-            // Authorized but held by the merchant's fraud filters; it is only paid once the
-            // merchant approves it in Authorize.Net.
-            return DriverResult::failure(
-                __('The payment is being held for review by the store. You have not been charged yet.', 'anypress-payments'),
-                'held_for_review',
-                [],
-                $transactionId
-            );
-        }
-
-        // A declined or failed transaction explains itself in transactionResponse.errors;
-        // a request the API refused outright (bad credentials, malformed) only in messages.
-        $error = $transaction['errors'][0] ?? null;
-        if ($error) {
-            return DriverResult::failure((string) $error['errorText'], (string) $error['errorCode'], [], $transactionId);
-        }
-
-        $message = $response['messages']['message'][0] ?? [];
-
-        return DriverResult::failure(
-            (string) ($message['text'] ?? __('Authorize.Net did not approve the transaction.', 'anypress-payments')),
-            (string) ($message['code'] ?? ''),
-            [],
-            $transactionId
-        );
-    }
-
-    private static function isOk($response): bool
-    {
-        return is_array($response) && ($response['messages']['resultCode'] ?? '') === 'Ok';
-    }
-
-    private static function apiErrorCode($response): string
-    {
-        return (string) ($response['messages']['message'][0]['code'] ?? '');
-    }
-
-    /** The existing record's ID from an E00039 duplicate error, or ''. */
-    private static function duplicateId($response): string
-    {
-        if (self::apiErrorCode($response) !== self::ERROR_DUPLICATE) {
-            return '';
-        }
-
-        return preg_match('/ID (\d+)/', (string) ($response['messages']['message'][0]['text'] ?? ''), $match) ? $match[1] : '';
-    }
-
-    private static function apiFailure($response): DriverResult
-    {
-        $message = $response['messages']['message'][0] ?? [];
-
-        return DriverResult::failure(
-            (string) ($message['text'] ?? __('Authorize.Net did not accept the request.', 'anypress-payments')),
-            (string) ($message['code'] ?? '')
-        );
-    }
-
-    private static function lastId($ids): string
-    {
-        $ids = array_values((array) $ids);
-
-        return $ids ? (string) end($ids) : '';
-    }
-
-    private static function stateOf(string $transactionStatus): string
-    {
-        if (in_array($transactionStatus, self::PAID_STATUSES, true)) {
-            return self::STATE_PAID;
-        }
-
-        if (in_array($transactionStatus, self::PENDING_STATUSES, true)) {
-            return self::STATE_PENDING;
-        }
-
-        return self::STATE_FAILED;
-    }
-
-    /** customerAddressType, in schema order, without empty fields. */
-    private static function billTo(array $billing): array
-    {
-        return array_filter([
-            'firstName' => self::limit((string) ($billing['first_name'] ?? ''), 50),
-            'lastName'  => self::limit((string) ($billing['last_name'] ?? ''), 50),
-            'address'   => self::limit((string) ($billing['address'] ?? ''), 60),
-            'city'      => self::limit((string) ($billing['city'] ?? ''), 40),
-            'state'     => self::limit((string) ($billing['state'] ?? ''), 40),
-            'zip'       => self::limit((string) ($billing['zip'] ?? ''), 20),
-            'country'   => self::limit((string) ($billing['country'] ?? ''), 60),
-        ], static fn ($value) => (string) $value !== '');
-    }
-
-    private static function isCompleteAddress(array $billTo): bool
-    {
-        foreach (['firstName', 'lastName', 'address', 'city', 'state', 'zip', 'country'] as $field) {
-            if (!isset($billTo[$field])) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static function unreachable(\WP_Error $error): string
-    {
-        /* translators: %s: the network error */
-        return sprintf(__('Could not reach Authorize.Net: %s', 'anypress-payments'), $error->get_error_message());
-    }
-
-    private static function formatAmount(int $cents): string
-    {
-        return number_format($cents / 100, 2, '.', '');
-    }
-
-    private static function limit(string $value, int $length): string
-    {
-        return function_exists('mb_substr') ? mb_substr($value, 0, $length) : substr($value, 0, $length);
     }
 }
