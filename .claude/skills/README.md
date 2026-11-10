@@ -27,3 +27,7 @@ taken at commit `7374e6f1`. They teach coding agents WordPress's own conventions
 | `blueprint` | Playground Blueprint JSON |
 
 To update, run `.github/scripts/sync-wp-skills.sh` from this repository (it clones the latest WordPress/agent-skills, or pass the path of a checkout). It replaces every upstream skill, sets the commit above and prints any skill that is new (add a row to the table) or was removed upstream. The **Sync WordPress skills** workflow runs it every Monday and opens a pull request when something changed. Don't edit the copies; change them upstream.
+
+## pstack skills
+
+[PSTACK.md](PSTACK.md) lists the other skills in this folder (statechart, blast-radius, tdd and more): where they come from, their MIT licence and how to update them.
