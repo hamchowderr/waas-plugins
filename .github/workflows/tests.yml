@@ -375,6 +375,51 @@ jobs:
           FLUENT_COMMUNITY: ${{ matrix.fluent-community }}
         run: npm run courses
 
+  playground-circle:
+    # The Circle switch (wp anypress circle switch and its abilities): a Circle community into FluentCommunity through a
+    # fake Circle Admin API, on a Playground store of the community site type, with the store's FluentCommunity and the
+    # newest one: checks with no, a wrong and the right token, switches, runs again, undoes, redoes, and checks the
+    # token is saved nowhere and no email goes out.
+    name: anypress-client Circle switch on WordPress Playground (FluentCommunity ${{ matrix.fluent-community }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        fluent-community: ["2.12.0", "2.13.0"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Checkout the store template's site types
+        uses: actions/checkout@v4
+        with:
+          repository: hamchowderr/waas-provisioning-api
+          path: waas-provisioning-api
+          sparse-checkout: templates/anypress-store/roles.json
+          sparse-checkout-cone-mode: false
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/anypress-client
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: Circle switch test
+        working-directory: scripts/playground
+        env:
+          ANYPRESS_API_DIR: ${{ github.workspace }}/waas-provisioning-api
+          FLUENT_COMMUNITY: ${{ matrix.fluent-community }}
+        run: npm run circle
+
   playground-support:
     # AnyPress Host's support desk on a WordPress Playground storefront with Fluent Support: the API's signed calls open,
     # list, read, reply to and close a customer's tickets, other customers can't see them, used or badly signed requests
