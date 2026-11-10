@@ -137,6 +137,8 @@ class SupportDesk
         if (!$ticket) {
             return self::error('invalid_ticket', 'Fluent Support did not take the ticket.', 400);
         }
+        // The created model only holds the fields we passed; the database fills in the rest (status "new").
+        $ticket = \FluentSupport\App\Models\Ticket::find($ticket->id) ?: $ticket;
 
         return new WP_REST_Response(['ticket' => self::ticket_view($ticket, true)], 201);
     }
