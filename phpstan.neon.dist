@@ -1,0 +1,68 @@
+# PHPStan for every AnyPress plugin: WordPress 7.1 and WooCommerce stubs, and ShipMonk's dead code check.
+# Run from tools/qa (composer install there first): composer stan
+includes:
+    # Findings PHPStan can't follow (array shapes built by reference, other plugins' classes and WooCommerce's
+    # order item types). New code must pass without adding to it.
+    - phpstan-baseline.neon
+
+parameters:
+    level: 5
+    phpVersion: 80100
+    paths:
+        - packages/anypress-host/src
+        - packages/anypress-host/anypress-host.php
+        - packages/anypress-client/src
+        - packages/anypress-client/anypress-client.php
+        - packages/anypress-payments/src
+        - packages/anypress-payments/anypress-payments.php
+        - packages/anypress-export/src
+        - packages/anypress-export/anypress-export.php
+        - packages/anypress-updater/src
+    excludePaths:
+        analyseAndScan:
+            - packages/*/vendor/*
+    scanDirectories:
+        - tools/qa/vendor/php-stubs/woocommerce-stubs
+        - tools/qa/stubs
+    bootstrapFiles:
+        - tools/qa/phpstan-bootstrap.php
+    treatPhpDocTypesAsCertain: false
+    # The stubbed parents in tools/qa/stubs: their properties and methods live in the other plugin.
+    universalObjectCratesClasses:
+        - FluentCart\App\Modules\Integrations\BaseIntegrationManager
+        - FluentCart\App\Modules\PaymentMethods\Core\AbstractPaymentGateway
+        - FluentCart\App\Modules\PaymentMethods\Core\BaseGatewaySettings
+        - FluentForm\App\Services\Migrator\Classes\BaseMigratorStub
+    reportUnmatchedIgnoredErrors: true
+    ignoreErrors:
+        # The plugins work with other plugins and tools that aren't installed here and have no stubs (WP-CLI,
+        # FluentCart, the Fluent plugins, Contact Form 7, Ninja Forms, WPForms, WP Fusion, the MCP Adapter). Each
+        # call is guarded with class_exists() or function_exists(). A missing AnyPress class is still reported.
+        -
+            identifier: class.notFound
+            message: '#(?:class|type|Class|of) \\?(?!AnyPress)[A-Za-z_]+\\?[A-Za-z_\\]*#'
+        -
+            identifier: function.notFound
+            message: '#^Function (fluent|Fluent|wpf_|Ninja_Forms|wpforms|wpcf7|WP_CLI\\)#'
+        -
+            identifier: constant.notFound
+            message: '#^Constant (FLUENT|WPCF7|NF_|WPFORMS|WPF_)#'
+        -
+            identifier: staticMethod.notFound
+            message: '#^Call to an undefined static method (FluentForm|FluentCart)\\#'
+        -
+            identifier: function.impossibleType
+            message: '#^Call to function method_exists\(\) with .\\++(?!AnyPress)#'
+        -
+            identifier: method.notFound
+            message: '#^Call to an undefined method AnyPress(Client\\Forms\\Migrators|Host\\Commerce\\FluentCart\\AnyPressProvisioningIntegration)#'
+        # Constants each plugin's main file defines, so they exist whenever the classes run.
+        -
+            identifier: constant.notFound
+            message: '#^Constant ANYPRESS_#'
+
+services:
+    -
+        class: AnyPressQa\WordPressUsageProvider
+        tags:
+            - shipmonk.deadCode.memberUsageProvider

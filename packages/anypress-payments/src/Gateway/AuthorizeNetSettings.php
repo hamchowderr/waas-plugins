@@ -18,10 +18,10 @@ class AuthorizeNetSettings extends BaseGatewaySettings
 {
     public $methodHandler = 'fluent_cart_payment_settings_anypress_authorizenet';
 
-    const MODES = ['test', 'live'];
+    public const MODES = ['test', 'live'];
 
     /** Per-mode keys. Transaction and Signature Keys are encrypted with Helper::encryptKey (app/Helpers/Helper.php:889). */
-    const MODE_KEYS = [
+    public const MODE_KEYS = [
         'api_login_id',
         'transaction_key',
         'signature_key',
@@ -37,10 +37,10 @@ class AuthorizeNetSettings extends BaseGatewaySettings
     ];
 
     /** Before 0.2.0 there was one set of keys and a "sandbox" setting that chose the environment. */
-    const LEGACY_KEYS = ['api_login_id', 'transaction_key', 'signature_key', 'public_client_key', 'webhook_status'];
+    public const LEGACY_KEYS = ['api_login_id', 'transaction_key', 'signature_key', 'public_client_key', 'webhook_status'];
 
     /** wp_options row with the time of the last signed webhook notification, per mode. */
-    const LAST_WEBHOOK_OPTION = 'anypress_payments_authorizenet_last_webhook';
+    public const LAST_WEBHOOK_OPTION = 'anypress_payments_authorizenet_last_webhook';
 
     public static function getDefaults(): array
     {

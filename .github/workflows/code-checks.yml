@@ -1,0 +1,88 @@
+name: Code checks
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+jobs:
+  coding-standards:
+    # WordPress Coding Standards (security, database, translation, best practice), PSR-12 layout and
+    # PHP 8.1 compatibility, from phpcs.xml.dist. Errors fail the check; warnings are listed.
+    name: Coding standards
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/qa
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2, cs2pr
+      - name: Composer install
+        run: composer install --no-interaction --no-progress
+      - name: PHP_CodeSniffer
+        run: vendor/bin/phpcs --standard=../../phpcs.xml.dist --basepath=../.. --warning-severity=0 --report-full --report-checkstyle=./phpcs.xml
+      - name: Show findings on the pull request
+        if: ${{ always() && hashFiles('tools/qa/phpcs.xml') != '' }}
+        run: cs2pr --graceful-warnings ./phpcs.xml
+
+  static-analysis:
+    # PHPStan with WordPress, WooCommerce and WP-CLI stubs, and the dead code check, from phpstan.neon.dist.
+    name: Static analysis and dead code
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/qa
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        run: composer install --no-interaction --no-progress
+      - name: PHPStan
+        run: composer stan -- --no-progress --error-format=github
+
+  plugin-check:
+    # The same Plugin Check wordpress.org runs. The plugins update through the AnyPress API rather than
+    # wordpress.org, so its updater rule and the directory-only checks are left out.
+    name: Plugin Check (${{ matrix.package }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [anypress-host, anypress-client, anypress-payments, anypress-export]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Build the plugin
+        run: |
+          scripts/release/build.sh ${{ matrix.package }} 0.0.0 dist
+          mkdir -p build
+          unzip -q dist/${{ matrix.package }}.zip -d build
+      - name: Plugin Check
+        uses: WordPress/plugin-check-action@v1
+        with:
+          build-dir: build/${{ matrix.package }}
+          categories: |
+            general
+            security
+            performance
+            accessibility
+          exclude-checks: |
+            plugin_updater
+          ignore-warnings: true

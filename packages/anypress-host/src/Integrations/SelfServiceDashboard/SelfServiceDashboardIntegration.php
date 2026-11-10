@@ -10,7 +10,7 @@ class SelfServiceDashboardIntegration
     {
         if (!function_exists('is_plugin_active'))
         {
-            require_once(ABSPATH . '/wp-admin/includes/plugin.php');
+            require_once ABSPATH . '/wp-admin/includes/plugin.php';
         }
 
         if (is_plugin_active('self-service-dashboard-for-woocommerce-subscriptions/self-service-dashboard-for-woocommerce-subscriptions.php'))
@@ -26,8 +26,8 @@ class SelfServiceDashboardIntegration
         if(\is_account_page())
         {
             $script_name = 'add-on-loading-indicator.js';
-            $src = plugin_dir_url( __FILE__ ) . "/assets/js/$script_name";
-            $version = gmdate("ymd-Gis", (int) filemtime( plugin_dir_path( __FILE__ ) . "assets/js/$script_name" ));
+            $src = plugin_dir_url(__FILE__) . "/assets/js/$script_name";
+            $version = gmdate("ymd-Gis", (int) filemtime(plugin_dir_path(__FILE__) . "assets/js/$script_name"));
             wp_enqueue_script('add-on-loading-indicator', $src, ['jquery'], $version, true);
             // The admin URL, not /wp-admin/: WordPress may live in a subdirectory.
             wp_localize_script('add-on-loading-indicator', 'anypressAddOnLoadingIndicator', ['spinner' => admin_url('images/spinner.gif')]);

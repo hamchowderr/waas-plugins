@@ -38,7 +38,7 @@ class FluentCartAdapter implements CommerceAdapter
         }
 
         if (!function_exists('is_plugin_active')) {
-            require_once(ABSPATH . '/wp-admin/includes/plugin.php');
+            require_once ABSPATH . '/wp-admin/includes/plugin.php';
         }
 
         return is_plugin_active('fluent-cart/fluent-cart.php');
@@ -95,7 +95,7 @@ class FluentCartAdapter implements CommerceAdapter
             $customer['email'] ?? '',
             $customer['country'] ?? '',
             // The checkout's optional business answer travels with the billing details to the store.
-            array_filter($this->store->get_order_billing($purchase_context) + ['about' => $this->store->get_order_meta($purchase_context, Tenant::BUSINESS_ABOUT_META)], 'strlen')
+            array_filter($this->store->get_order_billing($purchase_context) + ['about' => $this->store->get_order_meta($purchase_context, Tenant::BUSINESS_ABOUT_META)], static fn ($value) => (string) $value !== '')
         );
     }
 

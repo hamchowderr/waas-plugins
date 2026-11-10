@@ -7,8 +7,8 @@ use AnyPressHost\Core\Tenant;
 
 class PluginBootstrap
 {
-    const ROLES_WP_OPTION = 'anypress-host-roles-options';
-    const API_V1_NAMESPACE = 'anypress-host/v1';
+    public const ROLES_WP_OPTION = 'anypress-host-roles-options';
+    public const API_V1_NAMESPACE = 'anypress-host/v1';
 
     public function __construct()
     {
@@ -21,7 +21,7 @@ class PluginBootstrap
     }
 
     /** Shop, category, tag and product search pages (WooCommerce's main product query). */
-    function hide_addon_products_from_shop_page($q)
+    public function hide_addon_products_from_shop_page($q)
     {
         $q->set('tax_query', array_merge((array) $q->get('tax_query'), [self::exclude_addons()]));
     }

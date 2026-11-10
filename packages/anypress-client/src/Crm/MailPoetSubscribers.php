@@ -52,9 +52,9 @@ class MailPoetSubscribers
     public static function collect(): array
     {
         global $wpdb;
-        $subscribers = (array) $wpdb->get_results('SELECT id, email, first_name, last_name, status, subscribed_ip, confirmed_ip, created_at, deleted_at FROM ' . self::table('subscribers') . ' ORDER BY id', ARRAY_A);
-        $segments = (array) $wpdb->get_results('SELECT id, name, type, deleted_at FROM ' . self::table('segments') . ' ORDER BY id', ARRAY_A);
-        $memberships = (array) $wpdb->get_results('SELECT subscriber_id, segment_id, status FROM ' . self::table('subscriber_segment'), ARRAY_A);
+        $subscribers = (array) $wpdb->get_results($wpdb->prepare('SELECT id, email, first_name, last_name, status, subscribed_ip, confirmed_ip, created_at, deleted_at FROM %i ORDER BY id', self::table('subscribers')), ARRAY_A);
+        $segments = (array) $wpdb->get_results($wpdb->prepare('SELECT id, name, type, deleted_at FROM %i ORDER BY id', self::table('segments')), ARRAY_A);
+        $memberships = (array) $wpdb->get_results($wpdb->prepare('SELECT subscriber_id, segment_id, status FROM %i', self::table('subscriber_segment')), ARRAY_A);
 
         return self::from_rows($subscribers, $segments, $memberships, defined('MAILPOET_VERSION') ? MAILPOET_VERSION : null);
     }

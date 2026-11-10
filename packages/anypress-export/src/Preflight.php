@@ -16,10 +16,10 @@ defined('ABSPATH') || exit;
 final class Preflight
 {
     /** Above this the page suggests WP-CLI, which has no time limits. */
-    const LARGE_BYTES = 1073741824;
+    public const LARGE_BYTES = 1073741824;
 
     /** wp-config.php constants WordPress itself reads, or that AnyPress sets on the store. */
-    const CORE_CONSTANTS = [
+    public const CORE_CONSTANTS = [
         'ABSPATH', 'ADMIN_COOKIE_PATH', 'ALLOW_UNFILTERED_UPLOADS', 'ALTERNATE_WP_CRON', 'AUTH_COOKIE', 'AUTH_KEY', 'AUTH_SALT',
         'AUTOMATIC_UPDATER_DISABLED', 'AUTOSAVE_INTERVAL', 'BLOG_ID_CURRENT_SITE', 'COMPRESS_CSS', 'COMPRESS_SCRIPTS',
         'CONCATENATE_SCRIPTS', 'COOKIEHASH', 'COOKIEPATH', 'COOKIE_DOMAIN', 'CORE_UPGRADE_SKIP_NEW_BUNDLED', 'CUSTOM_USER_META_TABLE',
@@ -40,7 +40,7 @@ final class Preflight
     ];
 
     /** Plugin folders that send mail through their own settings (often an API key), by name. */
-    const MAILERS = [
+    public const MAILERS = [
         'fluent-smtp' => 'FluentSMTP', 'wp-mail-smtp' => 'WP Mail SMTP', 'wp-mail-smtp-pro' => 'WP Mail SMTP Pro',
         'post-smtp' => 'Post SMTP', 'easy-wp-smtp' => 'Easy WP SMTP', 'gosmtp' => 'GoSMTP', 'smtp-mailer' => 'SMTP Mailer',
         'wp-ses' => 'WP Offload SES', 'offload-ses-lite' => 'WP Offload SES', 'mailgun' => 'Mailgun', 'suremails' => 'SureMail',
@@ -48,7 +48,7 @@ final class Preflight
     ];
 
     /** Plugin folders for page and object caches, by name. AnyPress has its own page cache. */
-    const CACHES = [
+    public const CACHES = [
         'wp-rocket' => 'WP Rocket', 'w3-total-cache' => 'W3 Total Cache', 'litespeed-cache' => 'LiteSpeed Cache',
         'wp-super-cache' => 'WP Super Cache', 'redis-cache' => 'Redis Object Cache', 'object-cache-pro' => 'Object Cache Pro',
         'wp-fastest-cache' => 'WP Fastest Cache', 'sg-cachepress' => 'SiteGround Speed Optimizer', 'breeze' => 'Breeze',
@@ -58,7 +58,7 @@ final class Preflight
     ];
 
     /** PHP extensions that run encoded plugins; a store without them can't run those plugins. */
-    const LOADERS = ['ionCube Loader', 'SourceGuardian', 'Zend Guard Loader'];
+    public const LOADERS = ['ionCube Loader', 'SourceGuardian', 'Zend Guard Loader'];
 
     /**
      * What stops the move before anything is packed.
@@ -233,8 +233,10 @@ final class Preflight
         $need = self::diskNeed($uploadsBytes, $databaseBytes);
         if ($free !== null && $need > 0 && $free < $need) {
             $before[] = sprintf(
-                /* translators: 1: free space, such as 2 GB, 2: space the export needs */
-                $complete ? __('This server has %1$s of free space, and the export needs about %2$s while it runs. Free up space or ask your host before you start.', 'anypress-export')
+                $complete
+                    /* translators: 1: free space, such as 2 GB, 2: space the export needs */
+                    ? __('This server has %1$s of free space, and the export needs about %2$s while it runs. Free up space or ask your host before you start.', 'anypress-export')
+                    /* translators: 1: free space, such as 2 GB, 2: space the export needs */
                     : __('This server has %1$s of free space, and the export needs at least %2$s while it runs. Free up space or ask your host before you start.', 'anypress-export'),
                 Exporter::size((int) $free),
                 Exporter::size($need)
@@ -243,8 +245,10 @@ final class Preflight
         $total = (int) ($files['bytes'] ?? 0) + $databaseBytes;
         if ($total > self::LARGE_BYTES) {
             $before[] = sprintf(
-                /* translators: %s: the site's size, such as 3 GB */
-                $complete ? __('Your site is large (about %s). Moving it from the command line is more reliable: wp anypress-export send followed by your code. Ask your host if you can\'t run commands.', 'anypress-export')
+                $complete
+                    /* translators: %s: the site's size, such as 3 GB */
+                    ? __('Your site is large (about %s). Moving it from the command line is more reliable: wp anypress-export send followed by your code. Ask your host if you can\'t run commands.', 'anypress-export')
+                    /* translators: %s: the site's size, such as 3 GB */
                     : __('Your site is large (at least %s). Moving it from the command line is more reliable: wp anypress-export send followed by your code. Ask your host if you can\'t run commands.', 'anypress-export'),
                 Exporter::size($total)
             );

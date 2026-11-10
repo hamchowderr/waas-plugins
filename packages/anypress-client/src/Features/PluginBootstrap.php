@@ -5,13 +5,12 @@ namespace AnyPressClient\Features;
 class PluginBootstrap
 {
     /** Option holding the store's plan roles (filled from the ANYPRESS_TENANT_ROLES constant on stores). */
-    const TENANT_ROLES = 'anypress_tenant_roles';
-    const TENANT_ROLES_CONSTANT = 'ANYPRESS_TENANT_ROLES';
-    const API_V1_NAMESPACE = 'anypress-client/v1';
-    const PLUGIN_NAME = 'anypress-client/anypress-client.php';
-    const PLUGIN_VERSION = '2.0.0';
-    const TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS = 'ANYPRESS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS';
-    const REMOVED_ADMINISTRATOR_PLUGIN_CAPS = 'anypress_removed_administrator_plugin_caps';
+    public const TENANT_ROLES = 'anypress_tenant_roles';
+    public const TENANT_ROLES_CONSTANT = 'ANYPRESS_TENANT_ROLES';
+    public const API_V1_NAMESPACE = 'anypress-client/v1';
+    public const PLUGIN_NAME = 'anypress-client/anypress-client.php';
+    public const TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS = 'ANYPRESS_TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS';
+    public const REMOVED_ADMINISTRATOR_PLUGIN_CAPS = 'anypress_removed_administrator_plugin_caps';
 
 
     public static function init()
@@ -47,14 +46,14 @@ class PluginBootstrap
     public static function set_or_remove_admin_plugin_caps() {
         $plugins_capabilities = ['activate_plugins', 'delete_plugins', 'install_plugins', 'update_plugins', 'edit_plugins', 'upload_plugins'];
         $caps_removed = get_option(self::REMOVED_ADMINISTRATOR_PLUGIN_CAPS, false);
-        
+
         if (self::constant(self::TENANT_NO_ADMINISTRATOR_PLUGIN_CAPS) == 'true' && self::is_store()) {
             if (!$caps_removed) {
                 $role = get_role('administrator');
                 foreach ($plugins_capabilities as $capability) {
                     $role->remove_cap($capability);
                 }
-                
+
                 update_option(self::REMOVED_ADMINISTRATOR_PLUGIN_CAPS, true);
             }
 
@@ -91,7 +90,7 @@ class PluginBootstrap
         unset($actions['deactivate']);
 
         return array_merge($actions, [
-            'anypress_active' => is_plugin_active( $plugin_file ) ? sprintf(/* translators: %s: the plugin's name */ __('Activated by %s', 'anypress-client'), \AnyPressClient\Core\Brand::plugin_name()) : sprintf(/* translators: %s: the plugin's name */ __('Deactivated by %s', 'anypress-client'), \AnyPressClient\Core\Brand::plugin_name()),
+            'anypress_active' => is_plugin_active($plugin_file) ? sprintf(/* translators: %s: the plugin's name */ __('Activated by %s', 'anypress-client'), \AnyPressClient\Core\Brand::plugin_name()) : sprintf(/* translators: %s: the plugin's name */ __('Deactivated by %s', 'anypress-client'), \AnyPressClient\Core\Brand::plugin_name()),
         ]);
     }
 }

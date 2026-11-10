@@ -76,14 +76,16 @@ class WebhookReceiver
         $id = (string) $request->get_header('webhook-id');
         $body = (string) $request->get_body();
 
-        if (!self::verify(
-            Webhooks::secret(),
-            $id,
-            (string) $request->get_header('webhook-timestamp'),
-            (string) $request->get_header('webhook-signature'),
-            $body,
-            time()
-        )) {
+        if (
+            !self::verify(
+                Webhooks::secret(),
+                $id,
+                (string) $request->get_header('webhook-timestamp'),
+                (string) $request->get_header('webhook-signature'),
+                $body,
+                time()
+            )
+        ) {
             return new WP_REST_Response(['code' => 'invalid_signature', 'message' => 'Missing, stale or invalid webhook signature.'], 401);
         }
 

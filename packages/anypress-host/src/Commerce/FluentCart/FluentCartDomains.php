@@ -203,6 +203,7 @@ class FluentCartDomains
     }
 
     /** Back to the website's domain section on the Website page, with a message. */
+    /** @return never */
     private function back(int $subscription_id, string $query, string $result): void
     {
         wp_safe_redirect(add_query_arg([

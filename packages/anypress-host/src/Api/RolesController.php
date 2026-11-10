@@ -89,7 +89,7 @@ class RolesController
 
         if(200 !== $response_code) {
             // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not printed here; every place that shows the message escapes it.
-            throw new \Exception('Refreshing roles failed with code '.$response_code);
+            throw new \Exception('Refreshing roles failed with code ' . $response_code);
         }
 
         $body = json_decode($response['body']);

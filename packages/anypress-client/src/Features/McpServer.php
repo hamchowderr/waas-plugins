@@ -14,11 +14,11 @@ namespace AnyPressClient\Features;
  */
 class McpServer
 {
-    const OPTION = 'anypress_client_mcp';
-    const PLUGIN = 'mcp-adapter/mcp-adapter.php';
-    const ACTION = 'anypress_client_mcp';
-    const ROUTE_NAMESPACE = 'mcp';
-    const ROUTE = 'anypress';
+    public const OPTION = 'anypress_client_mcp';
+    public const PLUGIN = 'mcp-adapter/mcp-adapter.php';
+    public const ACTION = 'anypress_client_mcp';
+    public const ROUTE_NAMESPACE = 'mcp';
+    public const ROUTE = 'anypress';
 
     public function __construct()
     {

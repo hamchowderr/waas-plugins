@@ -203,7 +203,8 @@ class ShopCompare
                 }
             }
             $page++;
-        } while (count($products) === 200);
+            $more = count($products) === 200;
+        } while ($more);
 
         $page = 1;
         do {
@@ -223,7 +224,8 @@ class ShopCompare
                 }
             }
             $page++;
-        } while (count($orders) === 200);
+            $more = count($orders) === 200;
+        } while ($more);
 
         // The registered customers the add-on brings across even without orders.
         foreach (get_users(['role__in' => ['customer', 'subscriber'], 'fields' => ['ID', 'user_email']]) as $user) {
@@ -254,16 +256,16 @@ class ShopCompare
             $data['products'][(int) $link->woo_id] = (int) $link->ID;
         }
         if ($data['products']) {
-            $ids = implode(',', array_map('intval', $data['products']));
-            $data['skus'] = array_map('strval', (array) $wpdb->get_col("SELECT sku FROM {$wpdb->prefix}fct_product_variations WHERE post_id IN ({$ids}) AND sku IS NOT NULL AND sku != ''"));
+            $ids = array_values(array_map('intval', $data['products']));
+            $data['skus'] = array_map('strval', (array) $wpdb->get_col($wpdb->prepare("SELECT sku FROM {$wpdb->prefix}fct_product_variations WHERE post_id IN (" . implode(',', array_fill(0, count($ids), '%d')) . ") AND sku IS NOT NULL AND sku != ''", ...$ids)));
         }
         $orders = $wpdb->get_results($wpdb->prepare("SELECT id, total_amount, total_refund FROM {$wpdb->prefix}fct_orders WHERE config LIKE %s AND config LIKE %s", '%migrated_from%', '%woocommerce%'));
         foreach ((array) $orders as $order) {
             $data['orders'][(int) $order->id] = ['total' => (int) $order->total_amount, 'refunded' => (int) $order->total_refund];
         }
         if ($data['orders']) {
-            $ids = implode(',', array_keys($data['orders']));
-            $refunds = $wpdb->get_row("SELECT COUNT(*) AS c, COALESCE(SUM(total), 0) AS t FROM {$wpdb->prefix}fct_order_transactions WHERE transaction_type = 'refund' AND order_id IN ({$ids})");
+            $ids = array_map('intval', array_keys($data['orders']));
+            $refunds = $wpdb->get_row($wpdb->prepare("SELECT COUNT(*) AS c, COALESCE(SUM(total), 0) AS t FROM {$wpdb->prefix}fct_order_transactions WHERE transaction_type = 'refund' AND order_id IN (" . implode(',', array_fill(0, count($ids), '%d')) . ')', ...$ids));
             $data['refunds'] = ['count' => (int) $refunds->c, 'total' => (int) $refunds->t];
         }
         $data['coupons'] = array_map('strval', (array) $wpdb->get_col("SELECT code FROM {$wpdb->prefix}fct_coupons"));

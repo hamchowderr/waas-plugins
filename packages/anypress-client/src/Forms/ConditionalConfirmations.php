@@ -25,8 +25,10 @@ class ConditionalConfirmations
      */
     public function apply($confirmation, $data, $form)
     {
-        if (defined('FLUENTFORMPRO') || !is_object($form) || empty($form->id) || !is_array($data)
-            || !class_exists('FluentForm\App\Services\ConditionAssesor')) {
+        if (
+            defined('FLUENTFORMPRO') || !is_object($form) || empty($form->id) || !is_array($data)
+            || !class_exists('FluentForm\App\Services\ConditionAssesor')
+        ) {
             return $confirmation;
         }
         $converted = get_option(FormsSwitch::CONDITIONAL_OPTION, []);

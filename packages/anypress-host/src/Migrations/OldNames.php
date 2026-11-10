@@ -17,16 +17,16 @@ if (!defined('ABSPATH'))
  */
 class OldNames
 {
-    const DONE_OPTION = 'anypress_old_names_moved';
+    public const DONE_OPTION = 'anypress_old_names_moved';
 
     /** The prefixes the plugin used before 2.11.0, and the ones it uses now. */
-    const OLD = 'waas_';
-    const NEW = 'anypress_';
+    public const OLD = 'waas_';
+    public const NEW = 'anypress_';
 
     /** What secrets were sealed with before 2.11.0: their prefix, key constant and purpose names. */
-    const OLD_SEAL_PREFIX = 'waasenc:v1:';
-    const OLD_KEY_CONSTANT = 'WAAS_HOST_KEY_ENCRYPTION_KEY';
-    const OLD_PURPOSES = [
+    public const OLD_SEAL_PREFIX = 'waasenc:v1:';
+    public const OLD_KEY_CONSTANT = 'WAAS_HOST_KEY_ENCRYPTION_KEY';
+    public const OLD_PURPOSES = [
         'private-key' => ['waas-host-private-key-encryption', 'anypress-host-private-key-encryption'],
         'webhook' => ['waas-host-webhook-secret', 'anypress-host-webhook-secret'],
     ];
@@ -86,9 +86,9 @@ class OldNames
         global $wpdb;
 
         foreach (self::meta_tables() as $table) {
-            $table = esc_sql($table);
             $wpdb->query($wpdb->prepare(
-                "UPDATE `$table` SET meta_key = REPLACE(meta_key, %s, %s) WHERE meta_key LIKE %s",
+                'UPDATE %i SET meta_key = REPLACE(meta_key, %s, %s) WHERE meta_key LIKE %s',
+                $table,
                 self::OLD,
                 self::NEW,
                 '%' . $wpdb->esc_like(self::OLD) . '%'
@@ -132,7 +132,8 @@ class OldNames
             return;
         }
         $wpdb->query($wpdb->prepare(
-            "UPDATE `$table` SET hook = REPLACE(hook, %s, %s) WHERE hook LIKE %s AND status = 'pending'",
+            "UPDATE %i SET hook = REPLACE(hook, %s, %s) WHERE hook LIKE %s AND status = 'pending'",
+            $table,
             self::OLD,
             self::NEW,
             $wpdb->esc_like(self::OLD) . '%'
@@ -151,13 +152,14 @@ class OldNames
         }
 
         foreach (self::meta_tables() as $table) {
-            $table = esc_sql($table);
-            $id = $wpdb->get_var("SHOW KEYS FROM `$table` WHERE Key_name = 'PRIMARY'", 4);
+            $id = $wpdb->get_var($wpdb->prepare("SHOW KEYS FROM %i WHERE Key_name = 'PRIMARY'", $table), 4);
             if (!$id) {
                 continue;
             }
             $rows = $wpdb->get_results($wpdb->prepare(
-                "SELECT `$id` AS id, meta_value FROM `$table` WHERE meta_key = %s AND meta_value LIKE %s",
+                'SELECT %i AS id, meta_value FROM %i WHERE meta_key = %s AND meta_value LIKE %s',
+                $id,
+                $table,
                 Tenant::TENANT_PRIVATE_KEY_META,
                 $wpdb->esc_like(self::OLD_SEAL_PREFIX) . '%'
             ));

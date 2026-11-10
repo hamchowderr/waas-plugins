@@ -18,11 +18,10 @@ defined('ABSPATH') || exit;
  */
 final class Exporter
 {
-    const STEPS = ['preflight', 'files', 'database', 'pack', 'upload', 'start', 'moving'];
     /** The shape of the saved state. An export begun by an older version can't carry on with this one. */
-    const FORMAT = 2;
+    public const FORMAT = 2;
     /** How many files that went missing or changed while packing are kept by name (all are counted). */
-    const REPORT = 50;
+    public const REPORT = 50;
 
     /** @var Database */
     private $db;
@@ -178,7 +177,8 @@ final class Exporter
             fclose($fh);
         }
         $dump = new SqlDump($this->db, $file);
-        while ($state['table'] < count($state['tables']) && microtime(true) < $deadline) {
+        $tables = count($state['tables']);
+        while ($state['table'] < $tables && microtime(true) < $deadline) {
             $table = $state['tables'][$state['table']];
             $cursor = $dump->dumpBatch($table, (array) $state['cursor'], $state['stats'][$table] ?? null);
             if (!empty($cursor['done'])) {

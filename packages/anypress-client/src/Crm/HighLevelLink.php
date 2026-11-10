@@ -213,7 +213,8 @@ class HighLevelLink
         }
         // FluentCRM's field map names FluentCRM's fields; HighLevel starts from its own.
         $fields = $crm === self::TAKES_OVER_FROM ? [] : (array) wpf_get_option('contact_fields', []);
-        foreach ([
+        foreach (
+            [
             'user_email' => ['email', 'Email', true],
             'first_name' => ['firstName', 'First Name', true],
             'last_name' => ['lastName', 'Last Name', true],
@@ -225,7 +226,8 @@ class HighLevelLink
             'billing_country' => ['country', 'Country', false],
             // Lead source tracking: where the visitor first came from.
             'utm_source' => ['source', 'Source', true],
-        ] as $meta => [$crmField, $label, $active]) {
+            ] as $meta => [$crmField, $label, $active]
+        ) {
             $fields[$meta] = array_merge((array) ($fields[$meta] ?? []), ['crm_field' => $crmField, 'crm_label' => $label, 'active' => $active]);
         }
         wp_fusion()->settings->set_multiple([

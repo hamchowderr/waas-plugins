@@ -44,12 +44,12 @@ class TenantStatusService
     {
         $schedules['five_seconds'] = [
             'interval' => 5,
-            'display'  => esc_html__( 'Every Five Seconds', 'anypress-host' ),
+            'display'  => esc_html__('Every Five Seconds', 'anypress-host'),
         ];
 
         $schedules['every_minute'] = [
             'interval' => 60,
-            'display'  => esc_html__( 'Every Minute', 'anypress-host' ),
+            'display'  => esc_html__('Every Minute', 'anypress-host'),
         ];
 
         return $schedules;
@@ -157,6 +157,7 @@ class TenantStatusService
                     }
 
                     $tenant->update_status(Tenant::LINKING_DOMAIN);
+                    // Falls through: the domain may be linked already.
                 case Tenant::LINKING_DOMAIN:
                     $tenant_data = $this->provisioningApi->get_tenant_safe($external_id);
 
@@ -165,20 +166,13 @@ class TenantStatusService
                     }
 
                     $tenant->update_status(Tenant::REQUESTING_SSL);
+                    // Falls through: the certificate may be served already.
                 case Tenant::REQUESTING_SSL:
-                    try {
-                        $response = wp_remote_head("https://" . $target_domain_name, [
-                            "redirection" => 0
-                        ]);
-
-                        $response_code = wp_remote_retrieve_response_code($response);
-
-                        if ($response_code === 200) {
-                            $tenant->update_status(Tenant::READY);
-                            do_action('anypress_tenant_ready', $subscription_id, $external_id, $target_domain_name);
-                        }
-                    } catch (\Error $err) {
-                        // Check error?
+                    // A WP_Error (no certificate yet) has no response code, so the next poll looks again.
+                    $response = wp_remote_head('https://' . $target_domain_name, ['redirection' => 0]);
+                    if (wp_remote_retrieve_response_code($response) === 200) {
+                        $tenant->update_status(Tenant::READY);
+                        do_action('anypress_tenant_ready', $subscription_id, $external_id, $target_domain_name);
                     }
                     break;
                 default:
@@ -186,6 +180,7 @@ class TenantStatusService
                     break;
             }
         } catch (\Exception $e) {
+            // The API couldn't be reached: the store keeps its state and the next poll tries again.
         }
     }
 

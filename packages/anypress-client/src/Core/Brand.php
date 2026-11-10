@@ -60,8 +60,10 @@ final class Brand
             return $plugins;
         }
         $plugin = $plugins[ANYPRESS_CLIENT_BASENAME];
-        $plugin['Name'] = $plugin['Title'] = self::plugin_name();
-        $plugin['Author'] = $plugin['AuthorName'] = $reseller;
+        $plugin['Name'] = self::plugin_name();
+        $plugin['Title'] = $plugin['Name'];
+        $plugin['Author'] = $reseller;
+        $plugin['AuthorName'] = $reseller;
         $plugin['AuthorURI'] = '';
         $plugin['PluginURI'] = '';
         /* translators: %s: the brand name */

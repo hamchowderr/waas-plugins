@@ -12,7 +12,6 @@ namespace AnyPressClient\Core;
 class ConnectLink
 {
     public const FIELDS = ['request', 'app', 'to', 'write', 'back', 't'];
-    public const ANSWERS = ['allow', 'allow-read', 'deny'];
 
     /** The link's fields when $params carries a current link signed with $key; null otherwise. */
     public static function verify(string $key, array $params, ?int $now = null): ?array

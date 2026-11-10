@@ -117,7 +117,7 @@ class HttpService
 
         $response_code = wp_remote_retrieve_response_code($response);
 
-        // Only accept truly successful status codes 
+        // Only accept truly successful status codes
         if ($response_code < 200 || $response_code > 299) {
             $response_body = wp_remote_retrieve_body($response);
             // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- not printed here; every place that shows the message escapes it.

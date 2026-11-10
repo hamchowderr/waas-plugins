@@ -88,7 +88,11 @@ class CrmCommand
         if ($undo) {
             WP_CLI::line(sprintf(
                 'Contacts removed: %d. Contacts put back: %d. Tags removed: %d. Lists removed: %d. Fields removed: %d.',
-                $report['contacts_removed'], $report['contacts_restored'], $report['tags_removed'], $report['lists_removed'], $report['fields_removed']
+                $report['contacts_removed'],
+                $report['contacts_restored'],
+                $report['tags_removed'],
+                $report['lists_removed'],
+                $report['fields_removed']
             ));
             array_map([WP_CLI::class, 'line'], array_map([self::class, 'plain'], $report['notes']));
             WP_CLI::success($dry_run ? 'Dry run: nothing was changed.' : 'The CRM switch is undone.');

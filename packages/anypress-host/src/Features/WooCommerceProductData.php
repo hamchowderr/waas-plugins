@@ -7,10 +7,10 @@ use AnyPressHost\Core\ProvisioningApi;
 
 class WooCommerceProductData
 {
-    const PRODUCT_DATA_TAB_TARGET = 'anypress-product-settings';
+    public const PRODUCT_DATA_TAB_TARGET = 'anypress-product-settings';
     // Form field names. The values are stored under StoreProduct's meta keys.
-    const ROLE_FIELD = 'anypress_product_role';
-    const GROUPNAME_FIELD = 'anypress_product_group_name';
+    public const ROLE_FIELD = 'anypress_product_role';
+    public const GROUPNAME_FIELD = 'anypress_product_group_name';
 
     private ProvisioningApi $provisioningApi;
 

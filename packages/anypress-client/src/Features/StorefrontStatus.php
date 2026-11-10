@@ -12,10 +12,10 @@ use AnyPressClient\Core\HttpService;
  */
 class StorefrontStatus
 {
-    const PING_OPTION = 'anypress_client_last_roles_ping';
-    const TEST_OPTION = 'anypress_client_last_connection_test';
-    const UPDATE_ROUTE = '/user-role-plan/update';
-    const API_NAMESPACE = 'anypress-host/v1';
+    public const PING_OPTION = 'anypress_client_last_roles_ping';
+    public const TEST_OPTION = 'anypress_client_last_connection_test';
+    public const UPDATE_ROUTE = '/user-role-plan/update';
+    public const API_NAMESPACE = 'anypress-host/v1';
 
     /** Asks the storefront to reload the plan roles, and remembers how it answered. */
     public static function notify_storefront(HttpService $http, string $host_url): array

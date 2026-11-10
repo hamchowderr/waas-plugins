@@ -135,6 +135,7 @@ class CustomerMerge
                 $primary[] = (string) $address->type;
             }
         }
+        // phpcs:disable WordPress.DB.PreparedSQL -- table and column names come from the RESOURCES constant, ids are cast to int and keys go through prepare().
         if ($record['demoted']) {
             $wpdb->query("UPDATE {$wpdb->prefix}fct_customer_addresses SET is_primary = 0 WHERE id IN (" . implode(',', $record['demoted']) . ')');
         }
@@ -149,6 +150,7 @@ class CustomerMerge
             $wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}{$table} SET {$column} = %d WHERE {$where}", $into));
         }
         // FluentCart's own hook after a customer's rows move (FluentCart Pro moves its licences on it).
+        // phpcs:enable WordPress.DB.PreparedSQL
         do_action('fluent_cart/customer_resources_moved', ['from_customer_id' => $from, 'to_customer_id' => $into]);
         $wpdb->delete($wpdb->prefix . 'fct_customers', ['id' => $from]);
 
@@ -163,6 +165,7 @@ class CustomerMerge
         if ($dry_run || !$count) {
             return $count;
         }
+        // phpcs:disable WordPress.DB.PreparedSQL -- table and column names come from the RESOURCES constant, ids are cast to int and keys go through prepare().
         foreach ($state['merges'] as $id => $record) {
             if (!empty($record['row']) && !$wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}fct_customers WHERE id = %d", (int) $id))) {
                 $wpdb->insert($wpdb->prefix . 'fct_customers', $record['row']);
@@ -179,6 +182,7 @@ class CustomerMerge
                 $wpdb->query("UPDATE {$wpdb->prefix}fct_customer_addresses SET is_primary = 1 WHERE id IN (" . implode(',', array_map('intval', $record['demoted'])) . ')');
             }
         }
+        // phpcs:enable WordPress.DB.PreparedSQL
         $state['merges'] = [];
         self::recount();
 

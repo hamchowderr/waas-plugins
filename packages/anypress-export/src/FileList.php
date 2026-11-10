@@ -20,13 +20,13 @@ defined('ABSPATH') || exit;
 final class FileList
 {
     /** Top-level wp-content entries never exported. */
-    const SKIP_TOP = [
+    public const SKIP_TOP = [
         'cache', 'upgrade', 'upgrade-temp-backup', 'ai1wm-backups', 'updraft', 'backups-dup-lite', 'backups-dup-pro',
         'wpvividbackups', 'backup-db', 'backupwordpress', 'wflogs', 'et-cache', 'object-cache.php', 'advanced-cache.php',
         'db.php', 'wp-cache-config.php', 'debug.log',
     ];
     /** How many skipped paths of each kind are kept by name (all are counted). */
-    const REPORT = 50;
+    public const REPORT = 50;
 
     /** A cursor for a new listing. */
     public static function start(): array

@@ -372,13 +372,13 @@ class NameConflicts
     private function lock($subscription_id): bool
     {
         $name = 'anypress_choose_name_lock_' . md5((string) $subscription_id);
-        if (add_option($name, time(), '', 'no')) {
+        if (add_option($name, time(), '', false)) {
             return true;
         }
 
         if ((int) get_option($name) < time() - self::LOCK_TTL) {
             delete_option($name);
-            return add_option($name, time(), '', 'no');
+            return add_option($name, time(), '', false);
         }
 
         return false;

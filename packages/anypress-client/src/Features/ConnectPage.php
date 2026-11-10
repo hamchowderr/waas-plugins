@@ -12,8 +12,8 @@ use AnyPressClient\Core\SignedRequest;
  */
 class ConnectPage
 {
-    const PAGE = 'anypress-connect';
-    const ACTION = 'anypress_connect';
+    public const PAGE = 'anypress-connect';
+    public const ACTION = 'anypress_connect';
 
     public function __construct()
     {

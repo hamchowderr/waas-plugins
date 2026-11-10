@@ -12,13 +12,13 @@ defined('ABSPATH') || exit;
  */
 final class Plugin
 {
-    const OPTION = 'anypress_export_state';
-    const LOCK = 'anypress_export_lock';
-    const NONCE = 'anypress_export';
-    const PAGE = 'anypress-export';
-    const CRON = 'anypress_export_cleanup';
+    public const OPTION = 'anypress_export_state';
+    public const LOCK = 'anypress_export_lock';
+    public const NONCE = 'anypress_export';
+    public const PAGE = 'anypress-export';
+    public const CRON = 'anypress_export_cleanup';
     /** Work folders untouched this long are removed: an import code only lasts 7 days. */
-    const MAX_AGE = 7 * 86400;
+    public const MAX_AGE = 7 * 86400;
 
     public static function boot(string $file): void
     {
@@ -185,10 +185,13 @@ final class Plugin
         $suppressed = $wpdb->suppress_errors(true);
         try {
             if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($table))) !== $table) return null;
+            // Not %i: AnyPress Export also runs on WordPress older than 6.2. $table is the prefix plus a fixed name.
+            // phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             return [
                 'pending' => (int) $wpdb->get_var("SELECT COUNT(*) FROM `$table` WHERE status = 'pending'"),
                 'pastDue' => (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `$table` WHERE status = 'pending' AND scheduled_date_gmt < %s", gmdate('Y-m-d H:i:s'))),
             ];
+            // phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         } finally {
             $wpdb->suppress_errors($suppressed);
         }

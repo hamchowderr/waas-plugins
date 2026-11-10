@@ -112,9 +112,11 @@ class TenantsSubscriptionManager
         $status = $this->jobs->status($subscription_id);
 
         // Carts can report one cancellation several times (cancelled, then end of term).
-        if (!$this->has_store($subscription_id)
+        if (
+            !$this->has_store($subscription_id)
             || $status === Tenant::DELETED
-            || !empty($commerce->get_subscription_meta($subscription_id, Tenant::TENANT_DELETE_AT_META))) {
+            || !empty($commerce->get_subscription_meta($subscription_id, Tenant::TENANT_DELETE_AT_META))
+        ) {
             return;
         }
 
@@ -137,11 +139,13 @@ class TenantsSubscriptionManager
         $paid_through = (int) $paid_through;
         $commerce = Commerce::require_adapter();
 
-        if ($paid_through <= time()
+        if (
+            $paid_through <= time()
             || NameConflicts::is_waiting($subscription_id)
             || !$this->has_store($subscription_id)
             || in_array($this->jobs->status($subscription_id), [Tenant::SUSPENDED, Tenant::DELETED], true)
-            || !empty($commerce->get_subscription_meta($subscription_id, Tenant::TENANT_DELETE_AT_META))) {
+            || !empty($commerce->get_subscription_meta($subscription_id, Tenant::TENANT_DELETE_AT_META))
+        ) {
             $this->suspend_tenant_when_subscription_expired($subscription_id);
             return;
         }
@@ -212,8 +216,10 @@ class TenantsSubscriptionManager
             $this->name_conflicts->pause($subscription_id);
             return;
         }
-        if (!$this->has_store($subscription_id)
-            || in_array($this->jobs->status($subscription_id), [Tenant::SUSPENDED, Tenant::DELETED], true)) {
+        if (
+            !$this->has_store($subscription_id)
+            || in_array($this->jobs->status($subscription_id), [Tenant::SUSPENDED, Tenant::DELETED], true)
+        ) {
             return;
         }
 
@@ -249,9 +255,11 @@ class TenantsSubscriptionManager
     public function resume_after_renewal($subscription_id)
     {
         $commerce = Commerce::require_adapter();
-        if ($this->jobs->status($subscription_id) !== Tenant::SUSPENDED
+        if (
+            $this->jobs->status($subscription_id) !== Tenant::SUSPENDED
             || !in_array($commerce->get_subscription_meta($subscription_id, Tenant::TENANT_SUSPEND_REASON_META), [Tenant::SUSPENDED_ON_HOLD, Tenant::SUSPENDED_ENDED], true)
-            || !$commerce->is_subscription_active($subscription_id)) {
+            || !$commerce->is_subscription_active($subscription_id)
+        ) {
             return;
         }
 
@@ -363,13 +371,15 @@ class TenantsSubscriptionManager
         }
 
         // No backup left: unlink the deleted store; the subscription gets a new one.
-        foreach ([
+        foreach (
+            [
             Tenant::TENANT_EXTERNAL_ID_META,
             Tenant::DOMAIN_NAME_META,
             Tenant::BASE_DOMAIN_NAME_META,
             Tenant::TENANT_PUBLIC_KEY_META,
             Tenant::TENANT_PRIVATE_KEY_META,
-        ] as $key) {
+            ] as $key
+        ) {
             $commerce->update_subscription_meta($subscription_id, $key, '');
         }
 
@@ -546,7 +556,7 @@ class TenantsSubscriptionManager
         if (filter_var($args['wordpress_email'] ?? '', FILTER_VALIDATE_EMAIL)) {
             $options['admin_email'] = (string) $args['wordpress_email'];
         }
-        $owner = array_filter((array) ($args['owner'] ?? []), 'strlen');
+        $owner = array_filter((array) ($args['owner'] ?? []), static fn ($value) => (string) $value !== '');
         if ($owner) {
             $options['anypress_store_owner'] = (string) wp_json_encode($owner);
         }

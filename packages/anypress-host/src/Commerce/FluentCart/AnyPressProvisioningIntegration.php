@@ -221,8 +221,10 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
         $subscription_id = (int) $subscription->id;
 
         if ($is_revoke || in_array($trigger, self::REMOVE_TRIGGERS, true)) {
-            if (empty($this->store->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META))
-                && !is_array($this->store->get_subscription_meta($subscription_id, Tenant::NAME_CONFLICT_META))) {
+            if (
+                empty($this->store->get_subscription_meta($subscription_id, Tenant::TENANT_EXTERNAL_ID_META))
+                && !is_array($this->store->get_subscription_meta($subscription_id, Tenant::NAME_CONFLICT_META))
+            ) {
                 return; // never created, and not waiting for a new name
             }
             $is_active = in_array($this->store->get_subscription_status($subscription_id), FluentCartStore::ACTIVE_STATUSES, true);
@@ -242,20 +244,39 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
             // revoked access, the end of term, or a cancel with nothing left of the period takes it offline now.
             $paid_through = (!$is_revoke && $trigger === 'subscription_canceled') ? $this->store->get_paid_through($subscription_id) : 0;
             if ($paid_through > time()) {
-                AnyPressEventNotes::fire($this->store, $order, $subscription_id, 'anypress_subscription_canceled_until', [$paid_through],
+                AnyPressEventNotes::fire(
+                    $this->store,
+                    $order,
+                    $subscription_id,
+                    'anypress_subscription_canceled_until',
+                    [$paid_through],
                     __('Website stays online until the paid period ends', 'anypress-host'),
                     sprintf('Subscription #%d (%s): until %s UTC', $subscription_id, $trigger, gmdate('Y-m-d H:i', $paid_through))
                 );
                 return;
             }
-            AnyPressEventNotes::fire($this->store, $order, $subscription_id, 'anypress_subscription_expired', [],
-                __('Website suspended', 'anypress-host'), sprintf('Subscription #%d (%s)', $subscription_id, $trigger));
+            AnyPressEventNotes::fire(
+                $this->store,
+                $order,
+                $subscription_id,
+                'anypress_subscription_expired',
+                [],
+                __('Website suspended', 'anypress-host'),
+                sprintf('Subscription #%d (%s)', $subscription_id, $trigger)
+            );
             return;
         }
 
         if (in_array($trigger, self::CREATE_TRIGGERS, true)) {
-            AnyPressEventNotes::fire($this->store, $order, $subscription_id, 'anypress_subscription_created', [$order],
-                __('Website requested', 'anypress-host'), sprintf('Subscription #%d (%s)', $subscription_id, $trigger));
+            AnyPressEventNotes::fire(
+                $this->store,
+                $order,
+                $subscription_id,
+                'anypress_subscription_created',
+                [$order],
+                __('Website requested', 'anypress-host'),
+                sprintf('Subscription #%d (%s)', $subscription_id, $trigger)
+            );
         }
     }
 }

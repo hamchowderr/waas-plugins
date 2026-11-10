@@ -60,7 +60,8 @@ class WooBuyers
                 }
             }
             $page++;
-        } while (count($batch) === self::PAGE);
+            $more = count($batch) === self::PAGE;
+        } while ($more);
 
         return self::from_orders($orders, $users);
     }

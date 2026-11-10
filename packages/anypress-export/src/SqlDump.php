@@ -18,13 +18,13 @@ defined('ABSPATH') || exit;
 final class SqlDump
 {
     /** Most rows read per query. */
-    const BATCH = 500;
+    public const BATCH = 500;
     /** About how many bytes of rows one query reads. */
-    const BATCH_BYTES = 4194304;
+    public const BATCH_BYTES = 4194304;
     /** Most rows per INSERT statement. */
-    const ROWS_PER_INSERT = 100;
+    public const ROWS_PER_INSERT = 100;
     /** About the most bytes in one INSERT statement (a single bigger row still gets one of its own). */
-    const INSERT_BYTES = 1048576;
+    public const INSERT_BYTES = 1048576;
 
     /** @var Database */
     private $db;

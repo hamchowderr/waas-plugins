@@ -10,7 +10,7 @@ if (!defined('ABSPATH'))
 
 class Module
 {
-    const PLUGIN_VERSION_OPTION = 'anypress_host_db_version';
+    public const PLUGIN_VERSION_OPTION = 'anypress_host_db_version';
 
     private ProvisioningApi $provisioningApi;
     public function __construct(ProvisioningApi $provisioningApi)
@@ -40,6 +40,7 @@ class Module
             $this->provisioningApi->test_reachability();
             $can_reach = true;
         } catch (\Exception $e) {
+            // Not reachable: recorded below.
         }
 
         $this->provisioningApi->update_is_reachable($can_reach);

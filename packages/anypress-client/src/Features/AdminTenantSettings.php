@@ -11,8 +11,8 @@ use AnyPressClient\Core\HttpService;
  */
 class AdminTenantSettings
 {
-    const PAGE = 'anypress-admin-tenant';
-    const TEST_ACTION = 'anypress_test_storefront';
+    public const PAGE = 'anypress-admin-tenant';
+    public const TEST_ACTION = 'anypress_test_storefront';
 
     public function __construct()
     {
@@ -170,7 +170,7 @@ class AdminTenantSettings
         );
     }
 
-    function render_settings_field($args)
+    public function render_settings_field($args)
     {
         printf(
             '<input type="%1$s" id="%2$s" name="%2$s" value="%3$s" placeholder="%4$s" class="regular-text code" aria-describedby="%2$s-description" />',

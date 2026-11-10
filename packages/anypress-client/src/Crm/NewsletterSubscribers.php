@@ -36,7 +36,7 @@ class NewsletterSubscribers
             return false;
         }
         // wp_newsletter is a plain name another plugin could use: check for the Newsletter plugin's own columns.
-        $columns = array_map('strval', (array) $wpdb->get_col("SHOW COLUMNS FROM {$table}"));
+        $columns = array_map('strval', (array) $wpdb->get_col($wpdb->prepare('SHOW COLUMNS FROM %i', $table)));
 
         return in_array('surname', $columns, true) && in_array('list_1', $columns, true) && in_array('token', $columns, true);
     }
@@ -45,7 +45,7 @@ class NewsletterSubscribers
     public static function collect(): array
     {
         global $wpdb;
-        $rows = (array) $wpdb->get_results('SELECT * FROM ' . self::table() . ' ORDER BY id', ARRAY_A);
+        $rows = (array) $wpdb->get_results($wpdb->prepare('SELECT * FROM %i ORDER BY id', self::table()), ARRAY_A);
         $options = get_option('newsletter_lists');
 
         return self::from_rows($rows, is_array($options) ? $options : [], defined('NEWSLETTER_VERSION') ? NEWSLETTER_VERSION : null);

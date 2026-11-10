@@ -24,8 +24,8 @@ use AnyPressPayments\Driver\SavePaymentMethodRequest;
  */
 class CardUpdate
 {
-    const QUERY_VAR = 'anypress_payments_card_update';
-    const ACTION = 'anypress_payments_authorizenet_card_update';
+    public const QUERY_VAR = 'anypress_payments_card_update';
+    public const ACTION = 'anypress_payments_authorizenet_card_update';
 
     private $gateway;
 

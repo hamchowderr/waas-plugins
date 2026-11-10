@@ -61,7 +61,7 @@ class AdminHome
     public function check_tenant_roles($checklist_items)
     {
         $roles = get_option(PluginBootstrap::ROLES_WP_OPTION);
-        $checklist_items['setup_tenant_roles']['is_done'] = $roles && count(array_keys((array)$roles)) > 0;
+        $checklist_items['setup_tenant_roles']['is_done'] = $roles && count(array_keys((array) $roles)) > 0;
 
         return $checklist_items;
     }
@@ -472,12 +472,14 @@ class AdminHome
 
             <?php if ($websites) : ?>
                 <div class="ap-tiles">
-                    <?php foreach ([
+                    <?php foreach (
+    [
                         'live' => __('Live websites', 'anypress-host'),
                         'building' => __('Being built', 'anypress-host'),
                         'failed' => __('Need attention', 'anypress-host'),
                         'offline' => __('Offline', 'anypress-host'),
-                    ] as $group => $label) : ?>
+                    ] as $group => $label
+) : ?>
                         <div class="ap-tile<?php echo $group === 'failed' && $counts[$group] ? ' is-alert' : ''; ?>">
                             <b><?php echo (int) $counts[$group]; ?></b><span><?php echo esc_html($label); ?></span>
                         </div>

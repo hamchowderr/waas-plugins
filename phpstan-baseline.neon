@@ -1,0 +1,157 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Call to function in_array\(\) with arguments non\-empty\-string, array\{\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: packages/anypress-client/src/Crm/ContactPlan.php
+
+		-
+			message: '#^Ternary operator condition is always false\.$#'
+			identifier: ternary.alwaysFalse
+			count: 1
+			path: packages/anypress-client/src/Crm/ContactPlan.php
+
+		-
+			message: '#^Action callback returns array\|null but should not return anything\.$#'
+			identifier: return.void
+			count: 1
+			path: packages/anypress-client/src/Crm/HighLevelLink.php
+
+		-
+			message: '#^Empty array passed to foreach\.$#'
+			identifier: foreach.emptyArray
+			count: 1
+			path: packages/anypress-client/src/Crm/WooBuyers.php
+
+		-
+			message: '#^Negated boolean expression is always true\.$#'
+			identifier: booleanNot.alwaysTrue
+			count: 1
+			path: packages/anypress-client/src/Crm/WooBuyers.php
+
+		-
+			message: '#^Offset ''address_1'' on null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: packages/anypress-client/src/Crm/WooBuyers.php
+
+		-
+			message: '#^Offset ''address_2'' on null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: packages/anypress-client/src/Crm/WooBuyers.php
+
+		-
+			message: '#^Offset ''city'' on null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: packages/anypress-client/src/Crm/WooBuyers.php
+
+		-
+			message: '#^Offset ''country'' on null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: packages/anypress-client/src/Crm/WooBuyers.php
+
+		-
+			message: '#^Offset ''first_name'' on null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: packages/anypress-client/src/Crm/WooBuyers.php
+
+		-
+			message: '#^Offset ''ip'' on null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: packages/anypress-client/src/Crm/WooBuyers.php
+
+		-
+			message: '#^Offset ''last_name'' on null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: packages/anypress-client/src/Crm/WooBuyers.php
+
+		-
+			message: '#^Offset ''phone'' on null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: packages/anypress-client/src/Crm/WooBuyers.php
+
+		-
+			message: '#^Offset ''postcode'' on null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: packages/anypress-client/src/Crm/WooBuyers.php
+
+		-
+			message: '#^Offset ''state'' on null on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: packages/anypress-client/src/Crm/WooBuyers.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between '''' and '''' will always evaluate to true\.$#'
+			identifier: identical.alwaysTrue
+			count: 1
+			path: packages/anypress-client/src/Crm/WooBuyers.php
+
+		-
+			message: '#^Call to function method_exists\(\) with ''Flamingo_Inbound…'' and ''count'' will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: packages/anypress-client/src/Forms/FormsSwitch.php
+
+		-
+			message: '#^Variable \$status might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: packages/anypress-export/src/Cli.php
+
+		-
+			message: '#^Found usage of constant UPLOADS\. Use wp_get_upload_dir\(\) or wp_upload_dir\(null, false\) instead\.$#'
+			identifier: phpstanWP.wpConstant.fetch
+			count: 1
+			path: packages/anypress-export/src/Plugin.php
+
+		-
+			message: '#^Access to protected property wpdb\:\:\$dbh\.$#'
+			identifier: property.protected
+			count: 1
+			path: packages/anypress-export/src/WpdbDatabase.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: packages/anypress-host/src/Api/WebhookReceiver.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\<mixed\> will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: packages/anypress-host/src/Commerce/FluentCart/FluentCartDomains.php
+
+		-
+			message: '#^Call to an undefined method WC_Order_Item\:\:get_product_id\(\)\.$#'
+			identifier: method.notFound
+			count: 2
+			path: packages/anypress-host/src/Commerce/WooCommerce/WooCommerceAdapter.php
+
+		-
+			message: '#^PHPDoc tag @param for parameter \$subscription with type WC_Subscription is not subtype of native type WC_Order\.$#'
+			identifier: parameter.phpDocType
+			count: 1
+			path: packages/anypress-host/src/Commerce/WooCommerce/WooCommerceSubscriptions.php
+
+		-
+			message: '#^Parameter \#1 \$subscription of method AnyPressHost\\Commerce\\WooCommerce\\WooCommerceSubscriptions\:\:get_parent_order\(\) expects WC_Order, WC_Subscription given\.$#'
+			identifier: argument.type
+			count: 1
+			path: packages/anypress-host/src/Commerce/WooCommerce/WooCommerceSubscriptions.php
+
+		-
+			message: '#^Action callback returns string but should not return anything\.$#'
+			identifier: return.void
+			count: 1
+			path: packages/anypress-host/src/Features/TenantStatusService.php

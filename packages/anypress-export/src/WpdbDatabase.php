@@ -82,7 +82,8 @@ final class WpdbDatabase implements Database
                 'generated' => self::isGenerated((string) ($column['Extra'] ?? '')),
             ];
         }
-        return $this->columns[$table] = $columns;
+        $this->columns[$table] = $columns;
+        return $this->columns[$table];
     }
 
     /**
@@ -183,9 +184,11 @@ final class WpdbDatabase implements Database
     {
         $prefix = (string) $this->wpdb->base_prefix;
         $result = ['otherTables' => [], 'views' => [], 'triggers' => [], 'routines' => []];
-        foreach ((array) $this->quietly(function () {
+        foreach (
+            (array) $this->quietly(function () {
             return $this->wpdb->get_results('SHOW FULL TABLES', ARRAY_N);
-        }) as $row) {
+            }) as $row
+        ) {
             $name = (string) ($row[0] ?? '');
             if ($name === '' || self::isInternal($name)) continue;
             if (($row[1] ?? '') === 'VIEW') {
@@ -194,17 +197,21 @@ final class WpdbDatabase implements Database
                 $result['otherTables'][] = $name;
             }
         }
-        foreach ((array) $this->quietly(function () use ($prefix) {
+        foreach (
+            (array) $this->quietly(function () use ($prefix) {
             return $this->wpdb->get_results($this->wpdb->prepare(
                 'SELECT TRIGGER_NAME FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = DATABASE() AND EVENT_OBJECT_TABLE LIKE %s',
                 $this->wpdb->esc_like($prefix) . '%'
             ), ARRAY_N);
-        }) as $row) {
+            }) as $row
+        ) {
             if (isset($row[0])) $result['triggers'][] = (string) $row[0];
         }
-        foreach ((array) $this->quietly(function () {
+        foreach (
+            (array) $this->quietly(function () {
             return $this->wpdb->get_results('SELECT ROUTINE_NAME FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = DATABASE()', ARRAY_N);
-        }) as $row) {
+            }) as $row
+        ) {
             if (isset($row[0])) $result['routines'][] = (string) $row[0];
         }
         foreach ($result as &$names) {
@@ -255,6 +262,7 @@ final class WpdbDatabase implements Database
         if (!$this->canSwitch()) return $query();
         $before = (string) $dbh->character_set_name();
         if ($before === 'utf8mb4') return $query();
+        // phpcs:ignore WordPress.DB.RestrictedFunctions, WordPress.PHP.NoSilencedErrors -- switches $wpdb's own connection for one read; $wpdb has no call for it.
         if (!@mysqli_set_charset($dbh, 'utf8mb4')) throw new \RuntimeException(__('Could not read the database as utf8mb4.', 'anypress-export'));
         try {
             return $query();
@@ -262,6 +270,7 @@ final class WpdbDatabase implements Database
             if ($this->wpdb->charset === $before) {
                 $this->wpdb->set_charset($dbh, $this->wpdb->charset, $this->wpdb->collate);
             } else {
+                // phpcs:ignore WordPress.DB.RestrictedFunctions, WordPress.PHP.NoSilencedErrors -- puts the connection back as it was.
                 @mysqli_set_charset($dbh, $before);
             }
         }
