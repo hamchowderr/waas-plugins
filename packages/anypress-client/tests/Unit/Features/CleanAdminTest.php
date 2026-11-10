@@ -42,7 +42,7 @@ class CleanAdminTest extends TestCase
 
     public function test_the_included_plugins_are_every_site_types_plugins(): void
     {
-        $this->assertEqualsCanonicalizing(['mcp-adapter', 'fluentform', 'automatorwp', 'leadconnector'], CleanAdmin::managed_folders());
+        $this->assertEqualsCanonicalizing(['mcp-adapter', 'polylang', 'fluentform', 'automatorwp', 'leadconnector'], CleanAdmin::managed_folders());
         $this->assertTrue(CleanAdmin::is_managed('fluentform/fluentform.php'));
         $this->assertFalse(CleanAdmin::is_managed('shortcodes-ultimate/shortcodes-ultimate.php'));
     }

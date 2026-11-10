@@ -59,7 +59,8 @@ class RolesManager
         }
 
         // Plus the MCP Adapter, always on.
-        $enabled_plugins = McpServer::with_adapter($plan['plugins']);
+        // Plus Polylang while the owner has Languages on.
+        $enabled_plugins = Languages::with_polylang(McpServer::with_adapter($plan['plugins']));
         $all_plugins = array_keys(get_plugins());
         $disabled_plugins = array_diff($all_plugins, $enabled_plugins);
         if ($plan['own_plugins']) {
@@ -102,10 +103,10 @@ class RolesManager
         return ['matched' => $matched, 'missing' => $missing, 'plugins' => array_values(array_unique($plugins)), 'own_plugins' => $own_plugins];
     }
 
-    /** The plugins the template manages: every plugin any role in roles.json lists, and the MCP Adapter. */
+    /** The plugins the template manages: every plugin any role in roles.json lists, the MCP Adapter and Polylang. */
     public static function managed_plugins(array $roles_plugins): array
     {
-        $managed = [McpServer::PLUGIN];
+        $managed = [McpServer::PLUGIN, Languages::PLUGIN];
         foreach ($roles_plugins as $role) {
             if (is_array($role)) {
                 $managed = array_merge($managed, array_filter((array) ($role['plugins'] ?? []), 'is_string'));

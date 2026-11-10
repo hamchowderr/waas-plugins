@@ -81,7 +81,7 @@ class CleanAdmin
         return self::$managed;
     }
 
-    /** The folders of the plugins this store's site type turns on (and the MCP Adapter), or null when no site type matches. */
+    /** The folders of the plugins this store's site type turns on (and the MCP Adapter, and Polylang while Languages is on), or null when no site type matches. */
     public static function planned_folders(): ?array
     {
         if (self::$planned !== null) {
@@ -95,7 +95,7 @@ class CleanAdmin
 
             return null;
         }
-        $files = array_merge($plan['plugins'], [McpServer::PLUGIN]);
+        $files = Languages::with_polylang(array_merge($plan['plugins'], [McpServer::PLUGIN]));
 
         self::$planned = array_values(array_unique(array_map(static fn ($file) => explode('/', $file)[0], $files)));
 

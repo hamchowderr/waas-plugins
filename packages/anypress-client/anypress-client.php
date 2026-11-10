@@ -12,7 +12,7 @@ Plugin Name: AnyPress Client
 Plugin URI: https://github.com/hamchowderr/waas-plugins
 Description: Runs on each AnyPress website: one-click login from the storefront, turns plugins on or off to match the store's plan (roles), and lets the AnyPress connector edit the site's design and content.
 Author: Otaku Solutions
-Version: 2.21.0
+Version: 2.22.0
 Author URI: https://otakusolutions.io
 Update URI: anypress-client
 Requires at least: 6.9
@@ -25,7 +25,7 @@ Text Domain: anypress-client
 define( 'ANYPRESS_CLIENT_SLUG', 'anypress-client' );
 define( 'ANYPRESS_CLIENT_BASENAME', plugin_basename( __FILE__ ) );
 define( 'ANYPRESS_CLIENT_UPDATE_URI', 'anypress-client' );
-define( 'ANYPRESS_CLIENT_VERSION', '2.21.0' );
+define( 'ANYPRESS_CLIENT_VERSION', '2.22.0' );
 define( 'ANYPRESS_CLIENT_TEXTDOMAIN', 'anypress-client' );
 
 use AnyPressClient\Api\AdminLogin;
@@ -102,6 +102,8 @@ if (!wp_doing_ajax()) {
     new ConnectPage();
     // The same abilities as an MCP server, through WordPress's MCP Adapter, while the owner has it on (Your plan page).
     new McpServer();
+    // The Languages switch: the website in more than one language through Polylang, set up once when turned on.
+    new \AnyPressClient\Features\Languages();
     // The page a pattern preview link opens (the preview gallery in AI apps).
     new \AnyPressClient\Features\PatternPreview();
     // The website assistant beside the page editor and the Site Editor, opened from the admin bar too.

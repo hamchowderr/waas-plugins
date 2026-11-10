@@ -6,6 +6,7 @@ use Brain\Monkey\Actions;
 use Brain\Monkey\Functions;
 use Tests\Unit\TestCase;
 use AnyPressClient\Features\AdminRolesSettings;
+use AnyPressClient\Features\Languages;
 use AnyPressClient\Features\McpServer;
 use AnyPressClient\Features\PluginBootstrap;
 use AnyPressClient\Features\RolesManager;
@@ -125,7 +126,7 @@ class RolesManagerTest extends TestCase
     {
         $this->assertFalse(RolesManager::plan_for(['a'], ['a' => ['plugins' => [], 'ownPlugins' => 'yes']])['own_plugins']);
         $this->assertTrue(RolesManager::plan_for(['a', 'b'], ['a' => ['plugins' => []], 'b' => ['plugins' => [], 'ownPlugins' => true]])['own_plugins']);
-        $this->assertSame([McpServer::PLUGIN, 'x.php', 'y.php'], RolesManager::managed_plugins(['a' => ['plugins' => ['x.php']], 'b' => ['plugins' => ['x.php', 'y.php']], 'c' => 'broken']));
+        $this->assertSame([McpServer::PLUGIN, Languages::PLUGIN, 'x.php', 'y.php'], RolesManager::managed_plugins(['a' => ['plugins' => ['x.php']], 'b' => ['plugins' => ['x.php', 'y.php']], 'c' => 'broken']));
     }
 
     public function test_plan_for_splits_found_and_missing_roles(): void

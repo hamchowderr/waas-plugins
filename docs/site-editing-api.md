@@ -46,6 +46,9 @@ A signature is accepted within 5 minutes of `t`, and each `n` only once. Signed 
 | GET, PUT | `/site/parts/header`, `/site/parts/footer` | The header or footer as blocks; PUT `{ content }` saves the site's own copy |
 | GET | `/site/menus` | Navigation menus |
 | PUT | `/site/menus/{id}` | `{ content, title? }`, navigation-link blocks |
+| GET | `/site/languages` | Whether the site is in more than one language (Polylang, installed off on every store): `on`, `available`, `ready`, its `languages` (the site's own first, with each one's `code` and `pages` once ready) and the `choices` it can add |
+| PUT | `/site/languages` | `{ on, languages? }`: on with WordPress locales besides the site's own (up to 9), or off. Turning on sets Polylang up on the next visit (translation files download, a language switcher joins the menus, existing pages get the site's own language); read until `ready` is true. Off takes the switcher out and turns Polylang off; translated pages stay as ordinary pages |
+| POST | `/site/pages/{id}/translations` | `{ language }`: the page's copy in another of the site's languages, made as a linked draft with the original's title and content if it doesn't exist (`created`). Translate its text with PATCH `/site/pages/{id}` and publish it. While Languages is on, pages show their `language` and `translations` (code to page id) |
 | POST | `/site/media` | Copies an image from a public https link `{ url, alt? }` into the media library |
 | GET | `/site/products` | The shop's FluentCart products, newest first: id, title, status, link and the address each was added from |
 | POST | `/site/products` | Adds 1 to 20 products `{ products: [{ title, description?, excerpt?, url?, status?, images?, categories?, variants?: [{ title?, sku?, price, compareAtPrice?, available? }] }] }` to FluentCart, as drafts unless `status` is `publish`. Prices are amounts such as `"19.99"`. Up to 10 https photos go into the media library and the product's gallery. A product whose `url` was added before is left as it is. Each result has `status` (`created`, `exists` or `failed` with a `reason`), the product's `id`, `link` and `productStatus` (`draft` or `publish`), and how many `images` came in |
@@ -85,6 +88,7 @@ The same actions are registered as WordPress abilities (the Abilities API in Wor
 | `anypress/get-styles`, `update-styles` | Colours, fonts and sizes, and changing them |
 | `anypress/get-site-part`, `update-site-part` | The header or footer |
 | `anypress/list-menus`, `update-menu` | Navigation menus |
+| `anypress/get-languages`, `translate-page` | The site's languages; a page's draft copy in another of them |
 | `anypress/add-image` | Copy an image from a public https link into the media library |
 
 Each ability sets all three hints (`readonly`, `destructive`, `idempotent`). Changes that WordPress keeps a revision of are marked not destructive, since they can be undone; `remove-page-section` is marked destructive. They show in the abilities REST API (`/wp-json/wp-abilities/v1/abilities?category=anypress`) and, with `meta.mcp.public`, to MCP clients through WordPress's MCP Adapter plugin when a site has it.

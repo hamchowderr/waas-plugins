@@ -233,6 +233,17 @@ class SiteAbilities
                 'description' => 'Replaces a menu\'s links (navigation-link and navigation-submenu blocks) and optionally its title.',
                 'input' => $object(['id' => ['type' => 'integer', 'minimum' => 1, 'description' => 'A menu id from list-menus.'], 'content' => $blocks, 'title' => ['type' => 'string']], ['id', 'content']),
             ],
+            'get-languages' => [
+                'run' => ['read', 'get_languages', 'edit_pages'],
+                'label' => 'List the website\'s languages',
+                'description' => 'Whether Languages is on, and each language with its code, name and number of pages. The owner turns Languages on.',
+            ],
+            'translate-page' => [
+                'run' => ['add', 'translate_page', 'edit_pages'],
+                'label' => 'Make a page\'s copy in another language',
+                'description' => 'Makes a draft copy of a page in another of the website\'s languages (or returns the copy that exists), linked to the original. Then translate its text with update-page and publish it.',
+                'input' => $object(['id' => $id, 'language' => ['type' => 'string', 'description' => 'A language code from get-languages, like es.']], ['id', 'language']),
+            ],
             'add-image' => [
                 'run' => ['add', 'add_media', 'upload_files'],
                 'label' => 'Add an image',
