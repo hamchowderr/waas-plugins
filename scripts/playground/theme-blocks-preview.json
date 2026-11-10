@@ -1,9 +1,9 @@
 {
   "$schema": "https://playground.wordpress.net/blueprint-schema.json",
   "meta": {
-    "title": "AnyPress store template v1.1.5 preview",
+    "title": "AnyPress store preview (everything site type)",
     "author": "hamchowderr",
-    "description": "AnyPress theme 0.7.0 and AnyPress Blocks 0.3.0 with AnyPress Client 2.4.0: site details on every kit, synced patterns with overrides, wide and sidebar templates, and the MCP Adapter switch."
+    "description": "The newest AnyPress theme and AnyPress Blocks releases with AnyPress Client from main, on the everything site type."
   },
   "landingPage": "/store-preview/",
   "preferredVersions": {
