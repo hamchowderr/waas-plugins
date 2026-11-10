@@ -303,6 +303,21 @@ class HighLevelLink
     }
 
     /** WP Fusion is set to HighLevel and this site has a link: the token and sub-account are ours to give. */
+    /**
+     * What the Your plan page shows: the sub-account this site is tied to (null before the first check-in) and whether
+     * WP Fusion sends contacts there.
+     *
+     * @return array{location_id: ?string, connected: bool}
+     */
+    public static function status(): array
+    {
+        $link = get_option(self::OPTION);
+        $location = is_array($link) && isset($link['location_id']) ? (string) $link['location_id'] : null;
+        $crm = function_exists('wpf_get_option') ? wpf_get_option('crm') : null;
+
+        return ['location_id' => $location, 'connected' => $location !== null && function_exists('wp_fusion') && $crm === 'highlevel'];
+    }
+
     private function ours(): bool
     {
         return function_exists('wp_fusion') && function_exists('wpf_get_option') && wpf_get_option('crm') === 'highlevel' && (bool) get_option(self::OPTION);

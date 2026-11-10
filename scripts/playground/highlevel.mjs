@@ -33,7 +33,25 @@ const cli = await runCLI({
         steps: [
             { step: 'installTheme', themeData: { resource: 'literal', name: 'anypress.zip', contents: readFileSync(THEME) }, options: { activate: true } },
             { step: 'installPlugin', pluginData: { resource: 'url', url: `https://downloads.wordpress.org/plugin/wp-fusion-lite.${WPF}.zip` } },
+            // A plugin the owner adds (Hello Dolly), and one the template ships for other site types (Classic Editor).
+            { step: 'installPlugin', pluginData: { resource: 'wordpress.org/plugins', slug: 'hello-dolly' } },
+            { step: 'installPlugin', pluginData: { resource: 'wordpress.org/plugins', slug: 'classic-editor' } },
             { step: 'activatePlugin', pluginPath: 'anypress-client/anypress-client.php' },
+            { step: 'mkdir', path: '/wordpress/wp-content/plugins/anypress-client-data' },
+            {
+                // The template's site types: HighLevel sites let the owner add plugins and say what each one is for.
+                step: 'writeFile',
+                path: '/wordpress/wp-content/plugins/anypress-client-data/roles.json',
+                data: JSON.stringify({
+                    website: { title: 'Website', plugins: ['wp-fusion-lite/wp-fusion-lite.php', 'classic-editor/classic-editor.php'] },
+                    highlevel: {
+                        title: 'HighLevel site',
+                        ownPlugins: true,
+                        plugins: ['wp-fusion-lite/wp-fusion-lite.php'],
+                        about: { 'wp-fusion-lite/wp-fusion-lite.php': 'Sends new users and sign-ups to your HighLevel sub-account as contacts. Connected for you.' },
+                    },
+                }),
+            },
             {
                 // A HighLevel store: its site key and site type. The API's answer to the signed crm-link request, and
                 // HighLevel's answers to WP Fusion, are played here; every request is kept in anypress_test_requests.
@@ -98,6 +116,18 @@ try {
     check(before.wpf && !before.crm, 'WP Fusion Lite is active and not connected', before);
     check(before.scheduled, 'the hourly link check is scheduled', before);
 
+    // Plugins: the template's follow the site type, the owner's own stay as the owner set them.
+    const plugins = await php("echo wp_json_encode(['owners' => is_plugin_active('hello-dolly/hello.php'), 'template' => is_plugin_active('classic-editor/classic-editor.php'), 'wpf' => is_plugin_active('wp-fusion-lite/wp-fusion-lite.php')]);");
+    check(plugins.owners && plugins.wpf, "a plugin the owner added stays on, and the site type's plugins are on", plugins);
+    check(!plugins.template, "a template plugin outside the HighLevel site type is switched off", plugins);
+
+    // Your plan, before the site is tied to its sub-account: what each plugin is for, and what is connected.
+    const planPage = () => php("wp_set_current_user(1); ob_start(); (new \\AnyPressClient\\Features\\CustomerPlanPage())->render(); echo wp_json_encode(ob_get_clean());");
+    const unlinked = await planPage();
+    check(unlinked.includes('plugins of your own') && unlinked.includes('What it is for') && unlinked.includes('Connected for you.'), 'Your plan says owners may add plugins and what each included one is for', unlinked.slice(0, 300));
+    check(unlinked.includes('Connected to HighLevel') && unlinked.includes('KnowBS connects it') && unlinked.includes('Open LeadConnector'), 'Your plan shows WP Fusion not connected yet and how to connect LeadConnector', unlinked.slice(0, 300));
+    check(!unlinked.includes('change your plan'), 'no "change your plan" link on a HighLevel site');
+
     // The hourly check: the store asks the API and connects WP Fusion.
     await php("do_action('anypress_highlevel_link_check'); echo 'null';");
     const asked = (await requests()).filter((r) => r.api);
@@ -153,6 +183,25 @@ try {
     await php("delete_option('anypress_test_untied'); echo 'null';");
     const retied = await checkNow(true);
     check(retied.data?.linked && retied.data?.connected, 'tied again: connected at once, without the hour wait', retied);
+
+    const linked = await planPage();
+    check(linked.includes('Connected. New users and sign-ups go to your HighLevel sub-account (loc-test)'), 'Your plan shows WP Fusion connected to the sub-account', linked.slice(0, 300));
+    if (process.env.SHOTS) {
+        // Playwright from the machine (not a dependency here): require() honours NODE_PATH.
+        const { chromium } = (await import('node:module')).createRequire(import.meta.url)('playwright');
+        const browser = await chromium.launch();
+        for (const [name, viewport] of [['desktop', { width: 1280, height: 900 }], ['phone', { width: 390, height: 844 }]]) {
+            const page = await browser.newPage({ viewport, deviceScaleFactor: 2 });
+            await page.goto(`${cli.serverUrl}/wp-login.php`);
+            await page.fill('#user_login', 'admin');
+            await page.fill('#user_pass', 'password');
+            await page.click('#wp-submit');
+            await page.waitForLoadState('networkidle');
+            await page.goto(`${cli.serverUrl}/wp-admin/index.php?page=anypress-your-plan`);
+            await page.screenshot({ path: `${process.env.SHOTS}/your-plan-${name}.png`, fullPage: true });
+        }
+        await browser.close();
+    }
 
     // A store made before HighLevel sites had their own plugins: the template connected WP Fusion to FluentCRM.
     // The link takes over from that, and check-now says which CRM WP Fusion is on.

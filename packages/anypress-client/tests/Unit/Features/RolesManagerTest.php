@@ -106,6 +106,29 @@ class RolesManagerTest extends TestCase
         $this->run_manager();
     }
 
+    public function test_a_role_with_own_plugins_leaves_plugins_the_owner_added_alone(): void
+    {
+        // forms/forms.php is the template's (another role lists it), seo/seo.php the owner's own.
+        $this->writeRoles([
+            'highlevel' => ['title' => 'HighLevel site', 'ownPlugins' => true, 'plugins' => ['shop/shop.php']],
+            'website' => ['title' => 'Website', 'plugins' => ['shop/shop.php', 'forms/forms.php']],
+        ]);
+        $this->site_roles = ['highlevel'];
+        $this->active[] = 'seo/seo.php';
+
+        Functions\expect('activate_plugins')->once()->with([]);
+        Functions\expect('deactivate_plugins')->once()->with(\Mockery::on(fn ($files) => array_values($files) === ['forms/forms.php']));
+
+        $this->run_manager();
+    }
+
+    public function test_own_plugins_only_with_true(): void
+    {
+        $this->assertFalse(RolesManager::plan_for(['a'], ['a' => ['plugins' => [], 'ownPlugins' => 'yes']])['own_plugins']);
+        $this->assertTrue(RolesManager::plan_for(['a', 'b'], ['a' => ['plugins' => []], 'b' => ['plugins' => [], 'ownPlugins' => true]])['own_plugins']);
+        $this->assertSame([McpServer::PLUGIN, 'x.php', 'y.php'], RolesManager::managed_plugins(['a' => ['plugins' => ['x.php']], 'b' => ['plugins' => ['x.php', 'y.php']], 'c' => 'broken']));
+    }
+
     public function test_plan_for_splits_found_and_missing_roles(): void
     {
         $plan = RolesManager::plan_for(['a', 'b', 'c'], [
