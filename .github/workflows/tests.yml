@@ -420,6 +420,49 @@ jobs:
           FLUENT_COMMUNITY: ${{ matrix.fluent-community }}
         run: npm run circle
 
+  playground-languages:
+    # The Languages switch on a Playground store of the online-store and community site types: Polylang set up once
+    # when turned on, a page's Spanish copy at /es/, the menu's language switcher and links, and turning it off.
+    name: anypress-client Languages on WordPress Playground (${{ matrix.site-type }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        site-type: ["online-store", "community"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Checkout the store template's site types
+        uses: actions/checkout@v4
+        with:
+          repository: hamchowderr/waas-provisioning-api
+          path: waas-provisioning-api
+          sparse-checkout: templates/anypress-store/roles.json
+          sparse-checkout-cone-mode: false
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/anypress-client
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: Languages test
+        working-directory: scripts/playground
+        env:
+          ANYPRESS_API_DIR: ${{ github.workspace }}/waas-provisioning-api
+          SITE_TYPE: ${{ matrix.site-type }}
+        run: npm run languages
+
   playground-support:
     # AnyPress Host's support desk on a WordPress Playground storefront with Fluent Support: the API's signed calls open,
     # list, read, reply to and close a customer's tickets, other customers can't see them, used or badly signed requests
