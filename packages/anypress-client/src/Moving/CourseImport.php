@@ -128,7 +128,7 @@ class CourseImport extends NativeImport
             ]);
             $course_id = (int) ($made['course']['id'] ?? 0);
             if (!$course_id) {
-                throw new \RuntimeException(sprintf('FluentCommunity made no course for "%s".', $course['title']));
+                throw new \RuntimeException(sprintf('FluentCommunity made no course for "%s".', esc_html($course['title'])));
             }
             // Recorded at once, so undo finds the course even if a later step stops the run.
             $state['courses'][$ld_id] = $course_id;
@@ -224,7 +224,7 @@ class CourseImport extends NativeImport
             if (!$must) {
                 return [];
             }
-            throw new \RuntimeException(sprintf('FluentCommunity refused %s %s: %s', $method, $path !== '' ? $path : '/', wp_json_encode($data)));
+            throw new \RuntimeException(sprintf('FluentCommunity refused %s %s: %s', esc_html($method), esc_html($path !== '' ? $path : '/'), esc_html((string) wp_json_encode($data))));
         }
 
         return json_decode((string) wp_json_encode($data), true) ?: ['ok' => true];
@@ -411,10 +411,13 @@ class CourseImport extends NativeImport
         $headings = is_array($headings) ? array_filter($headings, fn ($h) => is_array($h) && isset($h['order'], $h['post_title'])) : [];
         usort($headings, fn ($a, $b) => (int) $a['order'] <=> (int) $b['order']);
         $outline = [];
+        $placed = 0;
         foreach ($headings as $heading) {
-            while ($items && count($outline) < (int) $heading['order']) {
+            while ($items && $placed < (int) $heading['order']) {
                 $outline[] = array_shift($items);
+                $placed++;
             }
+            $placed++;
             $outline[] = ['heading' => sanitize_text_field((string) $heading['post_title'])];
         }
 
