@@ -19,6 +19,7 @@
 
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runCLI } from '@wp-playground/cli';
@@ -356,10 +357,10 @@ await check('abilities: listed with all three safety hints', async () => {
     const list = await res.json();
     expect(res.status === 200 && Array.isArray(list), `HTTP ${res.status}: ${JSON.stringify(list).slice(0, 300)}`);
     for (const a of list) abilities.set(a.name, a);
-    // 22 site-editing abilities, plus check-forms and switch-forms (the forms switch, tested by forms.mjs),
+    // 23 site-editing abilities and 1 guide (an MCP resource), plus check-forms and switch-forms (the forms switch, tested by forms.mjs),
     // check-shop and switch-shop (shop-switch.mjs), check-crm and switch-crm (crm-switch.mjs), and check- and switch-
     // support, affiliate and community (moving.mjs).
-    expect(list.length === 34, `${list.length} abilities: ${list.map((a) => a.name).join(', ')}`);
+    expect(list.length === 36, `${list.length} abilities: ${list.map((a) => a.name).join(', ')}`);
     const unsure = list.filter((a) => ['readonly', 'destructive', 'idempotent'].some((k) => typeof a.meta?.annotations?.[k] !== 'boolean'));
     expect(!unsure.length, `missing hints: ${unsure.map((a) => a.name).join(', ')}`);
 });
@@ -431,6 +432,8 @@ await check('library: style variations list kits, palettes, fonts and section st
     expect(kinds('kit').length >= 16, `kits: ${kinds('kit').map((v) => v.slug).join(', ')}`);
     expect(kinds('colors').length >= 6 && kinds('fonts').length >= 4, `colors ${kinds('colors').length}, fonts ${kinds('fonts').length}`);
     expect(kinds('kit').every((v) => v.colors?.primary), 'a kit without its colours');
+    const noHome = kinds('kit').filter((v) => !v.homePage || !v.patternCategory).map((v) => v.slug);
+    expect(noHome.length === 0, `kits without their home page or category: ${noHome.join(', ')}`);
     const classes = res.data.blockStyles.map((s) => s.className);
     expect(classes.includes('is-style-section-dark'), `block styles: ${classes.join(', ')}`);
 });
@@ -523,7 +526,8 @@ async function mcpTools(version) {
     const list = await mcp('tools/list', {}, { version });
     expectStatus(list, 200);
     const tools = list.data.result?.tools ?? [];
-    expect(tools.length === abilities.size && abilities.size > 0, `${tools.length} tools for ${abilities.size} abilities`);
+    const toolAbilities = [...abilities.values()].filter((a) => a.meta?.mcp?.type !== 'resource').length;
+    expect(tools.length === toolAbilities && toolAbilities > 0, `${tools.length} tools for ${toolAbilities} abilities`);
     const getSite = tools.find((tool) => /get-site$/.test(tool.name));
     expect(getSite, `no get-site tool in ${tools.map((tool) => tool.name).join(', ')}`);
     expect(getSite.annotations?.readOnlyHint === true, `get-site annotations ${JSON.stringify(getSite.annotations)}`);
@@ -569,6 +573,50 @@ await check('MCP 2026-07-28: discover, every site ability is a tool, get-site ru
     expectStatus(discover, 200);
     expect(JSON.stringify(discover.data.result ?? {}).includes('AnyPress website'), `discover ${JSON.stringify(discover.data).slice(0, 300)}`);
     await mcpTools('2026-07-28');
+});
+
+await check('MCP: the build guide is a resource the app can read', async () => {
+    const init = await mcp('initialize', INIT);
+    mcpSession = init.session;
+    const list = await mcp('resources/list');
+    expectStatus(list, 200);
+    const guide = (list.data.result?.resources ?? []).find((r) => r.uri === 'skill://anypress-website/SKILL.md');
+    expect(guide, `resources: ${JSON.stringify(list.data).slice(0, 300)}`);
+    const read = await mcp('resources/read', { uri: guide.uri });
+    const text = JSON.stringify(read.data.result ?? {});
+    expect(text.includes('apply-style-variation') && text.includes('preview-pattern'), `read: ${text.slice(0, 300)}`);
+});
+
+await check('preview: a signed link shows a kit home page in the kit\'s look, and runs out', async () => {
+    const kits = await site('GET', '/styles/variations');
+    const home = { name: kits.data.variations.find((v) => v.slug === 'kit-hearth').homePage };
+    const res = await site('GET', `/preview?name=${encodeURIComponent(home.name)}&variation=kit-hearth`);
+    expectStatus(res, 200);
+    const url = new URL(res.data.url);
+    const page = await fetch(`${base}${url.pathname}${url.search}`);
+    const html = await page.text();
+    expect(page.status === 200 && html.includes('wp-site-blocks') && html.includes('anypress-preview'), `preview page: HTTP ${page.status} ${html.slice(0, 200)}`);
+    expect(!/X-Frame-Options/i.test([...page.headers.keys()].join(' ')) && page.headers.get('content-security-policy') === 'frame-ancestors *', 'preview cannot be framed');
+    const looks = await site('GET', '/styles/variations');
+    const hearth = looks.data.variations.find((v) => v.slug === 'kit-hearth');
+    expect(html.toLowerCase().includes(hearth.colors.primary.toLowerCase()), 'the preview is not in the Hearth colours');
+    if (process.env.SHOTS) {
+        // Pictures of the preview page, for a person to look at (SHOTS=<folder>).
+        const { chromium } = createRequire(import.meta.url)('playwright');
+        const browser = await chromium.launch();
+        for (const [name, viewport] of [['desktop', { width: 1280, height: 900 }], ['phone', { width: 390, height: 844 }]]) {
+            const tab = await browser.newPage({ viewport, deviceScaleFactor: 2 });
+            await tab.goto(`${base}${url.pathname}${url.search}`, { waitUntil: 'networkidle' });
+            await tab.screenshot({ path: `${process.env.SHOTS}/preview-${home.name.replace('/', '-')}-${name}.png`, fullPage: name === 'desktop' });
+        }
+        await browser.close();
+    }
+    const forged = await fetch(`${base}/?anypress_preview=${url.searchParams.get('anypress_preview').replace(/.$/, 'x')}`);
+    expect(forged.status === 403, `forged token: HTTP ${forged.status}`);
+    const missing = await site('GET', '/preview?name=anypress/no-such-pattern');
+    expectStatus(missing, 404);
+    const viaAbility = await ability('anypress/preview-pattern', { name: home.name });
+    expect(viaAbility.status === 200 && viaAbility.data.url.includes('anypress_preview='), `preview-pattern: HTTP ${viaAbility.status}`);
 });
 
 await check("brand: AnyPress Client by default, the reseller's brand once anypress_brand_name is set", async () => {

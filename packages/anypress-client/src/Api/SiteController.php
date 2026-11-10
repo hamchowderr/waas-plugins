@@ -51,6 +51,7 @@ class SiteController
             ['/patterns', WP_REST_Server::READABLE, 'list_patterns'],
             ['/patterns/categories', WP_REST_Server::READABLE, 'list_pattern_categories'],
             ['/blocks', WP_REST_Server::READABLE, 'list_blocks'],
+            ['/preview', WP_REST_Server::READABLE, 'preview_pattern'],
             ['/styles/variations', WP_REST_Server::READABLE, 'list_style_variations'],
             ['/styles/variations/(?P<slug>[a-z0-9_-]+)', WP_REST_Server::CREATABLE, 'apply_style_variation'],
             ['/patterns/(?P<name>[a-z0-9_-]+/[a-z0-9_-]+)', WP_REST_Server::READABLE, 'get_pattern'],

@@ -34,8 +34,28 @@ class SiteAbilities
         ]);
     }
 
+    /** Guides an AI app reads as MCP resources (skill://...), the way the AnyPress connector serves its skills. */
+    public const GUIDES = [
+        'build-a-website' => ['uri' => 'skill://anypress-website/SKILL.md', 'label' => 'Guide: build or redesign this website'],
+    ];
+
     public function register_abilities(): void
     {
+        foreach (self::GUIDES as $file => $guide) {
+            wp_register_ability(self::CATEGORY . '/guide-' . $file, [
+                'label' => $guide['label'],
+                'description' => 'Step-by-step guide for building this website with its own theme, kits, blocks and site tools.',
+                'category' => self::CATEGORY,
+                'output_schema' => ['type' => 'string'],
+                'execute_callback' => fn () => (string) file_get_contents(dirname(__DIR__, 2) . '/assets/guides/' . $file . '.md'), // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- a file in this plugin.
+                'permission_callback' => fn () => current_user_can('edit_pages'),
+                'meta' => [
+                    'show_in_rest' => true,
+                    'mcp' => ['public' => true, 'type' => 'resource', 'uri' => $guide['uri'], 'mimeType' => 'text/markdown'],
+                    'annotations' => self::ANNOTATIONS['read'],
+                ],
+            ]);
+        }
         foreach ($this->abilities() as $name => $ability) {
             [$kind, $method, $capability] = $ability['run'];
             $schema = $ability['input'] ?? null;
@@ -154,6 +174,12 @@ class SiteAbilities
                 'label' => 'List the interactive blocks',
                 'description' => 'The blocks this website has beyond WordPress\'s own (AnyPress Blocks: carousel, popup, counter, countdown, map...), each with its settings (block attributes) and patterns that use it; read one with get-pattern to see its markup.',
                 'output' => 'array',
+            ],
+            'preview-pattern' => [
+                'run' => ['read', 'preview_pattern', 'edit_pages'],
+                'label' => 'Preview a pattern',
+                'description' => 'A link, good for 15 minutes, to a page showing one pattern (a section, a starter page or a kit\'s home page) in this website\'s look, or in a style variation from list-style-variations. Share it so the owner can see a choice before it goes on a page; nothing on the website changes.',
+                'input' => $object(['name' => ['type' => 'string', 'pattern' => '^[a-z0-9_-]+/[a-z0-9_-]+$'], 'variation' => ['type' => 'string', 'pattern' => '^[a-z0-9_-]*$']], ['name']),
             ],
             'get-pattern' => [
                 'run' => ['read', 'get_pattern', 'edit_pages'],
