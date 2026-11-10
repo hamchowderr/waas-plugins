@@ -5,8 +5,8 @@ namespace AnyPressClient\Moving;
 use WP_CLI;
 
 /**
- * `wp anypress support switch`, `wp anypress affiliate switch`, `wp anypress community switch` and `wp anypress circle switch`: one command per Fluent
- * plugin importer (see NativeImport).
+ * `wp anypress support switch`, `wp anypress affiliate switch`, `wp anypress community switch`,
+ * `wp anypress course switch` and `wp anypress circle switch`: one command per switch (see NativeImport).
  */
 class ImportCommand
 {
@@ -25,6 +25,7 @@ class ImportCommand
      * agents. affiliate: AffiliateWP, Affiliates Manager, Solid Affiliate, SliceWP or Ultimate Affiliate Pro
      * affiliates, referrals, customers, payouts and visits (into an empty FluentAffiliate only). community:
      * BuddyPress or BuddyBoss groups, members, posts, comments and reactions (into an empty FluentCommunity only).
+     * course: LearnDash courses with their lessons, topics, students and progress, as FluentCommunity courses.
      * circle: a Circle community through Circle's Admin API: discussion spaces with their members and moderators,
      * space groups, topics, posts, comments and replies, members as WordPress users (into an empty FluentCommunity).
      *
@@ -60,6 +61,7 @@ class ImportCommand
      *     wp anypress support switch --user=admin --dry-run
      *     wp anypress affiliate switch --user=admin --from=slicewp
      *     wp anypress community switch --user=admin --undo
+     *     wp anypress course switch --user=admin --dry-run
      *     CIRCLE_API_TOKEN=... wp anypress circle switch --user=admin --dry-run
      *
      * @subcommand switch
