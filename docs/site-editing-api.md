@@ -39,6 +39,7 @@ A signature is accepted within 5 minutes of `t`, and each `n` only once. Signed 
 | GET | `/site/patterns/categories` | Pattern categories (starter pages, each kit's sections, shared sections) with how many patterns each has |
 | GET | `/site/blocks` | The interactive blocks beyond WordPress's own (AnyPress Blocks), with their settings and patterns that use them |
 | GET | `/site/styles/variations` | The theme's style variations (kits, other looks, palettes, font sets, and which are on), and the section and block styles (`is-style-<slug>`) |
+| GET | `/site/preview?name=&variation=` | A link, good for 15 minutes, to a page showing one pattern (a section, a starter page or a kit's home page) in the site's look or in one of the theme's style variations. The page needs no sign-in, can be shown in a frame, is not indexed and changes nothing |
 | POST | `/site/styles/variations/{slug}` | Switches a variation on, as Styles in the Site Editor does: a kit or look replaces the site's styles, a palette or font set changes only those; the old styles stay as a revision |
 | GET | `/site/styles` | The theme's colours, fonts, font sizes and spacing, the resulting styles, and the site's own changes |
 | PATCH | `/site/styles` | Merges `{ settings?, styles? }` (theme.json form) into the site's changes, as Styles in the Site Editor does |
@@ -79,7 +80,8 @@ The same actions are registered as WordPress abilities (the Abilities API in Wor
 | `anypress/list-page-revisions`, `restore-page-revision` | Earlier versions of a page, and undo |
 | `anypress/find-patterns`, `get-pattern`, `list-pattern-categories` | Starter pages, kit and shared sections, and their markup |
 | `anypress/list-blocks` | The interactive blocks (AnyPress Blocks) and their settings |
-| `anypress/list-style-variations`, `apply-style-variation` | The theme's looks (kits, palettes, font sets), section styles, and switching a look on |
+| `anypress/list-style-variations`, `apply-style-variation` | The theme's looks (kits with their home page and section category, palettes, font sets), section styles, and switching a look on |
+| `anypress/preview-pattern` | A preview link for a pattern, in the site's look or a style variation |
 | `anypress/get-styles`, `update-styles` | Colours, fonts and sizes, and changing them |
 | `anypress/get-site-part`, `update-site-part` | The header or footer |
 | `anypress/list-menus`, `update-menu` | Navigation menus |
@@ -89,8 +91,10 @@ Each ability sets all three hints (`readonly`, `destructive`, `idempotent`). Cha
 
 ## Over MCP
 
-Stores come with WordPress's [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin installed but off. The store owner turns it on or off on **Dashboard > Your plan > AI apps (MCP)** (`Features\McpServer`); the plan keeps the adapter on while the switch is on, and off otherwise.
+Stores come with WordPress's [MCP Adapter](https://wordpress.org/plugins/mcp-adapter/) plugin installed and always on (`Features\McpServer` keeps it among the plan's plugins).
 
-While it is on, the store has an MCP server called "AnyPress website" at `/wp-json/mcp/anypress`, with one tool for each ability above. It speaks MCP 2025-11-25 (initialize, then a session) and 2026-07-28 (stateless). An app signs in with a WordPress username and an [application password](https://developer.wordpress.org/rest-api/reference/application-passwords/) the owner makes in their profile, and only users who can `edit_pages` get in; each tool then checks that user's own capabilities, as above. Revoking the application password stops that app.
+The store has an MCP server called "AnyPress website" at `/wp-json/mcp/anypress`, with one tool for each ability above. It speaks MCP 2025-11-25 (initialize, then a session) and 2026-07-28 (stateless). An app signs in with a WordPress username and an [application password](https://developer.wordpress.org/rest-api/reference/application-passwords/) the owner makes in their profile, and only users who can `edit_pages` get in; each tool then checks that user's own capabilities, as above. Revoking the application password stops that app.
+
+The server also offers a guide as an MCP resource, `skill://anypress-website/SKILL.md`: the steps for building or redesigning the site with these tools (find a kit, preview it, switch it on, build pages from its sections as drafts). Apps that read resources can follow it as a workflow.
 
 The adapter's own default server (`/wp-json/mcp/mcp-adapter-default-server`) is also there, with its three discover, describe and run tools.

@@ -51,8 +51,14 @@ class McpServer
     public function create_server($adapter): void
     {
         $tools = [];
+        $resources = [];
         foreach (wp_get_abilities() as $ability) {
-            if ($ability->get_category() === \AnyPressClient\Api\SiteAbilities::CATEGORY) {
+            if ($ability->get_category() !== \AnyPressClient\Api\SiteAbilities::CATEGORY) {
+                continue;
+            }
+            if (($ability->get_meta()['mcp']['type'] ?? 'tool') === 'resource') {
+                $resources[] = $ability->get_name();
+            } else {
                 $tools[] = $ability->get_name();
             }
         }
@@ -62,13 +68,13 @@ class McpServer
             self::ROUTE_NAMESPACE,
             self::ROUTE,
             sprintf('%s website', \AnyPressClient\Core\Brand::name()),
-            'Read and change this website\'s pages, patterns and kits, interactive blocks, looks, colours and fonts, header, footer, menus and images. Every page change keeps a revision.',
+            'Read and change this website\'s pages, patterns and kits, interactive blocks, looks, colours and fonts, header, footer, menus and images. Every page change keeps a revision. To build or redesign the site, read skill://anypress-website/SKILL.md first.',
             ANYPRESS_CLIENT_VERSION,
             [\WP\MCP\Transport\HttpTransport::class],
             \WP\MCP\Infrastructure\ErrorHandling\ErrorLogMcpErrorHandler::class,
             null,
             $tools,
-            [],
+            $resources,
             [],
             fn () => current_user_can('edit_pages')
         );

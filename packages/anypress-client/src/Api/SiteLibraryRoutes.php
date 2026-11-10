@@ -91,8 +91,12 @@ trait SiteLibraryRoutes
     {
         $current = $this->user_global_styles();
         $looks = [];
+        $kits = $this->kit_categories();
+        $homes = $this->kit_home_pages();
         foreach (\WP_Theme_JSON_Resolver::get_style_variations() as $variation) {
             $kind = $this->variation_kind($variation);
+            $name = strtok($variation['title'], ' (');
+            $kit = $kind === 'kit' ? ($kits[$name] ?? null) : null;
             $looks[] = array_filter([
                 'slug' => $variation['slug'] ?? sanitize_title($variation['title']),
                 'title' => $variation['title'],
@@ -101,6 +105,8 @@ trait SiteLibraryRoutes
                 'colors' => array_column($this->presets($variation['settings']['color']['palette'] ?? []), 'color', 'slug') ?: null,
                 'fonts' => array_column($this->presets($variation['settings']['typography']['fontFamilies'] ?? []), 'name', 'slug') ?: null,
                 'active' => $this->variation_is_active($variation, $kind, $current) ?: null,
+                'patternCategory' => $kit,
+                'homePage' => $kind === 'kit' ? ($homes[$name] ?? null) : null,
             ]);
         }
         $styles = [];
@@ -159,10 +165,58 @@ trait SiteLibraryRoutes
         return ['applied' => ['slug' => $slug, 'title' => $variation['title'], 'kind' => $kind]] + $this->get_styles();
     }
 
+    /** The kits' pattern categories by kit name: "Kit: Food and drink (Hearth)" is Hearth's. */
+    private function kit_categories(): array
+    {
+        $kits = [];
+        foreach (\WP_Block_Pattern_Categories_Registry::get_instance()->get_all_registered() as $category) {
+            if (strpos($category['name'], 'anypress/kit-') === 0 && preg_match('/\(([^)]+)\)\s*$/', (string) ($category['label'] ?? ''), $match)) {
+                $kits[$match[1]] = $category['name'];
+            }
+        }
+
+        return $kits;
+    }
+
+    /** The kits' home pages by kit name: the starter page titled "Home page: Circuit kit, electricians" is Circuit's. */
+    private function kit_home_pages(): array
+    {
+        $homes = [];
+        foreach (\WP_Block_Patterns_Registry::get_instance()->get_all_registered() as $pattern) {
+            if (preg_match('/^Home page: (\S+) kit\b/', (string) ($pattern['title'] ?? ''), $match)) {
+                $homes[$match[1]] = $pattern['name'];
+            }
+        }
+
+        return $homes;
+    }
+
     /** A preset list, which theme.json data keeps by origin ({ theme: [...] }) once read. */
     private function presets(array $presets): array
     {
         return array_is_list($presets) ? $presets : array_merge(...array_values(array_filter($presets, 'is_array')));
+    }
+
+    /**
+     * ?name=&variation= A link, good for 15 minutes, to a page showing one pattern in this website's look or in one
+     * of the theme's style variations (Features\PatternPreview). Nothing on the website changes.
+     */
+    public function preview_pattern(WP_REST_Request $request)
+    {
+        $name = (string) $request->get_param('name');
+        $variation = (string) ($request->get_param('variation') ?? '');
+        if (!\WP_Block_Patterns_Registry::get_instance()->is_registered($name)) {
+            return new WP_Error('anypress_site_not_found', 'No pattern has that name.', ['status' => 404]);
+        }
+        if ($variation !== '' && !in_array($variation, array_column($this->list_style_variations()['variations'], 'slug'), true)) {
+            return new WP_Error('anypress_site_not_found', 'The theme has no style variation with that slug (see list-style-variations).', ['status' => 404]);
+        }
+        $url = \AnyPressClient\Features\PatternPreview::url($name, $variation);
+        if ($url === '') {
+            return new WP_Error('anypress_site_unavailable', 'This website has no site key, so it cannot make preview links.', ['status' => 503]);
+        }
+
+        return ['url' => $url, 'siteUrl' => home_url('/'), 'expiresIn' => \AnyPressClient\Features\PatternPreview::PREVIEW_TTL];
     }
 
     private function user_global_styles(): array
