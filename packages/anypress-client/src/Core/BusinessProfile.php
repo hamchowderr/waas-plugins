@@ -157,7 +157,7 @@ class BusinessProfile
         if ($type === '') {
             return [];
         }
-        $posts = get_posts(['post_type' => $type, 'post_status' => 'publish', 'numberposts' => self::LIST_LIMIT, 'orderby' => 'menu_order title', 'order' => 'ASC', 'suppress_filters' => true]);
+        $posts = get_posts(['post_type' => $type, 'post_status' => 'publish', 'numberposts' => self::LIST_LIMIT, 'orderby' => 'menu_order title', 'order' => 'ASC']);
         if (!$posts) {
             return [];
         }
