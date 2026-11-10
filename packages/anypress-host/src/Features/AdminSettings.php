@@ -8,19 +8,19 @@ use AnyPressHost\Core\Tenant;
 
 class AdminSettings
 {
-    const SHOULD_SEND_TENANT_READY_EMAIL_OPTION = 'anypress_notification_settings_send_tenant_ready_email';
-    const TENANT_READY_EMAIL_SUBJECT_OPTION = 'anypress_notification_settings_tenant_ready_email_subject';
-    const TENANT_READY_EMAIL_BODY_OPTION = 'anypress_notification_settings_tenant_ready_email_body';
-    const SHOULD_SEND_SUSPEND_SCHEDULED_EMAIL_OPTION = 'anypress_notification_settings_send_suspend_scheduled_email';
-    const SUSPEND_SCHEDULED_EMAIL_SUBJECT_OPTION = 'anypress_notification_settings_suspend_scheduled_email_subject';
-    const SUSPEND_SCHEDULED_EMAIL_BODY_OPTION = 'anypress_notification_settings_suspend_scheduled_email_body';
-    const SHOULD_SEND_SUSPENDED_EMAIL_OPTION = 'anypress_notification_settings_send_suspended_email';
-    const SUSPENDED_EMAIL_SUBJECT_OPTION = 'anypress_notification_settings_suspended_email_subject';
-    const SUSPENDED_EMAIL_BODY_OPTION = 'anypress_notification_settings_suspended_email_body';
-    const SHOULD_REMOVE_ADMINISTRATOR_PLUGIN_CAPABILITIES_OPTION = 'anypress_remove_administrator_plugin_caps';
-    const SLUG = 'anypress-admin-settings';
-    const RESET_EMAIL_ACTION = 'anypress_reset_email';
-    const EMAIL_AJAX_NONCE = 'anypress_email_editor';
+    public const SHOULD_SEND_TENANT_READY_EMAIL_OPTION = 'anypress_notification_settings_send_tenant_ready_email';
+    public const TENANT_READY_EMAIL_SUBJECT_OPTION = 'anypress_notification_settings_tenant_ready_email_subject';
+    public const TENANT_READY_EMAIL_BODY_OPTION = 'anypress_notification_settings_tenant_ready_email_body';
+    public const SHOULD_SEND_SUSPEND_SCHEDULED_EMAIL_OPTION = 'anypress_notification_settings_send_suspend_scheduled_email';
+    public const SUSPEND_SCHEDULED_EMAIL_SUBJECT_OPTION = 'anypress_notification_settings_suspend_scheduled_email_subject';
+    public const SUSPEND_SCHEDULED_EMAIL_BODY_OPTION = 'anypress_notification_settings_suspend_scheduled_email_body';
+    public const SHOULD_SEND_SUSPENDED_EMAIL_OPTION = 'anypress_notification_settings_send_suspended_email';
+    public const SUSPENDED_EMAIL_SUBJECT_OPTION = 'anypress_notification_settings_suspended_email_subject';
+    public const SUSPENDED_EMAIL_BODY_OPTION = 'anypress_notification_settings_suspended_email_body';
+    public const SHOULD_REMOVE_ADMINISTRATOR_PLUGIN_CAPABILITIES_OPTION = 'anypress_remove_administrator_plugin_caps';
+    public const SLUG = 'anypress-admin-settings';
+    public const RESET_EMAIL_ACTION = 'anypress_reset_email';
+    public const EMAIL_AJAX_NONCE = 'anypress_email_editor';
 
     private ProvisioningApi $provisioningApi;
     private ConfigService $configService;
@@ -410,7 +410,7 @@ class AdminSettings
         }
 
         $path = dirname(__DIR__) . '/Assets/js/anypress-email-editor.js';
-        wp_enqueue_script('anypress-email-editor', plugins_url('Assets/js/anypress-email-editor.js', dirname(__FILE__)), [], (string) filemtime($path), true);
+        wp_enqueue_script('anypress-email-editor', plugins_url('Assets/js/anypress-email-editor.js', __DIR__), [], (string) filemtime($path), true);
         wp_localize_script('anypress-email-editor', 'anypressEmailEditor', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce(self::EMAIL_AJAX_NONCE),
@@ -595,7 +595,6 @@ class AdminSettings
                 'label' => __('Plugins come from the plan only', 'anypress-host'),
                 'hint' => __('Customers can\'t install, turn on or delete plugins. Websites that already exist keep what they have.', 'anypress-host'),
             ]);
-
         }
 
         // Cancellations
@@ -743,7 +742,7 @@ class AdminSettings
         echo '</tbody></table>';
     }
 
-    function allow_tenant_ready_email($allowed)
+    public function allow_tenant_ready_email($allowed)
     {
         // If somebody else disallowed, respect their decision.
         if (!$allowed) {
@@ -753,7 +752,7 @@ class AdminSettings
         return get_option(self::SHOULD_SEND_TENANT_READY_EMAIL_OPTION) === 'on';
     }
 
-    function allow_suspend_scheduled_email($allowed)
+    public function allow_suspend_scheduled_email($allowed)
     {
         if (!$allowed) {
             return $allowed;
@@ -762,21 +761,21 @@ class AdminSettings
         return get_option(self::SHOULD_SEND_SUSPEND_SCHEDULED_EMAIL_OPTION, 'on') === 'on';
     }
 
-    function suspend_scheduled_email_subject($text)
+    public function suspend_scheduled_email_subject($text)
     {
         $option_val = get_option(self::SUSPEND_SCHEDULED_EMAIL_SUBJECT_OPTION);
 
         return !empty($option_val) ? $option_val : $text;
     }
 
-    function suspend_scheduled_email_body($text)
+    public function suspend_scheduled_email_body($text)
     {
         $option_val = get_option(self::SUSPEND_SCHEDULED_EMAIL_BODY_OPTION);
 
         return !empty($option_val) && !Notifications::is_old_default_body((string) $option_val) ? $option_val : $text;
     }
 
-    function allow_suspended_email($allowed)
+    public function allow_suspended_email($allowed)
     {
         if (!$allowed) {
             return $allowed;
@@ -785,21 +784,21 @@ class AdminSettings
         return get_option(self::SHOULD_SEND_SUSPENDED_EMAIL_OPTION, 'on') === 'on';
     }
 
-    function suspended_email_subject($text)
+    public function suspended_email_subject($text)
     {
         $option_val = get_option(self::SUSPENDED_EMAIL_SUBJECT_OPTION);
 
         return !empty($option_val) ? $option_val : $text;
     }
 
-    function suspended_email_body($text)
+    public function suspended_email_body($text)
     {
         $option_val = get_option(self::SUSPENDED_EMAIL_BODY_OPTION);
 
         return !empty($option_val) && !Notifications::is_old_default_body((string) $option_val) ? $option_val : $text;
     }
 
-        function remove_tenant_administrator_plugin_capabilities($allowed)
+        public function remove_tenant_administrator_plugin_capabilities($allowed)
     {
         // If somebody else disallowed, respect their decision.
         if (!$allowed) {
@@ -807,27 +806,20 @@ class AdminSettings
         }
 
         return get_option(self::SHOULD_REMOVE_ADMINISTRATOR_PLUGIN_CAPABILITIES_OPTION) === 'on';
-    }
+        }
 
-    function tenant_ready_email_subject($text)
+    public function tenant_ready_email_subject($text)
     {
         $option_val = get_option(self::TENANT_READY_EMAIL_SUBJECT_OPTION);
 
         return !empty($option_val) ? $option_val : $text;
     }
 
-    function tenant_ready_email_body($text)
+    public function tenant_ready_email_body($text)
     {
         $option_val = get_option(self::TENANT_READY_EMAIL_BODY_OPTION);
 
         return !empty($option_val) && !Notifications::is_old_default_body((string) $option_val) ? $option_val : $text;
-    }
-
-    public function anypress_could_not_connect_to_api_notice_error()
-    {
-        echo '<div class="notice notice-error"><p>'
-            . esc_html__('Couldn\'t connect to the AnyPress API. Check the API address, key and secret in AnyPress → Settings → Connection.', 'anypress-host')
-            . '</p></div>';
     }
 
     public function sanitize_user_role($value)

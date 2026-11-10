@@ -84,8 +84,10 @@ class RunSoon
         $hook = (string) $request->get_param('hook');
         $arg = (string) $request->get_param('arg');
         $delay = (int) $request->get_param('delay');
-        if (!in_array($hook, self::HOOKS, true) || $delay < 0 || $delay > self::MAX_DELAY
-            || !hash_equals(self::sign($hook, $arg, $delay), (string) $request->get_param('sig'))) {
+        if (
+            !in_array($hook, self::HOOKS, true) || $delay < 0 || $delay > self::MAX_DELAY
+            || !hash_equals(self::sign($hook, $arg, $delay), (string) $request->get_param('sig'))
+        ) {
             return new WP_REST_Response(['code' => 'invalid_signature', 'message' => 'Not a request this storefront sent.'], 401);
         }
 

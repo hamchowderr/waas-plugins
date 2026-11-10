@@ -27,10 +27,10 @@ use AnyPressPayments\Driver\SavePaymentMethodRequest;
  */
 class PaymentConfirmation
 {
-    const ACTION = 'anypress_payments_authorizenet_confirm';
-    const NONCE = 'anypress_payments_authorizenet';
+    public const ACTION = 'anypress_payments_authorizenet_confirm';
+    public const NONCE = 'anypress_payments_authorizenet';
     // Longer than the 45-second Authorize.Net request timeout.
-    const LOCK_WAIT = 50;
+    public const LOCK_WAIT = 50;
 
     private $gateway;
 

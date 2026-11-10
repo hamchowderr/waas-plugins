@@ -279,7 +279,7 @@ class Notifications
             "tenant_one_click_login_url" => $website_page_url,
             // Kept so custom templates that still use it don't show a raw placeholder.
             "tenant_one_click_login_url_expires_after" => '',
-            "storefront_name" => get_bloginfo('name'), 
+            "storefront_name" => get_bloginfo('name'),
             "storefront_url" => get_site_url(),
             "storefront_subscription_details_url" => $subscription_details_url,
         ], $subscription_id, $recipient);

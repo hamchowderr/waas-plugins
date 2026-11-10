@@ -15,14 +15,14 @@ defined('ABSPATH') || exit;
  */
 final class TarGz
 {
-    const BLOCK = 512;
-    const READ = 1048576;
+    public const BLOCK = 512;
+    public const READ = 1048576;
 
     /** @var string */
     private $file;
     /** @var resource|null */
     private $out;
-    /** @var resource|false|null */
+    /** @var \DeflateContext|false|null */
     private $deflate;
 
     public function __construct(string $file)

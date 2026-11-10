@@ -206,7 +206,8 @@ class StoreJobs
 
         $failed = [];
         foreach (array_keys($commerce->find_subscriptions_by_meta(self::FAILURE_META, [''])) as $subscription_id) {
-            if ($failure = $this->failure($subscription_id)) {
+            $failure = $this->failure($subscription_id);
+            if ($failure) {
                 $failed[$subscription_id] = $failure;
             }
         }
@@ -217,7 +218,11 @@ class StoreJobs
     public function show_failed_notice(): void
     {
         // The AnyPress Overview lists these in place, with a Try again button.
-        if (!current_user_can('manage_options') || AdminHome::is_plugin_page() || !($failed = $this->failed_stores())) {
+        if (!current_user_can('manage_options') || AdminHome::is_plugin_page()) {
+            return;
+        }
+        $failed = $this->failed_stores();
+        if (!$failed) {
             return;
         }
 
@@ -359,13 +364,13 @@ class StoreJobs
     private function lock($subscription_id): bool
     {
         $name = 'anypress_store_jobs_lock_' . md5((string) $subscription_id);
-        if (add_option($name, time(), '', 'no')) {
+        if (add_option($name, time(), '', false)) {
             return true;
         }
 
         if ((int) get_option($name) < time() - self::LOCK_TTL) {
             delete_option($name);
-            return add_option($name, time(), '', 'no');
+            return add_option($name, time(), '', false);
         }
 
         return false;

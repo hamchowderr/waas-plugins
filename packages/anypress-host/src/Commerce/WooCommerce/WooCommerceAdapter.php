@@ -46,7 +46,7 @@ class WooCommerceAdapter implements CommerceAdapter
     public function is_available(): bool
     {
         if (!function_exists('is_plugin_active')) {
-            require_once(ABSPATH . '/wp-admin/includes/plugin.php');
+            require_once ABSPATH . '/wp-admin/includes/plugin.php';
         }
 
         return is_plugin_active('woocommerce/woocommerce.php');

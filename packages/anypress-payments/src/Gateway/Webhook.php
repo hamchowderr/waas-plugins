@@ -21,11 +21,11 @@ namespace AnyPressPayments\Gateway;
  */
 class Webhook
 {
-    const NAMESPACE = 'anypress-payments/v1';
-    const ROUTE = '/authorizenet/webhook';
+    public const NAMESPACE = 'anypress-payments/v1';
+    public const ROUTE = '/authorizenet/webhook';
 
     // The events WebhookSync acts on. Authorize.Net's names (GET /rest/v1/eventtypes).
-    const EVENT_TYPES = [
+    public const EVENT_TYPES = [
         'net.authorize.payment.authcapture.created',
         'net.authorize.payment.fraud.approved',
         'net.authorize.payment.fraud.declined',

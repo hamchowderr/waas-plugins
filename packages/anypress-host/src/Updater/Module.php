@@ -5,7 +5,7 @@ namespace AnyPressHost\Updater;
 use AnyPressHost\Core\ConfigService;
 
 // Exit if accessed directly
-if ( !defined( 'ABSPATH' ) )
+if (!defined('ABSPATH'))
     exit;
 
 /**

@@ -28,10 +28,10 @@ use AnyPressPayments\Driver\SavedChargeRequest;
 class RenewalCharge
 {
     /** Transaction meta: a charge was sent and got no answer. */
-    const IN_FLIGHT_META = 'authorizenet_renewal_in_flight';
+    public const IN_FLIGHT_META = 'authorizenet_renewal_in_flight';
 
     /** Transaction meta: Authorize.Net's fraud filters hold the charge for the merchant's review. */
-    const HELD_META = 'authorizenet_held_for_review';
+    public const HELD_META = 'authorizenet_held_for_review';
 
     private $gateway;
 

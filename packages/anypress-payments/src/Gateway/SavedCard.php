@@ -16,7 +16,7 @@ use AnyPressPayments\Driver\DriverResult;
  */
 class SavedCard
 {
-    const META_KEY = 'active_payment_method';
+    public const META_KEY = 'active_payment_method';
 
     /**
      * @param object $subscription FluentCart Subscription

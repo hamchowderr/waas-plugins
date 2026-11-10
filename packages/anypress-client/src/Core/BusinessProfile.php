@@ -141,7 +141,7 @@ class BusinessProfile
                 'city' => $text('city'),
                 'state' => $text('state'),
                 'country' => $country !== '' && class_exists('Locale') ? (string) \Locale::getDisplayRegion('-' . $country, 'en') : $country,
-            ], 'strlen'),
+            ], static fn ($value) => (string) $value !== ''),
             'currency' => self::currency($details),
             'products' => self::products(),
             'bookings' => self::bookings(),
@@ -163,9 +163,9 @@ class BusinessProfile
         }
         $prices = [];
         if ($type === 'fluent-products' && self::table_exists($wpdb->prefix . 'fct_product_details')) {
-            $ids = implode(',', array_map('intval', wp_list_pluck($posts, 'ID')));
+            $ids = array_map('intval', wp_list_pluck($posts, 'ID'));
             // FluentCart keeps prices in cents.
-            foreach ((array) $wpdb->get_results("SELECT post_id, min_price, max_price FROM {$wpdb->prefix}fct_product_details WHERE post_id IN ($ids)", ARRAY_A) as $row) {
+            foreach ((array) $wpdb->get_results($wpdb->prepare("SELECT post_id, min_price, max_price FROM {$wpdb->prefix}fct_product_details WHERE post_id IN (" . implode(',', array_fill(0, count($ids), '%d')) . ')', ...$ids), ARRAY_A) as $row) {
                 $min = (float) $row['min_price'] / 100;
                 $max = (float) $row['max_price'] / 100;
                 $prices[(int) $row['post_id']] = $max > $min ? self::money($min) . '–' . self::money($max) : self::money($min);
@@ -174,7 +174,7 @@ class BusinessProfile
         $list = [];
         foreach ($posts as $post) {
             $price = $prices[$post->ID] ?? ($type === 'product' ? (string) get_post_meta($post->ID, '_price', true) : '');
-            $list[] = array_filter(['name' => wp_strip_all_tags(get_the_title($post)), 'price' => $price], 'strlen');
+            $list[] = array_filter(['name' => wp_strip_all_tags(get_the_title($post)), 'price' => $price], static fn ($value) => (string) $value !== '');
         }
 
         return $list;
@@ -188,7 +188,7 @@ class BusinessProfile
         if (!self::table_exists($table)) {
             return [];
         }
-        $rows = (array) $wpdb->get_results($wpdb->prepare("SELECT title, duration FROM {$table} WHERE status = 'active' ORDER BY id ASC LIMIT %d", self::LIST_LIMIT), ARRAY_A);
+        $rows = (array) $wpdb->get_results($wpdb->prepare("SELECT title, duration FROM %i WHERE status = 'active' ORDER BY id ASC LIMIT %d", $table, self::LIST_LIMIT), ARRAY_A);
 
         return array_map(static fn ($row) => ['name' => (string) $row['title'], 'minutes' => (int) $row['duration']], $rows);
     }
@@ -202,7 +202,7 @@ class BusinessProfile
             return [];
         }
 
-        return array_map('strval', (array) $wpdb->get_col($wpdb->prepare("SELECT title FROM {$table} WHERE status = 'published' ORDER BY id ASC LIMIT %d", self::LIST_LIMIT)));
+        return array_map('strval', (array) $wpdb->get_col($wpdb->prepare("SELECT title FROM %i WHERE status = 'published' ORDER BY id ASC LIMIT %d", $table, self::LIST_LIMIT)));
     }
 
     /** The shop's currency, else the one the purchase's country uses. */

@@ -17,7 +17,6 @@ use AnyPressHost\Commerce\Commerce;
 class PrivateKeyStore
 {
     public const PREFIX = SecretBox::PREFIX;
-    public const KEY_CONSTANT = SecretBox::KEY_CONSTANT;
     /** Keys are derived per purpose; this one is what the keys were sealed with before SecretBox was shared. */
     private const PURPOSE = 'anypress-host-private-key-encryption';
 

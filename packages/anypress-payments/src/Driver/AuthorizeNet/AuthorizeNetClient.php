@@ -18,11 +18,11 @@ namespace AnyPressPayments\Driver\AuthorizeNet;
 class AuthorizeNetClient
 {
     // Endpoints from the SDK: lib/net/authorize/api/constants/ANetEnvironment.php:7-8.
-    const SANDBOX_URL = 'https://apitest.authorize.net/xml/v1/request.api';
-    const PRODUCTION_URL = 'https://api2.authorize.net/xml/v1/request.api';
+    public const SANDBOX_URL = 'https://apitest.authorize.net/xml/v1/request.api';
+    public const PRODUCTION_URL = 'https://api2.authorize.net/xml/v1/request.api';
     // Webhooks REST API base URLs.
-    const SANDBOX_REST_URL = 'https://apitest.authorize.net/rest/v1/';
-    const PRODUCTION_REST_URL = 'https://api.authorize.net/rest/v1/';
+    public const SANDBOX_REST_URL = 'https://apitest.authorize.net/rest/v1/';
+    public const PRODUCTION_REST_URL = 'https://api.authorize.net/rest/v1/';
 
     private $apiLoginId;
     private $transactionKey;

@@ -6,8 +6,8 @@ use AnyPressClient\Core\HttpService;
 
 class AdminRolesSettings
 {
-    const ROLES_FILE_DIR_PATH = WP_PLUGIN_DIR . '/anypress-client-data/';
-    const ROLES_FILE_PATH = WP_PLUGIN_DIR . '/anypress-client-data/roles.json';
+    public const ROLES_FILE_DIR_PATH = WP_PLUGIN_DIR . '/anypress-client-data/';
+    public const ROLES_FILE_PATH = WP_PLUGIN_DIR . '/anypress-client-data/roles.json';
 
     private HttpService $host_http_service;
 
@@ -17,8 +17,8 @@ class AdminRolesSettings
 
         add_action('admin_menu', [$this, 'add_roles_page'], 11);
         add_action('admin_enqueue_scripts', [$this, 'add_admin_settings_styles']);
-        add_action('admin_post_anypress_add_new_role', [$this, 'add_new_role'], 10, 3);
-        add_action('admin_post_save_roles', [$this, 'save_roles'], 10, 3);
+        add_action('admin_post_anypress_add_new_role', [$this, 'add_new_role']);
+        add_action('admin_post_save_roles', [$this, 'save_roles']);
     }
 
     public function add_admin_settings_styles($hook)

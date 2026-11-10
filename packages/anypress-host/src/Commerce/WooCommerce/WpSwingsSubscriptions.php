@@ -29,7 +29,7 @@ class WpSwingsSubscriptions implements SubscriptionPlugin
     public function is_active(): bool
     {
         if (!function_exists('is_plugin_active')) {
-            require_once(ABSPATH . '/wp-admin/includes/plugin.php');
+            require_once ABSPATH . '/wp-admin/includes/plugin.php';
         }
 
         return is_plugin_active('subscriptions-for-woocommerce/subscriptions-for-woocommerce.php');
@@ -197,7 +197,8 @@ class WpSwingsSubscriptions implements SubscriptionPlugin
     public function get_customer_id(\WC_Order $subscription): int
     {
         $customer_id = (int) $subscription->get_customer_id() ?: (int) $subscription->get_meta('wps_customer_id');
-        if ($customer_id === 0 && ($parent = $this->get_parent_order($subscription)) !== null) {
+        $parent = $customer_id === 0 ? $this->get_parent_order($subscription) : null;
+        if ($parent !== null) {
             $customer_id = (int) $parent->get_customer_id();
         }
 

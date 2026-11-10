@@ -23,26 +23,25 @@ use AnyPressPayments\Driver\SavePaymentMethodRequest;
 class AuthorizeNetDriver implements RecurringGatewayDriver
 {
     // transactionResponse.responseCode values.
-    const APPROVED = '1';
-    const HELD_FOR_REVIEW = '4';
+    public const APPROVED = '1';
+    public const HELD_FOR_REVIEW = '4';
 
     // Error 54: "The referenced transaction does not meet the criteria for issuing a credit."
     // Returned when refunding a charge that has not settled yet.
-    const ERROR_NOT_SETTLED = '54';
+    public const ERROR_NOT_SETTLED = '54';
 
     // "A duplicate record with ID 123 already exists." (customer profile, or payment profile).
-    const ERROR_DUPLICATE = 'E00039';
+    public const ERROR_DUPLICATE = 'E00039';
     // "The record cannot be found."
-    const ERROR_NOT_FOUND = 'E00040';
+    public const ERROR_NOT_FOUND = 'E00040';
     // getTransactionListForCustomer: "No records found."
-    const NO_RECORDS = 'I00004';
 
     // Letters, digits and underscores only (Webhooks API).
-    const WEBHOOK_NAME = 'anypress_payments';
+    public const WEBHOOK_NAME = 'anypress_payments';
 
     // getTransactionDetails transactionStatus values, by what they mean for a charge.
-    const PAID_STATUSES = ['capturedPendingSettlement', 'settledSuccessfully', 'approvedReview'];
-    const PENDING_STATUSES = ['FDSPendingReview', 'FDSAuthorizedPendingReview', 'underReview', 'authorizedPendingCapture'];
+    public const PAID_STATUSES = ['capturedPendingSettlement', 'settledSuccessfully', 'approvedReview'];
+    public const PENDING_STATUSES = ['FDSPendingReview', 'FDSAuthorizedPendingReview', 'underReview', 'authorizedPendingCapture'];
 
     private $client;
 
@@ -294,8 +293,10 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
 
         $invoiceNumber = self::limit($invoiceNumber, 20);
         foreach ((array) ($response['transactions'] ?? []) as $transaction) {
-            if ((string) ($transaction['invoiceNumber'] ?? '') !== $invoiceNumber
-                || (int) round(((float) ($transaction['settleAmount'] ?? 0)) * 100) !== $amount) {
+            if (
+                (string) ($transaction['invoiceNumber'] ?? '') !== $invoiceNumber
+                || (int) round(((float) ($transaction['settleAmount'] ?? 0)) * 100) !== $amount
+            ) {
                 continue;
             }
 
@@ -610,7 +611,7 @@ class AuthorizeNetDriver implements RecurringGatewayDriver
             'state'     => self::limit((string) ($billing['state'] ?? ''), 40),
             'zip'       => self::limit((string) ($billing['zip'] ?? ''), 20),
             'country'   => self::limit((string) ($billing['country'] ?? ''), 60),
-        ], 'strlen');
+        ], static fn ($value) => (string) $value !== '');
     }
 
     private static function isCompleteAddress(array $billTo): bool

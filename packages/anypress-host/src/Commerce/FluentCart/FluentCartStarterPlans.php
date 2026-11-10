@@ -185,8 +185,10 @@ class FluentCartStarterPlans
      */
     public function maybe_create_for_ready_made(): void
     {
-        if (get_option(self::AUTO_DONE_OPTION) || wp_doing_ajax() || !current_user_can('manage_options')
-            || !ConfigService::has_constant('API_KEY') || !ConfigService::has_constant('API_SECRET') || get_transient(self::RETRY_TRANSIENT)) {
+        if (
+            get_option(self::AUTO_DONE_OPTION) || wp_doing_ajax() || !current_user_can('manage_options')
+            || !ConfigService::has_constant('API_KEY') || !ConfigService::has_constant('API_SECRET') || get_transient(self::RETRY_TRANSIENT)
+        ) {
             return;
         }
 

@@ -90,7 +90,8 @@ class AccountController
     public function authorize(WP_REST_Request $request, string $access)
     {
         $user_id = get_current_user_id();
-        if ($user_id === 0 && ($bearer = self::bearer_token($request)) !== '') {
+        $bearer = $user_id === 0 ? self::bearer_token($request) : '';
+        if ($bearer !== '') {
             // Only these routes take tokens, so a token can't be used on the rest of the site's API.
             $user_id = $this->tokens->user_for_access_token($bearer);
             if ($user_id === 0) {

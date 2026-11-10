@@ -3,7 +3,7 @@
 namespace AnyPressHost\Core;
 
 // Exit if accessed directly
-if ( !defined( 'ABSPATH' ) )
+if (!defined('ABSPATH'))
     exit;
 
 class ConfigService

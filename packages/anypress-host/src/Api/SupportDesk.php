@@ -58,14 +58,16 @@ class SupportDesk
     public function handle(WP_REST_Request $request): WP_REST_Response
     {
         $body = (string) $request->get_body();
-        if (!WebhookReceiver::verify(
-            Webhooks::secret(),
-            (string) $request->get_header('webhook-id'),
-            (string) $request->get_header('webhook-timestamp'),
-            (string) $request->get_header('webhook-signature'),
-            $body,
-            time()
-        )) {
+        if (
+            !WebhookReceiver::verify(
+                Webhooks::secret(),
+                (string) $request->get_header('webhook-id'),
+                (string) $request->get_header('webhook-timestamp'),
+                (string) $request->get_header('webhook-signature'),
+                $body,
+                time()
+            )
+        ) {
             return self::error('invalid_signature', 'Missing, stale or invalid signature.', 401);
         }
         // A signed request is used once: the same one again within its five minutes does nothing.

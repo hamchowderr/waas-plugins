@@ -12,7 +12,7 @@ use AnyPressClient\Crm\HighLevelLink;
  */
 class CustomerPlanPage
 {
-    const PAGE = 'anypress-your-plan';
+    public const PAGE = 'anypress-your-plan';
 
     public function __construct()
     {
@@ -147,7 +147,8 @@ class CustomerPlanPage
                 <?php endif; ?>
             <?php endforeach; ?>
 
-            <?php if (HighLevelLink::applies()) : $this->render_highlevel(); endif; ?>
+            <?php if (HighLevelLink::applies()) : $this->render_highlevel();
+            endif; ?>
 
             <?php McpServer::render_section(); ?>
 
@@ -186,10 +187,10 @@ class CustomerPlanPage
                     <th scope="row"><?php esc_html_e('Forms, chat and calendars (LeadConnector)', 'anypress-client'); ?></th>
                     <td><?php if ($leadconnector) : ?>
                         <?php esc_html_e('Connected.', 'anypress-client'); ?>
-                    <?php else : ?>
+                        <?php else : ?>
                         <?php esc_html_e('Not connected yet. To show HighLevel forms, the chat widget or calendars on this site, connect it to your sub-account:', 'anypress-client'); ?>
                         <a href="<?php echo esc_url(admin_url('admin.php?page=leadconnector-plugin')); ?>"><?php esc_html_e('Open LeadConnector', 'anypress-client'); ?></a>
-                    <?php endif; ?></td>
+                        <?php endif; ?></td>
                 </tr>
             </tbody>
         </table>

@@ -178,8 +178,10 @@ class ContactPlan
     {
         $remove = [];
         foreach ($current as $title) {
-            if (preg_match('/^(.+): Interested$/u', $title, $match)
-                && (in_array($match[1] . ': Past', $all, true) || in_array($match[1] . ': Active', $all, true))) {
+            if (
+                preg_match('/^(.+): Interested$/u', $title, $match)
+                && (in_array($match[1] . ': Past', $all, true) || in_array($match[1] . ': Active', $all, true))
+            ) {
                 $remove[] = $title;
             }
         }

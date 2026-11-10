@@ -55,7 +55,7 @@ class AssistantSignIn
     {
         $step = $this->next_step((int) $request->get_param('subscription_id'));
         if (isset($step['error'])) {
-            wp_die(esc_html($step['error']), '', ['response' => $step['status'], 'back_link' => true]);
+            wp_die(esc_html($step['error']), '', ['response' => (int) $step['status'], 'back_link' => true]);
         }
         // The assistant's own address, not this site, so not wp_safe_redirect().
         wp_redirect($step['redirect']); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect

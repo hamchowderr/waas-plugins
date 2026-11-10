@@ -3,7 +3,7 @@
 namespace AnyPressHost\Assets;
 
 // Exit if accessed directly
-if ( !defined( 'ABSPATH' ) )
+if (!defined('ABSPATH'))
     exit;
 
 class Module
@@ -21,8 +21,8 @@ class Module
         if(function_exists('is_account_page') && \is_account_page())
         {
             $script_name = 'sub-confirm-cancel-button.js';
-            $src = plugin_dir_url( __FILE__ ) . "/js/$script_name";
-            $version = gmdate("ymd-Gis", (int) filemtime( plugin_dir_path( __FILE__ ) . "js/$script_name" ));
+            $src = plugin_dir_url(__FILE__) . "/js/$script_name";
+            $version = gmdate("ymd-Gis", (int) filemtime(plugin_dir_path(__FILE__) . "js/$script_name"));
             wp_enqueue_script('confirm-cancel-button', $src, ['jquery'], $version, true);
         }
     }
@@ -30,8 +30,8 @@ class Module
     public static function enqueue_anypress_product_data_visibility()
     {
         $script_name = 'anypress-product-data-visibility.js';
-        $src = plugin_dir_url( __FILE__ ) . "/js/$script_name";
-        $version = gmdate("ymd-Gis", (int) filemtime( plugin_dir_path( __FILE__ ) . "js/$script_name" ));
+        $src = plugin_dir_url(__FILE__) . "/js/$script_name";
+        $version = gmdate("ymd-Gis", (int) filemtime(plugin_dir_path(__FILE__) . "js/$script_name"));
         wp_enqueue_script('anypress-product-data-visibility', $src, ['jquery'], $version, true);
     }
 
@@ -43,8 +43,8 @@ class Module
         }
 
         $style_name = 'anypress-admin.css';
-        $src = plugin_dir_url( __FILE__ ) . "css/$style_name";
-        $version = gmdate("ymd-Gis", (int) filemtime( plugin_dir_path( __FILE__ ) . "css/$style_name" ));
+        $src = plugin_dir_url(__FILE__) . "css/$style_name";
+        $version = gmdate("ymd-Gis", (int) filemtime(plugin_dir_path(__FILE__) . "css/$style_name"));
         wp_enqueue_style('anypress-admin-style', $src, [], $version);
     }
 }

@@ -326,7 +326,7 @@ class FormsSwitch
         global $wpdb;
         $table = $wpdb->prefix . 'fluentform_submissions';
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Fluent Forms' own table, read once after the import.
-        $ids = $wpdb->get_col($wpdb->prepare("SELECT id FROM {$table} WHERE form_id = %d ORDER BY id ASC", $fluent_id));
+        $ids = $wpdb->get_col($wpdb->prepare('SELECT id FROM %i WHERE form_id = %d ORDER BY id ASC', $table, $fluent_id));
         if (count($ids) !== count($details)) {
             return;
         }
@@ -359,7 +359,8 @@ class FormsSwitch
             );
         }
         if ($type === 'contactform7') {
-            $files = class_exists('WPCF7_ContactForm') && ($form = \WPCF7_ContactForm::get_instance($item['ID'])) && $form->scan_form_tags(['basetype' => 'file']);
+            $form = class_exists('WPCF7_ContactForm') ? \WPCF7_ContactForm::get_instance($item['ID']) : null;
+            $files = $form && $form->scan_form_tags(['basetype' => 'file']);
 
             return $files
                 ? __('Entries keep the date each was sent, its IP address and page. Files sent with the form aren\'t in them: Flamingo keeps only the file names.', 'anypress-client')
@@ -518,6 +519,7 @@ class FormsSwitch
         $types = implode(', ', array_fill(0, count(self::SKIP_POST_TYPES), '%s'));
         // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- placeholders only.
         $sql = "SELECT ID FROM {$wpdb->posts} WHERE post_type NOT IN ({$types}) AND post_status NOT IN ('trash', 'auto-draft', 'inherit') AND (" . implode(' OR ', $likes) . ') ORDER BY ID ASC';
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $sql above holds only placeholders.
         $ids = $wpdb->get_col($wpdb->prepare($sql, array_merge(self::SKIP_POST_TYPES, $values)));
 
         foreach ($ids as $id) {
@@ -612,6 +614,7 @@ class FormsSwitch
         }
         // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- placeholders only.
         $sql = "SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key IN (%s, %s) AND (" . implode(' OR ', $likes) . ')';
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $sql above holds only placeholders.
         foreach ($wpdb->get_col($wpdb->prepare($sql, $values)) as $id) {
             $post = get_post((int) $id);
             if ($post && $post->post_type !== 'revision') {
@@ -784,7 +787,7 @@ class FormsSwitch
     {
         global $wpdb;
         $table = $wpdb->prefix . 'fluentform_form_meta';
-        $rows = $wpdb->get_results($wpdb->prepare("SELECT id, value FROM {$table} WHERE form_id = %d AND meta_key = 'notifications'", $id));
+        $rows = $wpdb->get_results($wpdb->prepare("SELECT id, value FROM %i WHERE form_id = %d AND meta_key = 'notifications'", $table, $id));
         foreach ($rows as $row) {
             $value = json_decode((string) $row->value, true);
             if (!is_array($value) || !isset($value['sendTo'])) {
@@ -801,7 +804,7 @@ class FormsSwitch
     {
         global $wpdb;
         $table = $wpdb->prefix . 'fluentform_form_meta';
-        $rows = $wpdb->get_results($wpdb->prepare("SELECT id, value FROM {$table} WHERE form_id = %d AND meta_key = 'confirmations'", $id));
+        $rows = $wpdb->get_results($wpdb->prepare("SELECT id, value FROM %i WHERE form_id = %d AND meta_key = 'confirmations'", $table, $id));
         foreach ($rows as $row) {
             $value = json_decode((string) $row->value, true);
             if (empty($value['conditionals']['status'])) {

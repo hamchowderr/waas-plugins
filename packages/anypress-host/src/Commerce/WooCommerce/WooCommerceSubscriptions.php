@@ -19,7 +19,7 @@ class WooCommerceSubscriptions implements SubscriptionPlugin
     public function is_active(): bool
     {
         if (!function_exists('is_plugin_active')) {
-            require_once(ABSPATH . '/wp-admin/includes/plugin.php');
+            require_once ABSPATH . '/wp-admin/includes/plugin.php';
         }
 
         return is_plugin_active('woocommerce-subscriptions/woocommerce-subscriptions.php');

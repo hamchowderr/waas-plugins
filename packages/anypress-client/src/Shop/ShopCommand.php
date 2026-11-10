@@ -110,8 +110,18 @@ class ShopCommand
             $statuses = implode(', ', array_map(fn ($status, $count) => $status . ' ' . $count, array_keys($counts['orders_by_status']), $counts['orders_by_status']));
             WP_CLI::line(sprintf(
                 'Products %d (%d variable, %d variations), orders %d (%s; %d by guests), refunds %d, coupons %d, registered customers %d, tax rates %d, shipping zones %d, product tags %d',
-                $counts['products'], $counts['variable_products'], $counts['variations'], $counts['orders'], $statuses ?: 'none', $counts['guest_orders'],
-                $counts['refunds'], $counts['coupons'], $counts['registered_customers'], $counts['tax_rates'], $counts['shipping_zones'], $counts['product_tags']
+                $counts['products'],
+                $counts['variable_products'],
+                $counts['variations'],
+                $counts['orders'],
+                $statuses ?: 'none',
+                $counts['guest_orders'],
+                $counts['refunds'],
+                $counts['coupons'],
+                $counts['registered_customers'],
+                $counts['tax_rates'],
+                $counts['shipping_zones'],
+                $counts['product_tags']
             ));
             $subs = $preflight['subscriptions'];
             WP_CLI::line('Subscriptions: ' . ($subs['in_use'] ? $subs['count'] . ' (WooCommerce Subscriptions)' : ($subs['plugin'] ? 'none (WooCommerce Subscriptions is active)' : 'not in use')));

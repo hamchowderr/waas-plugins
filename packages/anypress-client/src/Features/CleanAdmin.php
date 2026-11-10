@@ -76,7 +76,9 @@ class CleanAdmin
         $roles = file_exists(AdminRolesSettings::ROLES_FILE_PATH) ? json_decode((string) file_get_contents(AdminRolesSettings::ROLES_FILE_PATH), true) : null;
         $files = is_array($roles) ? RolesManager::managed_plugins($roles) : [];
 
-        return self::$managed = array_values(array_unique(array_map(static fn ($file) => explode('/', $file)[0], $files)));
+        self::$managed = array_values(array_unique(array_map(static fn ($file) => explode('/', $file)[0], $files)));
+
+        return self::$managed;
     }
 
     /** The folders of the plugins this store's site type turns on (and the MCP Adapter), or null when no site type matches. */
@@ -95,7 +97,9 @@ class CleanAdmin
         }
         $files = array_merge($plan['plugins'], [McpServer::PLUGIN]);
 
-        return self::$planned = array_values(array_unique(array_map(static fn ($file) => explode('/', $file)[0], $files)));
+        self::$planned = array_values(array_unique(array_map(static fn ($file) => explode('/', $file)[0], $files)));
+
+        return self::$planned;
     }
 
     /** On the Plugins screen: no rows for included plugins this site type doesn't use (they are off and can't be used here). */
@@ -277,7 +281,7 @@ class CleanAdmin
         </style>
         <script>
         (function () {
-            var sell = /^\s*(upgrade( to pro| now)?|go pro|get pro|buy pro|buy now|unlock( with)? pro|unlock|leave a review|write a review|rate us|review [\w ]+ on wordpress\.org\.?|try [a-z]+!?)\s*(\(opens in a new (window|tab)\))?\s*$/i;
+            var sell = /^\s*(upgrade( to pro| now)?|go pro|get pro|buy pro|buy now|unlock( with)? pro|unlock|leave a review|write a review|rate us|review [\w ]+ on WordPress\.org\.?|try [a-z]+!?)\s*(\(opens in a new (window|tab)\))?\s*$/i;
             function tidy(root) {
                 (root.querySelectorAll ? root : document).querySelectorAll('#wpbody a, #wpbody button').forEach(function (el) {
                     if (!el.dataset.anypressSeen && sell.test(el.textContent || '')) {

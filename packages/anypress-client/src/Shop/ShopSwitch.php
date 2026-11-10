@@ -197,7 +197,10 @@ class ShopSwitch
                 $report['warnings'][] = __('The FluentCart Migrator add-on is installed but off. The switch turns it on when it runs.', 'anypress-client');
             } else {
                 $report['blockers'][] = sprintf(
-                    /* translators: 1: FluentCart add-ons page, 2: download link. */__('The FluentCart Migrator add-on isn\'t installed. It is free from FluentCart\'s add-ons page (%1$s), download: %2$s. Install and activate it, then run this again.', 'anypress-client'), self::ADDON_PAGE, self::ADDON_ZIP);
+                    /* translators: 1: FluentCart add-ons page, 2: download link. */                    __('The FluentCart Migrator add-on isn\'t installed. It is free from FluentCart\'s add-ons page (%1$s), download: %2$s. Install and activate it, then run this again.', 'anypress-client'),
+                    self::ADDON_PAGE,
+                    self::ADDON_ZIP
+                );
             }
         } elseif (strpos((string) FLUENTCART_MIGRATOR_VERSION, 'beta') !== false) {
             /* translators: %s: add-on version. */

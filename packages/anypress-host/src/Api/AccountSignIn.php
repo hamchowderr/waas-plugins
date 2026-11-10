@@ -169,11 +169,13 @@ class AccountSignIn
         // The code is used up even when the rest doesn't match, so it can't be tried again.
         $code = $this->tokens->consume_code((string) $request->get_param('code'));
         $verifier = (string) $request->get_param('code_verifier');
-        if ($code === null
+        if (
+            $code === null
             || $code['client_id'] !== $client_id
             || $code['redirect_uri'] !== (string) $request->get_param('redirect_uri')
             || !preg_match('/^[A-Za-z0-9._~-]{43,128}$/', $verifier)
-            || !hash_equals($code['code_challenge'], AccountTokens::base64url(hash('sha256', $verifier, true)))) {
+            || !hash_equals($code['code_challenge'], AccountTokens::base64url(hash('sha256', $verifier, true)))
+        ) {
             return null;
         }
 

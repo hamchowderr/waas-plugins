@@ -273,7 +273,7 @@ class CrmSwitch
             'without_record_status' => $without_consent,
             'rule' => sprintf(
                 /* translators: %s: transactional or unsubscribed. */
-                __('Subscribed only where a source holds a consent record (a MailPoet or Newsletter subscription, or a Mailchimp for WooCommerce opt-in). An unsubscribe, bounce or complaint in any source wins. Buyers with no consent record are "%s"%s. Contacts already in FluentCRM keep their status unless a source says unsubscribed, bounced or complained, or they were pending or transactional and a source says subscribed.', 'anypress-client'),
+                __('Subscribed only where a source holds a consent record (a MailPoet or Newsletter subscription, or a Mailchimp for WooCommerce opt-in). An unsubscribe, bounce or complaint in any source wins. Buyers with no consent record are "%1$s"%2$s. Contacts already in FluentCRM keep their status unless a source says unsubscribed, bounced or complained, or they were pending or transactional and a source says subscribed.', 'anypress-client'),
                 $without_consent,
                 $without_consent === 'transactional' ? __(' (FluentCRM sends them order and account emails only, never campaigns)', 'anypress-client') : ''
             ),

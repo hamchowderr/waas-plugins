@@ -119,8 +119,10 @@ class Webhooks
         $stored = self::stored();
 
         // An endpoint registered by an older version, for fewer events, is replaced too.
-        if (!$force && $stored['id'] !== '' && $stored['url'] === $url && $stored['api'] === $api && $stored['events'] === self::events()
-            && self::secret() !== '') {
+        if (
+            !$force && $stored['id'] !== '' && $stored['url'] === $url && $stored['api'] === $api && $stored['events'] === self::events()
+            && self::secret() !== ''
+        ) {
             return $stored;
         }
 

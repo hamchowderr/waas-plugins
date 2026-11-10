@@ -8,8 +8,8 @@ use AnyPressHost\Core\Exceptions\InvalidDomainException;
 
 class ProvisioningApi
 {
-    const CAN_REACH_API_OPTION_NAME = 'anypress_can_reach_api';
-    const GROUP_NAMES_TRANSIENT = 'anypress_available_group_names';
+    public const CAN_REACH_API_OPTION_NAME = 'anypress_can_reach_api';
+    public const GROUP_NAMES_TRANSIENT = 'anypress_available_group_names';
 
     private HttpService $httpService;
 
@@ -423,7 +423,7 @@ class ProvisioningApi
 
     /**
      * @throws \Exception
-     * 
+     *
      */
     public function get_tenant_safe($external_id)
     {

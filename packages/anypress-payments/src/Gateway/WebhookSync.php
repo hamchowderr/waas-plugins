@@ -30,10 +30,10 @@ class WebhookSync
 {
     // FluentCart's daily check of a renewal charge that is 'processing'
     // (SystemChargeService::RECONCILE_HOOK, app/Modules/Subscriptions/Services/SystemChargeService.php).
-    const RECONCILE_HOOK = 'fluent_cart/subscriptions/system_charge_reconcile';
+    public const RECONCILE_HOOK = 'fluent_cart/subscriptions/system_charge_reconcile';
 
     // getTransactionDetails transactionStatus of a refund that went through.
-    const REFUNDED_STATUSES = ['refundPendingSettlement', 'refundSettledSuccessfully'];
+    public const REFUNDED_STATUSES = ['refundPendingSettlement', 'refundSettledSuccessfully'];
 
     private $gateway;
 

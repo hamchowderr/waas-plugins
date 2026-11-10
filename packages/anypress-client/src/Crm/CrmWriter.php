@@ -341,7 +341,8 @@ class CrmWriter
         global $wpdb;
 
         return array_map('strval', (array) $wpdb->get_col($wpdb->prepare(
-            "SELECT t.title FROM {$wpdb->prefix}fc_subscriber_pivot p JOIN {$wpdb->prefix}{$table} t ON t.id = p.object_id WHERE p.subscriber_id = %d AND p.object_type = %s",
+            "SELECT t.title FROM {$wpdb->prefix}fc_subscriber_pivot p JOIN %i t ON t.id = p.object_id WHERE p.subscriber_id = %d AND p.object_type = %s",
+            $wpdb->prefix . $table,
             $id,
             $type
         )));

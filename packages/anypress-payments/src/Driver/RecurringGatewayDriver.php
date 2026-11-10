@@ -11,9 +11,9 @@ namespace AnyPressPayments\Driver;
 interface RecurringGatewayDriver extends GatewayDriver
 {
     // chargeStatus() / findSavedCharge() states.
-    const STATE_PAID = 'paid';
-    const STATE_PENDING = 'pending';
-    const STATE_FAILED = 'failed';
+    public const STATE_PAID = 'paid';
+    public const STATE_PENDING = 'pending';
+    public const STATE_FAILED = 'failed';
 
     /** Charge a saved card. */
     public function chargeSaved(SavedChargeRequest $request): DriverResult;

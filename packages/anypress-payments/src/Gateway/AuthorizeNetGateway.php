@@ -32,10 +32,10 @@ use AnyPressPayments\Driver\RefundRequest;
  */
 class AuthorizeNetGateway extends AbstractPaymentGateway
 {
-    const ROUTE = 'anypress_authorizenet';
+    public const ROUTE = 'anypress_authorizenet';
 
     // The only dataDescriptor Accept.js issues (Accept.js docs, "Building the Opaque Data Payment Type").
-    const TOKEN_DESCRIPTOR = 'COMMON.ACCEPT.INAPP.PAYMENT';
+    public const TOKEN_DESCRIPTOR = 'COMMON.ACCEPT.INAPP.PAYMENT';
 
     // system_subscription: FluentCart's SystemChargeService may charge renewals through
     // chargeRenewal(). card_update: the customer portal links to CardUpdate's page.

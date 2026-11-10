@@ -16,12 +16,12 @@ use AnyPressClient\Core\SignedRequest;
  */
 class EditorAssistant
 {
-    const CAPABILITY = 'edit_theme_options';
-    const ROUTE_NAMESPACE = 'anypress-client/v1';
-    const ROUTE = '/assistant/handoff';
-    const API_ROUTE = '/oauth/site/store-handoff';
+    public const CAPABILITY = 'edit_theme_options';
+    public const ROUTE_NAMESPACE = 'anypress-client/v1';
+    public const ROUTE = '/assistant/handoff';
+    public const API_ROUTE = '/oauth/site/store-handoff';
     /** Opens the panel when the editor loads (the admin bar's button). */
-    const OPEN_PARAM = 'site-assistant';
+    public const OPEN_PARAM = 'site-assistant';
 
     public function __construct()
     {

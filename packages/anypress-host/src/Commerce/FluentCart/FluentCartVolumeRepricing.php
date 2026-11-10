@@ -141,10 +141,12 @@ class FluentCartVolumeRepricing
 
         foreach ($subscription_ids as $subscription_id) {
             $billing = $this->store->get_subscription_billing($subscription_id);
-            if ($billing === null
+            if (
+                $billing === null
                 || !in_array($billing['status'], FluentCartStore::ACTIVE_STATUSES, true)
                 || $billing['recurring_total'] <= 0
-                || !$this->discount->is_plan_product($billing['product_id'])) {
+                || !$this->discount->is_plan_product($billing['product_id'])
+            ) {
                 continue;
             }
 
