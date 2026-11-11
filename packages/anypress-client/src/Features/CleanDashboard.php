@@ -173,6 +173,8 @@ class CleanDashboard
         $wp_plugins = get_plugins();
         // Only what is installed: a design demo with the site type set has a few of its plugins, not all.
         $installed = array_values(array_filter($plan['plugins'], static fn ($file) => isset($wp_plugins[$file])));
+        // AnyPress Blocks goes right after the theme it belongs with.
+        usort($installed, static fn ($a, $b) => (int) !str_starts_with($a, 'anypress-blocks/') <=> (int) !str_starts_with($b, 'anypress-blocks/'));
         $screens = self::plugin_screens();
 ?>
         <ul class="anypress-site-plugins">
@@ -180,7 +182,7 @@ class CleanDashboard
             // The theme first: the site's design comes with it too.
             $theme = wp_get_theme();
             /* translators: %s: the theme's name, such as AnyPress */
-            $theme_name = sprintf(__('%s theme', 'anypress-client'), (string) $theme->get('Name'));
+            $theme_name = sprintf(__('%s Theme', 'anypress-client'), (string) $theme->get('Name'));
             $theme_about = __('The site\'s design: pages, colours and fonts you change in the Site Editor.', 'anypress-client');
             $theme_screen = current_user_can('edit_theme_options') ? ($theme->is_block_theme() ? admin_url('site-editor.php') : admin_url('themes.php')) : null;
             ?>
@@ -205,6 +207,10 @@ class CleanDashboard
                 $folder = explode('/', $file)[0];
                 [$name, $about] = self::name_and_about((string) ($wp_plugins[$file]['Name'] ?? $folder), (string) ($plan['about'][$file] ?? ''));
                 $screen = $screens[$folder] ?? null;
+                if ($screen === null && $folder === 'anypress-blocks' && current_user_can('edit_theme_options') && wp_is_block_theme()) {
+                    // Its blocks have no screen of their own; they're used in the Site Editor.
+                    $screen = admin_url('site-editor.php');
+                }
             ?>
                 <li<?php echo $about !== '' ? ' title="' . esc_attr($about) . '"' : ''; ?>>
                     <span class="anypress-site-plugin-initial" aria-hidden="true"><?php echo esc_html(strtoupper(mb_substr($name, 0, 1))); ?><?php
