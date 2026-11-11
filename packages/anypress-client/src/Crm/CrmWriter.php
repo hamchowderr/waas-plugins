@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Crm;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 /**
  * Writes the merged contacts into FluentCRM through FluentCRM's own PHP API (FluentCrmApi('contacts')->createOrUpdate
  * and its tag and list models), and takes them back out on undo.
@@ -22,6 +20,7 @@ class CrmWriter
     private const LISTS = 'FluentCrm\App\Models\Lists';
     private const FIELDS_CLASS = 'FluentCrm\App\Models\CustomContactField';
     private const HELPER = 'FluentCrm\App\Services\Helper';
+    private const META = 'FluentCrm\App\Models\SubscriberMeta';
     /** The custom fields WooCommerce buyers carry (free FluentCRM has custom contact fields). */
     public const CUSTOM_FIELDS = [
         WooBuyers::FIELD_ORDERS => 'WooCommerce orders',
@@ -76,7 +75,7 @@ class CrmWriter
                 }
             } else {
                 $row = self::row($id);
-                $changes = ContactPlan::changes($contact, $row, self::titles($id, self::TAG, 'fc_tags'), self::titles($id, self::LISTS, 'fc_lists'), self::custom_values($id));
+                $changes = ContactPlan::changes($contact, $row, self::titles($id, self::TAG), self::titles($id, self::LISTS), self::custom_values($id));
                 $status = $changes['status'] ?? (string) $row['status'];
                 $action = ContactPlan::is_empty($changes) ? 'unchanged' : 'updated';
                 $report['interested_removed'] += count($changes['remove_tags']);
@@ -177,7 +176,6 @@ class CrmWriter
      */
     public static function undo(array &$state, bool $dry_run): array
     {
-        global $wpdb;
         $report = [
             'contacts_removed' => count(array_filter($state['contacts'], [self::class, 'exists'])),
             'contacts_restored' => count(array_filter(array_keys($state['existing']), [self::class, 'exists'])),
@@ -203,16 +201,18 @@ class CrmWriter
             $model->fill(array_filter($record['before'], fn ($value) => $value !== null))->save();
             $nulls = array_keys(array_filter($record['before'], fn ($value) => $value === null));
             if ($nulls) {
-                $wpdb->update($wpdb->prefix . 'fc_subscribers', array_fill_keys($nulls, null), ['id' => (int) $id]);
+                $subscriber::where('id', (int) $id)->update(array_fill_keys($nulls, null));
             }
+            $meta = self::META;
             foreach ($record['custom_before'] as $slug => $value) {
                 $where = ['subscriber_id' => (int) $id, 'object_type' => 'custom_field', 'key' => $slug];
+                $row = $meta::where($where)->first();
                 if ($value === null) {
-                    $wpdb->delete($wpdb->prefix . 'fc_subscriber_meta', $where);
-                } elseif ($wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}fc_subscriber_meta WHERE subscriber_id = %d AND object_type = 'custom_field' AND `key` = %s", (int) $id, $slug))) {
-                    $wpdb->update($wpdb->prefix . 'fc_subscriber_meta', ['value' => maybe_serialize($value)], $where);
+                    $meta::where($where)->delete();
+                } elseif ($row) {
+                    $row->fill(['value' => $value])->save();
                 } else {
-                    $wpdb->insert($wpdb->prefix . 'fc_subscriber_meta', $where + ['value' => maybe_serialize($value), 'created_at' => current_time('mysql'), 'updated_at' => current_time('mysql')]);
+                    $meta::create($where + ['value' => $value]);
                 }
             }
             $model->detachTags(array_values(array_diff($record['tags_added'], $state['tags'])));
@@ -321,10 +321,10 @@ class CrmWriter
     /** Every FluentCRM contact's email (lower case) => id. */
     private static function existing_emails(): array
     {
-        global $wpdb;
+        $subscriber = self::SUBSCRIBER;
         $map = [];
-        foreach ((array) $wpdb->get_results("SELECT id, email FROM {$wpdb->prefix}fc_subscribers", ARRAY_A) as $row) {
-            $map[ContactPlan::email((string) $row['email'])] = (int) $row['id'];
+        foreach ($subscriber::select(['id', 'email'])->get() as $row) {
+            $map[ContactPlan::email((string) $row->email)] = (int) $row->id;
         }
 
         return $map;
@@ -332,30 +332,34 @@ class CrmWriter
 
     private static function row(int $id): array
     {
-        global $wpdb;
+        $subscriber = self::SUBSCRIBER;
+        $model = $subscriber::find($id);
 
-        return (array) $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}fc_subscribers WHERE id = %d", $id), ARRAY_A);
+        return $model ? (array) $model->getAttributes() : [];
     }
 
-    /** Titles of the tags or lists a contact has. */
-    private static function titles(int $id, string $type, string $table): array
+    /** Titles of the tags or lists a contact has, through FluentCRM's own relations. */
+    private static function titles(int $id, string $type): array
     {
-        global $wpdb;
+        $subscriber = self::SUBSCRIBER;
+        $model = $subscriber::find($id);
+        if (!$model) {
+            return [];
+        }
+        $titles = [];
+        foreach ($type === self::TAG ? $model->tags : $model->lists as $term) {
+            $titles[] = (string) $term->title;
+        }
 
-        return array_map('strval', (array) $wpdb->get_col($wpdb->prepare(
-            "SELECT t.title FROM {$wpdb->prefix}fc_subscriber_pivot p JOIN %i t ON t.id = p.object_id WHERE p.subscriber_id = %d AND p.object_type = %s",
-            $wpdb->prefix . $table,
-            $id,
-            $type
-        )));
+        return $titles;
     }
 
     private static function custom_values(int $id): array
     {
-        global $wpdb;
+        $meta = self::META;
         $values = [];
-        foreach ((array) $wpdb->get_results($wpdb->prepare("SELECT `key`, value FROM {$wpdb->prefix}fc_subscriber_meta WHERE subscriber_id = %d AND object_type = 'custom_field'", $id), ARRAY_A) as $row) {
-            $values[$row['key']] = maybe_unserialize($row['value']);
+        foreach ($meta::where('subscriber_id', $id)->where('object_type', 'custom_field')->get() as $row) {
+            $values[(string) $row->key] = $row->value;
         }
 
         return $values;
@@ -363,9 +367,9 @@ class CrmWriter
 
     private static function exists($id): bool
     {
-        global $wpdb;
+        $subscriber = self::SUBSCRIBER;
 
-        return (bool) $wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}fc_subscribers WHERE id = %d", (int) $id));
+        return (int) $id > 0 && (bool) $subscriber::find((int) $id);
     }
 
     private static function term_exists(string $class, int $id): bool

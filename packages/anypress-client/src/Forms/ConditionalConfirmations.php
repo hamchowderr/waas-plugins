@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Forms;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 /**
  * Keeps a converted form's conditional confirmations working while Fluent Forms Pro is off. WPForms can send a
  * visitor somewhere else depending on their answers (a redirect "if Topic is Support"); the switch keeps that as a
@@ -38,11 +36,7 @@ class ConditionalConfirmations
             return $confirmation;
         }
 
-        global $wpdb;
-        $values = $wpdb->get_col($wpdb->prepare(
-            "SELECT value FROM {$wpdb->prefix}fluentform_form_meta WHERE form_id = %d AND meta_key = 'confirmations' ORDER BY id ASC",
-            (int) $form->id
-        ));
+        $values = FluentFormsStore::meta((int) $form->id, 'confirmations');
         foreach ($values as $value) {
             $candidate = json_decode((string) $value, true);
             if (!self::applies($candidate)) {

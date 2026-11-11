@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Forms;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 /**
  * A source form's entries in the forms switch: how many the old plugin holds, bringing them into the Fluent Forms
  * copy, and the note that says what came across.
@@ -113,19 +111,16 @@ final class FormEntries
     /** The IP, browser and page each CF7 message was sent from (Flamingo keeps them; the importer leaves them empty). */
     private static function restore_cf7_details(int $fluent_id, array $details): void
     {
-        global $wpdb;
-        $table = $wpdb->prefix . 'fluentform_submissions';
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Fluent Forms' own table, read once after the import.
-        $ids = $wpdb->get_col($wpdb->prepare('SELECT id FROM %i WHERE form_id = %d ORDER BY id ASC', $table, $fluent_id));
+        $ids = \FluentForm\App\Models\Submission::where('form_id', $fluent_id)->orderBy('id', 'ASC')->pluck('id')->all();
         if (count($ids) !== count($details)) {
             return;
         }
-        foreach ($ids as $i => $submission) {
-            $wpdb->update($table, [
+        foreach (array_values($ids) as $i => $submission) {
+            \FluentForm\App\Models\Submission::where('id', (int) $submission)->update([
                 'ip' => substr(sanitize_text_field($details[$i]['ip']), 0, 45),
                 'browser' => substr(sanitize_text_field($details[$i]['browser']), 0, 45),
                 'source_url' => esc_url_raw($details[$i]['source_url']),
-            ], ['id' => (int) $submission]);
+            ]);
         }
     }
 }

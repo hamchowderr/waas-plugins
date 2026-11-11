@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Crm;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 use AnyPressClient\Core\FluentPlugin;
 use WP_Error;
 
@@ -198,7 +196,7 @@ class CrmSwitch
             'fluentcrm_pro' => defined('FLUENTCAMPAIGN_PLUGIN_VERSION') ? FLUENTCAMPAIGN_PLUGIN_VERSION : null,
             'sources' => [
                 'woocommerce' => self::woo_preflight(),
-                'mailpoet' => ['found' => MailPoetSubscribers::present(), 'active' => defined('MAILPOET_VERSION')],
+                'mailpoet' => ['found' => MailPoetSubscribers::present(), 'active' => MailPoetSubscribers::active()],
                 'newsletter' => ['found' => NewsletterSubscribers::present(), 'active' => defined('NEWSLETTER_VERSION')],
             ],
             'other_lists' => [],
@@ -221,6 +219,9 @@ class CrmSwitch
         if ($sources['woocommerce']['tables_only']) {
             $report['warnings'][] = __('WooCommerce isn\'t active, so its orders can\'t be read. Turn it on to bring its buyers in.', 'anypress-client');
         }
+        if ($sources['mailpoet']['found'] && !$sources['mailpoet']['active']) {
+            $report['warnings'][] = __('MailPoet isn\'t active, so its subscribers can\'t be read. Turn it on to bring them in.', 'anypress-client');
+        }
         if ($report['other_lists']) {
             /* translators: %s: plugin names. */
             $report['warnings'][] = sprintf(__('These email-list plugins can\'t be read here: %s. Export their subscribers to a CSV file and bring it in with FluentCRM → Contacts → Import → CSV file (pick the status and lists there, and leave double opt-in off).', 'anypress-client'), implode(', ', $report['other_lists']));
@@ -238,8 +239,8 @@ class CrmSwitch
             $report['hpos'] = class_exists('Automattic\WooCommerce\Utilities\OrderUtil')
                 && \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
         } else {
-            global $wpdb;
-            $report['tables_only'] = (bool) $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->prefix . 'woocommerce_order_items'));
+            // WooCommerce was set up here once if it left its database version behind.
+            $report['tables_only'] = get_option('woocommerce_db_version') !== false;
         }
 
         return $report;
@@ -252,7 +253,7 @@ class CrmSwitch
         if ($preflight['sources']['woocommerce']['active']) {
             $sources['woocommerce'] = WooBuyers::collect();
         }
-        if ($preflight['sources']['mailpoet']['found']) {
+        if ($preflight['sources']['mailpoet']['found'] && $preflight['sources']['mailpoet']['active']) {
             $sources['mailpoet'] = MailPoetSubscribers::collect();
         }
         if ($preflight['sources']['newsletter']['found']) {
@@ -290,7 +291,7 @@ class CrmSwitch
         if ($preflight['sources']['woocommerce']['active']) {
             $lost[] = __('WooCommerce: unpaid, failed and cancelled orders (their people aren\'t brought in), and the order lines themselves (FluentCRM free keeps no purchase history; only the tags, the order count and the total spent come across).', 'anypress-client');
         }
-        if ($preflight['sources']['mailpoet']['found']) {
+        if ($preflight['sources']['mailpoet']['found'] && $preflight['sources']['mailpoet']['active']) {
             $lost[] = __('MailPoet: newsletters, automations, statistics, engagement scores, its own custom subscriber fields, and its automatic lists and segments (WordPress Users, WooCommerce Customers), which are reported, not copied.', 'anypress-client');
         }
         if ($preflight['sources']['newsletter']['found']) {

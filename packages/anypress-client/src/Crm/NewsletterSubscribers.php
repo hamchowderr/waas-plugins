@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Crm;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 /**
  * Subscribers of the Newsletter plugin (thenewsletterplugin.com), read from its table (wp_newsletter) and its list
  * names (the newsletter_lists option). Nothing in them is changed, and the plugin doesn't need to be active.
@@ -30,23 +28,19 @@ class NewsletterSubscribers
         return defined('NEWSLETTER_USERS_TABLE') ? (string) NEWSLETTER_USERS_TABLE : $wpdb->prefix . 'newsletter';
     }
 
+    /** Whether the Newsletter plugin was set up here: it records its version when it makes its table. */
     public static function present(): bool
     {
-        global $wpdb;
-        $table = self::table();
-        if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) !== $table) {
-            return false;
-        }
-        // wp_newsletter is a plain name another plugin could use: check for the Newsletter plugin's own columns.
-        $columns = array_map('strval', (array) $wpdb->get_col($wpdb->prepare('SHOW COLUMNS FROM %i', $table)));
-
-        return in_array('surname', $columns, true) && in_array('list_1', $columns, true) && in_array('token', $columns, true);
+        return get_option('newsletter_version') !== false;
     }
 
     /** @return array{records: array, stats: array} */
     public static function collect(): array
     {
         global $wpdb;
+        // The Newsletter plugin has no function that lists its subscribers (only one at a time by id or email), so
+        // its own table is read, and never changed.
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
         $rows = (array) $wpdb->get_results($wpdb->prepare('SELECT * FROM %i ORDER BY id', self::table()), ARRAY_A);
         $options = get_option('newsletter_lists');
 
