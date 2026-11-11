@@ -30,7 +30,8 @@ class ImportCommand
      * circle: a Circle community through Circle's Admin API: discussion spaces with their members and moderators,
      * space groups, topics, posts, comments and replies, course spaces as courses with their sections, lessons and
      * students, members as WordPress users (into an empty FluentCommunity). memberpress: everyone with an active
-     * MemberPress membership into the FluentCommunity space or course for it, tagged in FluentCRM; payments stay.
+     * MemberPress membership into the FluentCommunity space or course for it, tagged in FluentCRM; with --billing, active Stripe
+     * subscriptions move to FluentCart and keep renewing in Stripe; other payments stay.
      *
      * It checks first, holds back email while it runs, then shows what the source holds next to what came across.
      * The source plugin and its data are never changed. Run it as an administrator (--user=<admin login>).
@@ -47,6 +48,9 @@ class ImportCommand
      * [--map=<pairs>]
      * : memberpress only: which FluentCommunity space or course each membership opens, as
      * <membership id>:<space or course id> pairs separated by commas. A membership left out gets a new private space.
+     *
+     * [--billing]
+     * : memberpress only: also move active Stripe subscriptions to FluentCart, where they keep renewing in Stripe.
      *
      * [--dry-run]
      * : Only check and report what the switch would do. Changes nothing.
@@ -72,6 +76,7 @@ class ImportCommand
      *     wp anypress course switch --user=admin --from=tutor
      *     CIRCLE_API_TOKEN=... wp anypress circle switch --user=admin --dry-run
      *     wp anypress memberpress switch --user=admin --map=12:5,14:9
+     *     wp anypress memberpress switch --user=admin --billing --dry-run
      *
      * @subcommand switch
      */
@@ -91,7 +96,8 @@ class ImportCommand
             [$membership, $space] = array_pad(explode(':', $pair, 2), 2, 0);
             $map[(int) $membership] = (int) $space;
         }
-        $this->import->configure(array_intersect_key(['token' => $token, 'map' => $map], $this->import->inputs()));
+        $billing = (bool) WP_CLI\Utils\get_flag_value($assoc_args, 'billing', false);
+        $this->import->configure(array_intersect_key(['token' => $token, 'map' => $map, 'billing' => $billing], $this->import->inputs()));
         $report = $undo ? $this->import->undo($dry_run) : $this->import->run($dry_run, $from);
         if (is_wp_error($report)) {
             $data = $report->get_error_data();

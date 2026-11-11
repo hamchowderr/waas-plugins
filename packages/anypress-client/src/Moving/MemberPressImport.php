@@ -10,9 +10,10 @@ use FluentCommunity\App\Models\SpaceUserPivot;
  * FluentCommunity space or course for it, and (with FluentCRM on) gets a "MemberPress: <membership>" tag and the date
  * the membership runs out.
  *
- * Access only: payments stay where they are. MemberPress's subscriptions renew through its payment gateway with card
- * details only that gateway holds, so nothing can carry them across; members subscribe again through FluentCart from
- * a date the owner picks.
+ * Payments stay where they are unless "billing" is asked for: then active Stripe subscriptions move to FluentCart and
+ * keep renewing in Stripe (MemberPressBilling). Subscriptions on other gateways (PayPal) renew with details only that
+ * gateway holds, so they stay in MemberPress; those members subscribe again through FluentCart from a date the owner
+ * picks.
  *
  * Each membership goes to the space or course it is mapped to ("map": membership id => FluentCommunity space or
  * course id), or else to a new private space named after it. MemberPress doesn't need to be active: its memberships
@@ -27,6 +28,9 @@ class MemberPressImport extends NativeImport
 
     /** @var array<int, int> membership id => space or course id, for this run only. */
     private array $map = [];
+
+    /** Whether to move active Stripe subscriptions to FluentCart, for this run only. */
+    private bool $billing = false;
 
     /** @var array|null Worked out once per request. */
     private ?array $plan = null;
@@ -58,6 +62,10 @@ class MemberPressImport extends NativeImport
             'additionalProperties' => ['type' => 'integer'],
             'default' => (object) [],
             'description' => 'Which FluentCommunity space or course each membership opens: MemberPress membership id => space or course id. A membership left out gets a new private space with its name.',
+        ], 'billing' => [
+            'type' => 'boolean',
+            'default' => false,
+            'description' => 'Also move active Stripe subscriptions to FluentCart (FluentCart must be active), so they keep renewing in Stripe and FluentCart records the renewals. PayPal and other gateways stay in MemberPress.',
         ]];
     }
 
@@ -69,6 +77,7 @@ class MemberPressImport extends NativeImport
                 $this->map[(int) $membership] = (int) $space;
             }
         }
+        $this->billing = !empty($input['billing']);
         $this->plan = null;
     }
 
@@ -87,6 +96,9 @@ class MemberPressImport extends NativeImport
             }
             $counts['members'] = count($people);
             $counts['subscriptions'] = self::active_subscriptions();
+            if ($this->billing) {
+                $counts['stripe_subscriptions'] = array_sum(array_map('count', MemberPressBilling::stripe_subscriptions()['by_membership']));
+            }
         }
         $name = defined('MEPR_VERSION') ? 'MemberPress' : __('MemberPress (switched off, its memberships are still here)', 'anypress-client');
 
@@ -117,9 +129,9 @@ class MemberPressImport extends NativeImport
 
     protected function target_warnings(): array
     {
-        $warnings = [
-            __('Payments don\'t move: MemberPress\'s subscriptions keep renewing through its payment gateway until they are cancelled. Pick a date to switch members to FluentCart, then cancel the MemberPress subscriptions.', 'anypress-client'),
-        ];
+        $warnings = $this->billing
+            ? MemberPressBilling::warnings(MemberPressBilling::stripe_subscriptions())
+            : [__('Payments don\'t move: MemberPress\'s subscriptions keep renewing through its payment gateway until they are cancelled. To move Stripe subscriptions to FluentCart (they keep renewing in Stripe), run this with billing on. Otherwise pick a date to switch members to FluentCart, then cancel the MemberPress subscriptions.', 'anypress-client')];
         if (!function_exists('FluentCrmApi')) {
             $warnings[] = __('FluentCRM isn\'t active, so members get their spaces but no MemberPress tags or end dates.', 'anypress-client');
         }
@@ -172,6 +184,11 @@ class MemberPressImport extends NativeImport
             $this->tag_members($state);
             /* translators: %d: a number of contacts. */
             $state['fixed'][] = sprintf(__('%d members were tagged in FluentCRM with their membership and its end date.', 'anypress-client'), count($state['crm']['tagged']));
+        }
+        if ($this->billing && MemberPressBilling::fluentcart_active()) {
+            MemberPressBilling::carry(MemberPressBilling::stripe_subscriptions(), array_map(fn ($m) => $m['title'], $this->plan()), $state, $save);
+            /* translators: %d: a number of subscriptions. */
+            $state['fixed'][] = sprintf(__('%d Stripe subscriptions now renew in FluentCart, with the same Stripe subscription.', 'anypress-client'), count($state['billing']['subscriptions']));
         }
 
         return $state;
@@ -256,6 +273,11 @@ class MemberPressImport extends NativeImport
         if (isset($state['profiles_before'])) {
             $removed['profiles'] = self::delete_in('fcom_xprofile', 'user_id', array_diff(self::profile_ids(), array_map('intval', (array) $state['profiles_before'])), $dry_run);
         }
+        if (isset($state['billing'])) {
+            foreach (MemberPressBilling::remove((array) $state['billing'], $dry_run) as $item => $count) {
+                $removed['fluentcart_' . $item] = $count;
+            }
+        }
         $crm = (array) ($state['crm'] ?? []);
         if (function_exists('FluentCrmApi')) {
             $contacts = array_values(array_filter(array_map('intval', (array) ($crm['contacts'] ?? [])), fn ($id) => (bool) \FluentCrm\App\Models\Subscriber::find($id)));
@@ -293,7 +315,9 @@ class MemberPressImport extends NativeImport
     protected function lost(string $source): array
     {
         return [
-            __('Payments and subscriptions: they keep running in MemberPress until cancelled. Members subscribe again through FluentCart.', 'anypress-client'),
+            $this->billing
+                ? __('Subscriptions on PayPal and other gateways besides Stripe: they keep running in MemberPress until cancelled, and those members subscribe again through FluentCart. Past payments stay in MemberPress.', 'anypress-client')
+                : __('Payments and subscriptions: they keep running in MemberPress until cancelled. Members subscribe again through FluentCart (or run this with billing on to move Stripe subscriptions).', 'anypress-client'),
             __('Expired, cancelled and refunded memberships: only members whose membership is active now get access.', 'anypress-client'),
             __('MemberPress\'s rules for which pages each membership opens: put that content in the membership\'s space or course instead.', 'anypress-client'),
             __('Coupons, account pages, membership pricing pages and MemberPress shortcodes.', 'anypress-client'),
