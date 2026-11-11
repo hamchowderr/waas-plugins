@@ -126,7 +126,6 @@ class SupportImport extends NativeImport
 
     protected function remove(array $state, bool $dry_run): array
     {
-        global $wpdb;
         $tickets = array_map('intval', (array) ($state['tickets'] ?? []));
         $removed = [
             'replies and notes' => self::delete_in('fs_conversations', 'ticket_id', $tickets, $dry_run),
@@ -134,19 +133,21 @@ class SupportImport extends NativeImport
             'ticket details' => self::delete_in('fs_meta', 'object_id', $tickets, $dry_run, "object_type = 'ticket_meta'"),
             'tickets' => self::delete_in('fs_tickets', 'id', $tickets, $dry_run),
         ];
-        // People the import added, unless a ticket or reply that stays still names them.
+        // People the import added, unless a ticket or reply that stays still names them. The ones being removed are
+        // left out of that check, so a dry run (where they are still there) counts the same people a real run removes.
         $after = (int) ($state['persons_after'] ?? 0);
         $upto = (int) ($state['persons_upto'] ?? self::max_id('fs_persons'));
-        $p = $wpdb->prefix;
-        $unused = $upto > $after ? "NOT EXISTS (SELECT 1 FROM {$p}fs_tickets t WHERE t.customer_id = {$p}fs_persons.id OR t.agent_id = {$p}fs_persons.id)"
-            . " AND NOT EXISTS (SELECT 1 FROM {$p}fs_conversations c WHERE c.person_id = {$p}fs_persons.id)" : '';
-        if ($dry_run) {
-            // The tickets are still there in a dry run, so count the people only those tickets name.
-            $kept = $tickets ? implode(',', $tickets) : '0';
-            $unused = $upto > $after ? "NOT EXISTS (SELECT 1 FROM {$p}fs_tickets t WHERE t.id NOT IN ({$kept}) AND (t.customer_id = {$p}fs_persons.id OR t.agent_id = {$p}fs_persons.id))"
-                . " AND NOT EXISTS (SELECT 1 FROM {$p}fs_conversations c WHERE c.ticket_id NOT IN ({$kept}) AND c.person_id = {$p}fs_persons.id)" : '';
+        $removed['customers and agents'] = 0;
+        if ($upto > $after) {
+            $staying = self::rows('fs_tickets')->whereNotIn('id', $tickets ?: [0])->get(['customer_id', 'agent_id']);
+            $used = array_merge(
+                $staying->pluck('customer_id')->all(),
+                $staying->pluck('agent_id')->all(),
+                self::rows('fs_conversations')->whereNotIn('ticket_id', $tickets ?: [0])->pluck('person_id')->all()
+            );
+            $made = self::rows('fs_persons')->where('id', '>', $after)->where('id', '<=', $upto)->pluck('id')->all();
+            $removed['customers and agents'] = self::delete_in('fs_persons', 'id', array_diff(array_map('intval', $made), array_map('intval', $used)), $dry_run);
         }
-        $removed['customers and agents'] = $unused !== '' ? self::delete_range('fs_persons', $after, $upto, $dry_run, 'id', $unused) : 0;
         $removed['business inbox'] = self::delete_in('fs_mail_boxes', 'id', [(int) ($state['mailbox'] ?? 0)], $dry_run);
         if (!$dry_run) {
             delete_option(self::SOURCES[$state['source']][2] ?? '');

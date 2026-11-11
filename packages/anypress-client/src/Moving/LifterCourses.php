@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Moving;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 /**
  * LifterLMS courses, read from what LifterLMS keeps in WordPress: courses, sections, lessons and quizzes as posts (a
  * section points at its course and a lesson at its section through post meta, each with its place in _llms_order), and
@@ -21,7 +19,7 @@ class LifterCourses extends CourseSource
     public function found(): bool
     {
         // "course" is also another plugin's post type; LifterLMS's own table tells them apart.
-        return NativeImport::table_exists('lifterlms_user_postmeta') && self::count_posts('course') > 0;
+        return self::has_table('lifterlms_user_postmeta') && self::count_posts('course') > 0;
     }
 
     public function extra_counts(): array
@@ -80,10 +78,11 @@ class LifterCourses extends CourseSource
     /** Posts of this type pointing at $parent through $key, not in the bin, by their _llms_order. */
     private static function ordered(string $type, string $key, int $parent): array
     {
-        global $wpdb;
-        $p = $wpdb->prefix;
+        $ids = array_map('intval', self::posts(['post_type' => $type, 'meta_key' => $key, 'meta_value' => $parent, 'fields' => 'ids'])); // phpcs:ignore WordPress.DB.SlowDBQuery -- one admin run.
+        // Already in menu order; a stable sort puts them in LifterLMS's own order on top of that.
+        usort($ids, fn ($a, $b) => (int) get_post_meta($a, '_llms_order', true) <=> (int) get_post_meta($b, '_llms_order', true));
 
-        return array_map('intval', $wpdb->get_col($wpdb->prepare("SELECT p.ID FROM {$p}posts p JOIN {$p}postmeta m ON m.post_id = p.ID AND m.meta_key = %s AND m.meta_value = %d LEFT JOIN {$p}postmeta o ON o.post_id = p.ID AND o.meta_key = '_llms_order' WHERE p.post_type = %s AND p.post_status IN " . self::LIVE . ' ORDER BY CAST(o.meta_value AS UNSIGNED), p.menu_order, p.ID', $key, $parent, $type))); // phpcs:ignore WordPress.DB.PreparedSQL
+        return $ids;
     }
 
     /**
@@ -94,7 +93,7 @@ class LifterCourses extends CourseSource
     private static function latest(string $key, string $value): array
     {
         global $wpdb;
-        $rows = $wpdb->get_results($wpdb->prepare("SELECT user_id, post_id, meta_value FROM {$wpdb->prefix}lifterlms_user_postmeta WHERE meta_key = %s ORDER BY updated_date, meta_id", $key)); // phpcs:ignore WordPress.DB.PreparedSQL
+        $rows = $wpdb->get_results($wpdb->prepare('SELECT user_id, post_id, meta_value FROM %i WHERE meta_key = %s ORDER BY updated_date, meta_id', $wpdb->prefix . 'lifterlms_user_postmeta', $key)); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- LifterLMS's own table, read with LifterLMS off (see CourseSource::has_table()).
         $last = [];
         foreach ((array) $rows as $row) {
             $last[(int) $row->post_id][(int) $row->user_id] = (string) $row->meta_value;
@@ -110,9 +109,13 @@ class LifterCourses extends CourseSource
     /** Whether the course has a free access plan that's on sale: anyone may take it. */
     private static function free(int $course): bool
     {
-        global $wpdb;
-        $p = $wpdb->prefix;
-
-        return (bool) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$p}posts a JOIN {$p}postmeta c ON c.post_id = a.ID AND c.meta_key = '_llms_product_id' AND c.meta_value = %d JOIN {$p}postmeta f ON f.post_id = a.ID AND f.meta_key = '_llms_is_free' AND f.meta_value = 'yes' WHERE a.post_type = 'llms_access_plan' AND a.post_status = 'publish'", $course)); // phpcs:ignore WordPress.DB.PreparedSQL
+        return (bool) get_posts([
+            'post_type' => 'llms_access_plan',
+            'post_status' => 'publish',
+            'meta_query' => [['key' => '_llms_product_id', 'value' => $course], ['key' => '_llms_is_free', 'value' => 'yes']], // phpcs:ignore WordPress.DB.SlowDBQuery -- one admin run.
+            'fields' => 'ids',
+            'numberposts' => 1,
+            'suppress_filters' => true,
+        ]);
     }
 }

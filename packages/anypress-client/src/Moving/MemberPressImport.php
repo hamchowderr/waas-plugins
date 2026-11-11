@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Moving;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 use FluentCommunity\App\Models\Space;
 use FluentCommunity\App\Models\SpaceUserPivot;
 
@@ -76,7 +74,7 @@ class MemberPressImport extends NativeImport
 
     protected function sources(): array
     {
-        $found = self::table_exists('mepr_transactions') && self::count('posts', "post_type = 'memberpressproduct' AND post_status IN ('publish', 'private', 'draft')") > 0;
+        $found = self::mepr_table('mepr_transactions') && self::memberships() !== [];
         $counts = [];
         if ($found) {
             $counts = ['memberships' => 0, 'members' => 0, 'access' => 0, 'mapped' => 0];
@@ -88,7 +86,7 @@ class MemberPressImport extends NativeImport
                 $people += $membership['members'];
             }
             $counts['members'] = count($people);
-            $counts['subscriptions'] = self::table_exists('mepr_subscriptions') ? self::count('mepr_subscriptions', "status = 'active'") : 0;
+            $counts['subscriptions'] = self::active_subscriptions();
         }
         $name = defined('MEPR_VERSION') ? 'MemberPress' : __('MemberPress (switched off, its memberships are still here)', 'anypress-client');
 
@@ -97,12 +95,11 @@ class MemberPressImport extends NativeImport
 
     protected function target_counts(): array
     {
-        global $wpdb;
-        $p = $wpdb->prefix;
+        $spaces = self::rows('fcom_spaces', "type IN ('community', 'course')");
 
         return [
             'spaces' => self::count('fcom_spaces', "type = 'community'"),
-            'access' => self::table_exists('fcom_space_user') ? (int) $wpdb->get_var("SELECT COUNT(*) FROM {$p}fcom_space_user m JOIN {$p}fcom_spaces s ON s.id = m.space_id WHERE s.type IN ('community', 'course') AND m.status = 'active'") : 0, // phpcs:ignore WordPress.DB.PreparedSQL
+            'access' => $spaces ? (int) self::rows('fcom_space_user', "status = 'active'")->whereIn('space_id', $spaces->pluck('id')->all() ?: [0])->count() : 0,
         ];
     }
 
@@ -243,16 +240,14 @@ class MemberPressImport extends NativeImport
 
     protected function remove(array $state, bool $dry_run): array
     {
-        global $wpdb;
-        $p = $wpdb->prefix;
         $removed = ['access' => 0, 'spaces' => 0, 'contacts' => 0, 'tags' => 0];
         $made = array_map('intval', array_values((array) ($state['spaces'] ?? [])));
         foreach ((array) ($state['joined'] ?? []) as [$space, $user_id]) {
-            $where = ['space_id' => (int) $space, 'user_id' => (int) $user_id];
-            if (self::count('fcom_space_user', 'space_id = %d AND user_id = %d', [(int) $space, (int) $user_id])) {
+            $member = self::rows('fcom_space_user', 'space_id = %d AND user_id = %d', [(int) $space, (int) $user_id]);
+            if ($member && $member->count()) {
                 $removed['access']++;
                 if (!$dry_run) {
-                    $wpdb->delete("{$p}fcom_space_user", $where);
+                    $member->delete();
                 }
             }
         }
@@ -274,7 +269,7 @@ class MemberPressImport extends NativeImport
                     $contact = \FluentCrm\App\Models\Subscriber::find((int) $id);
                     if ($contact) {
                         $contact->detachTags(array_map('intval', (array) $tags));
-                        $wpdb->delete("{$p}fc_subscriber_meta", ['subscriber_id' => (int) $id, 'object_type' => 'custom_field', 'key' => self::EXPIRES_FIELD]);
+                        \FluentCrm\App\Models\SubscriberMeta::where(['subscriber_id' => (int) $id, 'object_type' => 'custom_field', 'key' => self::EXPIRES_FIELD])->delete();
                     }
                 }
                 foreach ((array) ($crm['tags'] ?? []) as $tag_id) {
@@ -314,14 +309,10 @@ class MemberPressImport extends NativeImport
         if ($this->plan !== null) {
             return $this->plan;
         }
-        global $wpdb;
-        $p = $wpdb->prefix;
         $this->plan = [];
-        $memberships = (array) $wpdb->get_results("SELECT ID, post_title, post_excerpt FROM {$p}posts WHERE post_type = 'memberpressproduct' AND post_status IN ('publish', 'private', 'draft') ORDER BY menu_order, ID"); // phpcs:ignore WordPress.DB.PreparedSQL
-        $now = gmdate('Y-m-d H:i:s');
-        foreach ($memberships as $membership) {
+        foreach (self::memberships() as $membership) {
             $id = (int) $membership->ID;
-            $rows = (array) $wpdb->get_results($wpdb->prepare("SELECT t.user_id, t.expires_at FROM {$p}mepr_transactions t JOIN {$p}users u ON u.ID = t.user_id WHERE t.product_id = %d AND t.status IN ('complete', 'confirmed') AND (t.expires_at IS NULL OR t.expires_at = '0000-00-00 00:00:00' OR t.expires_at > %s) ORDER BY t.user_id", $id, $now)); // phpcs:ignore WordPress.DB.PreparedSQL
+            $rows = self::active_transactions($id);
             $members = [];
             foreach ($rows as $row) {
                 $user = (int) $row->user_id;
@@ -339,19 +330,55 @@ class MemberPressImport extends NativeImport
         return $this->plan;
     }
 
-    private static function profile_ids(): array
+    /** MemberPress's memberships: its own post type, read through WordPress, so this works with MemberPress off too. */
+    private static function memberships(): array
+    {
+        return get_posts([
+            'post_type' => 'memberpressproduct',
+            'post_status' => ['publish', 'private', 'draft'],
+            'orderby' => ['menu_order' => 'ASC', 'ID' => 'ASC'],
+            'numberposts' => -1,
+            'suppress_filters' => true,
+        ]);
+    }
+
+    /*
+     * MemberPress's transactions and subscriptions are read straight from its tables. Its own classes (MeprUser,
+     * MeprTransaction) only load while MemberPress is switched on, and this switch is meant to work after MemberPress
+     * has been switched off too (often once its licence has lapsed). The reads are read-only, prepared, and run once
+     * in an admin's run, so there is nothing to cache.
+     */
+
+    private static function mepr_table(string $table): bool
     {
         global $wpdb;
 
-        return self::table_exists('fcom_xprofile') ? array_map('intval', $wpdb->get_col("SELECT user_id FROM {$wpdb->prefix}fcom_xprofile")) : []; // phpcs:ignore WordPress.DB.PreparedSQL
+        return (string) $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($wpdb->prefix . $table))) !== ''; // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- see above.
+    }
+
+    /** A membership's transactions that give access now (complete or confirmed, not expired), by people who still have an account. */
+    private static function active_transactions(int $membership): array
+    {
+        global $wpdb;
+
+        return (array) $wpdb->get_results($wpdb->prepare('SELECT t.user_id, t.expires_at FROM %i t JOIN %i u ON u.ID = t.user_id WHERE t.product_id = %d AND t.status IN (%s, %s) AND (t.expires_at IS NULL OR t.expires_at = %s OR t.expires_at > %s) ORDER BY t.user_id', $wpdb->prefix . 'mepr_transactions', $wpdb->users, $membership, 'complete', 'confirmed', '0000-00-00 00:00:00', gmdate('Y-m-d H:i:s'))); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- see above.
+    }
+
+    private static function active_subscriptions(): int
+    {
+        global $wpdb;
+        if (!self::mepr_table('mepr_subscriptions')) {
+            return 0;
+        }
+
+        return (int) $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM %i WHERE status = %s', $wpdb->prefix . 'mepr_subscriptions', 'active')); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- see above.
     }
 
     private static function free_slug(string $name): string
     {
-        global $wpdb;
         $base = sanitize_title($name) ?: 'membership';
         $try = $base;
-        for ($n = 2; $wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}fcom_spaces WHERE slug = %s", $try)); $n++) { // phpcs:ignore WordPress.DB.PreparedSQL
+        for ($n = 2; self::count('fcom_spaces', 'slug = %s', [$try]); $n++) {
             $try = $base . '-' . $n;
         }
 

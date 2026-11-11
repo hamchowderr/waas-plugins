@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Moving;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 use AnyPressClient\Core\FluentPlugin;
 use WP_Error;
 
@@ -341,54 +339,86 @@ abstract class NativeImport
         return is_plugin_active($file);
     }
 
+    /** The Fluent plugins' own models, by table name without the prefix. */
+    private const MODELS = [
+        'fcom_spaces' => 'FluentCommunity\App\Models\BaseSpace',
+        'fcom_space_user' => 'FluentCommunity\App\Models\SpaceUserPivot',
+        'fcom_posts' => 'FluentCommunity\App\Models\Feed',
+        'fcom_post_comments' => 'FluentCommunity\App\Models\Comment',
+        'fcom_post_reactions' => 'FluentCommunity\App\Models\Reaction',
+        'fcom_media_archive' => 'FluentCommunity\App\Models\Media',
+        'fcom_user_activities' => 'FluentCommunity\App\Models\Activity',
+        'fcom_xprofile' => 'FluentCommunity\App\Models\XProfile',
+        'fcom_terms' => 'FluentCommunity\App\Models\Term',
+        'fcom_meta' => 'FluentCommunity\App\Models\Meta',
+        'fs_tickets' => 'FluentSupport\App\Models\Ticket',
+        'fs_conversations' => 'FluentSupport\App\Models\Conversation',
+        'fs_persons' => 'FluentSupport\App\Models\Person',
+        'fs_attachments' => 'FluentSupport\App\Models\Attachment',
+        'fs_mail_boxes' => 'FluentSupport\App\Models\MailBox',
+        'fs_meta' => 'FluentSupport\App\Models\Meta',
+        'fa_affiliates' => 'FluentAffiliate\App\Models\Affiliate',
+        'fa_referrals' => 'FluentAffiliate\App\Models\Referral',
+        'fa_customers' => 'FluentAffiliate\App\Models\Customer',
+        'fa_payouts' => 'FluentAffiliate\App\Models\Payout',
+        'fa_payout_transactions' => 'FluentAffiliate\App\Models\Transaction',
+        'fa_visits' => 'FluentAffiliate\App\Models\Visit',
+        'fa_meta' => 'FluentAffiliate\App\Models\Meta',
+    ];
+
+    /** Whether the Fluent plugin that keeps this table is active, so its model can be used. */
     public static function table_exists(string $table): bool
     {
-        global $wpdb;
-        $name = $wpdb->prefix . $table;
-
-        return $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($name))) === $name;
+        return isset(self::MODELS[$table]) && class_exists(self::MODELS[$table]);
     }
 
-    /** Rows in a table of this site (prefix added), 0 when it doesn't exist. */
+    /**
+     * A query on one of the Fluent plugins' tables through that plugin's own model, without the model's default
+     * filters (a Feed model, say, only sees one post type), so it covers the whole table. $where is a fixed condition
+     * written in this plugin's code, with ? (or %d and %s) for the values in $args.
+     *
+     * @return object|null The model's query builder, or null when the plugin isn't active.
+     */
+    protected static function rows(string $table, string $where = '', array $args = [])
+    {
+        if (!self::table_exists($table)) {
+            return null;
+        }
+        $class = self::MODELS[$table];
+        $query = $class::withoutGlobalScopes();
+        if ($where !== '' && $where !== '1=1') {
+            $query->whereRaw(str_replace(['%d', '%s'], '?', $where), $args);
+        }
+
+        return $query;
+    }
+
+    /** Rows in one of the Fluent plugins' tables, 0 when the plugin isn't active. */
     protected static function count(string $table, string $where = '1=1', array $args = []): int
     {
-        global $wpdb;
-        if (!self::table_exists($table)) {
-            return 0;
-        }
-        // $where is a fixed condition written in this plugin's code, its values passed as $args to prepare().
-        $sql = "SELECT COUNT(*) FROM %i WHERE {$where}";
+        $query = self::rows($table, $where, $args);
 
-        return (int) $wpdb->get_var($wpdb->prepare($sql, array_merge([$wpdb->prefix . $table], $args))); // phpcs:ignore WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+        return $query ? (int) $query->count() : 0;
     }
 
     protected static function max_id(string $table, string $column = 'id'): int
     {
-        global $wpdb;
-        if (!self::table_exists($table)) {
-            return 0;
-        }
+        $query = self::rows($table);
 
-        return (int) $wpdb->get_var($wpdb->prepare('SELECT MAX(%i) FROM %i', $column, $wpdb->prefix . $table));
+        return $query ? (int) $query->max($column) : 0;
     }
 
     /** Deletes rows of a table whose $column is in $ids; returns how many (or would). */
     protected static function delete_in(string $table, string $column, array $ids, bool $dry_run, string $extra = ''): int
     {
-        global $wpdb;
         $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
         if (!$ids || !self::table_exists($table)) {
             return 0;
         }
         $total = 0;
-        // $extra is a fixed condition written in this plugin's code; the table, column and ids go through prepare().
-        $extra = $extra !== '' ? " AND {$extra}" : '';
         foreach (array_chunk($ids, 500) as $chunk) {
-            // phpcs:disable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
-            $total += $dry_run
-                ? (int) $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM %i WHERE %i IN (' . implode(',', array_fill(0, count($chunk), '%d')) . "){$extra}", ...array_merge([$wpdb->prefix . $table, $column], $chunk)))
-                : (int) $wpdb->query($wpdb->prepare('DELETE FROM %i WHERE %i IN (' . implode(',', array_fill(0, count($chunk), '%d')) . "){$extra}", ...array_merge([$wpdb->prefix . $table, $column], $chunk)));
-            // phpcs:enable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+            $query = self::rows($table, $extra)->whereIn($column, $chunk);
+            $total += $dry_run ? (int) $query->count() : (int) $query->delete();
         }
 
         return $total;
@@ -397,20 +427,20 @@ abstract class NativeImport
     /** Deletes rows of a table with $after < id <= $upto; returns how many (or would). */
     protected static function delete_range(string $table, int $after, int $upto, bool $dry_run, string $column = 'id', string $extra = ''): int
     {
-        global $wpdb;
         if ($upto <= $after || !self::table_exists($table)) {
             return 0;
         }
-        // $extra is a fixed condition written in this plugin's code; the table, column and ids go through prepare().
-        $extra = $extra !== '' ? " AND {$extra}" : '';
-        $name = $wpdb->prefix . $table;
-        // phpcs:disable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
-        $total = $dry_run
-            ? (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM %i WHERE %i > %d AND %i <= %d{$extra}", $name, $column, $after, $column, $upto))
-            : (int) $wpdb->query($wpdb->prepare("DELETE FROM %i WHERE %i > %d AND %i <= %d{$extra}", $name, $column, $after, $column, $upto));
-        // phpcs:enable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+        $query = self::rows($table, $extra)->where($column, '>', $after)->where($column, '<=', $upto);
 
-        return $total;
+        return $dry_run ? (int) $query->count() : (int) $query->delete();
+    }
+
+    /** The members FluentCommunity has a profile for (its XProfile model). */
+    protected static function profile_ids(): array
+    {
+        $profiles = self::rows('fcom_xprofile');
+
+        return $profiles ? array_map('intval', $profiles->pluck('user_id')->all()) : [];
     }
 
     /** One run at a time (the command and the ability together must not import twice). */
