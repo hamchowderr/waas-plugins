@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Moving;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 /**
  * LearnDash courses, read from what LearnDash keeps in WordPress: courses, lessons, topics and quizzes as posts, the
  * course builder's steps and section headings as post meta, enrolments, group access and progress as user meta (and
@@ -126,8 +124,6 @@ class LearnDashCourses extends CourseSource
      */
     private static function outline(int $course): array
     {
-        global $wpdb;
-        $p = $wpdb->prefix;
         $items = [];
         $steps = maybe_unserialize(get_post_meta($course, 'ld_course_steps', true));
         $tree = is_array($steps) ? ($steps['steps']['h']['sfwd-lessons'] ?? null) : null;
@@ -140,9 +136,13 @@ class LearnDashCourses extends CourseSource
                 }
             }
         } else {
-            $lessons = array_map('intval', $wpdb->get_col($wpdb->prepare("SELECT p.ID FROM {$p}posts p JOIN {$p}postmeta m ON m.post_id = p.ID AND m.meta_key = 'course_id' AND m.meta_value = %d WHERE p.post_type = 'sfwd-lessons' AND p.post_status IN " . self::LIVE . ' ORDER BY p.menu_order, p.ID', $course))); // phpcs:ignore WordPress.DB.PreparedSQL
+            $lessons = array_map('intval', self::posts(['post_type' => 'sfwd-lessons', 'meta_key' => 'course_id', 'meta_value' => $course, 'fields' => 'ids'])); // phpcs:ignore WordPress.DB.SlowDBQuery -- one admin run.
             foreach ($lessons as $lesson) {
-                $topics = array_map('intval', $wpdb->get_col($wpdb->prepare("SELECT p.ID FROM {$p}posts p JOIN {$p}postmeta l ON l.post_id = p.ID AND l.meta_key = 'lesson_id' AND l.meta_value = %d JOIN {$p}postmeta c ON c.post_id = p.ID AND c.meta_key = 'course_id' AND c.meta_value = %d WHERE p.post_type = 'sfwd-topic' AND p.post_status IN " . self::LIVE . ' ORDER BY p.menu_order, p.ID', $lesson, $course))); // phpcs:ignore WordPress.DB.PreparedSQL
+                $topics = array_map('intval', self::posts([
+                    'post_type' => 'sfwd-topic',
+                    'meta_query' => [['key' => 'lesson_id', 'value' => $lesson], ['key' => 'course_id', 'value' => $course]], // phpcs:ignore WordPress.DB.SlowDBQuery -- one admin run.
+                    'fields' => 'ids',
+                ]));
                 $items[] = ['lesson' => $lesson, 'topics' => $topics];
             }
         }
@@ -167,12 +167,11 @@ class LearnDashCourses extends CourseSource
     /** @return array<int, true> Which of these posts exist and aren't in the bin. */
     private static function live_ids(array $ids): array
     {
-        global $wpdb;
         $ids = array_values(array_filter(array_map('intval', $ids)));
         if (!$ids) {
             return [];
         }
-        $found = $wpdb->get_col("SELECT ID FROM {$wpdb->prefix}posts WHERE ID IN (" . implode(',', $ids) . ') AND post_status IN ' . self::LIVE); // phpcs:ignore WordPress.DB.PreparedSQL
+        $found = self::posts(['post__in' => $ids, 'post_type' => ['sfwd-lessons', 'sfwd-topic'], 'fields' => 'ids']);
 
         return array_fill_keys(array_map('intval', $found), true);
     }
@@ -208,12 +207,12 @@ class LearnDashCourses extends CourseSource
      */
     private static function students(int $course, array $started): array
     {
-        global $wpdb;
-        $p = $wpdb->prefix;
-        $ids = $wpdb->get_col($wpdb->prepare("SELECT user_id FROM {$p}usermeta WHERE meta_key = %s", 'course_' . $course . '_access_from')); // phpcs:ignore WordPress.DB.PreparedSQL
-        $groups = $wpdb->get_col($wpdb->prepare("SELECT SUBSTRING(meta_key, 26) FROM {$p}postmeta WHERE post_id = %d AND meta_key LIKE %s", $course, $wpdb->esc_like('learndash_group_enrolled_') . '%')); // phpcs:ignore WordPress.DB.PreparedSQL
-        foreach (array_filter(array_map('intval', $groups)) as $group) {
-            $ids = array_merge($ids, $wpdb->get_col($wpdb->prepare("SELECT user_id FROM {$p}usermeta WHERE meta_key = %s", 'learndash_group_users_' . $group))); // phpcs:ignore WordPress.DB.PreparedSQL
+        $ids = self::users_with('course_' . $course . '_access_from');
+        foreach (array_keys((array) get_post_meta($course)) as $key) {
+            $group = str_starts_with((string) $key, 'learndash_group_enrolled_') ? (int) substr((string) $key, 25) : 0;
+            if ($group > 0) {
+                $ids = array_merge($ids, self::users_with('learndash_group_users_' . $group));
+            }
         }
         $settings = (array) maybe_unserialize(get_post_meta($course, '_sfwd-courses', true));
         $ids = array_merge($ids, explode(',', (string) ($settings['sfwd-courses_course_access_list'] ?? '')), $started);
@@ -230,14 +229,10 @@ class LearnDashCourses extends CourseSource
      */
     private static function progress(): array
     {
-        global $wpdb;
-        $p = $wpdb->prefix;
         $steps = [];
         $finished = [];
-        $rows = $wpdb->get_results("SELECT user_id, meta_value FROM {$p}usermeta WHERE meta_key = '_sfwd-course_progress'"); // phpcs:ignore WordPress.DB.PreparedSQL
-        foreach ((array) $rows as $row) {
-            $user = (int) $row->user_id;
-            foreach ((array) maybe_unserialize($row->meta_value) as $course => $done) {
+        foreach (self::users_with('_sfwd-course_progress') as $user) {
+            foreach ((array) get_user_meta($user, '_sfwd-course_progress', true) as $course => $done) {
                 $course = (int) $course;
                 $steps[$course][$user] = $steps[$course][$user] ?? [];
                 foreach ((array) ($done['lessons'] ?? []) as $lesson => $complete) {
@@ -254,8 +249,9 @@ class LearnDashCourses extends CourseSource
                 }
             }
         }
-        if (NativeImport::table_exists('learndash_user_activity')) {
-            $rows = $wpdb->get_results("SELECT user_id, post_id, course_id, activity_type FROM {$p}learndash_user_activity WHERE activity_status = 1 AND activity_type IN ('lesson', 'topic', 'course')"); // phpcs:ignore WordPress.DB.PreparedSQL
+        if (self::has_table('learndash_user_activity')) {
+            global $wpdb;
+            $rows = $wpdb->get_results($wpdb->prepare('SELECT user_id, post_id, course_id, activity_type FROM %i WHERE activity_status = 1 AND activity_type IN (%s, %s, %s)', $wpdb->prefix . 'learndash_user_activity', 'lesson', 'topic', 'course')); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- LearnDash's own table, read with LearnDash off (see CourseSource::has_table()).
             foreach ((array) $rows as $row) {
                 $course = (int) ($row->activity_type === 'course' ? $row->post_id : $row->course_id);
                 if ($row->activity_type === 'course') {
@@ -265,9 +261,14 @@ class LearnDashCourses extends CourseSource
                 }
             }
         }
-        $rows = $wpdb->get_results($wpdb->prepare("SELECT user_id, meta_key FROM {$p}usermeta WHERE meta_key LIKE %s AND meta_value > 0", $wpdb->esc_like('course_completed_') . '%')); // phpcs:ignore WordPress.DB.PreparedSQL
-        foreach ((array) $rows as $row) {
-            $finished[(int) substr($row->meta_key, 17)][] = (int) $row->user_id;
+        // A finished course is a course_completed_<course id> user meta key holding when.
+        $completers = get_users(['blog_id' => 0, 'fields' => 'ID', 'meta_query' => [['key' => 'course_completed_', 'compare_key' => 'LIKE']]]); // phpcs:ignore WordPress.DB.SlowDBQuery -- one admin run.
+        foreach (array_map('intval', $completers) as $user) {
+            foreach ((array) get_user_meta($user) as $key => $values) {
+                if (str_starts_with((string) $key, 'course_completed_') && (int) ($values[0] ?? 0) > 0) {
+                    $finished[(int) substr((string) $key, 17)][] = $user;
+                }
+            }
         }
         foreach ($steps as $course => $users) {
             foreach ($users as $user => $ids) {
@@ -276,5 +277,11 @@ class LearnDashCourses extends CourseSource
         }
 
         return ['steps' => $steps, 'finished' => array_map(fn ($ids) => array_values(array_unique($ids)), $finished)];
+    }
+
+    /** @return int[] Users that have this user meta key. */
+    private static function users_with(string $key): array
+    {
+        return array_map('intval', get_users(['blog_id' => 0, 'fields' => 'ID', 'meta_key' => $key])); // phpcs:ignore WordPress.DB.SlowDBQuery -- one admin run.
     }
 }

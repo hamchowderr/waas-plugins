@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Moving;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 use WP_REST_Request;
 
 /**
@@ -48,16 +46,20 @@ class CommunityImport extends NativeImport
 
     protected function sources(): array
     {
-        $found = function_exists('bp_is_active') && self::table_exists('bp_activity');
+        $found = function_exists('bp_is_active') && bp_is_active('activity');
         $counts = [];
         if ($found) {
-            $counts = [
-                'groups' => self::count('bp_groups'),
+            $groups = self::group_ids();
+            $members = 0;
+            foreach ($groups as $group) {
                 // Banned members are taken out again after the import (see fix_members).
-                'group_members' => self::count('bp_groups_members', 'is_banned = 0'),
-                'posts' => self::count('bp_activity', "type = 'activity_update' AND (secondary_item_id = 0 OR secondary_item_id IS NULL)"),
-                'comments' => self::count('bp_activity', "type = 'activity_comment'"),
-                'profiles' => self::table_exists('bp_xprofile_data') ? (int) $GLOBALS['wpdb']->get_var("SELECT COUNT(DISTINCT user_id) FROM {$GLOBALS['wpdb']->prefix}bp_xprofile_data") : 0, // phpcs:ignore WordPress.DB.PreparedSQL
+                $members += count(self::group_members($group, ['member', 'mod', 'admin']));
+            }
+            $counts = [
+                'groups' => count($groups),
+                'group_members' => $members,
+                'posts' => self::activity_count('activity_update'),
+                'comments' => self::activity_count('activity_comment'),
             ];
         }
         $name = defined('BP_PLATFORM_VERSION') ? 'BuddyBoss' : 'BuddyPress';
@@ -128,21 +130,18 @@ class CommunityImport extends NativeImport
      */
     private static function fix_members(array $groups, int $from): array
     {
-        global $wpdb;
-        $p = $wpdb->prefix;
         $banned = 0;
         $pending = 0;
-        $rows = $wpdb->get_results("SELECT group_id, user_id, is_banned FROM {$p}bp_groups_members WHERE is_banned = 1 OR is_confirmed = 0"); // phpcs:ignore WordPress.DB.PreparedSQL
-        foreach ((array) $rows as $row) {
-            $space = $groups[(int) $row->group_id] ?? 0;
+        foreach ($groups as $group => $space) {
             if (!$space) {
                 continue;
             }
-            $where = $wpdb->prepare("space_id = %d AND user_id = %d AND id > %d", $space, (int) $row->user_id, $from);
-            if ((int) $row->is_banned === 1) {
-                $banned += (int) $wpdb->query("DELETE FROM {$p}fcom_space_user WHERE {$where}"); // phpcs:ignore WordPress.DB.PreparedSQL
-            } else {
-                $pending += (int) $wpdb->query("UPDATE {$p}fcom_space_user SET status = 'pending' WHERE {$where}"); // phpcs:ignore WordPress.DB.PreparedSQL
+            $member = fn (int $user) => self::rows('fcom_space_user', 'space_id = ? AND user_id = ? AND id > ?', [(int) $space, $user, $from]);
+            foreach (self::group_members((int) $group, ['banned']) as $user) {
+                $banned += (int) $member($user)->delete();
+            }
+            foreach (self::group_members((int) $group, ['member', 'mod', 'admin'], false) as $user) {
+                $pending += (int) $member($user)->update(['status' => 'pending']);
             }
         }
         $fixed = [];
@@ -158,14 +157,47 @@ class CommunityImport extends NativeImport
         return $fixed;
     }
 
-    private static function profile_ids(): array
+    /** BuddyPress's own list of every group, hidden ones too. */
+    private static function group_ids(): array
     {
-        global $wpdb;
-        if (!self::table_exists('fcom_xprofile')) {
+        if (!function_exists('bp_is_active') || !bp_is_active('groups')) {
             return [];
         }
 
-        return array_map('intval', $wpdb->get_col("SELECT user_id FROM {$wpdb->prefix}fcom_xprofile")); // phpcs:ignore WordPress.DB.PreparedSQL
+        return array_map('intval', (array) \BP_Groups_Group::get(['show_hidden' => true, 'per_page' => -1, 'fields' => 'ids'])['groups']);
+    }
+
+    /**
+     * A group's members in these roles (BuddyPress's member query), confirmed ones or, with $confirmed false, the
+     * requests and invitations that weren't accepted. Banned members are looked up both ways.
+     */
+    private static function group_members(int $group, array $roles, ?bool $confirmed = null): array
+    {
+        $users = [];
+        foreach ($confirmed === null ? [true, false] : [$confirmed] as $state) {
+            $query = new \BP_Group_Member_Query(['group_id' => $group, 'group_role' => $roles, 'is_confirmed' => $state, 'per_page' => 0]);
+            $users = array_merge($users, array_map('intval', (array) $query->user_ids));
+        }
+
+        return array_values(array_unique($users));
+    }
+
+    /** BuddyPress activity items of one type, hidden and spam ones too (FluentCommunity's importer takes them all). */
+    private static function activity_count(string $type): int
+    {
+        if (!function_exists('bp_activity_get')) {
+            return 0;
+        }
+        $found = bp_activity_get([
+            'filter' => ['action' => $type],
+            'display_comments' => $type === 'activity_comment' ? 'stream' : false,
+            'show_hidden' => true,
+            'spam' => 'all',
+            'count_total' => true,
+            'count_total_only' => true,
+        ]);
+
+        return (int) ($found['total'] ?? 0);
     }
 
     protected function compare_keys(): array
@@ -175,7 +207,6 @@ class CommunityImport extends NativeImport
 
     protected function remove(array $state, bool $dry_run): array
     {
-        global $wpdb;
         $from = (array) ($state['from'] ?? []);
         $upto = (array) ($state['upto'] ?? []);
         $removed = [];
@@ -190,11 +221,11 @@ class CommunityImport extends NativeImport
         }
         if (!$dry_run) {
             // The marks FluentCommunity leaves on the BuddyPress side so it skips what it already imported.
-            if (self::table_exists('bp_activity_meta')) {
-                $wpdb->query("DELETE FROM {$wpdb->prefix}bp_activity_meta WHERE meta_key = '_fcom_feed_id'"); // phpcs:ignore WordPress.DB.PreparedSQL
+            if (function_exists('bp_activity_delete_meta')) {
+                bp_activity_delete_meta(0, '_fcom_feed_id', '', true);
             }
-            if (self::table_exists('bp_groups_groupmeta')) {
-                $wpdb->query("DELETE FROM {$wpdb->prefix}bp_groups_groupmeta WHERE meta_key = '_fcom_space_id'"); // phpcs:ignore WordPress.DB.PreparedSQL
+            if (function_exists('groups_delete_groupmeta')) {
+                groups_delete_groupmeta(0, '_fcom_space_id', false, true);
             }
             foreach ([self::STATUS, '_bp_fcom_group_maps', '_bp_fcom_last_post_id', '_bp_fcom_last_user_id', '_bp_fcom_last_migrated_member_id'] as $option) {
                 delete_option($option);

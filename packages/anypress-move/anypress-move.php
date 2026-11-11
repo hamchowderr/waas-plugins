@@ -9,7 +9,7 @@ Plugin Name: AnyPress Move
 Plugin URI: https://github.com/hamchowderr/waas-plugins
 Description: Moves your site's forms, shop, contacts, help desk, affiliates, community, courses and members into the Fluent plugins, with a check first and an undo after. Under Tools, Move to Fluent.
 Author: Otaku Solutions
-Version: 1.0.1
+Version: 1.0.2
 Author URI: https://otakusolutions.io
 Requires at least: 6.9
 Requires PHP: 8.1
@@ -18,7 +18,7 @@ License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Text Domain: anypress-move
 */
 
-define('ANYPRESS_MOVE_VERSION', '1.0.1');
+define('ANYPRESS_MOVE_VERSION', '1.0.2');
 
 // AnyPress websites already have every switch in AnyPress Client; this plugin then stays out of the way.
 add_action('plugins_loaded', static function () {

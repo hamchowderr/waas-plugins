@@ -2,11 +2,10 @@
 
 namespace AnyPressClient\Forms;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 /**
  * Reads and tidies the forms Fluent Forms' importer made: which Fluent Forms form a source form became, its fields
- * and entry count, and the importer's leftover notification and confirmation rows. Part of the forms switch.
+ * and entry count, and the importer's leftover notification and confirmation rows, all through Fluent Forms' own
+ * models (Form, FormMeta, Submission). Part of the forms switch.
  */
 final class FluentFormsStore
 {
@@ -28,25 +27,31 @@ final class FluentFormsStore
 
     public static function exists(int $id): bool
     {
-        global $wpdb;
-
-        return $id > 0 && (bool) $wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}fluentform_forms WHERE id = %d", $id));
+        return $id > 0 && (bool) \FluentForm\App\Models\Form::find($id);
     }
 
     public static function fields(int $id): array
     {
-        global $wpdb;
-        $json = $wpdb->get_var($wpdb->prepare("SELECT form_fields FROM {$wpdb->prefix}fluentform_forms WHERE id = %d", $id));
-        $fields = is_string($json) ? json_decode($json, true) : null;
+        $form = \FluentForm\App\Models\Form::find($id);
+        $fields = $form ? json_decode((string) $form->form_fields, true) : null;
 
         return is_array($fields) ? $fields : [];
     }
 
     public static function submissions(int $id): int
     {
-        global $wpdb;
+        return (int) \FluentForm\App\Models\Submission::where('form_id', $id)->count();
+    }
 
-        return (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}fluentform_submissions WHERE form_id = %d", $id));
+    /** A form's meta rows of one key, oldest first. */
+    public static function meta(int $id, string $key): array
+    {
+        $rows = [];
+        foreach (\FluentForm\App\Models\FormMeta::where('form_id', $id)->where('meta_key', $key)->orderBy('id', 'ASC')->get() as $row) {
+            $rows[(int) $row->id] = (string) $row->value;
+        }
+
+        return $rows;
     }
 
     /**
@@ -55,13 +60,10 @@ final class FluentFormsStore
      */
     public static function remove_junk_notifications(int $id): void
     {
-        global $wpdb;
-        $table = $wpdb->prefix . 'fluentform_form_meta';
-        $rows = $wpdb->get_results($wpdb->prepare("SELECT id, value FROM %i WHERE form_id = %d AND meta_key = 'notifications'", $table, $id));
-        foreach ($rows as $row) {
-            $value = json_decode((string) $row->value, true);
+        foreach (self::meta($id, 'notifications') as $row => $value) {
+            $value = json_decode($value, true);
             if (!is_array($value) || !isset($value['sendTo'])) {
-                $wpdb->delete($table, ['id' => (int) $row->id]);
+                \FluentForm\App\Models\FormMeta::where('id', $row)->delete();
             }
         }
     }
@@ -72,13 +74,10 @@ final class FluentFormsStore
      */
     public static function remove_unconditional_confirmations(int $id): void
     {
-        global $wpdb;
-        $table = $wpdb->prefix . 'fluentform_form_meta';
-        $rows = $wpdb->get_results($wpdb->prepare("SELECT id, value FROM %i WHERE form_id = %d AND meta_key = 'confirmations'", $table, $id));
-        foreach ($rows as $row) {
-            $value = json_decode((string) $row->value, true);
+        foreach (self::meta($id, 'confirmations') as $row => $value) {
+            $value = json_decode($value, true);
             if (empty($value['conditionals']['status'])) {
-                $wpdb->delete($table, ['id' => (int) $row->id]);
+                \FluentForm\App\Models\FormMeta::where('id', $row)->delete();
             }
         }
     }
@@ -86,15 +85,10 @@ final class FluentFormsStore
     /** Keeps the short list of converted Fluent Forms forms that have conditional confirmations. */
     public static function remember_conditional(array $state): void
     {
-        global $wpdb;
         $ids = [];
         foreach ($state['forms'] as $form) {
-            $values = $wpdb->get_col($wpdb->prepare(
-                "SELECT value FROM {$wpdb->prefix}fluentform_form_meta WHERE form_id = %d AND meta_key = 'confirmations'",
-                (int) $form['fluent_id']
-            ));
-            foreach ($values as $value) {
-                $confirmation = json_decode((string) $value, true);
+            foreach (self::meta((int) $form['fluent_id'], 'confirmations') as $value) {
+                $confirmation = json_decode($value, true);
                 if (!empty($confirmation['conditionals']['status'])) {
                     $ids[] = (int) $form['fluent_id'];
                     break;

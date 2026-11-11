@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Shop;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 /**
  * Copies each WooCommerce product's gallery images to its FluentCart copy. The FluentCart Migrator add-on links
  * the copy to the original (`_fct_migrated_id` on the WooCommerce product) but puts only the featured image in
@@ -118,16 +116,10 @@ class GalleryImages
     /** WooCommerce product id => its FluentCart copy's id, for products the add-on has copied. */
     private static function linked_products(): array
     {
-        global $wpdb;
-        $rows = $wpdb->get_results($wpdb->prepare(
-            "SELECT m.post_id, m.meta_value FROM {$wpdb->postmeta} m INNER JOIN {$wpdb->posts} p ON p.ID = m.post_id WHERE m.meta_key = %s AND p.post_type = %s",
-            self::LINK,
-            'product'
-        ));
         $map = [];
-        foreach ((array) $rows as $row) {
-            if ((int) $row->meta_value && get_post_type((int) $row->meta_value) === 'fluent-products') {
-                $map[(int) $row->post_id] = (int) $row->meta_value;
+        foreach (ShopCompare::posts_with('product', self::LINK) as $woo => $fc) {
+            if ($fc && get_post_type($fc) === 'fluent-products') {
+                $map[$woo] = $fc;
             }
         }
 

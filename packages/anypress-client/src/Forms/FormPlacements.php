@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Forms;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 /**
  * Where the forms appear in the forms switch: swaps the old shortcodes and blocks in posts and widgets, lists the
  * page builder layouts it can't change, and puts the old ones back on undo. Each changed post keeps a revision.
@@ -22,18 +20,7 @@ final class FormPlacements
     /** Swaps the forms in every post-like record (pages, posts, templates, template parts, synced patterns…). */
     public static function switch_posts(PageSwitcher $switcher, array &$state, array &$report, bool $dry_run): void
     {
-        global $wpdb;
-        $likes = [];
-        $values = [];
-        foreach (PageSwitcher::NEEDLES as $needle) {
-            $likes[] = 'post_content LIKE %s';
-            $values[] = '%' . $wpdb->esc_like($needle) . '%';
-        }
-        $types = implode(', ', array_fill(0, count(self::SKIP_POST_TYPES), '%s'));
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- placeholders only.
-        $sql = "SELECT ID FROM {$wpdb->posts} WHERE post_type NOT IN ({$types}) AND post_status NOT IN ('trash', 'auto-draft', 'inherit') AND (" . implode(' OR ', $likes) . ') ORDER BY ID ASC';
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $sql above holds only placeholders.
-        $ids = $wpdb->get_col($wpdb->prepare($sql, array_merge(self::SKIP_POST_TYPES, $values)));
+        $ids = self::posts_containing(PageSwitcher::NEEDLES);
 
         foreach ($ids as $id) {
             $post = get_post((int) $id);
@@ -118,17 +105,14 @@ final class FormPlacements
     /** Page builders keep their own copy of a page (Elementor, Beaver Builder): those forms are listed, not changed. */
     public static function page_builders(array &$report): void
     {
-        global $wpdb;
-        $likes = [];
-        $values = ['_elementor_data', '_fl_builder_data'];
-        foreach (PageSwitcher::NEEDLES as $needle) {
-            $likes[] = 'meta_value LIKE %s';
-            $values[] = '%' . $wpdb->esc_like($needle) . '%';
+        $or = ['relation' => 'OR'];
+        foreach (['_elementor_data', '_fl_builder_data'] as $key) {
+            foreach (PageSwitcher::NEEDLES as $needle) {
+                $or[] = ['key' => $key, 'value' => $needle, 'compare' => 'LIKE'];
+            }
         }
-        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- placeholders only.
-        $sql = "SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key IN (%s, %s) AND (" . implode(' OR ', $likes) . ')';
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $sql above holds only placeholders.
-        foreach ($wpdb->get_col($wpdb->prepare($sql, $values)) as $id) {
+        $ids = get_posts(['post_type' => array_values(array_diff(get_post_types(), self::SKIP_POST_TYPES)), 'post_status' => 'any', 'meta_query' => [$or], 'fields' => 'ids', 'numberposts' => -1]); // phpcs:ignore WordPress.DB.SlowDBQuery -- one admin run.
+        foreach ($ids as $id) {
             $post = get_post((int) $id);
             if ($post && $post->post_type !== 'revision') {
                 $report['not_switched'][] = [
@@ -218,5 +202,29 @@ final class FormPlacements
     private static function where(\WP_Post $post): string
     {
         return sprintf('%s "%s" (%d)', $post->post_type, html_entity_decode(get_the_title($post), ENT_QUOTES), $post->ID);
+    }
+
+    /** Ids of the post-like records whose content holds any of $needles, through WP_Query's own search. */
+    private static function posts_containing(array $needles): array
+    {
+        $types = array_values(array_diff(get_post_types(), self::SKIP_POST_TYPES));
+        $statuses = array_values(array_diff(get_post_stati(), ['trash', 'auto-draft', 'inherit']));
+        $ids = [];
+        foreach ($needles as $needle) {
+            $found = get_posts([
+                'post_type' => $types,
+                'post_status' => $statuses,
+                's' => $needle,
+                'sentence' => true,
+                'search_columns' => ['post_content'],
+                'fields' => 'ids',
+                'numberposts' => -1,
+            ]);
+            $ids = array_merge($ids, array_map('intval', $found));
+        }
+        $ids = array_values(array_unique($ids));
+        sort($ids);
+
+        return $ids;
     }
 }

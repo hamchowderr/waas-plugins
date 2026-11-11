@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Moving;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 /**
  * Tutor LMS courses, read from what Tutor LMS keeps in WordPress: courses, topics, lessons, quizzes and assignments as
  * posts (a topic's parent is its course, a lesson's parent its topic), enrolments as tutor_enrolled posts (author the
@@ -41,7 +39,6 @@ class TutorCourses extends CourseSource
 
     protected function read(): array
     {
-        global $wpdb;
         $plan = [];
         foreach (self::course_posts('courses') as $course) {
             $id = (int) $course->ID;
@@ -53,18 +50,23 @@ class TutorCourses extends CourseSource
                 }
             }
             // Active enrolments only: a pending one waits on payment, a cancelled one was taken back.
-            $students = self::real_users($wpdb->get_col($wpdb->prepare("SELECT post_author FROM {$wpdb->posts} WHERE post_type = 'tutor_enrolled' AND post_parent = %d AND post_status = 'completed'", $id))); // phpcs:ignore WordPress.DB.PreparedSQL
+            // Tutor LMS's "completed" status isn't registered with WordPress while Tutor LMS is off, so WordPress can't
+            // filter on it: take every enrolment that isn't in the bin and keep the completed ones.
+            $enrolments = get_posts(['post_type' => 'tutor_enrolled', 'post_parent' => $id, 'post_status' => 'any', 'numberposts' => -1, 'no_found_rows' => true]);
+            $students = self::real_users(array_map(fn ($post) => (int) $post->post_author, array_filter($enrolments, fn ($post) => $post->post_status === 'completed')));
             $completed = [];
             $lesson_ids = self::lesson_ids($sections);
             if ($students && $lesson_ids) {
-                $keys = array_map(fn ($lesson) => '_tutor_completed_lesson_id_' . (int) $lesson, $lesson_ids);
-                $rows = $wpdb->get_results($wpdb->prepare("SELECT user_id, meta_key FROM {$wpdb->usermeta} WHERE meta_key IN (" . implode(',', array_fill(0, count($keys), '%s')) . ') AND user_id IN (' . implode(',', array_fill(0, count($students), '%d')) . ') ORDER BY umeta_id', ...array_values($keys), ...array_values(array_map('intval', $students))));
-                foreach ((array) $rows as $row) {
-                    $completed[(int) $row->user_id][] = (int) substr($row->meta_key, strlen('_tutor_completed_lesson_id_'));
+                // Tutor LMS marks a finished lesson with a user meta key per lesson.
+                foreach ($students as $student) {
+                    $done = array_values(array_filter($lesson_ids, fn ($lesson) => metadata_exists('user', $student, '_tutor_completed_lesson_id_' . (int) $lesson)));
+                    if ($done) {
+                        $completed[$student] = $done;
+                    }
                 }
-                $completed = array_map(fn ($done) => array_values(array_intersect($lesson_ids, $done)), $completed);
             }
-            $finished = array_map('intval', $wpdb->get_col($wpdb->prepare("SELECT DISTINCT user_id FROM {$wpdb->comments} WHERE comment_type = 'course_completed' AND comment_post_ID = %d", $id))); // phpcs:ignore WordPress.DB.PreparedSQL
+            // A finished course is a comment of Tutor LMS's own type on it.
+            $finished = array_map('intval', array_unique(array_map(fn ($comment) => (int) $comment->user_id, get_comments(['post_id' => $id, 'type' => 'course_completed', 'status' => 'any']))));
             $plan[$id] = self::course_fields($course) + [
                 'privacy' => self::open($id) ? 'public' : 'private',
                 'sections' => $sections,

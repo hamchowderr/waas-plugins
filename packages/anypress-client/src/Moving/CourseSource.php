@@ -2,13 +2,11 @@
 
 namespace AnyPressClient\Moving;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 /**
  * One course plugin the course switch reads from (LearnDash, Tutor LMS or LifterLMS), on the same website.
  *
- * Each reads what its plugin leaves in WordPress (posts, post meta, user meta, its own tables) directly, so it works
- * with the plugin switched off, as a community store has it. It never changes that data.
+ * Each reads what its plugin leaves in WordPress (posts, post meta, user meta) through WordPress's own functions, so it
+ * works with the plugin switched off, as a community store has it. It never changes that data.
  *
  * A source gives every course as FluentCommunity will hold it:
  * [
@@ -22,7 +20,8 @@ namespace AnyPressClient\Moving;
  */
 abstract class CourseSource
 {
-    protected const LIVE = "('publish', 'draft', 'pending', 'private', 'future')";
+    /** Post statuses that are not in the bin. */
+    protected const LIVE = ['publish', 'draft', 'pending', 'private', 'future'];
 
     /** @var array|null Worked out once per request. */
     private ?array $courses = null;
@@ -115,35 +114,58 @@ abstract class CourseSource
      */
     protected static function real_users(array $ids): array
     {
-        global $wpdb;
         $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
         if (!$ids) {
             return [];
         }
 
-        return array_map('intval', $wpdb->get_col($wpdb->prepare("SELECT ID FROM {$wpdb->users} WHERE ID IN (" . implode(',', array_fill(0, count($ids), '%d')) . ') ORDER BY ID', ...$ids)));
+        return array_map('intval', get_users(['include' => $ids, 'blog_id' => 0, 'fields' => 'ID', 'orderby' => 'ID', 'order' => 'ASC']));
+    }
+
+    /**
+     * Posts not in the bin, in the plugin's order (menu order, then id), through WordPress's own post query, which
+     * works whether or not the plugin that registers the post type is on.
+     *
+     * @return \WP_Post[]|int[] Posts, or their ids with 'fields' => 'ids'.
+     */
+    protected static function posts(array $args): array
+    {
+        return get_posts($args + [
+            'post_status' => self::LIVE,
+            'orderby' => ['menu_order' => 'ASC', 'ID' => 'ASC'],
+            'numberposts' => -1,
+            'no_found_rows' => true,
+        ]);
     }
 
     /** Ids of posts of this type below $parent (post_parent), not in the bin, in the plugin's order. */
     protected static function children(string $type, int $parent): array
     {
-        global $wpdb;
-
-        return array_map('intval', $wpdb->get_col($wpdb->prepare("SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND post_parent = %d AND post_status IN " . self::LIVE . ' ORDER BY menu_order, ID', $type, $parent))); // phpcs:ignore WordPress.DB.PreparedSQL
+        return array_map('intval', self::posts(['post_type' => $type, 'post_parent' => $parent, 'fields' => 'ids']));
     }
 
     /** Courses of this post type, not in the bin, in the plugin's order. */
     protected static function course_posts(string $type): array
     {
+        return self::posts(['post_type' => $type]);
+    }
+
+    /*
+     * LearnDash and LifterLMS also keep progress in a table of their own. Their functions that read it only load while
+     * the plugin is on, and these readers work with it off, so those tables are read directly: read-only, prepared,
+     * once in an admin's run, so nothing is worth caching.
+     */
+
+    /** Whether the plugin's own table is here (it stays after the plugin is switched off). */
+    protected static function has_table(string $table): bool
+    {
         global $wpdb;
 
-        return (array) $wpdb->get_results($wpdb->prepare("SELECT ID, post_title, post_content, post_excerpt, post_status FROM {$wpdb->posts} WHERE post_type = %s AND post_status IN " . self::LIVE . ' ORDER BY menu_order, ID', $type)); // phpcs:ignore WordPress.DB.PreparedSQL
+        return (string) $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($wpdb->prefix . $table))) !== ''; // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- see above.
     }
 
     protected static function count_posts(string $type): int
     {
-        global $wpdb;
-
-        return (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type = %s AND post_status IN " . self::LIVE, $type)); // phpcs:ignore WordPress.DB.PreparedSQL
+        return count(self::posts(['post_type' => $type, 'fields' => 'ids']));
     }
 }

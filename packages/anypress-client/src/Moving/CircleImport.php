@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Moving;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 use FluentCommunity\App\Models\Comment;
 use FluentCommunity\App\Models\Feed;
 use FluentCommunity\App\Models\Space;
@@ -183,13 +181,12 @@ class CircleImport extends NativeImport
 
     protected function import(string $source, array $before): array
     {
-        global $wpdb;
         $state = $this->state();
         $added = ['from' => [], 'users' => [], 'matched' => [], 'groups' => [], 'spaces' => [], 'topics' => [], 'skipped' => 0, 'fixed' => []];
         foreach (self::RANGES as $key => $table) {
             $added['from'][$key] = self::max_id($table);
         }
-        $added['profiles_before'] = array_map('intval', $wpdb->get_col("SELECT user_id FROM {$wpdb->prefix}fcom_xprofile")); // phpcs:ignore WordPress.DB.PreparedSQL
+        $added['profiles_before'] = self::profile_ids();
         $people = new CirclePeople();
         $save = function () use (&$added, $state, $people) {
             $added['users'] = $people->made;
@@ -480,8 +477,6 @@ class CircleImport extends NativeImport
 
     protected function remove(array $state, bool $dry_run): array
     {
-        global $wpdb;
-        $p = $wpdb->prefix;
         $from = (array) ($state['from'] ?? []);
         $upto = (array) ($state['upto'] ?? []);
         $removed = ['courses' => 0, 'lessons' => 0];
@@ -499,7 +494,8 @@ class CircleImport extends NativeImport
         $first_post = (int) ($from['posts'] ?? 0);
         $last_post = (int) ($upto['posts'] ?? self::max_id('fcom_posts'));
         if (!$dry_run && $last_post > $first_post) {
-            $wpdb->query($wpdb->prepare("DELETE FROM {$p}fcom_term_feed WHERE post_id > %d AND post_id <= %d", $first_post, $last_post)); // phpcs:ignore WordPress.DB.PreparedSQL
+            // The posts' topics: FluentCommunity keeps them in a table with no model of its own, so through its query builder.
+            fluentCommunityApp('db')->table('fcom_term_feed')->where('post_id', '>', $first_post)->where('post_id', '<=', $last_post)->delete();
         }
         foreach (self::RANGES as $key => $table) {
             $removed[$key] = self::delete_range($table, (int) ($from[$key] ?? 0), (int) ($upto[$key] ?? self::max_id($table)), $dry_run, 'id', $key === 'posts' ? self::NOT_COURSE : '');
@@ -508,11 +504,11 @@ class CircleImport extends NativeImport
         $removed['spaces'] = self::delete_in('fcom_spaces', 'id', $spaces, $dry_run, "type = 'community'");
         $removed['groups'] = self::delete_in('fcom_spaces', 'id', (array) ($state['groups'] ?? []), $dry_run, "type = 'space_group'");
         if ($spaces && !$dry_run) {
-            $wpdb->query($wpdb->prepare("DELETE FROM %i WHERE object_type = 'term_space_relation' AND meta_key IN (" . implode(',', array_fill(0, count($spaces), '%s')) . ')', ...array_merge([$p . 'fcom_meta'], array_map('strval', $spaces))));
+            self::rows('fcom_meta', "object_type = 'term_space_relation'")->whereIn('meta_key', array_map('strval', $spaces))->delete();
         }
         $removed['topics'] = self::delete_in('fcom_terms', 'id', (array) ($state['topics'] ?? []), $dry_run, "taxonomy_name = 'post_topic'");
         if (isset($state['profiles_before'])) {
-            $made = array_diff(array_map('intval', $wpdb->get_col("SELECT user_id FROM {$p}fcom_xprofile")), array_map('intval', (array) $state['profiles_before'])); // phpcs:ignore WordPress.DB.PreparedSQL
+            $made = array_diff(self::profile_ids(), array_map('intval', (array) $state['profiles_before']));
             $removed['profiles'] = self::delete_in('fcom_xprofile', 'user_id', $made, $dry_run);
         }
         // Users the switch made go again; users that were already there only lose the Circle mark.
@@ -568,11 +564,12 @@ class CircleImport extends NativeImport
     /** A slug no row of a FluentCommunity table ($table: fcom_spaces or fcom_terms) has yet. */
     private static function free_slug(string $table, string $name, string $fallback): string
     {
-        global $wpdb;
         $base = sanitize_title($name) ?: $fallback;
         $try = $base;
-        for ($n = 2; $wpdb->get_var($wpdb->prepare('SELECT id FROM %i WHERE slug = %s', $wpdb->prefix . $table, $try)); $n++) {
+        $taken = self::count($table, 'slug = %s', [$try]);
+        for ($n = 2; $taken; $n++) {
             $try = $base . '-' . $n;
+            $taken = self::count($table, 'slug = %s', [$try]);
         }
 
         return $try;

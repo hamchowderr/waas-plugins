@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Shop;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 /**
  * Copies WooCommerce's shipping zones and their flat rate, free shipping and local pickup methods to FluentCart
  * (the FluentCart Migrator add-on has no shipping step).
@@ -218,15 +216,15 @@ class ShippingZones
      */
     public static function copy(array &$state, bool $dry_run): array
     {
-        global $wpdb;
+        $zones = '\FluentCart\App\Models\ShippingZone';
+        $methods = '\FluentCart\App\Models\ShippingMethod';
         $report = ['zones' => [], 'lost' => []];
         $continents = self::continents();
-        $now = current_time('mysql');
 
         foreach (self::woo_zones() as $zone) {
             $where = self::zone_region($zone['locations'], $continents);
             $fc_zone = (int) ($state['zones'][$zone['id']] ?? 0);
-            $exists = $fc_zone && $wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}fct_shipping_zones WHERE id = %d", $fc_zone));
+            $exists = $fc_zone && $zones::find($fc_zone);
             $row = ['zone' => $zone['name'], 'region' => $where['meta'] ? implode(' ', $where['meta']['countries']) : $where['region'], 'methods' => [], 'status' => 'already copied'];
             foreach ($where['lost'] as $note) {
                 $report['lost'][] = $zone['name'] . ': ' . $note;
@@ -235,17 +233,20 @@ class ShippingZones
             if (!$exists) {
                 $row['status'] = $dry_run ? 'will be copied' : 'copied';
                 if (!$dry_run) {
-                    $wpdb->insert($wpdb->prefix . 'fct_shipping_zones', [
-                        'name' => $zone['name'],
-                        'region' => $where['region'],
-                        'meta' => $where['meta'] ? wp_json_encode($where['meta']) : '{}',
-                        'order' => $zone['order'],
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ]);
-                    $fc_zone = (int) $wpdb->insert_id;
+                    try {
+                        $fc_zone = (int) $zones::create([
+                            'name' => $zone['name'],
+                            'region' => $where['region'],
+                            'meta' => $where['meta'] ?: [],
+                            'order' => $zone['order'],
+                        ])->id;
+                        $error = '';
+                    } catch (\Throwable $e) {
+                        $fc_zone = 0;
+                        $error = $e->getMessage();
+                    }
                     if (!$fc_zone) {
-                        $row['status'] = 'failed: ' . $wpdb->last_error;
+                        $row['status'] = 'failed: ' . $error;
                         $report['zones'][] = $row;
                         continue;
                     }
@@ -265,28 +266,26 @@ class ShippingZones
                 $label = $copy['row']['title'] . ' ' . ($copy['row']['type'] === 'free_shipping' ? '' : number_format((float) $copy['row']['amount'], 2) . ' ') . ($copy['row']['is_enabled'] ? '' : '(off)');
                 $row['methods'][] = trim($label);
                 $fc_method = (int) ($state['methods'][$method['instance_id']] ?? 0);
-                if ($fc_method && $wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}fct_shipping_methods WHERE id = %d", $fc_method))) {
+                if ($fc_method && $methods::find($fc_method)) {
                     continue;
                 }
                 if ($dry_run || !$fc_zone) {
                     continue;
                 }
                 $data = $copy['row'];
-                $wpdb->insert($wpdb->prefix . 'fct_shipping_methods', [
+                $made = $methods::create([
                     'zone_id' => $fc_zone,
                     'title' => $data['title'],
                     'type' => $data['type'],
-                    'settings' => wp_json_encode($data['settings']),
+                    'settings' => $data['settings'],
                     'amount' => $data['amount'],
                     'is_enabled' => $data['is_enabled'],
-                    'states' => wp_json_encode($data['states']),
+                    'states' => $data['states'],
                     'order' => $data['order'],
-                    'meta' => wp_json_encode($data['meta']),
-                    'created_at' => $now,
-                    'updated_at' => $now,
+                    'meta' => $data['meta'],
                 ]);
-                if ($wpdb->insert_id) {
-                    $state['methods'][$method['instance_id']] = (int) $wpdb->insert_id;
+                if ($made && $made->id) {
+                    $state['methods'][$method['instance_id']] = (int) $made->id;
                 }
             }
             $report['zones'][] = $row;
@@ -298,16 +297,15 @@ class ShippingZones
     /** Removes the zones and methods the switch copied. */
     public static function undo(array &$state, bool $dry_run): array
     {
-        global $wpdb;
         $removed = ['zones' => count($state['zones']), 'methods' => count($state['methods'])];
         if ($dry_run) {
             return $removed;
         }
-        foreach ($state['methods'] as $id) {
-            $wpdb->delete($wpdb->prefix . 'fct_shipping_methods', ['id' => (int) $id]);
+        if ($state['methods']) {
+            \FluentCart\App\Models\ShippingMethod::whereIn('id', array_map('intval', $state['methods']))->delete();
         }
-        foreach ($state['zones'] as $id) {
-            $wpdb->delete($wpdb->prefix . 'fct_shipping_zones', ['id' => (int) $id]);
+        if ($state['zones']) {
+            \FluentCart\App\Models\ShippingZone::whereIn('id', array_map('intval', $state['zones']))->delete();
         }
         $state['zones'] = [];
         $state['methods'] = [];

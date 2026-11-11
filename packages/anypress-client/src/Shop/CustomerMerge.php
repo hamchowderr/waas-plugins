@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Shop;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 /**
  * Merges FluentCart customers that belong to the same WordPress user.
  *
@@ -17,7 +15,8 @@ namespace AnyPressClient\Shop;
  * customer's primary addresses stay primary), and fires the same fluent_cart/customer_resources_moved action so
  * FluentCart Pro moves its licences. That merger itself can't be used here: it only folds a customer with no
  * WordPress user into one with a user (both of these have the same user), runs only on InnoDB tables (never on
- * SQLite), and keeps the emptied customer, which would leave a stray customer per merge.
+ * SQLite), and keeps the emptied customer, which would leave a stray customer per merge. So the rows are moved here
+ * through FluentCart's own models and query builder, the same way its merger moves them.
  */
 class CustomerMerge
 {
@@ -35,6 +34,7 @@ class CustomerMerge
         'fct_licenses' => ['id', 'customer_id', null],
     ];
     private const CUSTOMER_MODEL = 'FluentCart\App\Models\Customer';
+    private const ADDRESS_MODEL = 'FluentCart\App\Models\CustomerAddresses';
 
     /**
      * Which customers to merge into which.
@@ -84,8 +84,8 @@ class CustomerMerge
      */
     public static function merge(array &$state, bool $dry_run): array
     {
-        global $wpdb;
-        $customers = $wpdb->get_results("SELECT id, user_id, email FROM {$wpdb->prefix}fct_customers WHERE user_id > 0", ARRAY_A);
+        $model = self::CUSTOMER_MODEL;
+        $customers = array_map(fn ($row) => $row->getAttributes(), $model::where('user_id', '>', 0)->get(['id', 'user_id', 'email'])->all());
         $emails = [];
         foreach ((array) $customers as $customer) {
             $user = get_userdata((int) $customer['user_id']);
@@ -98,7 +98,7 @@ class CustomerMerge
         foreach ($plan as $merge) {
             $orders = 0;
             foreach ($merge['merge'] as $id) {
-                $orders += (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->prefix}fct_orders WHERE customer_id = %d", $id));
+                $orders += (int) \FluentCart\App\Models\Order::where('customer_id', $id)->count();
             }
             $report[] = [
                 'user_id' => $merge['user_id'],
@@ -125,66 +125,72 @@ class CustomerMerge
     /** Moves everything off customer $from onto $into and removes $from. Returns what undo needs. */
     private static function move(int $from, int $into): array
     {
-        global $wpdb;
-        $record = ['into' => $into, 'row' => $wpdb->get_row($wpdb->prepare("SELECT * FROM {$wpdb->prefix}fct_customers WHERE id = %d", $from), ARRAY_A), 'moved' => [], 'demoted' => []];
+        $customer = self::CUSTOMER_MODEL;
+        $address = self::ADDRESS_MODEL;
+        $row = $customer::find($from);
+        $record = ['into' => $into, 'row' => $row ? $row->getAttributes() : null, 'moved' => [], 'demoted' => []];
 
         // The kept customer's primary address of each type stays primary; otherwise the moved one keeps its place.
-        $primary = array_map('strval', (array) $wpdb->get_col($wpdb->prepare("SELECT type FROM {$wpdb->prefix}fct_customer_addresses WHERE customer_id = %d AND is_primary = 1", $into)));
-        foreach ((array) $wpdb->get_results($wpdb->prepare("SELECT id, type FROM {$wpdb->prefix}fct_customer_addresses WHERE customer_id = %d AND is_primary = 1 ORDER BY id", $from)) as $address) {
-            if (in_array((string) $address->type, $primary, true)) {
-                $record['demoted'][] = (int) $address->id;
+        $primary = array_map('strval', $address::where('customer_id', $into)->where('is_primary', 1)->pluck('type')->all());
+        foreach ($address::where('customer_id', $from)->where('is_primary', 1)->orderBy('id')->get(['id', 'type']) as $moved) {
+            if (in_array((string) $moved->type, $primary, true)) {
+                $record['demoted'][] = (int) $moved->id;
             } else {
-                $primary[] = (string) $address->type;
+                $primary[] = (string) $moved->type;
             }
         }
-        // phpcs:disable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter -- table and column names come from the RESOURCES constant, ids are cast to int and keys go through prepare().
         if ($record['demoted']) {
-            $wpdb->query("UPDATE {$wpdb->prefix}fct_customer_addresses SET is_primary = 0 WHERE id IN (" . implode(',', $record['demoted']) . ')');
+            $address::whereIn('id', $record['demoted'])->update(['is_primary' => 0]);
         }
 
         foreach (self::resources() as $table => [$key, $column, $type]) {
-            $where = $type ? $wpdb->prepare("{$column} = %d AND {$type} = %s", $from, self::CUSTOMER_MODEL) : $wpdb->prepare("{$column} = %d", $from);
-            $keys = array_map('strval', (array) $wpdb->get_col("SELECT {$key} FROM {$wpdb->prefix}{$table} WHERE {$where}"));
+            $keys = array_map('strval', self::pointing_at($table, $from)->pluck($key)->all());
             if (!$keys) {
                 continue;
             }
             $record['moved'][$table] = $keys;
-            $wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}{$table} SET {$column} = %d WHERE {$where}", $into));
+            self::pointing_at($table, $from)->update([$column => $into]);
         }
         // FluentCart's own hook after a customer's rows move (FluentCart Pro moves its licences on it).
-        // phpcs:enable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
         do_action('fluent_cart/customer_resources_moved', ['from_customer_id' => $from, 'to_customer_id' => $into]);
-        $wpdb->delete($wpdb->prefix . 'fct_customers', ['id' => $from]);
+        $customer::where('id', $from)->delete();
 
         return $record;
+    }
+
+    /** Rows of a resource table that point at this customer, through FluentCart's query builder. */
+    private static function pointing_at(string $table, int $customer)
+    {
+        [, $column, $type] = self::RESOURCES[$table];
+        $query = \FluentCart\App\App::db()->table($table)->where($column, $customer);
+
+        return $type ? $query->where($type, self::CUSTOMER_MODEL) : $query;
     }
 
     /** Puts merged customers back with their own orders, addresses and the rest. */
     public static function undo(array &$state, bool $dry_run): int
     {
-        global $wpdb;
         $count = count($state['merges']);
         if ($dry_run || !$count) {
             return $count;
         }
-        // phpcs:disable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter -- table and column names come from the RESOURCES constant, ids are cast to int and keys go through prepare().
+        $customer = self::CUSTOMER_MODEL;
         foreach ($state['merges'] as $id => $record) {
-            if (!empty($record['row']) && !$wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}fct_customers WHERE id = %d", (int) $id))) {
-                $wpdb->insert($wpdb->prefix . 'fct_customers', $record['row']);
+            if (!empty($record['row']) && !$customer::find((int) $id)) {
+                \FluentCart\App\App::db()->table('fct_customers')->insert($record['row']);
             }
             foreach ($record['moved'] as $table => $keys) {
                 if (!isset(self::RESOURCES[$table]) || !$keys) {
                     continue;
                 }
                 [$key, $column] = self::RESOURCES[$table];
-                $list = implode(',', array_map(fn ($value) => $wpdb->prepare('%s', $value), $keys));
-                $wpdb->query($wpdb->prepare("UPDATE {$wpdb->prefix}{$table} SET {$column} = %d WHERE {$key} IN ({$list})", (int) $id));
+                \FluentCart\App\App::db()->table($table)->whereIn($key, array_map('strval', $keys))->update([$column => (int) $id]);
             }
             if (!empty($record['demoted'])) {
-                $wpdb->query("UPDATE {$wpdb->prefix}fct_customer_addresses SET is_primary = 1 WHERE id IN (" . implode(',', array_map('intval', $record['demoted'])) . ')');
+                $address = self::ADDRESS_MODEL;
+                $address::whereIn('id', array_map('intval', $record['demoted']))->update(['is_primary' => 1]);
             }
         }
-        // phpcs:enable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
         $state['merges'] = [];
         self::recount();
 
@@ -194,9 +200,7 @@ class CustomerMerge
     /** The resource tables this site has (fct_licenses only with FluentCart Pro). */
     private static function resources(): array
     {
-        global $wpdb;
-
-        return array_filter(self::RESOURCES, fn ($table) => $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->prefix . $table)) === $wpdb->prefix . $table, ARRAY_FILTER_USE_KEY);
+        return array_filter(self::RESOURCES, fn ($table) => \FluentCart\Framework\Database\Schema::hasTable($table), ARRAY_FILTER_USE_KEY);
     }
 
     /** The add-on's own recount of each customer's order count, lifetime value and purchase dates. */

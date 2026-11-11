@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Shop;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 use AnyPressClient\Core\FluentPlugin;
 use WP_Error;
 
@@ -247,7 +245,6 @@ class ShopSwitch
                 $orders[str_replace('wc-', '', $status)] = $count;
             }
         }
-        global $wpdb;
         $guests = $total(wc_get_orders(['type' => 'shop_order', 'status' => 'any', 'customer_id' => 0, 'limit' => 1, 'paginate' => true, 'return' => 'ids']));
         $customers = new \WP_User_Query(['role__in' => ['customer', 'subscriber'], 'number' => 1, 'count_total' => true, 'fields' => 'ID']);
 
@@ -261,7 +258,7 @@ class ShopSwitch
             'refunds' => $total(wc_get_orders(['type' => 'shop_order_refund', 'status' => 'any', 'limit' => 1, 'paginate' => true, 'return' => 'ids'])),
             'coupons' => (int) (wp_count_posts('shop_coupon')->publish ?? 0),
             'registered_customers' => (int) $customers->get_total(),
-            'tax_rates' => (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}woocommerce_tax_rates"),
+            'tax_rates' => count(ShopReview::woo_tax_rates()),
             'shipping_zones' => count(ShippingZones::woo_zones()),
             'product_tags' => (int) wp_count_terms(['taxonomy' => 'product_tag', 'hide_empty' => false]),
         ];

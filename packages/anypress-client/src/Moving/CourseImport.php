@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Moving;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 use WP_REST_Request;
 
 /**
@@ -79,14 +77,13 @@ class CourseImport extends NativeImport
 
     protected function target_counts(): array
     {
-        global $wpdb;
-        $p = $wpdb->prefix;
+        $courses = self::rows('fcom_spaces', "type = 'course'");
 
         return [
             'courses' => self::count('fcom_spaces', "type = 'course'"),
             'sections' => self::count('fcom_posts', "type = 'course_section'"),
             'lessons' => self::count('fcom_posts', "type = 'course_lesson'"),
-            'students' => self::table_exists('fcom_space_user') ? (int) $wpdb->get_var("SELECT COUNT(*) FROM {$p}fcom_space_user m JOIN {$p}fcom_spaces s ON s.id = m.space_id WHERE s.type = 'course' AND m.role = 'student'") : 0, // phpcs:ignore WordPress.DB.PreparedSQL
+            'students' => $courses ? (int) self::rows('fcom_space_user', "role = 'student'")->whereIn('space_id', $courses->pluck('id')->all() ?: [0])->count() : 0,
             'completed_lessons' => self::count('fcom_post_reactions', "object_type = 'lesson_completed' AND type = 'completed'"),
             'completed_courses' => self::count('fcom_user_activities', "action_name = 'course_completed'"),
         ];
@@ -235,8 +232,6 @@ class CourseImport extends NativeImport
 
     protected function remove(array $state, bool $dry_run): array
     {
-        global $wpdb;
-        $p = $wpdb->prefix;
         $removed = array_fill_keys(['courses', 'sections', 'lessons', 'students', 'completed_lessons', 'completed_courses'], 0);
         foreach (array_map('intval', (array) ($state['courses'] ?? [])) as $course_id) {
             if (!self::count('fcom_spaces', "id = %d AND type = 'course'", [$course_id])) {
@@ -252,8 +247,8 @@ class CourseImport extends NativeImport
                 continue;
             }
             // Progress first (FluentCommunity's course delete leaves it), then the course with its outline and students.
-            $wpdb->query($wpdb->prepare("DELETE FROM {$p}fcom_post_reactions WHERE parent_id = %d AND object_type = 'lesson_completed'", $course_id)); // phpcs:ignore WordPress.DB.PreparedSQL
-            $wpdb->query($wpdb->prepare("DELETE FROM {$p}fcom_user_activities WHERE feed_id = %d AND action_name = 'course_completed'", $course_id)); // phpcs:ignore WordPress.DB.PreparedSQL
+            self::rows('fcom_post_reactions', "parent_id = %d AND object_type = 'lesson_completed'", [$course_id])->delete();
+            self::rows('fcom_user_activities', "feed_id = %d AND action_name = 'course_completed'", [$course_id])->delete();
             self::call('DELETE', "/{$course_id}");
         }
         // Profiles FluentCommunity made for the enrolled students; ones that were there before stay.
@@ -263,16 +258,6 @@ class CourseImport extends NativeImport
         }
 
         return $removed;
-    }
-
-    private static function profile_ids(): array
-    {
-        global $wpdb;
-        if (!self::table_exists('fcom_xprofile')) {
-            return [];
-        }
-
-        return array_map('intval', $wpdb->get_col("SELECT user_id FROM {$wpdb->prefix}fcom_xprofile")); // phpcs:ignore WordPress.DB.PreparedSQL
     }
 
     protected function lost(string $source): array

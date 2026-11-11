@@ -2,11 +2,9 @@
 
 namespace AnyPressClient\Crm;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 /**
- * MailPoet subscribers and lists, read straight from MailPoet's tables (MailPoet doesn't need to be active, and
- * nothing in them is changed).
+ * MailPoet subscribers and lists, read through MailPoet's own API (\MailPoet\API\API::MP('v1'), so MailPoet has
+ * to be active); nothing in MailPoet is changed.
  *
  * Statuses come across as they are: subscribed stays subscribed, unconfirmed becomes pending (no confirmation
  * email is sent), unsubscribed and bounced stay that way, and inactive (MailPoet stopped sending to them for lack of
@@ -20,6 +18,7 @@ namespace AnyPressClient\Crm;
 class MailPoetSubscribers
 {
     public const SOURCE = 'MailPoet';
+    private const PAGE = 500;
     private const STATUSES = [
         'subscribed' => 'subscribed',
         'unconfirmed' => 'pending',
@@ -34,29 +33,65 @@ class MailPoetSubscribers
         return self::STATUSES[strtolower(trim($status))] ?? 'pending';
     }
 
-    public static function table(string $name): string
-    {
-        global $wpdb;
-
-        return $wpdb->prefix . 'mailpoet_' . $name;
-    }
-
-    /** Whether this site has MailPoet's tables. */
+    /** Whether MailPoet is installed on this site (it may be switched off now). */
     public static function present(): bool
     {
-        global $wpdb;
-        $table = self::table('subscribers');
+        if (defined('MAILPOET_VERSION')) {
+            return true;
+        }
+        if (!function_exists('get_plugins')) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        }
 
-        return $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) === $table;
+        return array_key_exists('mailpoet/mailpoet.php', get_plugins());
+    }
+
+    /** Whether MailPoet's API can be used now. */
+    public static function active(): bool
+    {
+        return class_exists('MailPoet\API\API');
     }
 
     /** @return array{records: array, stats: array} */
     public static function collect(): array
     {
+        $api = \MailPoet\API\API::MP('v1');
+        $subscribers = [];
+        $memberships = [];
+        $trashed = false;
+        for ($offset = 0;; $offset += self::PAGE) {
+            $page = (array) $api->getSubscribers([], self::PAGE, $offset);
+            foreach ($page as $subscriber) {
+                $trashed = $trashed || !empty($subscriber['deleted_at']);
+                $subscribers[] = $subscriber;
+                foreach ((array) ($subscriber['subscriptions'] ?? []) as $subscription) {
+                    $memberships[] = ['subscriber_id' => $subscriber['id'], 'segment_id' => $subscription['segment_id'], 'status' => $subscription['status']];
+                }
+            }
+            if (count($page) < self::PAGE) {
+                break;
+            }
+        }
+        // MailPoet's API lists subscribers without their IP addresses, and has no other way to give them, so those two
+        // columns alone are read from its table (and never changed).
         global $wpdb;
-        $subscribers = (array) $wpdb->get_results($wpdb->prepare('SELECT id, email, first_name, last_name, status, subscribed_ip, confirmed_ip, created_at, deleted_at FROM %i ORDER BY id', self::table('subscribers')), ARRAY_A);
-        $segments = (array) $wpdb->get_results($wpdb->prepare('SELECT id, name, type, deleted_at FROM %i ORDER BY id', self::table('segments')), ARRAY_A);
-        $memberships = (array) $wpdb->get_results($wpdb->prepare('SELECT subscriber_id, segment_id, status FROM %i', self::table('subscriber_segment')), ARRAY_A);
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        $ips = (array) $wpdb->get_results($wpdb->prepare('SELECT id, subscribed_ip, confirmed_ip FROM %i', $wpdb->prefix . 'mailpoet_subscribers'), OBJECT_K);
+        foreach ($subscribers as &$subscriber) {
+            $row = $ips[(int) $subscriber['id']] ?? null;
+            $subscriber['subscribed_ip'] = $row ? (string) $row->subscribed_ip : '';
+            $subscriber['confirmed_ip'] = $row ? (string) $row->confirmed_ip : '';
+        }
+        unset($subscriber);
+        // The default listing leaves trashed subscribers out: count them for the report.
+        $in_trash = $trashed ? 0 : (int) $api->getSubscribersCount(['status' => 'trash']);
+        $subscribers = array_merge($subscribers, array_fill(0, $in_trash, ['id' => 0, 'deleted_at' => 'trash']));
+        $segments = array_map(fn ($list) => ['id' => $list['id'], 'name' => $list['name'], 'type' => 'default', 'deleted_at' => $list['deleted_at'] ?? null], (array) $api->getLists());
+        // MailPoet's automatic lists aren't in its API; they are worked out from other data and never copied.
+        $segments[] = ['id' => 0, 'name' => 'WordPress Users', 'type' => 'wp_users', 'deleted_at' => null];
+        if (class_exists('WooCommerce')) {
+            $segments[] = ['id' => 0, 'name' => 'WooCommerce Customers', 'type' => 'woocommerce_users', 'deleted_at' => null];
+        }
 
         return self::from_rows($subscribers, $segments, $memberships, defined('MAILPOET_VERSION') ? MAILPOET_VERSION : null);
     }
