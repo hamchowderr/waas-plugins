@@ -86,6 +86,10 @@ ok "anypress-host and anypress-client build and stamp too"
 unzip -p "$work/other-builds/anypress-export.zip" anypress-export/anypress-export.php | grep -q "define('ANYPRESS_EXPORT_VERSION', '9.9.9');" || fail "anypress-export not stamped"
 unzip -p "$work/other-builds/anypress-export.zip" anypress-export/anypress-export.php | grep -q '^Version: 9.9.9$' || fail "anypress-export header not stamped"
 ok "anypress-export builds and stamps too"
+"$here/build.sh" anypress-move 9.9.9 "$work/other-builds" > /dev/null
+unzip -p "$work/other-builds/anypress-move.zip" anypress-move/anypress-move.php | grep -q "define('ANYPRESS_MOVE_VERSION', '9.9.9');" || fail "anypress-move not stamped"
+unzip -l "$work/other-builds/anypress-move.zip" | grep -q 'anypress-move/lib/Moving/CourseImport.php' || fail "anypress-move has no switches in lib/"
+ok "anypress-move builds with its copy of the switches"
 "$here/build.sh" anypress-payments latest "$work/x" 2>/dev/null && fail "accepted a bad version"
 ok "a bad version is refused"
 

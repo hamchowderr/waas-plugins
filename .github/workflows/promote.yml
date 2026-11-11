@@ -8,7 +8,7 @@ on:
       package:
         description: Plugin
         type: choice
-        options: [anypress-host, anypress-client, anypress-payments, anypress-export]
+        options: [anypress-host, anypress-client, anypress-payments, anypress-export, anypress-move]
       version:
         description: 'Released version, like 2.3.0-beta.2'
         required: true

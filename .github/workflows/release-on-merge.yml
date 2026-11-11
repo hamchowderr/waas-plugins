@@ -9,6 +9,7 @@ on:
       - 'packages/anypress-client/anypress-client.php'
       - 'packages/anypress-payments/anypress-payments.php'
       - 'packages/anypress-export/anypress-export.php'
+      - 'packages/anypress-move/anypress-move.php'
   workflow_dispatch:
 
 permissions:
@@ -27,7 +28,7 @@ jobs:
       - id: find
         run: |
           tags=()
-          for p in host client payments export; do
+          for p in host client payments export move; do
             v=$(sed -n 's/^[ *]*Version: *//p' "packages/anypress-$p/anypress-$p.php" | head -1 | tr -d '\r')
             tag="anypress-$p-v$v"
             if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then

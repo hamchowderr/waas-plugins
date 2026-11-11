@@ -17,11 +17,15 @@ parameters:
         - packages/anypress-payments/anypress-payments.php
         - packages/anypress-export/src
         - packages/anypress-export/anypress-export.php
+        - packages/anypress-move/src
+        - packages/anypress-move/anypress-move.php
         - packages/anypress-updater/src
     excludePaths:
         analyseAndScan:
             - packages/*/vendor/*
     scanDirectories:
+        # AnyPress Move's copy of AnyPress Client's switches (scripts/build-move.sh), checked as AnyPress Client.
+        - packages/anypress-move/lib
         - tools/qa/vendor/php-stubs/woocommerce-stubs
         - tools/qa/stubs
     bootstrapFiles:
