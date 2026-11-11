@@ -163,7 +163,7 @@ Sources: `src/Features/StorefrontStatus.php`, `src/Core/HttpService.php`, `anypr
 
 ## Moving Forms to Fluent Forms
 
-A website moved into AnyPress often has its forms in Contact Form 7, WPForms (Lite) or Ninja Forms. The forms switch moves them to Fluent Forms and switches the pages over. Run it with WP-CLI as an administrator, with Fluent Forms and the old form plugins active:
+A website moved into AnyPress often has its forms in Contact Form 7, WPForms (Lite), Ninja Forms or Gravity Forms. The forms switch moves them to Fluent Forms and switches the pages over. Run it with WP-CLI as an administrator, with Fluent Forms and the old form plugins active:
 
 ```sh
 wp anypress forms switch --user=admin --dry-run   # what would be converted, dropped and switched; changes nothing
@@ -179,13 +179,14 @@ What it does, in order:
    - Contact Form 7: the emails are built from the form's Mail and Mail (2) (recipient, sender, subject, body, Reply-To, Cc, Bcc, with the mail tags turned into Fluent Forms smart codes), the thank-you message from its "sent" message, and the malformed notification rows the importer writes are deleted. Placeholders stay placeholders and a date field stays a date.
    - WPForms: the confirmation that applies to every submission is the main one, and a conditional one (such as a redirect for one answer) stays conditional. Free Fluent Forms stores conditional confirmations but only Fluent Forms Pro runs them, so AnyPress Client runs them for the converted forms while Pro is off (`src/Forms/ConditionalConfirmations.php`).
    - Ninja Forms: each email keeps its own Reply-To, and the date format is converted (`MM/DD/YYYY` becomes `m/d/Y`).
-   - Entries (Contact Form 7 through Flamingo, Ninja Forms, WPForms Pro) keep the date each was sent and their order; Contact Form 7 entries also keep the visitor's IP address and page. All Flamingo messages are read, not only the first 10.
-2. **Reports** every dropped field of each form by name and type, with the reason (most need Fluent Forms Pro), and anything else that didn't come across: show/hide rules on fields, email attachments, mail tags with no Fluent Forms equivalent, entries past Fluent Forms' limit of 1,000 per form.
-3. **Switches the pages over**: the old shortcodes (`[contact-form-7]`, `[contact-form]`, `[wpforms]`, `[ninja_form]`, `[ninja_forms]`) and blocks become `[fluentform id="…"]` and the Fluent Forms block, in posts, pages, templates, template parts, synced patterns and Text, Custom HTML and block widgets. Each changed post keeps a revision. Forms inside a page builder's own layout (Elementor, Beaver Builder) are listed in the report, not changed.
+   - Gravity Forms: name and address parts that are hidden in Gravity Forms stay hidden (the importer shows them), Address Line 2 is never required, a one-box name field becomes a text field, dates and times keep their format, the entry limit, its period, the schedule and every message keep their values (the importer writes them as true or false), the default confirmation is the main one, and only notifications sent on submission come across. An address entry with an empty part no longer stops the import. Gravity Forms has to be active while its forms are read, so run the switch on the website before it moves into an AnyPress store (or with AnyPress Move on any WordPress), not on the store itself, which keeps only its site type's plugins on.
+   - Entries (Contact Form 7 through Flamingo, Ninja Forms, WPForms Pro, Gravity Forms) keep the date each was sent and their order; Contact Form 7 entries also keep the visitor's IP address and page, Gravity Forms entries the visitor's IP address, browser and page. All Flamingo messages are read, not only the first 10.
+2. **Reports** every dropped field of each form by name and type, with the reason (most need Fluent Forms Pro), and anything else that didn't come across: show/hide rules on fields, email attachments, mail tags with no Fluent Forms equivalent, Gravity Forms add-on feeds (Mailchimp, Stripe and the like), entries past Fluent Forms' limit of 1,000 per form.
+3. **Switches the pages over**: the old shortcodes (`[contact-form-7]`, `[contact-form]`, `[wpforms]`, `[ninja_form]`, `[ninja_forms]`, `[gravityform]`, `[gravityforms]`; Gravity Forms' conditional-content `[gravityforms action="…"]` is left alone) and blocks become `[fluentform id="…"]` and the Fluent Forms block, in posts, pages, templates, template parts, synced patterns and Text, Custom HTML and block widgets. Each changed post keeps a revision. Forms inside a page builder's own layout (Elementor, Beaver Builder) are listed in the report, not changed.
 
 Running it again changes nothing that was already done: converted forms are skipped, entries are only brought into a Fluent Forms form that has none, and pages already switched have nothing left to swap. The old plugins and their forms are never changed, deactivated or deleted, so they keep working until the owner turns them off. Undo puts back the exact old content of each page or widget that wasn't edited since, and swaps the forms back in one that was; the Fluent Forms forms and their entries stay.
 
-The id map and each changed page's original content are kept in the `anypress_client_forms_switch` option (not autoloaded). Sources: `src/Forms/FormsSwitch.php`, `src/Forms/Migrators/`, `src/Forms/PageSwitcher.php`, `src/Forms/FormsCommand.php`, `src/Forms/FormsAbilities.php`. Tested end to end by `scripts/playground/forms.mjs` (`npm run forms`).
+The id map and each changed page's original content are kept in the `anypress_client_forms_switch` option (not autoloaded). Sources: `src/Forms/FormsSwitch.php`, `src/Forms/Migrators/`, `src/Forms/PageSwitcher.php`, `src/Forms/FormsCommand.php`, `src/Forms/FormsAbilities.php`. Tested end to end by `scripts/playground/forms.mjs` (`npm run forms`) and, for Gravity Forms, `scripts/playground/gravity-forms.mjs` (`npm run gravity-forms`, against a stand-in for Gravity Forms' PHP API, since Gravity Forms is paid and not on wordpress.org).
 
 ## Moving a WooCommerce Shop to FluentCart
 
@@ -213,6 +214,26 @@ What it does, in order:
 Running it again adds nothing twice: the add-on skips each step it has finished, gallery images already there are kept, each zone and method is copied once, and merged customers have nothing left to merge. WooCommerce and its data are never changed, deactivated or deleted. Undo puts back the galleries as the add-on left them, removes the copied shipping zones and methods, and splits the merged customers again; what the add-on copied stays, because the add-on has no undo outside its developer mode.
 
 The galleries before the switch, the copied zone and method ids and each merged customer (its row and the rows moved off it) are kept in the `anypress_client_shop_switch` option (not autoloaded). Sources: `src/Shop/ShopSwitch.php`, `src/Shop/GalleryImages.php`, `src/Shop/ShippingZones.php`, `src/Shop/CustomerMerge.php`, `src/Shop/ShopReview.php`, `src/Shop/ShopCompare.php`, `src/Shop/ShopCommand.php`, `src/Shop/ShopAbilities.php`. Tested end to end, with HPOS off and on, by `scripts/playground/shop-switch.mjs` (`npm run shop-switch`).
+
+## Moving an Easy Digital Downloads Shop to FluentCart
+
+The shop switch also copies an Easy Digital Downloads 3 shop into FluentCart, through the same FluentCart Migrator add-on's own EDD migration, and then swaps EDD's shortcodes and blocks on the site's pages for FluentCart's (the add-on leaves the pages alone). Run it with WP-CLI as an administrator, with EDD 3, FluentCart and the add-on active:
+
+```
+wp anypress shop switch --from=edd --user=admin --dry-run   # check the shop and list the pages it would switch; changes nothing
+wp anypress shop switch --from=edd --user=admin             # do it
+wp anypress shop switch --from=edd --user=admin --undo      # put EDD's shortcodes and blocks back on the pages
+```
+
+The abilities take `{"from": "edd"}`: `anypress/check-shop` and `anypress/switch-shop`.
+
+1. **Checks** that EDD 3 (not 2.x: EDD's own upgrade moves orders into its 3.0 tables first), FluentCart and the add-on are active, and FluentCart Pro too when EDD Software Licensing is in use (the add-on needs it for the licences). Reports the products, orders, transactions, customers, coupons, subscriptions, licences and payment gateways.
+2. **Runs the add-on's EDD migration** through its PHP classes, the same steps as its admin screen: store settings and products (with their price options), tax rates, coupons, orders with their transactions, subscriptions and licences, customers without orders, and the recount. Orders it couldn't copy, or copied with a gap, are listed from its own log.
+3. **Switches the pages over**: `[download_checkout]`, `[download_cart]`, `[edd_login]`, `[edd_register]`, `[edd_receipt]` and `[downloads]` become FluentCart's checkout, cart, login form, registration form, receipt and product list; `[purchase_history]`, `[download_history]` and `[edd_profile_editor]` become FluentCart's one customer profile (once per page); a buy button (`[purchase_link id="…"]`, the `edd/buy-button` block) becomes `[fluent_cart_product_card product_id="…"]` for the product the add-on made of that download. EDD's blocks (checkout, cart, order history, user downloads, login, register, receipt, confirmation, downloads, buy button) become shortcode blocks. This covers posts, pages, templates, template parts and synced patterns, EDD's own Checkout, Receipt, Order History and Confirmation pages included; each changed post keeps a revision. A buy button whose download isn't copied yet stays as it is and is listed.
+
+EDD Recurring subscriptions are copied, but their renewals keep charging only when FluentCart has the same gateway set up with the same Stripe or PayPal account (FluentCart Pro for subscriptions); switch EDD's gateway off once FluentCart's is connected, so nobody is charged twice. Running it again adds nothing twice: the add-on skips the steps it has finished, and switched pages have nothing left to swap. EDD and its data are never changed or turned off. Undo puts every switched page back; what the add-on copied stays in FluentCart. EDD has to be active while its shop is read, so run this on the website before it moves into an AnyPress store (or with AnyPress Move on any WordPress), not on the store itself, which keeps only its site type's plugins on.
+
+Each changed page's original content is kept in the `anypress_client_edd_switch` option (not autoloaded). Sources: `src/Shop/EddSwitch.php`, `src/Shop/EddShortcodes.php`, `src/Shop/EddPages.php`. Tested end to end by `scripts/playground/edd.mjs` (`npm run edd`, EDD and FluentCart from wordpress.org).
 
 ## Bringing Buyers and Subscribers Into FluentCRM
 

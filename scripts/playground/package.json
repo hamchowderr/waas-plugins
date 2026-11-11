@@ -34,7 +34,9 @@
     "mail-log": "node mail-log.mjs",
     "download-site": "node download-site.mjs",
     "community-portal": "node community-portal.mjs",
-    "cache-checkout": "node cache-checkout.mjs"
+    "cache-checkout": "node cache-checkout.mjs",
+    "gravity-forms": "node gravity-forms.mjs",
+    "edd": "node edd.mjs"
   },
   "dependencies": {
     "@wp-playground/cli": "3.1.59"

@@ -14,6 +14,7 @@ class DroppedFields
         'contactform7' => ['tel', 'range', 'file'],
         'wpforms' => ['phone', 'number-slider', 'file-upload', 'pagebreak', 'richtext'],
         'ninja_forms' => ['phone', 'repeater'],
+        'gravityform' => ['phone', 'list', 'fileupload', 'page'],
     ];
 
     /**
