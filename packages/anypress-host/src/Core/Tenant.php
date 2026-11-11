@@ -32,6 +32,8 @@ class Tenant
     public const WEBSITE_NAME_UNVERIFIED_META = 'anypress_website_name_unverified';
     /** The checkout's optional "What does your business do, and who is it for?" answer; the store's assistant starts from it. */
     public const BUSINESS_ABOUT_META = 'anypress_business_about';
+    /** Order meta: the demo draft (built in the visitor's browser) the new store starts from (see DemoDrafts). */
+    public const DEMO_DRAFT_META = 'anypress_demo_draft';
     /** Subscription meta while the store waits for a new name (see NameConflicts). */
     public const NAME_CONFLICT_META = 'anypress_name_conflict';
 

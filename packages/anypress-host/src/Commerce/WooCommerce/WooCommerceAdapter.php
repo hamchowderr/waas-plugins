@@ -109,7 +109,7 @@ class WooCommerceAdapter implements CommerceAdapter
             }
         }
 
-        return new PlanPurchase(
+        $purchase = new PlanPurchase(
             $plans,
             (string) $purchase_context->get_meta(Tenant::WEBSITE_NAME_META),
             (string) $purchase_context->get_billing_email(),
@@ -124,6 +124,9 @@ class WooCommerceAdapter implements CommerceAdapter
                 'postcode' => (string) $purchase_context->get_billing_postcode(),
             ]
         );
+        $purchase->demo_draft_id = (string) $purchase_context->get_meta(Tenant::DEMO_DRAFT_META);
+
+        return $purchase;
     }
 
     /** The subscription, or null if there is none with that id or no subscription plugin is active. */

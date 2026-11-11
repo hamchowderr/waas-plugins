@@ -29,6 +29,7 @@ class WooCommerceAdapterTest extends TestCase
 
         $order = Mockery::mock('WC_Order');
         $order->allows('get_meta')->with(Tenant::WEBSITE_NAME_META)->andReturn('Apex Research');
+        $order->allows('get_meta')->with(Tenant::DEMO_DRAFT_META)->andReturn('');
         $order->allows('get_billing_email')->andReturn('owner@apexresearch.example');
         $order->allows('get_billing_country')->andReturn('US');
         $billing = ['first_name' => 'Jordan', 'last_name' => 'Reyes', 'phone' => '512 555 0100', 'address_1' => '1 Main St', 'address_2' => '',

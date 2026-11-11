@@ -130,6 +130,7 @@ class UserWcTenantsCheckout
         if ($key === self::FIELD_ID && $value !== '' && $wc_object instanceof \WC_Order) {
             $wc_object->update_meta_data(Tenant::WEBSITE_NAME_META, $value);
             $this->mark_unverified($wc_object, $value);
+            $this->save_demo_draft($wc_object);
         }
     }
 
@@ -175,6 +176,17 @@ class UserWcTenantsCheckout
             $value = sanitize_text_field((string) $data[Tenant::WEBSITE_NAME_META]);
             $order->update_meta_data(Tenant::WEBSITE_NAME_META, $value);
             $this->mark_unverified($order, $value);
+            $this->save_demo_draft($order);
+        }
+    }
+
+    /** @param \WC_Order $order */
+    private function save_demo_draft($order): void
+    {
+        $demo = DemoDrafts::pending();
+        if ($demo !== '') {
+            $order->update_meta_data(Tenant::DEMO_DRAFT_META, $demo);
+            DemoDrafts::forget();
         }
     }
 

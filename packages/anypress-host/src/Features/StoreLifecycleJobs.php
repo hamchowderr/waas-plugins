@@ -55,7 +55,7 @@ class StoreLifecycleJobs
             $args['wp_options'] = $this->store_options($args);
 
             try {
-                $new_tenant = $this->provisioningApi->create_tenant($args);
+                $new_tenant = $this->create_tenant($args);
             } catch (\Exception $error) {
                 // The externalId is this subscription's own, so a store already holding it is ours: an earlier try
                 // got through (an admin's retry starts again at attempt 0, skipping the lookup above). Adopt it.
@@ -185,6 +185,26 @@ class StoreLifecycleJobs
         do_action('anypress_tenant_deleted', $subscription_id);
 
         return null;
+    }
+
+    /**
+     * Create the store from its demo draft, if it has one. When the API refuses the draft (expired, already used, or
+     * made for another site type or storefront), the store is made from the template instead: the buyer has paid.
+     */
+    private function create_tenant(array $args)
+    {
+        try {
+            return $this->provisioningApi->create_tenant($args);
+        } catch (\Exception $error) {
+            $message = $error->getMessage();
+            if (empty($args['demo_draft_id']) || strpos($message, 'Failed: 400') !== 0 || stripos($message, 'demo draft') === false) {
+                throw $error;
+            }
+            error_log('AnyPress Host: the store is made without its demo, which the API refused: ' . $message);
+            unset($args['demo_draft_id']);
+
+            return $this->provisioningApi->create_tenant($args);
+        }
     }
 
     /** The API refused the create because a store already has this externalId (409; older APIs answer 400). */

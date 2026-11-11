@@ -5,6 +5,7 @@ namespace AnyPressHost\Commerce\FluentCart;
 use AnyPressHost\Core\Exceptions\InvalidDomainException;
 use AnyPressHost\Core\ProvisioningApi;
 use AnyPressHost\Core\Tenant;
+use AnyPressHost\Features\DemoDrafts;
 
 /**
  * The "Website name" field on FluentCart's checkout, shown when the cart holds a website plan, and an optional
@@ -146,6 +147,11 @@ class FluentCartCheckout
         $about = self::about((string) ($data['request_data'][self::ABOUT_FIELD] ?? ''));
         if ($about !== '') {
             $order->updateMeta(self::ABOUT_FIELD, $about);
+        }
+        $demo = DemoDrafts::pending();
+        if ($demo !== '') {
+            $order->updateMeta(Tenant::DEMO_DRAFT_META, $demo);
+            DemoDrafts::forget();
         }
     }
 

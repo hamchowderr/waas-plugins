@@ -37,6 +37,7 @@ class FluentCartAdapterTest extends TestCase
         $this->store->allows('get_plan_feed')->with(102)->andReturnNull();
         $this->store->allows('get_order_meta')->with($order, Tenant::WEBSITE_NAME_META)->andReturn('Apex Research');
         $this->store->allows('get_order_meta')->with($order, Tenant::BUSINESS_ABOUT_META)->andReturn('Lab supplies for research teams.');
+        $this->store->allows('get_order_meta')->with($order, Tenant::DEMO_DRAFT_META)->andReturn('demo_AbCdEfGhIjKlMnOpQrStUv');
         $this->store->allows('get_order_billing')->with($order)->andReturn(['name' => 'Jordan Reyes', 'city' => 'Austin', 'state' => 'TX']);
         $this->customer(7);
 
@@ -44,6 +45,7 @@ class FluentCartAdapterTest extends TestCase
 
         $this->assertEquals([new PlanProduct(101, 'peptide-store', 'peptide-starter', 'medium')], $purchase->plans);
         $this->assertSame('Apex Research', $purchase->website_name);
+        $this->assertSame('demo_AbCdEfGhIjKlMnOpQrStUv', $purchase->demo_draft_id);
         $this->assertSame('owner@apexresearch.example', $purchase->customer_email);
         $this->assertSame(['name' => 'Jordan Reyes', 'city' => 'Austin', 'state' => 'TX', 'about' => 'Lab supplies for research teams.'], $purchase->billing);
     }

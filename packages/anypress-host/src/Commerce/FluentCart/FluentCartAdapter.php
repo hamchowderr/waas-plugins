@@ -89,7 +89,7 @@ class FluentCartAdapter implements CommerceAdapter
 
         $customer = $this->store->get_subscription_customer($subscription_id);
 
-        return new PlanPurchase(
+        $purchase = new PlanPurchase(
             $plans,
             $this->store->get_order_meta($purchase_context, Tenant::WEBSITE_NAME_META),
             $customer['email'] ?? '',
@@ -97,6 +97,9 @@ class FluentCartAdapter implements CommerceAdapter
             // The checkout's optional business answer travels with the billing details to the store.
             array_filter($this->store->get_order_billing($purchase_context) + ['about' => $this->store->get_order_meta($purchase_context, Tenant::BUSINESS_ABOUT_META)], static fn ($value) => (string) $value !== '')
         );
+        $purchase->demo_draft_id = (string) $this->store->get_order_meta($purchase_context, Tenant::DEMO_DRAFT_META);
+
+        return $purchase;
     }
 
     public function get_subscription_meta($subscription_id, string $key)

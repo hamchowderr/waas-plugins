@@ -20,6 +20,8 @@ final class PlanPurchase
      * @var array<string, string>
      */
     public array $billing;
+    /** The demo draft (built in the buyer's browser) the store starts from, '' for none */
+    public string $demo_draft_id = '';
 
     /**
      * @param PlanProduct[] $plans

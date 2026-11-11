@@ -151,6 +151,54 @@ class TenantsSubscriptionManagerTest extends StoreJobsTestCase
         $this->run_due(901);
     }
 
+    private function demo_purchase(): PlanPurchase
+    {
+        $purchase = $this->purchase();
+        $purchase->demo_draft_id = 'demo_AbCdEfGhIjKlMnOpQrStUv';
+
+        return $purchase;
+    }
+
+    public function test_a_store_bought_from_a_demo_is_created_from_its_draft(): void
+    {
+        $this->stub_new_store_functions();
+        $this->manager->create_tenant_when_subscription_created(901, $this->demo_purchase());
+        $this->api->expects('create_tenant')->once()->with(Mockery::on(fn ($args) => $args['demo_draft_id'] === 'demo_AbCdEfGhIjKlMnOpQrStUv'))
+            ->andReturn((object) ['externalId' => '5f0b7c3e-2d1a-4e8b-9c6f-0a1b2c3d4e5f', 'baseDomain' => 't-1.stores.waas.example']);
+
+        $this->run_due(901);
+
+        $this->assertSame([], $this->queue(901));
+    }
+
+    public function test_a_draft_that_is_not_an_api_draft_id_is_not_sent(): void
+    {
+        $this->stub_new_store_functions();
+        $purchase = $this->purchase();
+        $purchase->demo_draft_id = 'demo_../../x';
+
+        $this->manager->create_tenant_when_subscription_created(901, $purchase);
+
+        $this->assertArrayNotHasKey('demo_draft_id', $this->queue(901)[0]['args']['request']);
+    }
+
+    public function test_a_refused_demo_draft_still_gets_the_buyer_a_store_from_the_template(): void
+    {
+        $this->stub_new_store_functions();
+        $this->manager->create_tenant_when_subscription_created(901, $this->demo_purchase());
+        $this->api->expects('create_tenant')->once()->with(Mockery::on(fn ($args) => isset($args['demo_draft_id'])))
+            ->andThrow(new \Exception('Failed: 400 - {"message":"This demo draft has already been used for a store"}'));
+        $this->api->expects('create_tenant')->once()->with(Mockery::on(fn ($args) => !isset($args['demo_draft_id'])))
+            ->andReturn((object) ['externalId' => '5f0b7c3e-2d1a-4e8b-9c6f-0a1b2c3d4e5f', 'baseDomain' => 't-1.stores.waas.example']);
+        Actions\expectDone('anypress_tenant_linked_to_subscription')->once()->with(901);
+
+        $previous = ini_set('error_log', '/dev/null');
+        $this->run_due(901);
+        ini_set('error_log', (string) $previous);
+
+        $this->assertSame('t-1.stores.waas.example', $this->cart->meta[901][Tenant::BASE_DOMAIN_NAME_META]);
+    }
+
     public function test_a_second_activation_before_the_job_ran_queues_nothing_more(): void
     {
         $this->stub_new_store_functions();

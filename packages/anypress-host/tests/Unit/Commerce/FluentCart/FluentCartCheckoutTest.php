@@ -171,4 +171,29 @@ class FluentCartCheckoutTest extends TestCase
 
         $this->checkout->save(['order' => $order, 'cart' => $this->other_cart, 'request_data' => [self::FIELD => 'Apex Research']]);
     }
+
+    public function test_the_demo_the_buyer_brought_is_saved_on_the_order(): void
+    {
+        Functions\when('wp_unslash')->returnArg();
+        Functions\when('is_ssl')->justReturn(true);
+        $_COOKIE['anypress_demo'] = 'demo_AbCdEfGhIjKlMnOpQrStUv';
+        $order = Mockery::mock();
+        $order->expects('updateMeta')->with(self::FIELD, 'Apex Research');
+        $order->expects('updateMeta')->with(Tenant::DEMO_DRAFT_META, 'demo_AbCdEfGhIjKlMnOpQrStUv');
+
+        $this->checkout->save(['order' => $order, 'cart' => $this->plan_cart, 'request_data' => [self::FIELD => 'Apex Research']]);
+
+        $this->assertArrayNotHasKey('anypress_demo', $_COOKIE);
+    }
+
+    public function test_a_cookie_that_is_not_a_draft_id_is_ignored(): void
+    {
+        Functions\when('wp_unslash')->returnArg();
+        $_COOKIE['anypress_demo'] = 'demo_<script>';
+        $order = Mockery::mock();
+        $order->expects('updateMeta')->with(self::FIELD, 'Apex Research');
+
+        $this->checkout->save(['order' => $order, 'cart' => $this->plan_cart, 'request_data' => [self::FIELD => 'Apex Research']]);
+        unset($_COOKIE['anypress_demo']);
+    }
 }
