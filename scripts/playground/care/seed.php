@@ -6,7 +6,7 @@ update_option('anypress_api_key', 'key');
 update_option('anypress_api_secret', 'secret');
 update_option('anypress_can_reach_api', true);
 if (class_exists('\FluentCart\App\Modules\PaymentMethods\Core\GatewayManager')) {
-    update_option('fluent_cart_payment_settings_offline_payment', ['is_active' => 'yes', 'checkout_label' => 'Pay later']);
+    fluent_cart_update_option('fluent_cart_payment_settings_offline_payment', ['is_active' => 'yes', 'payment_mode' => 'live', 'checkout_label' => 'Pay later']);
 }
 if (!(new \FluentCart\Api\StoreSettings())->get('customer_profile_page_id')) { (new \FluentCart\App\CPT\Pages())->createPages(); }
 if (!\FluentSupport\App\Models\MailBox::count()) {

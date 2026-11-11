@@ -105,6 +105,7 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
     const checkout = await page.innerText('body');
     check(checkout.includes('Care Plus'), `${label}: the link opens checkout for Care Plus`, page.url());
     await page.screenshot({ path: resolve(OUT, `${label}-3-checkout.png`), fullPage: true });
+
     await context.close();
 }
 
@@ -127,7 +128,8 @@ const gate = JSON.parse(await php(`${boot}
 check(Boolean(gate.stranger?.anypress_care?.no_website), 'checkout turns away care for an email with no website', JSON.stringify(gate));
 check(Array.isArray(gate.owner) ? gate.owner.length === 0 : Object.keys(gate.owner).length === 0, 'checkout takes care for the website owner', JSON.stringify(gate));
 
-// 4. Paying: an order and subscription for the checkout's cart, through the Host plugin's handlers.
+// 4. Paying for the package: FluentCart's offline payment can't take subscriptions, and card payments need a payment
+// account, so the order and subscription are made here and go through the Host plugin's own handlers.
 const paid = await php(`${boot}
     $cart = \\FluentCart\\App\\Models\\Cart::query()->where('cart_group', 'instant')->orderBy('created_at', 'desc')->first();
     $customer = \\FluentCart\\App\\Models\\Customer::query()->where('email', 'shopper@example.com')->first();
@@ -146,7 +148,78 @@ console.log('paid:', paid);
 const after = JSON.parse(paid.slice(paid.indexOf('{')));
 check(Number(after.chosen) === after.website, 'checkout kept the website on the order');
 check(after.summary?.package === 'Care Plus' && after.summary.left === 120, 'once paid, Care Plus belongs to the website with 2 h this month');
-check(after.mails?.length === 1 && after.mails[0][0] === 'shopper@example.com' && after.mails[0][1] === 'Care Plus is on for your website', 'the owner gets the "Care is on" email', JSON.stringify(after.mails));
+check((after.mails ?? []).filter((m) => m[0] === 'shopper@example.com' && m[1] === 'Care Plus is on for your website').length === 1, 'the owner gets the "Care is on" email', JSON.stringify(after.mails));
+
+// 4b. A one-time service bought for real: FluentCart's checkout with "Pay later", then the shop's "Mark as paid" in
+// FluentCart, which runs the Host plugin's order_paid_done handlers as any payment does.
+const hourUrl = (await php(`${boot} $hour = array_values(array_filter($care->services(), fn ($s) => $s['title'] === 'One hour of changes'))[0]; echo add_query_arg('anypress_website', $website, $hour['variations'][0]['checkout_url']);`)).trim();
+{
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    await page.goto(`${base}/wp-login.php`);
+    await page.fill('#user_login', 'shopper');
+    await page.fill('#user_pass', 'password');
+    await page.click('#wp-submit');
+    await page.waitForLoadState('networkidle');
+    await page.goto(hourUrl, { waitUntil: 'networkidle' });
+    {
+        const country = page.locator('select[name="billing_country"]');
+        if (await country.count()) {
+            await country.selectOption('US', { force: true });
+            await country.dispatchEvent('change');
+            await page.waitForLoadState('networkidle');
+        }
+        const state = page.locator('select[name="billing_state"]');
+        if (await state.count()) {
+            await state.selectOption('CA', { force: true }).catch(() => {});
+            await state.dispatchEvent('change').catch(() => {});
+        }
+        for (const input of await page.locator('form input[required]:visible, form textarea[required]:visible, form input[name="billing_state"]:visible').all()) {
+            if ((await input.inputValue()) !== '') continue;
+            const name = (await input.getAttribute('name')) ?? '';
+            await input.fill(name.includes('email') ? 'shopper@example.com' : name.includes('state') ? 'CA' : name.includes('postcode') ? '94110' : name.includes('phone') ? '5551234567' : 'Ada Baker');
+        }
+        const offline = page.locator('input[value="offline_payment"]');
+        if (await offline.count()) await offline.first().check({ force: true });
+        const before = page.url();
+        await page.locator('[data-fluent-cart-checkout-page-checkout-button], button:has-text("Place order")').first().click();
+        await page.waitForURL((url) => url.toString() !== before, { timeout: 30000 }).catch(() => {});
+        await page.waitForLoadState('networkidle');
+        await page.screenshot({ path: resolve(OUT, `desktop-4b-service-order.png`), fullPage: true });
+        check(page.url() !== before, 'placing the order with "Pay later" goes on to the receipt', (await page.innerText('body')).slice(0, 300));
+    }
+    await context.close();
+}
+const orderId = Number((await php(`echo (int) \\FluentCart\\App\\Models\\Order::query()->where('payment_method', 'offline_payment')->orderBy('id', 'desc')->value('id');`)).trim());
+check(orderId > 0, 'the checkout made an offline order', String(orderId));
+{
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    await page.goto(`${base}/wp-login.php`);
+    await page.fill('#user_login', 'admin');
+    await page.fill('#user_pass', 'password');
+    await page.click('#wp-submit');
+    await page.waitForLoadState('networkidle');
+    const result = await page.evaluate(async ({ base, orderId }) => {
+        const nonce = await (await fetch(`${base}/wp-admin/admin-ajax.php?action=rest-nonce`)).text();
+        const res = await fetch(`${base}/wp-json/fluent-cart/v2/orders/${orderId}/mark-as-paid`, {
+            method: 'POST',
+            headers: { 'X-WP-Nonce': nonce, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ payment_method: 'offline_payment', vendor_charge_id: '', mark_paid_note: 'Paid by bank transfer' }),
+        });
+        return [res.status, (await res.text()).slice(0, 300)];
+    }, { base, orderId });
+    check(result[0] === 200, 'FluentCart\'s "Mark as paid" takes the order', JSON.stringify(result));
+    await context.close();
+}
+const service = JSON.parse((await php(`${boot}
+    // FluentCart runs order_paid_done from Action Scheduler, as WP-Cron would on the shop.
+    if (class_exists('ActionScheduler_QueueRunner')) { ActionScheduler_QueueRunner::instance()->run('care-check'); }
+    $ticket = \\FluentSupport\\App\\Models\\Ticket::query()->orderBy('id', 'desc')->first();
+    echo wp_json_encode(['extra' => $care->summary($website)['extra'], 'title' => $ticket ? $ticket->title : '', 'tags' => $ticket ? $ticket->tags()->pluck('title')->all() : [], 'done' => (bool) \\FluentCart\\App\\Models\\Order::query()->find(${orderId})->getMeta('_anypress_care_done')]);
+`)).replace(/^[^{]*/, ''));
+check(service.extra === 60, 'once paid, the hour is added to the website as extra time', JSON.stringify(service));
+check(service.title === 'One hour of changes: sams-studio.anypress.site' && service.tags.includes('One hour of changes'), 'and filed as a tagged Fluent Support ticket', JSON.stringify(service));
 
 // 5. The account with care: time left and "Ask for a change".
 for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844]]) {
