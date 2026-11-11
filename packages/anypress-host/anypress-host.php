@@ -37,14 +37,14 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 /**
  * @package AnyPressHost
- * @version 2.13.2
+ * @version 2.14.0
  */
 /*
 Plugin Name: AnyPress Host
 Plugin URI: https://github.com/hamchowderr/waas-plugins
 Description: Sells AnyPress websites from your storefront: creates, suspends and restores each customer's website through the AnyPress API, with FluentCart or WooCommerce (and WooCommerce Subscriptions) for billing.
 Author: Otaku Solutions
-Version: 2.13.2
+Version: 2.14.0
 Author URI: https://otakusolutions.io
 Update URI: anypress-host
 Requires at least: 6.4
@@ -57,7 +57,7 @@ Text Domain: anypress-host
 define( 'ANYPRESS_HOST_SLUG', 'anypress-host' );
 define( 'ANYPRESS_HOST_BASENAME', plugin_basename( __FILE__ ) );
 define( 'ANYPRESS_HOST_UPDATE_URI', 'anypress-host' );
-define( 'ANYPRESS_HOST_VERSION', '2.13.2' );
+define( 'ANYPRESS_HOST_VERSION', '2.14.0' );
 define( 'ANYPRESS_HOST_TEXTDOMAIN', 'anypress-host' );
 
 // Settings and data saved before the AnyPress names (2.11.0) move to them before anything reads them
@@ -76,6 +76,8 @@ new AssistantSignIn($configService, $provisioningApi);
 SingleLogin::init();
 // "Log in to WordPress" from the AnyPress dashboard: a one-time link the API signs with this site's key.
 AdminLogin::init();
+// A demo built in the visitor's browser (anypress.io/try) becomes the store they buy
+AnyPressHost\Features\DemoDrafts::init();
 // Store API calls run as background jobs, never inside the cart's hooks
 // Background work starts when the request that asked for it ends, not on the next cron run
 new RunSoon();

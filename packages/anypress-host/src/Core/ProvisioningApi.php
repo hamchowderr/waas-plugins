@@ -165,6 +165,10 @@ class ProvisioningApi
             $payload['wpOptions'] = $args['wp_options'];
         }
 
+        if (!empty($args['demo_draft_id'])) {
+            $payload['demoDraftId'] = $args['demo_draft_id'];
+        }
+
         $filtered_payload = apply_filters('anypress_tenant_create_payload', $payload);
 
         return $this->httpService->post('/v1/tenants', $filtered_payload);

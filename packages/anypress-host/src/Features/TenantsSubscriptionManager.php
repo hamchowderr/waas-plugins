@@ -315,6 +315,11 @@ class TenantsSubscriptionManager
             'owner' => ['country' => strtoupper((string) preg_replace('/[^A-Za-z]/', '', $purchase->country))] + $this->owner_billing($purchase->billing),
         ];
 
+        $demo = DemoDrafts::valid($purchase->demo_draft_id);
+        if ($demo !== '') {
+            $request['demo_draft_id'] = $demo;
+        }
+
         $tenant_root_domain = get_option('anypress_root_domain', '');
         if ($tenant_root_domain !== '') {
             $request['custom_domain_name'] = sanitize_title_with_dashes(remove_accents($website_name)) . '.' . $tenant_root_domain;
