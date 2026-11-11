@@ -198,7 +198,7 @@ class MovePage
                 echo '<tr>';
                 foreach ($columns as $column) {
                     $cell = $row[$column] ?? '';
-                    echo '<td>' . esc_html(is_scalar($cell) || $cell === null ? (string) $cell : (string) wp_json_encode($cell)) . '</td>';
+                    echo '<td>' . esc_html(is_scalar($cell) ? (string) $cell : (string) wp_json_encode($cell)) . '</td>';
                 }
                 echo '</tr>';
             }
