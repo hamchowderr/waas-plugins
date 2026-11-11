@@ -160,7 +160,7 @@ class CommunityImport extends NativeImport
     /** BuddyPress's own list of every group, hidden ones too. */
     private static function group_ids(): array
     {
-        if (!bp_is_active('groups')) {
+        if (!function_exists('bp_is_active') || !bp_is_active('groups')) {
             return [];
         }
 
@@ -185,6 +185,9 @@ class CommunityImport extends NativeImport
     /** BuddyPress activity items of one type, hidden and spam ones too (FluentCommunity's importer takes them all). */
     private static function activity_count(string $type): int
     {
+        if (!function_exists('bp_activity_get')) {
+            return 0;
+        }
         $found = bp_activity_get([
             'filter' => ['action' => $type],
             'display_comments' => $type === 'activity_comment' ? 'stream' : false,
