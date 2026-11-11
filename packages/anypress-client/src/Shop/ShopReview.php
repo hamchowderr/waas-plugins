@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Shop;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 /**
  * What the owner has to look at by hand after the switch; nothing here changes the shop.
  *
@@ -76,27 +74,43 @@ class ShopReview
         return rtrim(rtrim(number_format((float) $value, 4, '.', ''), '0'), '.');
     }
 
+    /**
+     * Every WooCommerce tax rate, of every tax class, with the postcodes and cities it's limited to, through
+     * WooCommerce's own WC_Tax, in its tax settings' order.
+     */
+    public static function woo_tax_rates(): array
+    {
+        if (!class_exists('WC_Tax')) {
+            return [];
+        }
+        $rates = [];
+        foreach (array_merge([''], \WC_Tax::get_tax_class_slugs()) as $class) {
+            foreach (\WC_Tax::get_rates_for_tax_class($class) as $rate) {
+                $rate = (array) $rate;
+                $rate['postcodes'] = (array) ($rate['postcode'] ?? []);
+                $rate['cities'] = (array) ($rate['city'] ?? []);
+                unset($rate['postcode'], $rate['city'], $rate['postcode_count'], $rate['city_count']);
+                $rates[] = $rate;
+            }
+        }
+        usort($rates, fn ($a, $b) => [(int) $a['tax_rate_order'], (int) $a['tax_rate_id']] <=> [(int) $b['tax_rate_order'], (int) $b['tax_rate_id']]);
+
+        return $rates;
+    }
+
     /** The WooCommerce rates that differ from FluentCart's, as tax_differences() lists them. */
     public static function tax_rates(): array
     {
-        global $wpdb;
-        if (!$wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->prefix . 'woocommerce_tax_rates'))) {
+        $woo = self::woo_tax_rates();
+        if (!$woo) {
             return [];
         }
-        $woo = (array) $wpdb->get_results("SELECT * FROM {$wpdb->prefix}woocommerce_tax_rates ORDER BY tax_rate_order, tax_rate_id", ARRAY_A);
-        foreach ($woo as &$rate) {
-            $rate['postcodes'] = [];
-            $rate['cities'] = [];
-            foreach ((array) $wpdb->get_results($wpdb->prepare("SELECT location_code, location_type FROM {$wpdb->prefix}woocommerce_tax_rate_locations WHERE tax_rate_id = %d", (int) $rate['tax_rate_id']), ARRAY_A) as $location) {
-                $rate[$location['location_type'] === 'city' ? 'cities' : 'postcodes'][] = $location['location_code'];
-            }
-        }
-        unset($rate);
 
         $fluent = [];
         $by_place = [];
-        if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->prefix . 'fct_tax_rates'))) {
-            foreach ((array) $wpdb->get_results("SELECT * FROM {$wpdb->prefix}fct_tax_rates ORDER BY id", ARRAY_A) as $row) {
+        if (class_exists('FluentCart\App\Models\TaxRate')) {
+            foreach (\FluentCart\App\Models\TaxRate::orderBy('id')->get() as $model) {
+                $row = $model->getAttributes();
                 $fluent[(int) $row['id']] = $row;
                 // The add-on's own lookup: country and state, then country alone (its first match).
                 $by_place += [$row['country'] . ':' . $row['state'] => $row];

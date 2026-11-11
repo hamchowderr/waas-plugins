@@ -4,7 +4,7 @@ Tags: migration, fluentcrm, fluent forms, fluentcommunity, fluentcart
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -45,6 +45,9 @@ This plugin connects to one outside service, and only when you run its Circle sw
 No other switch sends anything off your site. The Shop switch links to FluentCart's own page for its free Migrator add-on but never downloads it; you install it yourself.
 
 == Changelog ==
+
+= 1.0.2 =
+* The switches read and write through each plugin's own functions (FluentCRM, Fluent Forms, FluentCommunity, Fluent Support, FluentAffiliate, FluentCart, BuddyPress, MailPoet, WooCommerce) and WordPress's own post, user and comment queries, instead of their database tables. The only direct reads left are of tables a plugin keeps for itself and offers no function for while it is switched off (MemberPress, LearnDash and LifterLMS progress, MailPoet's sign-up IP addresses, The Newsletter Plugin's subscribers).
 
 = 1.0.1 =
 * Files can't be opened directly from the web.

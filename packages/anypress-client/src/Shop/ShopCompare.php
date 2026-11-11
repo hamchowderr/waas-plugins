@@ -2,8 +2,6 @@
 
 namespace AnyPressClient\Shop;
 
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
-
 /**
  * WooCommerce next to FluentCart after the switch: products, SKUs, orders, the sum of order totals, refunds,
  * coupons and customers, each with every difference listed. Read only. Amounts are compared in cents.
@@ -244,35 +242,46 @@ class ShopCompare
     /** FluentCart's side: what the add-on brought across from WooCommerce. */
     public static function fluent(): array
     {
-        global $wpdb;
         $data = ['products' => [], 'skus' => [], 'orders' => [], 'refunds' => ['count' => 0, 'total' => 0], 'coupons' => [], 'customers' => []];
-        if (!$wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->prefix . 'fct_orders'))) {
+        if (!class_exists('FluentCart\App\Models\Order')) {
             return $data;
         }
-        $links = $wpdb->get_results($wpdb->prepare(
-            "SELECT m.meta_value AS woo_id, p.ID FROM {$wpdb->postmeta} m INNER JOIN {$wpdb->posts} p ON p.ID = m.post_id WHERE m.meta_key = %s AND p.post_type = %s",
-            '_wc_migrated_from',
-            'fluent-products'
-        ));
-        foreach ((array) $links as $link) {
-            $data['products'][(int) $link->woo_id] = (int) $link->ID;
+        foreach (self::posts_with('fluent-products', '_wc_migrated_from') as $fc => $woo) {
+            $data['products'][$woo] = $fc;
         }
         if ($data['products']) {
-            $ids = array_values(array_map('intval', $data['products']));
-            $data['skus'] = array_map('strval', (array) $wpdb->get_col($wpdb->prepare("SELECT sku FROM {$wpdb->prefix}fct_product_variations WHERE post_id IN (" . implode(',', array_fill(0, count($ids), '%d')) . ") AND sku IS NOT NULL AND sku != ''", ...$ids)));
+            $skus = \FluentCart\App\Models\ProductVariation::whereIn('post_id', array_values($data['products']))->whereNotNull('sku')->where('sku', '!=', '')->pluck('sku')->all();
+            $data['skus'] = array_map('strval', $skus);
         }
-        $orders = $wpdb->get_results($wpdb->prepare("SELECT id, total_amount, total_refund FROM {$wpdb->prefix}fct_orders WHERE config LIKE %s AND config LIKE %s", '%migrated_from%', '%woocommerce%'));
-        foreach ((array) $orders as $order) {
-            $data['orders'][(int) $order->id] = ['total' => (int) $order->total_amount, 'refunded' => (int) $order->total_refund];
+        $orders = \FluentCart\App\Models\Order::where('config', 'LIKE', '%migrated_from%')->where('config', 'LIKE', '%woocommerce%')->get(['id', 'total_amount', 'total_refund']);
+        foreach ($orders as $order) {
+            $row = $order->getAttributes();
+            $data['orders'][(int) $row['id']] = ['total' => (int) $row['total_amount'], 'refunded' => (int) $row['total_refund']];
         }
         if ($data['orders']) {
-            $ids = array_map('intval', array_keys($data['orders']));
-            $refunds = $wpdb->get_row($wpdb->prepare("SELECT COUNT(*) AS c, COALESCE(SUM(total), 0) AS t FROM {$wpdb->prefix}fct_order_transactions WHERE transaction_type = 'refund' AND order_id IN (" . implode(',', array_fill(0, count($ids), '%d')) . ')', ...$ids));
-            $data['refunds'] = ['count' => (int) $refunds->c, 'total' => (int) $refunds->t];
+            $refunds = \FluentCart\App\Models\OrderTransaction::where('transaction_type', 'refund')->whereIn('order_id', array_keys($data['orders']));
+            $data['refunds'] = ['count' => (int) (clone $refunds)->count(), 'total' => (int) $refunds->sum('total')];
         }
-        $data['coupons'] = array_map('strval', (array) $wpdb->get_col("SELECT code FROM {$wpdb->prefix}fct_coupons"));
-        $data['customers'] = (array) $wpdb->get_results("SELECT id, user_id, email FROM {$wpdb->prefix}fct_customers ORDER BY id", ARRAY_A);
+        $data['coupons'] = array_map('strval', \FluentCart\App\Models\Coupon::pluck('code')->all());
+        $data['customers'] = array_map(fn ($row) => $row->getAttributes(), \FluentCart\App\Models\Customer::orderBy('id')->get(['id', 'user_id', 'email'])->all());
 
         return $data;
+    }
+
+    /**
+     * Posts of a type that carry a link meta key (the add-on's mark of the product it copied): post id => the linked id.
+     * Through WordPress's own post query, bin included, as the add-on links those too.
+     *
+     * @return array<int, int>
+     */
+    public static function posts_with(string $type, string $key): array
+    {
+        $ids = get_posts(['post_type' => $type, 'post_status' => ['any', 'trash'], 'meta_key' => $key, 'fields' => 'ids', 'numberposts' => -1, 'suppress_filters' => true, 'no_found_rows' => true]); // phpcs:ignore WordPress.DB.SlowDBQuery -- one admin run.
+        $map = [];
+        foreach (array_map('intval', $ids) as $id) {
+            $map[$id] = (int) get_post_meta($id, $key, true);
+        }
+
+        return $map;
     }
 }

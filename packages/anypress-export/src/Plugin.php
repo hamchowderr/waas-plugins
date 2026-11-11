@@ -177,24 +177,16 @@ final class Plugin
         return (string) @file_get_contents($file);
     }
 
-    /** Action Scheduler's (WooCommerce and others) waiting and overdue tasks; null without it. */
+    /** Action Scheduler's (WooCommerce and others) waiting and overdue tasks, through its own store; null without it. */
     private static function actionScheduler(): ?array
     {
-        global $wpdb;
-        $table = $wpdb->prefix . 'actionscheduler_actions';
-        $suppressed = $wpdb->suppress_errors(true);
-        try {
-            if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($table))) !== $table) return null;
-            // Not %i: AnyPress Export also runs on WordPress older than 6.2. $table is the prefix plus a fixed name.
-            // phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-            return [
-                'pending' => (int) $wpdb->get_var("SELECT COUNT(*) FROM `$table` WHERE status = 'pending'"),
-                'pastDue' => (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM `$table` WHERE status = 'pending' AND scheduled_date_gmt < %s", gmdate('Y-m-d H:i:s'))),
-            ];
-            // phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-        } finally {
-            $wpdb->suppress_errors($suppressed);
-        }
+        if (!class_exists('ActionScheduler') || !class_exists('ActionScheduler_Store') || !function_exists('as_get_datetime_object')) return null;
+        $store = \ActionScheduler::store();
+        $pending = ['status' => \ActionScheduler_Store::STATUS_PENDING];
+        return [
+            'pending' => (int) $store->query_actions($pending, 'count'),
+            'pastDue' => (int) $store->query_actions($pending + ['date' => as_get_datetime_object(), 'date_compare' => '<'], 'count'),
+        ];
     }
 
     public static function exporter(): Exporter

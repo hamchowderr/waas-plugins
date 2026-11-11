@@ -152,7 +152,6 @@ class BusinessProfile
     /** Published products by name, with their price when the shop keeps one: FluentCart, or WooCommerce. */
     private static function products(): array
     {
-        global $wpdb;
         $type = post_type_exists('fluent-products') ? 'fluent-products' : (post_type_exists('product') ? 'product' : '');
         if ($type === '') {
             return [];
@@ -162,10 +161,11 @@ class BusinessProfile
             return [];
         }
         $prices = [];
-        if ($type === 'fluent-products' && self::table_exists($wpdb->prefix . 'fct_product_details')) {
+        if ($type === 'fluent-products' && class_exists('FluentCart\App\Models\ProductDetail')) {
             $ids = array_map('intval', wp_list_pluck($posts, 'ID'));
             // FluentCart keeps prices in cents.
-            foreach ((array) $wpdb->get_results($wpdb->prepare("SELECT post_id, min_price, max_price FROM {$wpdb->prefix}fct_product_details WHERE post_id IN (" . implode(',', array_fill(0, count($ids), '%d')) . ')', ...$ids), ARRAY_A) as $row) {
+            foreach (\FluentCart\App\Models\ProductDetail::whereIn('post_id', $ids)->get(['post_id', 'min_price', 'max_price']) as $detail) {
+                $row = $detail->getAttributes();
                 $min = (float) $row['min_price'] / 100;
                 $max = (float) $row['max_price'] / 100;
                 $prices[(int) $row['post_id']] = $max > $min ? self::money($min) . '–' . self::money($max) : self::money($min);
@@ -183,26 +183,22 @@ class BusinessProfile
     /** Active booking types (FluentBooking), with how long each takes. */
     private static function bookings(): array
     {
-        global $wpdb;
-        $table = $wpdb->prefix . 'fcal_calendar_events';
-        if (!self::table_exists($table)) {
+        if (!class_exists('FluentBooking\App\Models\CalendarSlot')) {
             return [];
         }
-        $rows = (array) $wpdb->get_results($wpdb->prepare("SELECT title, duration FROM %i WHERE status = 'active' ORDER BY id ASC LIMIT %d", $table, self::LIST_LIMIT), ARRAY_A);
+        $slots = \FluentBooking\App\Models\CalendarSlot::where('status', 'active')->orderBy('id', 'ASC')->limit(self::LIST_LIMIT)->get(['title', 'duration']);
 
-        return array_map(static fn ($row) => ['name' => (string) $row['title'], 'minutes' => (int) $row['duration']], $rows);
+        return array_map(static fn ($slot) => ['name' => (string) $slot->getAttributes()['title'], 'minutes' => (int) $slot->getAttributes()['duration']], $slots->all());
     }
 
     /** Published forms (Fluent Forms), by title. */
     private static function forms(): array
     {
-        global $wpdb;
-        $table = $wpdb->prefix . 'fluentform_forms';
-        if (!self::table_exists($table)) {
+        if (!class_exists('FluentForm\App\Models\Form')) {
             return [];
         }
 
-        return array_map('strval', (array) $wpdb->get_col($wpdb->prepare("SELECT title FROM %i WHERE status = 'published' ORDER BY id ASC LIMIT %d", $table, self::LIST_LIMIT)));
+        return array_map('strval', \FluentForm\App\Models\Form::where('status', 'published')->orderBy('id', 'ASC')->limit(self::LIST_LIMIT)->pluck('title')->all());
     }
 
     /** The shop's currency, else the one the purchase's country uses. */
@@ -214,13 +210,6 @@ class BusinessProfile
         }
 
         return is_array($details) ? (string) ($details['set']['currency'] ?? '') : '';
-    }
-
-    private static function table_exists(string $table): bool
-    {
-        global $wpdb;
-
-        return $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($table))) === $table;
     }
 
     private static function money(float $amount): string
