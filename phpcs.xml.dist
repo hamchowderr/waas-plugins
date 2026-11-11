@@ -6,6 +6,7 @@
 	<file>packages/anypress-client</file>
 	<file>packages/anypress-payments</file>
 	<file>packages/anypress-export</file>
+	<file>packages/anypress-move</file>
 	<file>packages/anypress-updater</file>
 
 	<exclude-pattern>*/vendor/*</exclude-pattern>
@@ -13,6 +14,7 @@
 	<exclude-pattern>*/node_modules/*</exclude-pattern>
 	<exclude-pattern>*/dist/*</exclude-pattern>
 	<exclude-pattern>*/build/*</exclude-pattern>
+	<exclude-pattern>packages/anypress-move/lib/*</exclude-pattern>
 
 	<arg name="extensions" value="php"/>
 	<arg name="parallel" value="8"/>

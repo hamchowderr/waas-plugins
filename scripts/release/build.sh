@@ -22,6 +22,8 @@ trap 'rm -rf "$work"' EXIT
 src="$work/$PACKAGE"
 cp -R "$root/packages/$PACKAGE" "$src"
 rm -rf "$src/vendor" "$src/tests" "$src/node_modules" "$src/data" "$src/phpunit.xml.dist" "$src/.phpunit.result.cache"
+# AnyPress Move carries AnyPress Client's switches, copied in at build time.
+if [ "$PACKAGE" = anypress-move ]; then "$root/scripts/build-move.sh" "$src" > /dev/null; fi
 (cd "$src" && composer install --no-dev --no-interaction --no-progress --optimize-autoloader --quiet)
 
 # Stamp the version: the header's "Version:" and "@version" lines and the *_VERSION constant.

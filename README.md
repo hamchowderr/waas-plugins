@@ -148,6 +148,10 @@ WooCommerce products keep their AnyPress settings through WooCommerce's product 
 
 `packages/anypress-export` moves a WordPress site from another host into an AnyPress store. On AnyPress, *Move a site in* creates a store that waits for the site and shows an import code. The site owner installs AnyPress Export on the old site, opens **Tools → Move to AnyPress** and pastes the code, or runs `wp anypress-export send <code>`. The plugin packs the database and `wp-content` in short steps that carry on after a timeout, uploads them and starts the move; the old site is never changed. The store keeps the site's own plugins and themes. It needs PHP 7.4+, zlib and cURL, and doesn't move multisite networks. More: [packages/anypress-export/README.md](packages/anypress-export/README.md).
 
+## AnyPress Move
+
+`packages/anypress-move` carries AnyPress Client's moving switches on their own, for any WordPress site: forms, a WooCommerce shop, contacts, help desk, affiliates, a community, LearnDash, Tutor LMS or LifterLMS courses, a Circle community and MemberPress members into the Fluent plugins. **Tools → Move to Fluent** has Check, Switch and Undo for each, and the same switches run as `wp anypress <switch> switch` and as abilities. With AnyPress Client active it does nothing. `scripts/build-move.sh` copies the switches in at build time. More: [packages/anypress-move/README.md](packages/anypress-move/README.md).
+
 ## Account API
 
 AnyPress Host has a REST API for the signed-in customer's websites (`anypress-host/v1/account`): list them, sign in to one, change its address, set up its email sender, and choose a new name. Pages on the storefront call it with the login cookie; a front end on another domain signs the customer in with token sign-in (OAuth 2.0 with PKCE). How: [docs/account-api.md](docs/account-api.md).
@@ -170,7 +174,7 @@ The rest of this page is for working on the plugins themselves.
 
 ### Local Development
 
-Each plugin is a Composer package under `packages/` (`anypress-host`, `anypress-client`, `anypress-payments`, `anypress-export`, and the shared `anypress-updater`). Run `composer install` in the one you work on. The quickest way to see the Host plugin running is the test environment below.
+Each plugin is a Composer package under `packages/` (`anypress-host`, `anypress-client`, `anypress-payments`, `anypress-export`, `anypress-move` (run `scripts/build-move.sh` first), and the shared `anypress-updater`). Run `composer install` in the one you work on. The quickest way to see the Host plugin running is the test environment below.
 
 ### Test Environment
 

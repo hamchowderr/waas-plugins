@@ -27,6 +27,7 @@
     "circle": "node circle.mjs",
     "lms": "node lms.mjs",
     "memberpress": "node memberpress.mjs",
+    "move": "node move.mjs",
     "languages": "node languages.mjs"
   },
   "dependencies": {

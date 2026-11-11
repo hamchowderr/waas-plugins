@@ -421,6 +421,39 @@ jobs:
           FLUENT_COMMUNITY: ${{ matrix.fluent-community }}
         run: npm run lms
 
+  playground-move:
+    # AnyPress Move, the switches as their own plugin for any WordPress site: built from AnyPress Client's switches,
+    # on a plain WordPress with FluentCommunity and Tutor LMS. The Tools page's Check, Switch and Undo, the abilities
+    # and WP-CLI commands, and that it does nothing when AnyPress Client is active.
+    name: anypress-move on WordPress Playground
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Build AnyPress Move
+        run: |
+          scripts/build-move.sh
+          (cd packages/anypress-move && composer install --no-dev --no-interaction --no-progress)
+          (cd packages/anypress-client && composer install --no-dev --no-interaction --no-progress)
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: AnyPress Move test
+        working-directory: scripts/playground
+        run: npm run move
+
   playground-memberpress:
     # The MemberPress switch (wp anypress memberpress switch and its abilities): active members into FluentCommunity
     # spaces and courses with FluentCRM tags, on a Playground store of the community site type: checks, switches,
