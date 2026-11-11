@@ -143,10 +143,12 @@ class CleanDashboard
             require_once ABSPATH . 'wp-admin/includes/plugin.php';
         }
         $wp_plugins = get_plugins();
+        // Only what is installed: a design demo with the site type set has a few of its plugins, not all.
+        $installed = array_values(array_filter($plan['plugins'], static fn ($file) => isset($wp_plugins[$file])));
         $screens = self::plugin_screens();
 ?>
         <ul class="anypress-site-plugins">
-            <?php foreach ($plan['plugins'] as $file) :
+            <?php foreach ($installed as $file) :
                 $folder = explode('/', $file)[0];
                 [$name, $about] = self::name_and_about((string) ($wp_plugins[$file]['Name'] ?? $folder), (string) ($plan['about'][$file] ?? ''));
                 $screen = $screens[$folder] ?? null;
