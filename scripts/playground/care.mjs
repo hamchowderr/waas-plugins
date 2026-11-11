@@ -63,7 +63,7 @@ const boot = `
 `;
 const products = JSON.parse(await php(`${boot} echo wp_json_encode(array_map(fn ($p) => [$p['title'], array_column($p['variations'], 'price')], array_merge($care->packages(), $care->services())));`));
 console.log('care products:', JSON.stringify(products));
-check(products.length === 6 && products[1][0] === 'Care Plus' && products[1][1].join() === '19900,199000', 'the button makes 3 packages (monthly + yearly at 10x) and 3 services');
+check(products.length === 7 && products[1][0] === 'Care Plus' && products[1][1].join() === '19900,199000' && products[6][0] === 'Extra hour for care customers' && products[6][1].join() === '10000', 'the button makes 3 packages (monthly + yearly at 10x) and 4 services, the extra hour at $100 for care customers');
 
 const { chromium } = createRequire(import.meta.url)('playwright');
 const browser = await chromium.launch();
@@ -241,6 +241,7 @@ for (const [label, width, height] of SIZES) {
     await page.goto(portal, { waitUntil: 'networkidle' });
     const section = page.locator('details.anypress-acct-care');
     check((await section.locator('summary').innerText()).includes('2 h of 2 h left this month'), `${label}: the card shows this month's time`);
+    check((await section.innerText()).includes('Extra hour for care customers · $100'), `${label}: the card offers the extra hour at the care price`);
     if (label === 'desktop') {
         await section.locator('textarea').fill('Please add a "Spring workshop" page with a booking button, and put it in the menu.');
         await section.locator('button[type=submit]').click();

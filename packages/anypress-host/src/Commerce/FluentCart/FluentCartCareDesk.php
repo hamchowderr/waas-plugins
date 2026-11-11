@@ -478,7 +478,7 @@ class FluentCartCareDesk
             return;
         }
         echo '<section class="ap-card ap-setup"><div class="ap-card-head"><div><h2>' . esc_html__('Sell care with your websites', 'anypress-host') . '</h2><p class="ap-muted">'
-            . esc_html__('Makes Care, Care Plus and Care Pro (monthly and yearly) and three one-time services as drafts in FluentCart, so nothing is on sale until you publish them.', 'anypress-host') . '</p></div>'
+            . esc_html__('Makes Care, Care Plus and Care Pro (monthly and yearly) and four one-time services (one of them an extra hour at the care price) as drafts in FluentCart, so nothing is on sale until you publish them.', 'anypress-host') . '</p></div>'
             . '<a class="ap-btn is-ink" href="' . esc_url(FluentCartCareProducts::url()) . '">' . esc_html__('Create the care products', 'anypress-host') . '</a></div></section>';
     }
 

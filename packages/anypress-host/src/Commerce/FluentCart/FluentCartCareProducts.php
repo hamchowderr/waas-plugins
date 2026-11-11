@@ -30,6 +30,7 @@ class FluentCartCareProducts
             'set-up-my-site' => [__('Set up my site for me', 'anypress-host'), 29900, __('We fill in your pages, logo, colours, menus and first products, courses or spaces from what you send us.', 'anypress-host'), ['product_type' => 'service', 'service_minutes' => '']],
             'move-my-site-in' => [__('Move my site in for me', 'anypress-host'), 19900, __('We run the move from WordPress, Circle, LearnDash, Tutor LMS, LifterLMS, MemberPress or WooCommerce, then check it.', 'anypress-host'), ['product_type' => 'service', 'service_minutes' => '']],
             'one-hour' => [__('One hour of changes', 'anypress-host'), 12500, __('For a one-off change, with no package. The hour is added to your website and used as you ask.', 'anypress-host'), ['product_type' => 'service', 'service_minutes' => '60']],
+            'extra-hour' => [__('Extra hour for care customers', 'anypress-host'), 10000, __('More time in a busy month, at the care price. The hour is added to your website, used once this month\'s time runs out, and never expires.', 'anypress-host'), ['product_type' => 'service', 'service_minutes' => '60', 'service_care_only' => 'yes']],
         ]);
     }
 
@@ -103,6 +104,7 @@ class FluentCartCareProducts
             'care_priority' => AnyPressProvisioningIntegration::PRIORITY_NORMAL,
             'care_call_url' => '',
             'service_minutes' => '',
+            'service_care_only' => 'no',
             'role' => '',
             'group_name' => '',
             'size' => '',
