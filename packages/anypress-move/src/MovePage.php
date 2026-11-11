@@ -100,7 +100,8 @@ class MovePage
         $input = ['from' => sanitize_key(wp_unslash($_POST['from'] ?? ''))];
         foreach ($this->fields($key) as $name => $schema) {
             $value = trim(sanitize_text_field(wp_unslash($_POST[$name] ?? '')));
-            $input[$name] = ($schema['type'] ?? '') === 'object' ? self::pairs($value) : $value;
+            $type = $schema['type'] ?? '';
+            $input[$name] = $type === 'object' ? self::pairs($value) : ($type === 'boolean' ? $value === '1' : $value);
         }
         $result = $this->act($key, $act, $input);
         set_transient(self::RESULT . get_current_user_id(), ['switch' => $key, 'act' => $act, 'result' => $result], HOUR_IN_SECONDS);
@@ -172,6 +173,10 @@ class MovePage
             $this->field($key . '-from', 'from', __('Source plugin (only when more than one is active, as Check lists them)', 'anypress-move'), 'text');
         }
         foreach ($this->fields($key) as $name => $schema) {
+            if (($schema['type'] ?? '') === 'boolean') {
+                echo '<p><label><input type="checkbox" name="' . esc_attr($name) . '" value="1"> ' . esc_html__('Also move active Stripe subscriptions to FluentCart, where they keep renewing in Stripe (FluentCart must be active). PayPal and other gateways stay in MemberPress.', 'anypress-move') . '</label></p>';
+                continue;
+            }
             $object = ($schema['type'] ?? '') === 'object';
             $label = $object
                 ? __('Which space or course each membership opens, as membership id:space id pairs (12:40, 13:41). Leave empty for a new private space per membership.', 'anypress-move')
