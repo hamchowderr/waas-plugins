@@ -29,7 +29,8 @@
     "memberpress": "node memberpress.mjs",
     "move": "node move.mjs",
     "languages": "node languages.mjs",
-    "mail-log": "node mail-log.mjs"
+    "mail-log": "node mail-log.mjs",
+    "download-site": "node download-site.mjs"
   },
   "dependencies": {
     "@wp-playground/cli": "3.1.59"
