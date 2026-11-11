@@ -12,7 +12,7 @@ What it does:
 | Gives the AnyPress API, AI apps and WordPress's own AI tools a safe way to edit pages and design | Every website | [Site Tools, Abilities and MCP](#site-tools-abilities-and-mcp) |
 | Answers the phone receptionist: open times, bookings and callers | Every website | [Phone Receptionist Routes](#phone-receptionist-routes) |
 | Shows the website assistant beside the editor | Every website | [The Website Assistant Beside the Page](#the-website-assistant-beside-the-page) |
-| Moves forms, a WooCommerce shop, a CRM list, a help desk, affiliates, a community (also from Circle), courses (LearnDash, Tutor LMS, LifterLMS) or MemberPress members onto the Fluent plugins | Moved-in websites | [Moving Forms](#moving-forms-to-fluent-forms) and the sections after it |
+| Moves forms, a WooCommerce shop, a CRM list, a help desk, affiliates, a community (also from Circle), courses (LearnDash, Tutor LMS, LifterLMS), a Calendly account or MemberPress members onto the Fluent plugins | Moved-in websites | [Moving Forms](#moving-forms-to-fluent-forms) and the sections after it |
 
 AnyPress Client calls the AnyPress API in one place only: the assistant's sign-in. Everything else the API asks of a website comes in as a request signed with that website's own site key.
 
@@ -265,6 +265,21 @@ What doesn't come across: order lines and history (FluentCRM free keeps none), c
 
 What the switch created, and each existing contact's values before it changed them, are kept in the `anypress_client_crm_switch` option (not autoloaded). Sources: `src/Crm/CrmSwitch.php`, `src/Crm/ContactPlan.php`, `src/Crm/WooBuyers.php`, `src/Crm/MailPoetSubscribers.php`, `src/Crm/NewsletterSubscribers.php`, `src/Crm/CrmWriter.php`, `src/Crm/CrmCommand.php`, `src/Crm/CrmAbilities.php`. Tested end to end, with HPOS off and on, by `scripts/playground/crm-switch.mjs` (`npm run crm-switch`).
 
+## Brevo and MailerLite in FluentCRM's Import Screen
+
+FluentCRM's Import screen (FluentCRM > Contacts > Import > "Migrate from another CRM") has importers for Mailchimp, ConvertKit, MailerLite, Drip and ActiveCampaign. AnyPress Client adds two more through FluentCRM's `fluent_crm/saas_migrators` and `fluent_crm/migrator_driver_class` filters, so they sit beside FluentCRM's own and work the same way:
+
+- **Brevo** (formerly Sendinblue), through Brevo's official PHP SDK (`getbrevo/brevo-php`) and an API key. Each Brevo list chosen becomes a FluentCRM tag (or goes into one that exists), Brevo's contact attributes map onto FluentCRM fields (FIRSTNAME, LASTNAME and SMS on their own), and contacts come across 200 at a time. A contact Brevo has blocklisted for email comes across unsubscribed.
+- **MailerLite (accounts since 2022)**, through MailerLite's official PHP SDK (`mailerlite/mailerlite-php`) and an API token. FluentCRM's own MailerLite importer calls the MailerLite Classic API, which only takes keys from Classic accounts (made before March 2022); this one calls the current API. Each group chosen becomes a tag, fields map across, and every subscriber keeps their MailerLite status: active, unsubscribed, unconfirmed (pending), bounced or junk (complained).
+
+In both, a contact FluentCRM already holds as unsubscribed, bounced or complained stays so, importing again makes no duplicates, and the key is used for that import only and saved nowhere. The SDKs send their requests through the WordPress HTTP API (`src/Crm/Importers/WpHttpClient.php`, a PSR-18 client), so WordPress's proxy and certificate settings apply.
+
+Without an API key (or for anything the API doesn't give), export the contacts as CSV from Brevo (Contacts > Export) or MailerLite (Subscribers > Export) and bring them in with FluentCRM's own CSV import on the same screen, mapping the columns there.
+
+FluentCRM's ConvertKit importer uses Kit's v3 API, which Kit has deprecated (no end date yet): it works while the account has a v3 key and secret under Kit's developer settings.
+
+These importers read online services, so they run on the store itself; AnyPress Move doesn't carry them. Sources: `src/Crm/Importers/`. Tested by `scripts/playground/crm-import.mjs` (`npm run crm-import`, on a website store, against fake Brevo and MailerLite APIs in `scripts/playground/crm-import/fake-apis.php`).
+
 ## Moving a Help Desk, an Affiliate Program or a Community
 
 Fluent Support, FluentAffiliate and FluentCommunity each have their own importer. Three switches run those importers and add what they leave to the person running them: a check first, a count of what the source holds next to what came across, no email while they run, one run at a time, and an undo. Run them with WP-CLI as an administrator, with the Fluent plugin active:
@@ -376,6 +391,28 @@ Every call counts against the Circle plan's monthly Admin API allowance (5,000 o
 What doesn't come across: who liked what (Circle's API gives only the number of likes); chat, event, image and members spaces; course progress (Circle's API can't read which lessons a student finished, so students start each course from the beginning), lesson videos and files uploaded to Circle, lesson order rules and drip schedules; direct messages; passwords; profile photos, custom profile fields, member tags, paywalls and access groups. Images and files in posts stay on Circle's servers.
 
 Undo deletes what the switch made: the courses (through FluentCommunity's own course delete, with their sections, lessons and students), the users it made (users already on the site stay, and only lose the Circle mark), spaces, space groups, topics, posts, comments and the community profiles made for the members. Sources: `src/Moving/CircleImport.php` (on `NativeImport`), `src/Moving/CircleApi.php`, `src/Moving/CirclePeople.php`. Tested end to end on a store of the community site type, with the FluentCommunity the store template installs and the newest one, against a fake Circle Admin API with Circle's own response shapes, by `scripts/playground/circle.mjs` (`npm run circle`).
+
+## Moving a Calendly Account to FluentBooking
+
+FluentBooking has no Calendly importer, and Calendly has no export file, so the Calendly switch reads the account through Calendly's API v2 with the account owner's own personal access token (Calendly: profile menu, Developer, Personal access tokens, with the read scopes for users, event types, availability and scheduled events). The token is used for that run only: it isn't saved, logged or shown. Calendly is only read. Calendly publishes no PHP library for its API, so `src/Moving/CalendlyApi.php` calls it with the WordPress HTTP API, 100 records a page, waiting and trying again when Calendly says to slow down (500 calls a minute on paid plans, 50 on the free plan). Like the switches above, it checks first, counts what Calendly holds next to what came across, sends no email while it runs, runs once, and has an undo.
+
+```
+CALENDLY_API_TOKEN=... wp anypress calendly switch --user=admin --dry-run   # check and count; changes nothing
+CALENDLY_API_TOKEN=... wp anypress calendly switch --user=admin             # do it (or --token=...)
+wp anypress calendly switch --user=admin --undo                             # take it back out
+```
+
+The abilities are `anypress/check-calendly` and `anypress/switch-calendly`, each with a `token` input (and `{"undo": true}` to undo); both need an administrator. Everything comes onto the FluentBooking calendar of the administrator running it (the one they have, or a new one).
+
+| Calendly | FluentBooking |
+|---|---|
+| An availability schedule | An availability schedule with the same name and time zone, its weekday hours and its dated hours, written by FluentBooking's own `AvailabilityService`. Calendly's default is FluentBooking's default when the administrator has none yet. |
+| An event type | A booking type made by FluentBooking's own `CalendarService`, on the schedule Calendly uses for it: same name, length, description (made safe) and colour; a group event as a group booking type with the most seats Calendly shows for it; an inactive one as a draft. Locations: in person, the invitee's address, a phone call either way, a custom one, and Zoom, Google Meet, Teams, GoTo Meeting or Webex as an online meeting. One-off meetings stay out. |
+| An upcoming booking | A scheduled booking for each active invitee, with their name, email, time zone (the host's when Calendly has none), phone, answers (in the booking's note) and meeting link. A group event's invitees share one booking group. FluentBooking sends no confirmation or reminder and syncs no calendar for it; Calendly goes on sending its own reminders as long as the booking stays in Calendly. A booking of an event type that no longer exists is skipped and counted. |
+
+What doesn't come across: past and cancelled bookings; custom booking form questions (the answers come across in each booking's note); days off in a schedule, buffers, minimum notice, daily limits, polls, routing forms, workflows and payments; team members' event types and bookings (the token reads only its owner's; each team member can run it with their own token); and the meeting links Calendly made for new bookings, so set a link on the booking type or connect the meeting app in FluentBooking.
+
+Undo deletes the bookings, booking types and schedules the switch made, and the calendar when it made one. Sources: `src/Moving/CalendlyImport.php` (on `NativeImport`) and `src/Moving/CalendlyApi.php`. Tested end to end on a store of the bookings site type, with the FluentBooking the store template installs, against a fake Calendly API with Calendly's own response shapes, by `scripts/playground/calendly.mjs` (`npm run calendly`).
 
 ## Moving MemberPress Members
 

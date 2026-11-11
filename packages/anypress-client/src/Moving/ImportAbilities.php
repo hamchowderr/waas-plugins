@@ -5,7 +5,7 @@ namespace AnyPressClient\Moving;
 use AnyPressClient\Api\SiteAbilities;
 
 /**
- * The support, affiliate, community, course and Circle switches as WordPress abilities, next to the site-editing ones (same
+ * The support, affiliate, community, course, Circle, Calendly and MemberPress switches as WordPress abilities, next to the site-editing ones (same
  * category, so the AnyPress website MCP server offers them too): check-<key> says what a switch would do and changes
  * nothing; switch-<key> does it, or with undo takes it back out. Both need an administrator (manage_options), and run
  * as the signed-in user.
@@ -38,6 +38,7 @@ class ImportAbilities
             'community' => __('a BuddyPress or BuddyBoss community into an empty FluentCommunity (groups as spaces with their members, posts, comments and reactions)', 'anypress-client'),
             'course' => __('LearnDash, Tutor LMS or LifterLMS courses into FluentCommunity courses (their outline as sections and lessons, students, the lessons each student finished and the courses they completed)', 'anypress-client'),
             'circle' => __('a Circle community into an empty FluentCommunity, through Circle\'s Admin API with the community\'s Admin V2 token (discussion spaces with their members and moderators, space groups, topics, posts, comments and replies, and course spaces as courses with their sections, lessons and students; members become WordPress users)', 'anypress-client'),
+            'calendly' => __('a Calendly account into FluentBooking, through Calendly\'s API with a personal access token (availability schedules, event types as booking types on the administrator\'s calendar, and upcoming bookings with each invitee\'s details and meeting link; no booking email is sent)', 'anypress-client'),
             'memberpress' => __('MemberPress memberships into FluentCommunity access: everyone with an active membership joins the space or course it is mapped to (or a new private space named after it), with a FluentCRM tag and end date; with billing, active Stripe subscriptions move to FluentCart and keep renewing in Stripe, other payments stay in MemberPress', 'anypress-client'),
         ][$import->key()] ?? '';
         $labels = [
@@ -46,6 +47,7 @@ class ImportAbilities
             'community' => [__('Check the community switch', 'anypress-client'), __('Bring a BuddyPress community into FluentCommunity', 'anypress-client')],
             'course' => [__('Check the course switch', 'anypress-client'), __('Bring LearnDash, Tutor LMS or LifterLMS courses into FluentCommunity', 'anypress-client')],
             'circle' => [__('Check the Circle switch', 'anypress-client'), __('Bring a Circle community into FluentCommunity', 'anypress-client')],
+            'calendly' => [__('Check the Calendly switch', 'anypress-client'), __('Bring Calendly event types and bookings into FluentBooking', 'anypress-client')],
             'memberpress' => [__('Check the MemberPress switch', 'anypress-client'), __('Give MemberPress members their FluentCommunity spaces', 'anypress-client')],
         ][$import->key()];
 

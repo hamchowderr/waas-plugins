@@ -59,6 +59,9 @@ jobs:
         run: composer install --no-interaction --no-progress
       - name: Build AnyPress Move's copy of the switches
         run: ../../scripts/build-move.sh
+      - name: AnyPress Client's libraries (the SDKs it calls)
+        working-directory: packages/anypress-client
+        run: composer install --no-dev --no-interaction --no-progress
       - name: PHPStan
         run: composer stan -- --no-progress --error-format=github
 

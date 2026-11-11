@@ -14,6 +14,7 @@ use AnyPressMove\Lib\Forms\FormsAbilities;
 use AnyPressMove\Lib\Forms\FormsCommand;
 use AnyPressMove\Lib\Forms\FormsSwitch;
 use AnyPressMove\Lib\Moving\AffiliateImport;
+use AnyPressMove\Lib\Moving\CalendlyImport;
 use AnyPressMove\Lib\Moving\CircleImport;
 use AnyPressMove\Lib\Moving\CommunityImport;
 use AnyPressMove\Lib\Moving\CourseImport;
@@ -40,7 +41,7 @@ class Plugin
         $forms = new FormsSwitch();
         $shop = new ShopSwitch();
         $crm = new CrmSwitch();
-        $imports = [new SupportImport(), new AffiliateImport(), new CommunityImport(), new CourseImport(), new CircleImport(), new MemberPressImport()];
+        $imports = [new SupportImport(), new AffiliateImport(), new CommunityImport(), new CourseImport(), new CircleImport(), new CalendlyImport(), new MemberPressImport()];
 
         new FormsAbilities($forms);
         new ShopAbilities($shop);
