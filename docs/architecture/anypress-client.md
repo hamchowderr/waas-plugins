@@ -12,7 +12,7 @@ What it does:
 | Gives the AnyPress API, AI apps and WordPress's own AI tools a safe way to edit pages and design | Every website | [Site Tools, Abilities and MCP](#site-tools-abilities-and-mcp) |
 | Answers the phone receptionist: open times, bookings and callers | Every website | [Phone Receptionist Routes](#phone-receptionist-routes) |
 | Shows the website assistant beside the editor | Every website | [The Website Assistant Beside the Page](#the-website-assistant-beside-the-page) |
-| Moves forms, a WooCommerce shop, a CRM list, a help desk, affiliates, a community (also from Circle) or LearnDash courses onto the Fluent plugins | Moved-in websites | [Moving Forms](#moving-forms-to-fluent-forms) and the sections after it |
+| Moves forms, a WooCommerce shop, a CRM list, a help desk, affiliates, a community (also from Circle) or courses (LearnDash, Tutor LMS, LifterLMS) onto the Fluent plugins | Moved-in websites | [Moving Forms](#moving-forms-to-fluent-forms) and the sections after it |
 
 AnyPress Client calls the AnyPress API in one place only: the assistant's sign-in. Everything else the API asks of a website comes in as a request signed with that website's own site key.
 
@@ -296,7 +296,36 @@ LearnDash doesn't need to be active. A store of the community site type turns it
 
 Courses already in FluentCommunity are left alone. What doesn't come across: quizzes, assignments and certificates; prices and how access is sold (sell the courses with FluentCart); drip schedules and prerequisites; LearnDash groups as such (their members become students); LearnDash shortcodes and blocks inside lessons, which show as text. An automation set to start when someone joins a course starts for each student the switch enrols, so the check says to pause those first.
 
-Undo deletes the courses the switch made, with their sections, lessons, students and progress (through FluentCommunity's own course delete), and the member profiles FluentCommunity made for those students. Sources: `src/Moving/CourseImport.php` (on `NativeImport`). Tested end to end on a store of the community site type, with the FluentCommunity the store template installs and the newest one, by `scripts/playground/courses.mjs` (`npm run courses`).
+Undo deletes the courses the switch made, with their sections, lessons, students and progress (through FluentCommunity's own course delete), and the member profiles FluentCommunity made for those students. Sources: `src/Moving/CourseImport.php` (on `NativeImport`), reading through `src/Moving/CourseSource.php` and `LearnDashCourses.php`. Tested end to end on a store of the community site type, with the FluentCommunity the store template installs and the newest one, by `scripts/playground/courses.mjs` (`npm run courses`).
+
+## Moving Tutor LMS and LifterLMS Courses
+
+Since 2.26.0 the same course switch also reads Tutor LMS and LifterLMS. When a website holds courses from more than one of them, the check asks which, and `--from` (or `"from"` in the abilities) picks it:
+
+```sh
+wp anypress course switch --user=admin --from=tutor --dry-run
+wp anypress course switch --user=admin --from=lifterlms
+```
+
+Neither plugin needs to be active: both keep their courses in WordPress, and the switch reads them directly.
+
+| Tutor LMS | FluentCommunity |
+|---|---|
+| A course | A self-paced course, as for LearnDash. Free or public courses are public, paid ones private. |
+| A topic | A section, in Tutor LMS's order. Topics with only quizzes are left out. |
+| A lesson | A lesson with its text, featured image and status. A YouTube, Vimeo, external or uploaded video goes at the top. |
+| Students | Active enrolments (pending and cancelled ones are left out). |
+| Progress | Finished lessons and completed courses. |
+
+| LifterLMS | FluentCommunity |
+|---|---|
+| A course | A self-paced course. Courses with a free access plan on sale are public, the rest private. |
+| A section | A section, in LifterLMS's order. |
+| A lesson | A lesson with its text, featured image, status and video embed. |
+| Students | Students whose newest enrolment status is "enrolled" (so those who left or expired stay out). |
+| Progress | Lessons marked complete and completed courses, by the newest record for each. |
+
+What doesn't come across from either: quizzes, assignments, certificates and achievements; prices, access plans and memberships (sell the courses with FluentCart); drip schedules and prerequisites; Q&A, announcements and reviews; shortcodes inside lessons. Sources: `src/Moving/TutorCourses.php`, `src/Moving/LifterCourses.php`. Tested end to end on a store of the community site type by `scripts/playground/lms.mjs` (`npm run lms`): Tutor LMS and LifterLMS from wordpress.org make their own courses, enrolments and progress, are switched off, and each is switched across, checked and undone.
 
 ## Moving a Circle Community
 

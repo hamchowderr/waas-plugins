@@ -36,14 +36,14 @@ class ImportAbilities
             'support' => __('help desk tickets from Awesome Support, SupportCandy or JS Help Desk into Fluent Support (replies, attachments, customers and agents)', 'anypress-client'),
             'affiliate' => __('affiliates from AffiliateWP, Affiliates Manager, Solid Affiliate, SliceWP or Ultimate Affiliate Pro into an empty FluentAffiliate (groups, referrals, customers, payouts and visits)', 'anypress-client'),
             'community' => __('a BuddyPress or BuddyBoss community into an empty FluentCommunity (groups as spaces with their members, posts, comments and reactions)', 'anypress-client'),
-            'course' => __('LearnDash courses into FluentCommunity courses (lessons and topics as sections and lessons, students, and the lessons each student finished)', 'anypress-client'),
+            'course' => __('LearnDash, Tutor LMS or LifterLMS courses into FluentCommunity courses (their outline as sections and lessons, students, the lessons each student finished and the courses they completed)', 'anypress-client'),
             'circle' => __('a Circle community into an empty FluentCommunity, through Circle\'s Admin API with the community\'s Admin V2 token (discussion spaces with their members and moderators, space groups, topics, posts, comments and replies, and course spaces as courses with their sections, lessons and students; members become WordPress users)', 'anypress-client'),
         ][$import->key()] ?? '';
         $labels = [
             'support' => [__('Check the support switch', 'anypress-client'), __('Bring help desk tickets into Fluent Support', 'anypress-client')],
             'affiliate' => [__('Check the affiliate switch', 'anypress-client'), __('Bring affiliates into FluentAffiliate', 'anypress-client')],
             'community' => [__('Check the community switch', 'anypress-client'), __('Bring a BuddyPress community into FluentCommunity', 'anypress-client')],
-            'course' => [__('Check the course switch', 'anypress-client'), __('Bring LearnDash courses into FluentCommunity', 'anypress-client')],
+            'course' => [__('Check the course switch', 'anypress-client'), __('Bring LearnDash, Tutor LMS or LifterLMS courses into FluentCommunity', 'anypress-client')],
             'circle' => [__('Check the Circle switch', 'anypress-client'), __('Bring a Circle community into FluentCommunity', 'anypress-client')],
         ][$import->key()];
 

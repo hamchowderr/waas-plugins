@@ -338,7 +338,7 @@ abstract class NativeImport
         return is_plugin_active($file);
     }
 
-    protected static function table_exists(string $table): bool
+    public static function table_exists(string $table): bool
     {
         global $wpdb;
         $name = $wpdb->prefix . $table;
