@@ -38,7 +38,7 @@ class ImportAbilities
             'community' => __('a BuddyPress or BuddyBoss community into an empty FluentCommunity (groups as spaces with their members, posts, comments and reactions)', 'anypress-client'),
             'course' => __('LearnDash, Tutor LMS or LifterLMS courses into FluentCommunity courses (their outline as sections and lessons, students, the lessons each student finished and the courses they completed)', 'anypress-client'),
             'circle' => __('a Circle community into an empty FluentCommunity, through Circle\'s Admin API with the community\'s Admin V2 token (discussion spaces with their members and moderators, space groups, topics, posts, comments and replies, and course spaces as courses with their sections, lessons and students; members become WordPress users)', 'anypress-client'),
-            'memberpress' => __('MemberPress memberships into FluentCommunity access: everyone with an active membership joins the space or course it is mapped to (or a new private space named after it), with a FluentCRM tag and end date; payments stay in MemberPress', 'anypress-client'),
+            'memberpress' => __('MemberPress memberships into FluentCommunity access: everyone with an active membership joins the space or course it is mapped to (or a new private space named after it), with a FluentCRM tag and end date; with billing, active Stripe subscriptions move to FluentCart and keep renewing in Stripe, other payments stay in MemberPress', 'anypress-client'),
         ][$import->key()] ?? '';
         $labels = [
             'support' => [__('Check the support switch', 'anypress-client'), __('Bring help desk tickets into Fluent Support', 'anypress-client')],
