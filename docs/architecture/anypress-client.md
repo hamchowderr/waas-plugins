@@ -12,7 +12,7 @@ What it does:
 | Gives the AnyPress API, AI apps and WordPress's own AI tools a safe way to edit pages and design | Every website | [Site Tools, Abilities and MCP](#site-tools-abilities-and-mcp) |
 | Answers the phone receptionist: open times, bookings and callers | Every website | [Phone Receptionist Routes](#phone-receptionist-routes) |
 | Shows the website assistant beside the editor | Every website | [The Website Assistant Beside the Page](#the-website-assistant-beside-the-page) |
-| Moves forms, a WooCommerce shop, a CRM list, a help desk, affiliates, a community (also from Circle) or courses (LearnDash, Tutor LMS, LifterLMS) onto the Fluent plugins | Moved-in websites | [Moving Forms](#moving-forms-to-fluent-forms) and the sections after it |
+| Moves forms, a WooCommerce shop, a CRM list, a help desk, affiliates, a community (also from Circle), courses (LearnDash, Tutor LMS, LifterLMS) or MemberPress members onto the Fluent plugins | Moved-in websites | [Moving Forms](#moving-forms-to-fluent-forms) and the sections after it |
 
 AnyPress Client calls the AnyPress API in one place only: the assistant's sign-in. Everything else the API asks of a website comes in as a request signed with that website's own site key.
 
@@ -355,6 +355,26 @@ Every call counts against the Circle plan's monthly Admin API allowance (5,000 o
 What doesn't come across: who liked what (Circle's API gives only the number of likes); chat, event, image and members spaces; course progress (Circle's API can't read which lessons a student finished, so students start each course from the beginning), lesson videos and files uploaded to Circle, lesson order rules and drip schedules; direct messages; passwords; profile photos, custom profile fields, member tags, paywalls and access groups. Images and files in posts stay on Circle's servers.
 
 Undo deletes what the switch made: the courses (through FluentCommunity's own course delete, with their sections, lessons and students), the users it made (users already on the site stay, and only lose the Circle mark), spaces, space groups, topics, posts, comments and the community profiles made for the members. Sources: `src/Moving/CircleImport.php` (on `NativeImport`), `src/Moving/CircleApi.php`, `src/Moving/CirclePeople.php`. Tested end to end on a store of the community site type, with the FluentCommunity the store template installs and the newest one, against a fake Circle Admin API with Circle's own response shapes, by `scripts/playground/circle.mjs` (`npm run circle`).
+
+## Moving MemberPress Members
+
+Since 2.27.0 the MemberPress switch gives everyone with an active MemberPress membership the same access in FluentCommunity. It brings access only: payments stay where they are. MemberPress's subscriptions renew through its own payment gateway, so they keep running until the owner cancels them, and members subscribe again through FluentCart from a date the owner picks.
+
+```sh
+wp anypress memberpress switch --user=admin --dry-run              # check and count; changes nothing
+wp anypress memberpress switch --user=admin --map=12:5,14:9        # membership 12 opens space or course 5, 14 opens 9
+wp anypress memberpress switch --user=admin --undo
+```
+
+The abilities are `anypress/check-memberpress` and `anypress/switch-memberpress`, with `{"map": {"12": 5}}`.
+
+| MemberPress | FluentCommunity and FluentCRM |
+|---|---|
+| A membership | The space or course it is mapped to, or else a new private space with its name and excerpt. |
+| An active member (a complete or confirmed transaction that hasn't run out) | A member of that space, or a student of that course. They are already the website's users, so no account is made. |
+| The member in FluentCRM (when it's active) | A "MemberPress: <membership>" tag and the "MemberPress membership ends" field (the latest end date, or "never"). A new contact is transactional, not subscribed to marketing; an existing contact keeps its status and tags. |
+
+MemberPress doesn't need to be active: its memberships are posts and its transactions its own table, and the switch reads them. What doesn't come across: payments and subscriptions; expired, cancelled and refunded memberships; MemberPress's content rules (put that content in the space or course); coupons, account and pricing pages and shortcodes. Undo takes out the members it added, the spaces it made, the contacts it made, its tags and end dates, and the field. Sources: `src/Moving/MemberPressImport.php`. Tested on a store of the community site type by `scripts/playground/memberpress.mjs` (`npm run memberpress`). MemberPress is a paid plugin, so the test writes its memberships and tables as MemberPress keeps them instead of installing it.
 
 ## The Website Assistant Beside the Page
 
