@@ -31,7 +31,7 @@ const SERVE = process.argv.includes('--serve');
 const FLUENT_COMMUNITY = process.env.FLUENT_COMMUNITY || '2.12.0';
 const TUTOR = process.env.TUTOR || 'latest-stable';
 const USER_TOKEN = randomBytes(24).toString('hex');
-const SWITCHES = ['forms', 'shop', 'edd', 'crm', 'support', 'affiliate', 'community', 'course', 'circle', 'memberpress'];
+const SWITCHES = ['forms', 'shop', 'edd', 'crm', 'support', 'affiliate', 'community', 'course', 'circle', 'calendly', 'memberpress'];
 
 for (const [path, fix] of [
     [resolve(MOVE, 'lib/Moving/CourseImport.php'), 'run scripts/build-move.sh'],
@@ -180,7 +180,7 @@ await check('Tools, Move to Fluent lists every switch with Check, Switch and Und
     expect(hook && html.includes('Move to Fluent'), short({ hook, html: html?.slice(0, 300) }));
     for (const k of SWITCHES) expect(html.includes(`id="switch-${k}"`), `no ${k} card`);
     expect((html.match(/value="check"/g) || []).length === SWITCHES.length, 'a Check button per switch');
-    expect(html.includes('type="password" id="circle-token"'), 'the Circle token is a password field');
+    expect(html.includes('type="password" id="circle-token"') && html.includes('type="password" id="calendly-token"'), 'the Circle and Calendly tokens are password fields');
     expect(!/ (onclick|style)=/.test(html), 'no inline script or style attributes (they are enqueued)');
 });
 

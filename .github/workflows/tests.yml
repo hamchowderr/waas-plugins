@@ -240,6 +240,45 @@ jobs:
         working-directory: scripts/playground
         run: npm run edd
 
+  playground-crm-import:
+    # AnyPress Client's Brevo and MailerLite importers in FluentCRM's Import screen on WordPress Playground, through
+    # the official SDKs against fake Brevo and MailerLite APIs.
+    name: anypress-client Brevo and MailerLite importers on WordPress Playground
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Checkout the store template (roles.json)
+        uses: actions/checkout@v4
+        with:
+          repository: hamchowderr/waas-provisioning-api
+          path: waas-provisioning-api
+          sparse-checkout: templates/anypress-store/roles.json
+          sparse-checkout-cone-mode: false
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/anypress-client
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: CRM importers test
+        working-directory: scripts/playground
+        env:
+          ANYPRESS_API_DIR: ${{ github.workspace }}/waas-provisioning-api
+        run: npm run crm-import
+
   playground-shop-switch:
     # The shop switch (wp anypress shop switch and its abilities) on a WordPress Playground site with WooCommerce,
     # FluentCart and the FluentCart Migrator add-on (downloaded from FluentCart's add-ons CDN): checks, switches,
@@ -655,6 +694,47 @@ jobs:
           ANYPRESS_API_DIR: ${{ github.workspace }}/waas-provisioning-api
           FLUENT_COMMUNITY: ${{ matrix.fluent-community }}
         run: npm run circle
+
+  playground-calendly:
+    # The Calendly switch (wp anypress calendly switch and its abilities): a Calendly account into FluentBooking through
+    # a fake Calendly API, on a Playground store of the bookings site type with the store's FluentBooking: checks with
+    # no, a wrong and the right token, switches (schedules, booking types, upcoming bookings over two pages), runs
+    # again, undoes, redoes, and checks the token is saved nowhere and no email goes out.
+    name: anypress-client Calendly switch on WordPress Playground
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Checkout the store template's site types
+        uses: actions/checkout@v4
+        with:
+          repository: hamchowderr/waas-provisioning-api
+          path: waas-provisioning-api
+          sparse-checkout: templates/anypress-store/roles.json
+          sparse-checkout-cone-mode: false
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/anypress-client
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: Calendly switch test
+        working-directory: scripts/playground
+        env:
+          ANYPRESS_API_DIR: ${{ github.workspace }}/waas-provisioning-api
+        run: npm run calendly
 
   playground-languages:
     # The Languages switch on a Playground store of the online-store and community site types: Polylang set up once
