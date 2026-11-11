@@ -48,6 +48,15 @@ class FluentCartCarePortal
         add_filter('fluent_cart/checkout/validate_data', [$this, 'validate_checkout'], 10, 2);
     }
 
+    /**
+     * The published one-time services for anyone (care-only ones left out), or with $care_only the ones only websites
+     * with a care package may buy, such as an extra hour at the care price.
+     */
+    private function services(bool $care_only = false): array
+    {
+        return array_values(array_filter($this->care->services(), fn ($service) => AnyPressProvisioningIntegration::is_care_only($service['settings'] ?? []) === $care_only));
+    }
+
     /** @return int[] the published care package and service products */
     private function care_product_ids(): array
     {
@@ -70,7 +79,8 @@ class FluentCartCarePortal
 
     /**
      * fluent_cart/checkout/validate_data: care and services need a website. A cart with one is turned away unless it
-     * also holds a website plan or the buyer (signed in, or by their checkout email) has a live website.
+     * also holds a website plan or the buyer (signed in, or by their checkout email) has a live website. A care-only
+     * service (the extra hour at the care price) needs a live website with a care package.
      *
      * @param array $errors
      * @param array $args data, cart
@@ -85,17 +95,26 @@ class FluentCartCarePortal
         if (!array_intersect($in_cart, $this->care_product_ids())) {
             return $errors;
         }
-        foreach ($in_cart as $product_id) {
-            if ($this->adapter->is_plan_product($product_id)) {
-                return $errors;
-            }
-        }
-
         $user_id = get_current_user_id();
         if ($user_id <= 0) {
             $email = sanitize_email((string) ($args['data']['billing_email'] ?? ''));
             $user = $email !== '' ? get_user_by('email', $email) : false;
             $user_id = $user ? (int) $user->ID : 0;
+        }
+        $care_only = array_map(fn ($product) => (int) $product['product_id'], $this->services(true));
+        if (array_intersect($in_cart, $care_only)) {
+            if ($user_id > 0 && $this->care->has_care_package($user_id)) {
+                return $errors;
+            }
+            $errors = is_array($errors) ? $errors : [];
+            $errors['anypress_care']['care_only'] = __('This price is for websites with a care package. Please sign in to the account that has care, or choose "One hour of changes".', 'anypress-host');
+
+            return $errors;
+        }
+        foreach ($in_cart as $product_id) {
+            if ($this->adapter->is_plan_product($product_id)) {
+                return $errors;
+            }
         }
         if ($user_id > 0 && $this->care->has_live_website($user_id)) {
             return $errors;
@@ -183,7 +202,7 @@ class FluentCartCarePortal
             . esc_html__('No thanks', 'anypress-host') . '</strong> <small>' . esc_html__('You can add care later from your account.', 'anypress-host') . '</small></span></label>';
         echo '</fieldset>';
 
-        $services = $this->care->services();
+        $services = $this->services();
         if ($services) {
             echo '<p class="anypress-care-sub">' . esc_html__('One-time help', 'anypress-host') . '</p><ul class="anypress-care-services">';
             foreach ($services as $service) {
@@ -343,6 +362,17 @@ class FluentCartCarePortal
         }
 
         $links = [];
+        if ($has_package) {
+            foreach ($this->services(true) as $service) {
+                $variation = $service['variations'][0];
+                $links[] = '<a class="anypress-acct-btn" href="' . esc_url(add_query_arg(FluentCartEmailPacks::QUERY_ARG, $website_id, $variation['checkout_url'])) . '">' . esc_html(sprintf(
+                    /* translators: 1: e.g. Extra hour for care customers, 2: price */
+                    __('%1$s · %2$s', 'anypress-host'),
+                    $service['title'],
+                    self::price_label($variation)
+                )) . '</a>';
+            }
+        }
         if ($summary['call_url'] !== '') {
             $links[] = '<a class="anypress-acct-btn" href="' . esc_url($summary['call_url']) . '" target="_blank" rel="noopener">' . esc_html__('Book this month\'s call', 'anypress-host') . '</a>';
         }
@@ -423,7 +453,7 @@ class FluentCartCarePortal
         }
         echo '</div><p class="anypress-acct-note">' . esc_html__('Unused time doesn\'t carry over. Care renews on its own and can be cancelled any time; it ends with the website\'s plan.', 'anypress-host') . '</p>';
 
-        $services = $this->care->services();
+        $services = $this->services();
         if ($services) {
             echo '<p class="anypress-acct-care-sub">' . esc_html__('One-time help', 'anypress-host') . '</p><ul class="anypress-acct-care-services">';
             foreach ($services as $service) {

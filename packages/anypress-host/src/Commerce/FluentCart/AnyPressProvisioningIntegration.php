@@ -89,6 +89,7 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
             'care_priority' => self::PRIORITY_NORMAL,
             'care_call_url' => '',
             'service_minutes' => '',
+            'service_care_only' => 'no',
             'role' => '',
             'group_name' => '',
             'size' => '',
@@ -187,6 +188,16 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
                 'inline_tip' => __('One-time services only: time this adds to the website, used once its care package\'s monthly time runs out (e.g. 60 for a single hour). Leave empty for a job such as setting a site up.', 'anypress-host'),
             ],
             [
+                'key' => 'service_care_only',
+                'label' => __('Only for websites with care', 'anypress-host'),
+                'component' => 'select',
+                'is_multiple' => false,
+                'required' => false,
+                'options' => ['no' => __('No', 'anypress-host'), 'yes' => __('Yes', 'anypress-host')],
+                'dependency' => ['depends_on' => 'product_type', 'operator' => '=', 'value' => self::PRODUCT_TYPE_SERVICE],
+                'inline_tip' => __('One-time services only: "Yes" offers it only on the card of a website with a care package, and checkout refuses it for anyone else. Use it for a lower price on extra time for care customers.', 'anypress-host'),
+            ],
+            [
                 'key' => 'role',
                 'label' => __('Role', 'anypress-host'),
                 'component' => 'select',
@@ -283,6 +294,12 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
         }
 
         return max(0, min((int) $minutes, 31 * 24 * 60));
+    }
+
+    /** True when a one-time service's feed sells it only to websites with a care package. */
+    public static function is_care_only($settings): bool
+    {
+        return self::product_type($settings) === self::PRODUCT_TYPE_SERVICE && ($settings['service_care_only'] ?? '') === 'yes';
     }
 
     /** True when a feed's settings make the product a storage pack, not a website plan. */

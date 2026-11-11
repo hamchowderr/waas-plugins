@@ -270,6 +270,18 @@ class FluentCartCare
         return false;
     }
 
+    /** True when one of the user's live websites has an active care package. */
+    public function has_care_package(int $user_id): bool
+    {
+        foreach ($this->adapter->get_customer_subscription_ids($user_id) as $id) {
+            if ($this->is_live_website((int) $id) && $this->care_of((int) $id) > 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** @return int[] the user's active care subscriptions that have no website yet */
     public function waiting_for_user(int $user_id): array
     {

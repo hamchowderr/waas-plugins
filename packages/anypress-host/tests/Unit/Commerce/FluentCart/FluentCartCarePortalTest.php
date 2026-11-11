@@ -64,6 +64,7 @@ class FluentCartCarePortalTest extends TestCase
         ]);
         $this->care->allows('services')->andReturn([
             ['product_id' => 501, 'title' => 'Set up my site for me', 'excerpt' => 'We build it out.', 'settings' => [], 'variations' => [['id' => 51, 'title' => '', 'price' => 29900, 'interval' => '', 'checkout_url' => 'https://shop.example/?fluent-cart=instant_checkout&item_id=51&quantity=1']]],
+            ['product_id' => 502, 'title' => 'Extra hour for care customers', 'excerpt' => 'More time.', 'settings' => ['product_type' => 'service', 'service_care_only' => 'yes'], 'variations' => [['id' => 52, 'title' => '', 'price' => 10000, 'interval' => '', 'checkout_url' => 'https://shop.example/?fluent-cart=instant_checkout&item_id=52&quantity=1']]],
         ]);
 
         $this->portal = new FluentCartCarePortal(new FluentCartAdapter($this->store), $this->store, $this->care);
@@ -113,6 +114,7 @@ class FluentCartCarePortalTest extends TestCase
         $this->assertStringContainsString('Yearly <small>2 months free</small>', $html);
         $this->assertStringContainsString('<li>2 h of changes a month</li><li>Answer within 1 business day</li>', $html);
         $this->assertStringContainsString('item_id=51', $html);
+        $this->assertStringNotContainsString('item_id=52', $html, 'the care price is not offered without care');
     }
 
     public function test_a_website_with_care_shows_the_time_left_and_how_to_manage_it(): void
@@ -129,13 +131,14 @@ class FluentCartCarePortalTest extends TestCase
         $this->assertStringContainsString('We answer by email within 1 business day', $html);
         $this->assertStringContainsString('Manage or cancel care', $html);
         $this->assertStringContainsString('href="https://shop.example/book/care-call" target="_blank" rel="noopener">Book this month&#039;s call', str_replace("'", '&#039;', $html));
-        $this->assertStringNotContainsString('anypress_website=', $html, 'no offers once it has a package');
+        $this->assertStringContainsString('item_id=52&quantity=1&anypress_website=900">Extra hour for care customers · $100</a>', $html, 'the extra hour at the care price');
+        $this->assertSame(1, substr_count($html, 'anypress_website='), 'no package offers once it has a package');
     }
 
     public function test_care_and_services_are_left_out_of_the_shop_lists(): void
     {
         $query = Mockery::mock();
-        $query->expects('whereNotIn')->with('ID', [401, 402, 501])->andReturnSelf();
+        $query->expects('whereNotIn')->with('ID', [401, 402, 501, 502])->andReturnSelf();
 
         $this->assertSame($query, $this->portal->hide_from_shop($query));
     }
@@ -157,6 +160,16 @@ class FluentCartCarePortalTest extends TestCase
 
         $this->assertSame([], $this->portal->validate_checkout([], ['cart' => (object) [], 'data' => []]));
         $this->assertSame([], $this->portal->validate_checkout([], ['cart' => (object) [], 'data' => []]));
+        $this->assertSame([], $this->portal->validate_checkout([], ['cart' => (object) [], 'data' => []]));
+    }
+
+    public function test_the_extra_hour_at_the_care_price_needs_a_website_with_care(): void
+    {
+        $this->store->allows('get_cart_product_ids')->andReturn([502], [502, self::PLAN], [502]);
+        $this->care->allows('has_care_package')->with(7)->andReturn(false, false, true);
+
+        $this->assertArrayHasKey('care_only', $this->portal->validate_checkout([], ['cart' => (object) [], 'data' => []])['anypress_care']);
+        $this->assertArrayHasKey('care_only', $this->portal->validate_checkout([], ['cart' => (object) [], 'data' => []])['anypress_care'], 'a plan in the cart is not care');
         $this->assertSame([], $this->portal->validate_checkout([], ['cart' => (object) [], 'data' => []]));
     }
 }
