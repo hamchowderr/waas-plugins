@@ -2,6 +2,8 @@
 
 namespace AnyPressClient\Crm;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
+
 /**
  * Subscribers of the Newsletter plugin (thenewsletterplugin.com), read from its table (wp_newsletter) and its list
  * names (the newsletter_lists option). Nothing in them is changed, and the plugin doesn't need to be active.

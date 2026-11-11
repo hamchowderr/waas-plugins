@@ -2,6 +2,8 @@
 
 namespace AnyPressClient\Moving;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
+
 /**
  * LifterLMS courses, read from what LifterLMS keeps in WordPress: courses, sections, lessons and quizzes as posts (a
  * section points at its course and a lesson at its section through post meta, each with its place in _llms_order), and

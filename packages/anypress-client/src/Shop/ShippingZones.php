@@ -2,6 +2,8 @@
 
 namespace AnyPressClient\Shop;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
+
 /**
  * Copies WooCommerce's shipping zones and their flat rate, free shipping and local pickup methods to FluentCart
  * (the FluentCart Migrator add-on has no shipping step).

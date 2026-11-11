@@ -2,6 +2,10 @@
 
 namespace AnyPressMove;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 use AnyPressMove\Lib\Crm\CrmAbilities;
 use AnyPressMove\Lib\Crm\CrmCommand;
 use AnyPressMove\Lib\Crm\CrmSwitch;

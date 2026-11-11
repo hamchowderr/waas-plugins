@@ -2,6 +2,8 @@
 
 namespace AnyPressClient\Moving;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
+
 use AnyPressClient\Core\FluentPlugin;
 use WP_Error;
 
@@ -214,7 +216,8 @@ abstract class NativeImport
         }
         try {
             if (function_exists('set_time_limit')) {
-                @set_time_limit(0);
+                // A switch copies a whole plugin's data in one admin request.
+                @set_time_limit(0); // phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged, WordPress.PHP.NoSilencedErrors.Discouraged
             }
             wp_raise_memory_limit('admin');
             add_filter('pre_wp_mail', [$this, 'hold_mail'], PHP_INT_MAX);
@@ -353,9 +356,10 @@ abstract class NativeImport
         if (!self::table_exists($table)) {
             return 0;
         }
-        $sql = "SELECT COUNT(*) FROM {$wpdb->prefix}{$table} WHERE {$where}";
+        // $where is a fixed condition written in this plugin's code, its values passed as $args to prepare().
+        $sql = "SELECT COUNT(*) FROM %i WHERE {$where}";
 
-        return (int) $wpdb->get_var($args ? $wpdb->prepare($sql, $args) : $sql); // phpcs:ignore WordPress.DB.PreparedSQL
+        return (int) $wpdb->get_var($wpdb->prepare($sql, array_merge([$wpdb->prefix . $table], $args))); // phpcs:ignore WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
     }
 
     protected static function max_id(string $table, string $column = 'id'): int
@@ -365,7 +369,7 @@ abstract class NativeImport
             return 0;
         }
 
-        return (int) $wpdb->get_var("SELECT MAX({$column}) FROM {$wpdb->prefix}{$table}"); // phpcs:ignore WordPress.DB.PreparedSQL
+        return (int) $wpdb->get_var($wpdb->prepare('SELECT MAX(%i) FROM %i', $column, $wpdb->prefix . $table));
     }
 
     /** Deletes rows of a table whose $column is in $ids; returns how many (or would). */
@@ -377,12 +381,14 @@ abstract class NativeImport
             return 0;
         }
         $total = 0;
+        // $extra is a fixed condition written in this plugin's code; the table, column and ids go through prepare().
+        $extra = $extra !== '' ? " AND {$extra}" : '';
         foreach (array_chunk($ids, 500) as $chunk) {
-            $in = implode(',', $chunk);
-            $where = "{$column} IN ({$in})" . ($extra !== '' ? " AND {$extra}" : '');
+            // phpcs:disable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
             $total += $dry_run
-                ? (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}{$table} WHERE {$where}") // phpcs:ignore WordPress.DB.PreparedSQL
-                : (int) $wpdb->query("DELETE FROM {$wpdb->prefix}{$table} WHERE {$where}"); // phpcs:ignore WordPress.DB.PreparedSQL
+                ? (int) $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM %i WHERE %i IN (' . implode(',', array_fill(0, count($chunk), '%d')) . "){$extra}", ...array_merge([$wpdb->prefix . $table, $column], $chunk)))
+                : (int) $wpdb->query($wpdb->prepare('DELETE FROM %i WHERE %i IN (' . implode(',', array_fill(0, count($chunk), '%d')) . "){$extra}", ...array_merge([$wpdb->prefix . $table, $column], $chunk)));
+            // phpcs:enable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
         }
 
         return $total;
@@ -395,11 +401,16 @@ abstract class NativeImport
         if ($upto <= $after || !self::table_exists($table)) {
             return 0;
         }
-        $where = $wpdb->prepare("{$column} > %d AND {$column} <= %d", $after, $upto) . ($extra !== '' ? " AND {$extra}" : ''); // phpcs:ignore WordPress.DB.PreparedSQL
+        // $extra is a fixed condition written in this plugin's code; the table, column and ids go through prepare().
+        $extra = $extra !== '' ? " AND {$extra}" : '';
+        $name = $wpdb->prefix . $table;
+        // phpcs:disable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
+        $total = $dry_run
+            ? (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM %i WHERE %i > %d AND %i <= %d{$extra}", $name, $column, $after, $column, $upto))
+            : (int) $wpdb->query($wpdb->prepare("DELETE FROM %i WHERE %i > %d AND %i <= %d{$extra}", $name, $column, $after, $column, $upto));
+        // phpcs:enable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
-        return $dry_run
-            ? (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}{$table} WHERE {$where}") // phpcs:ignore WordPress.DB.PreparedSQL
-            : (int) $wpdb->query("DELETE FROM {$wpdb->prefix}{$table} WHERE {$where}"); // phpcs:ignore WordPress.DB.PreparedSQL
+        return $total;
     }
 
     /** One run at a time (the command and the ability together must not import twice). */

@@ -2,6 +2,8 @@
 
 namespace AnyPressClient\Moving;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
+
 /**
  * One course plugin the course switch reads from (LearnDash, Tutor LMS or LifterLMS), on the same website.
  *
@@ -119,7 +121,7 @@ abstract class CourseSource
             return [];
         }
 
-        return array_map('intval', $wpdb->get_col("SELECT ID FROM {$wpdb->users} WHERE ID IN (" . implode(',', $ids) . ') ORDER BY ID')); // phpcs:ignore WordPress.DB.PreparedSQL
+        return array_map('intval', $wpdb->get_col($wpdb->prepare("SELECT ID FROM {$wpdb->users} WHERE ID IN (" . implode(',', array_fill(0, count($ids), '%d')) . ') ORDER BY ID', ...$ids)));
     }
 
     /** Ids of posts of this type below $parent (post_parent), not in the bin, in the plugin's order. */

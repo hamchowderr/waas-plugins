@@ -2,6 +2,8 @@
 
 namespace AnyPressClient\Shop;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
+
 /**
  * Copies each WooCommerce product's gallery images to its FluentCart copy. The FluentCart Migrator add-on links
  * the copy to the original (`_fct_migrated_id` on the WooCommerce product) but puts only the featured image in

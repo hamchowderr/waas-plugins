@@ -2,6 +2,8 @@
 
 namespace AnyPressClient\Shop;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
+
 /**
  * What the owner has to look at by hand after the switch; nothing here changes the shop.
  *

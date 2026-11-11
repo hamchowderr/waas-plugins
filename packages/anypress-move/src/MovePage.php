@@ -2,6 +2,10 @@
 
 namespace AnyPressMove;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 use AnyPressMove\Lib\Crm\CrmSwitch;
 use AnyPressMove\Lib\Forms\FormsSwitch;
 use AnyPressMove\Lib\Moving\NativeImport;

@@ -2,6 +2,8 @@
 
 namespace AnyPressClient\Moving;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
+
 use WP_REST_Request;
 
 /**

@@ -2,6 +2,8 @@
 
 namespace AnyPressClient\Forms;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
+
 /**
  * Keeps a converted form's conditional confirmations working while Fluent Forms Pro is off. WPForms can send a
  * visitor somewhere else depending on their answers (a redirect "if Topic is Support"); the switch keeps that as a
