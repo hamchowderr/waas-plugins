@@ -12,7 +12,7 @@ Plugin Name: AnyPress Client
 Plugin URI: https://github.com/hamchowderr/waas-plugins
 Description: Runs on each AnyPress website: one-click login from the storefront, turns plugins on or off to match the store's plan (roles), and lets the AnyPress connector edit the site's design and content.
 Author: Otaku Solutions
-Version: 2.26.0
+Version: 2.27.0
 Author URI: https://otakusolutions.io
 Update URI: anypress-client
 Requires at least: 6.9
@@ -25,7 +25,7 @@ Text Domain: anypress-client
 define( 'ANYPRESS_CLIENT_SLUG', 'anypress-client' );
 define( 'ANYPRESS_CLIENT_BASENAME', plugin_basename( __FILE__ ) );
 define( 'ANYPRESS_CLIENT_UPDATE_URI', 'anypress-client' );
-define( 'ANYPRESS_CLIENT_VERSION', '2.26.0' );
+define( 'ANYPRESS_CLIENT_VERSION', '2.27.0' );
 define( 'ANYPRESS_CLIENT_TEXTDOMAIN', 'anypress-client' );
 
 use AnyPressClient\Api\AdminLogin;
@@ -58,6 +58,7 @@ use AnyPressClient\Moving\CommunityImport;
 use AnyPressClient\Moving\CourseImport;
 use AnyPressClient\Moving\ImportAbilities;
 use AnyPressClient\Moving\ImportCommand;
+use AnyPressClient\Moving\MemberPressImport;
 use AnyPressClient\Moving\SupportImport;
 use AnyPressClient\Shop\ShopAbilities;
 use AnyPressClient\Shop\ShopCommand;
@@ -136,7 +137,7 @@ if (!wp_doing_ajax()) {
     // importers, LearnDash courses into FluentCommunity courses, and a Circle community into FluentCommunity through
     // Circle's Admin API: `wp anypress support|affiliate|community|course|circle switch` and the check-* and switch-*
     // abilities.
-    $imports = [new SupportImport(), new AffiliateImport(), new CommunityImport(), new CourseImport(), new CircleImport()];
+    $imports = [new SupportImport(), new AffiliateImport(), new CommunityImport(), new CourseImport(), new CircleImport(), new MemberPressImport()];
     new ImportAbilities(...$imports);
     if (defined('WP_CLI') && WP_CLI) {
         foreach ($imports as $import) {
