@@ -44,4 +44,5 @@ namespace FluentForm\App\Services\Migrator\Classes {
     class ContactForm7Migrator extends BaseMigratorStub {}
     class NinjaFormsMigrator extends BaseMigratorStub {}
     class WpFormsMigrator extends BaseMigratorStub {}
+    class GravityFormsMigrator extends BaseMigratorStub {}
 }

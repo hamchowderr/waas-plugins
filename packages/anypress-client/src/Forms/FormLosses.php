@@ -108,7 +108,7 @@ final class FormLosses
                 implode(', ', $rules)
             );
         }
-        $feeds = class_exists('GFAPI') && method_exists('GFAPI', 'get_feeds') ? \GFAPI::get_feeds(null, (int) ($item['id'] ?? 0)) : [];
+        $feeds = class_exists('GFAPI') ? \GFAPI::get_feeds(null, (int) ($item['id'] ?? 0)) : [];
         $addons = is_array($feeds) ? array_values(array_unique(array_filter(array_map(fn ($feed) => (string) ($feed['addon_slug'] ?? ''), $feeds)))) : [];
         if ($addons) {
             $lost[] = sprintf(
