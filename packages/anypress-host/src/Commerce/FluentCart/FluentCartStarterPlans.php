@@ -94,7 +94,7 @@ class FluentCartStarterPlans
         $feeds = ProductMeta::query()->where('object_type', 'product_integration')->where('meta_key', AnyPressProvisioningIntegration::KEY)->get();
         foreach ($feeds as $feed) {
             $settings = $feed->meta_value;
-            if (is_array($settings) && !AnyPressProvisioningIntegration::is_email_pack($settings)) {
+            if (is_array($settings) && !AnyPressProvisioningIntegration::is_add_on($settings)) {
                 $existing[($settings['role'] ?? '') . '/' . (($settings['size'] ?? '') ?: 'small')] = true;
             }
         }

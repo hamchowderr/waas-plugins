@@ -256,6 +256,20 @@ class ProvisioningApi
     }
 
     /**
+     * Sets how many storage packs the store has now (each adds the API's pack size, 25 GB, to the plan's storage).
+     * The count replaces the one before, so sending it again is safe; 0 ends them. The answer is
+     * {tenantId, externalId, storagePacks, storagePacksGb}.
+     *
+     * @throws \Exception
+     */
+    public function set_storage_packs($external_id, int $packs)
+    {
+        return $this->httpService->put('/v1/tenants/storage-packs?externalId=' . rawurlencode((string) $external_id), [
+            'packs' => $packs,
+        ]);
+    }
+
+    /**
      * Domains to buy for a name or an exact domain, with what each costs the storefront (cents, USD).
      *
      * @throws \Exception

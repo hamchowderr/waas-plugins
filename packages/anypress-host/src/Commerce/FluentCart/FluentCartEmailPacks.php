@@ -152,7 +152,8 @@ class FluentCartEmailPacks
         }
 
         foreach ($this->store->get_cart_product_ids($cart) as $product_id) {
-            if ($this->store->get_email_pack_feed($product_id) !== null) {
+            // A storage pack (FluentCartStoragePacks) is bought for a website the same way.
+            if ($this->store->get_email_pack_feed($product_id) !== null || $this->store->is_storage_pack_product($product_id)) {
                 $this->store->update_order_meta($order, self::ORDER_WEBSITE_META, $subscription_id);
                 return;
             }
