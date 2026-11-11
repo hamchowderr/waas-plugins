@@ -180,6 +180,66 @@ jobs:
         working-directory: scripts/playground
         run: npm run forms
 
+  playground-gravity-forms:
+    # The forms switch's Gravity Forms source on WordPress Playground, against a stand-in for Gravity Forms' PHP API
+    # (Gravity Forms is paid): converts with the importer's mistakes fixed, entries, pages, runs again, undoes.
+    name: anypress-client forms switch from Gravity Forms on WordPress Playground
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/anypress-client
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: Gravity Forms switch test
+        working-directory: scripts/playground
+        run: npm run gravity-forms
+
+  playground-edd:
+    # The shop switch's Easy Digital Downloads source on WordPress Playground: the FluentCart Migrator add-on copies the
+    # EDD shop, EDD's shortcodes and blocks on pages become FluentCart's, runs again, undoes.
+    name: anypress-client shop switch from Easy Digital Downloads on WordPress Playground
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/anypress-client
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: EDD shop switch test
+        working-directory: scripts/playground
+        run: npm run edd
+
   playground-shop-switch:
     # The shop switch (wp anypress shop switch and its abilities) on a WordPress Playground site with WooCommerce,
     # FluentCart and the FluentCart Migrator add-on (downloaded from FluentCart's add-ons CDN): checks, switches,

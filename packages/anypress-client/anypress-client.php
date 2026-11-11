@@ -12,7 +12,7 @@ Plugin Name: AnyPress Client
 Plugin URI: https://anypress.io
 Description: Runs on each AnyPress website: one-click login from the storefront, turns plugins on or off to match the store's plan (roles), and lets the AnyPress connector edit the site's design and content.
 Author: Otaku Solutions
-Version: 2.34.0
+Version: 2.35.0
 Author URI: https://otakusolutions.io
 Update URI: anypress-client
 Requires at least: 6.9
@@ -25,7 +25,7 @@ Text Domain: anypress-client
 define( 'ANYPRESS_CLIENT_SLUG', 'anypress-client' );
 define( 'ANYPRESS_CLIENT_BASENAME', plugin_basename( __FILE__ ) );
 define( 'ANYPRESS_CLIENT_UPDATE_URI', 'anypress-client' );
-define( 'ANYPRESS_CLIENT_VERSION', '2.34.0' );
+define( 'ANYPRESS_CLIENT_VERSION', '2.35.0' );
 define( 'ANYPRESS_CLIENT_TEXTDOMAIN', 'anypress-client' );
 
 use AnyPressClient\Api\AdminLogin;
@@ -121,7 +121,7 @@ if (!wp_doing_ajax()) {
     // The website assistant beside the page editor and the Site Editor, opened from the admin bar too.
     new EditorAssistant();
 
-    // Moving a site's forms to Fluent Forms (Contact Form 7, WPForms, Ninja Forms): `wp anypress forms switch` and
+    // Moving a site's forms to Fluent Forms (Contact Form 7, WPForms, Ninja Forms, Gravity Forms): `wp anypress forms switch` and
     // the check-forms and switch-forms abilities.
     new FormsAbilities(new FormsSwitch());
     if (defined('WP_CLI') && WP_CLI) {

@@ -4,12 +4,13 @@ namespace AnyPressClient\Forms;
 
 use AnyPressClient\Core\FluentPlugin;
 use AnyPressClient\Forms\Migrators\Cf7Migrator;
+use AnyPressClient\Forms\Migrators\GravityMigrator;
 use AnyPressClient\Forms\Migrators\NinjaMigrator;
 use AnyPressClient\Forms\Migrators\WpFormsMigrator;
 use WP_Error;
 
 /**
- * The forms switch: moves a website's Contact Form 7, WPForms (Lite) and Ninja Forms forms to Fluent Forms.
+ * The forms switch: moves a website's Contact Form 7, WPForms (Lite), Ninja Forms and Gravity Forms forms to Fluent Forms.
  *
  * 1. Converts each form, and its entries, with Fluent Forms' own importer (Fluent Forms → Tools → Migrator), through
  *    the subclasses in Migrators/ that put its known mistakes right.
@@ -37,6 +38,7 @@ class FormsSwitch
         'contactform7' => ['label' => 'Contact Form 7', 'parent' => 'FluentForm\App\Services\Migrator\Classes\ContactForm7Migrator', 'class' => Cf7Migrator::class],
         'wpforms' => ['label' => 'WPForms', 'parent' => 'FluentForm\App\Services\Migrator\Classes\WpFormsMigrator', 'class' => WpFormsMigrator::class],
         'ninja_forms' => ['label' => 'Ninja Forms', 'parent' => 'FluentForm\App\Services\Migrator\Classes\NinjaFormsMigrator', 'class' => NinjaMigrator::class],
+        'gravityform' => ['label' => 'Gravity Forms', 'parent' => 'FluentForm\App\Services\Migrator\Classes\GravityFormsMigrator', 'class' => GravityMigrator::class],
     ];
 
     /**
@@ -73,7 +75,7 @@ class FormsSwitch
             ];
             $sources = $this->sources();
             if (!$sources) {
-                $report['notes'][] = __('Contact Form 7, WPForms and Ninja Forms aren\'t active here, so there are no forms to switch. (Their forms can only be read while the plugin is active.)', 'anypress-client');
+                $report['notes'][] = __('Contact Form 7, WPForms, Ninja Forms and Gravity Forms aren\'t active here, so there are no forms to switch. (Their forms can only be read while the plugin is active.)', 'anypress-client');
             }
 
             foreach ($sources as $type => $source) {

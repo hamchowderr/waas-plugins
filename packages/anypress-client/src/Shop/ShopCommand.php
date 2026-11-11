@@ -34,6 +34,17 @@ class ShopCommand
      * [--dry-run]
      * : Only check the shop and report what the switch would do. Changes nothing.
      *
+     * [--from=<shop>]
+     * : The shop to move: WooCommerce, or Easy Digital Downloads 3 (EDD's products, orders, customers, coupons,
+     * subscriptions and licences through the add-on's EDD source, and EDD's shortcodes and blocks on pages swapped
+     * for FluentCart's; undo puts the pages back).
+     * ---
+     * default: woocommerce
+     * options:
+     *   - woocommerce
+     *   - edd
+     * ---
+     *
      * [--undo]
      * : Undo this command's fixes: put back the galleries, remove the copied shipping zones and split the merged
      * customers again. What the add-on copied stays in FluentCart.
@@ -52,6 +63,7 @@ class ShopCommand
      *     wp anypress shop switch --user=admin --dry-run
      *     wp anypress shop switch --user=admin
      *     wp anypress shop switch --user=admin --undo
+     *     wp anypress shop switch --user=admin --from=edd --dry-run
      *
      * @subcommand switch
      */
@@ -64,7 +76,9 @@ class ShopCommand
         $undo = (bool) WP_CLI\Utils\get_flag_value($assoc_args, 'undo', false);
         $format = WP_CLI\Utils\get_flag_value($assoc_args, 'format', 'table') === 'json' ? 'json' : 'table';
 
-        $report = $undo ? $this->switch->undo($dry_run) : $this->switch->run($dry_run);
+        $from = WP_CLI\Utils\get_flag_value($assoc_args, 'from', 'woocommerce') === 'edd' ? 'edd' : 'woocommerce';
+
+        $report = $undo ? $this->switch->undo($dry_run, $from) : $this->switch->run($dry_run, $from);
         if (is_wp_error($report)) {
             $data = $report->get_error_data();
             if ($format === 'table' && is_array($data) && isset($data['preflight'])) {
@@ -74,6 +88,10 @@ class ShopCommand
         }
         if ($format === 'json') {
             WP_CLI::line((string) wp_json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            return;
+        }
+        if ($from === 'edd') {
+            self::print_edd($report);
             return;
         }
         if ($undo) {
@@ -87,6 +105,36 @@ class ShopCommand
             WP_CLI::error('The shop can\'t be switched yet.');
         }
         WP_CLI::success($dry_run ? 'Dry run: nothing was changed.' : 'Shop switched to FluentCart.');
+    }
+
+    /** The Easy Digital Downloads switch's report, as tables. */
+    private static function print_edd(array $report): void
+    {
+        $preflight = $report['preflight'] ?? null;
+        if ($preflight) {
+            WP_CLI::line(sprintf('Easy Digital Downloads %s, FluentCart %s, FluentCart Migrator %s', self::plain($preflight['edd'] ?? 'not active'), self::plain($preflight['fluentcart'] ?? 'not active'), self::plain($preflight['migrator_addon'] ?? 'not active')));
+            if (!empty($preflight['counts'])) {
+                $c = $preflight['counts'];
+                WP_CLI::line(sprintf('Products %d, orders %d, customers %d, coupons %d, subscriptions %d, licences %d', $c['products'], $c['orders'], $c['customers'], $c['coupons'], $c['subscriptions'], $c['licenses']));
+            }
+            foreach (array_merge($preflight['blockers'], $preflight['warnings']) as $line) {
+                WP_CLI::warning(self::plain($line));
+            }
+        }
+        if (!empty($report['migration']['steps'])) {
+            WP_CLI\Utils\format_items('table', array_map(fn ($step, $result) => ['step' => $step, 'result' => self::plain($result)], array_keys($report['migration']['steps']), $report['migration']['steps']), ['step', 'result']);
+        }
+        if ($report['pages']) {
+            WP_CLI\Utils\format_items('table', array_map(fn ($row) => array_map([self::class, 'plain'], $row), $report['pages']), array_keys($report['pages'][0]));
+        }
+        foreach ($report['not_switched'] ?? [] as $row) {
+            WP_CLI::warning(self::plain($row['where'] . ': ' . $row['what'] . ' ' . $row['why']));
+        }
+        array_map([WP_CLI::class, 'line'], array_map([self::class, 'plain'], $report['notes']));
+        if ($preflight && !$preflight['ready']) {
+            WP_CLI::error('The shop can\'t be switched yet.');
+        }
+        WP_CLI::success(!empty($report['dry_run']) ? 'Dry run: nothing was changed.' : (!empty($report['undo']) ? 'The pages are put back.' : 'Shop switched to FluentCart.'));
     }
 
     private static function plain($text): string

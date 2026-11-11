@@ -20,20 +20,33 @@ final class FormPlacements
     /** Swaps the forms in every post-like record (pages, posts, templates, template parts, synced patterns…). */
     public static function switch_posts(PageSwitcher $switcher, array &$state, array &$report, bool $dry_run): void
     {
-        $ids = self::posts_containing(PageSwitcher::NEEDLES);
+        self::rewrite_posts(
+            fn (string $content) => $switcher->rewrite($content),
+            PageSwitcher::NEEDLES,
+            __('That form wasn\'t converted (it may have been deleted, or its plugin is off).', 'anypress-client'),
+            $state,
+            $report,
+            $dry_run
+        );
+    }
+
+    /**
+     * Rewrites every post holding one of $needles with $rewrite (content => content, replacements, missing), keeping
+     * each changed post's revision, old content and replacements in $state['pages'] for restore_posts(), leaving posts of
+     * the $skip types alone. Also used by the shop switch for Easy Digital Downloads' shortcodes.
+     */
+    public static function rewrite_posts(callable $rewrite, array $needles, string $why, array &$state, array &$report, bool $dry_run, array $skip = []): void
+    {
+        $ids = self::posts_containing($needles, $skip);
 
         foreach ($ids as $id) {
             $post = get_post((int) $id);
             if (!$post) {
                 continue;
             }
-            $result = $switcher->rewrite((string) $post->post_content);
+            $result = $rewrite((string) $post->post_content);
             foreach ($result['missing'] as $what) {
-                $report['not_switched'][] = [
-                    'where' => self::where($post),
-                    'what' => $what,
-                    'why' => __('That form wasn\'t converted (it may have been deleted, or its plugin is off).', 'anypress-client'),
-                ];
+                $report['not_switched'][] = ['where' => self::where($post), 'what' => $what, 'why' => $why];
             }
             if (!$result['replacements']) {
                 continue;
@@ -205,9 +218,9 @@ final class FormPlacements
     }
 
     /** Ids of the post-like records whose content holds any of $needles, through WP_Query's own search. */
-    private static function posts_containing(array $needles): array
+    private static function posts_containing(array $needles, array $skip = []): array
     {
-        $types = array_values(array_diff(get_post_types(), self::SKIP_POST_TYPES));
+        $types = array_values(array_diff(get_post_types(), self::SKIP_POST_TYPES, $skip));
         $statuses = array_values(array_diff(get_post_stati(), ['trash', 'auto-draft', 'inherit']));
         $ids = [];
         foreach ($needles as $needle) {
