@@ -33,9 +33,12 @@ final class SiteBrand
             return;
         }
         printf(
-            '<p class="anypress-powered-by" style="text-align:center;margin:24px 0 0;font-size:13px;color:#50575e">%s <a href="%s" style="color:inherit">%s</a></p>',
-            esc_html__('Powered by', 'anypress-client'),
+            '<p class="anypress-powered-by" style="text-align:center;margin:24px 0 0;font-size:13px;color:#50575e">'
+            . '<a href="%1$s" style="color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:6px">'
+            . '<img src="%2$s" width="18" height="18" alt="" style="display:block"> %3$s <strong>%4$s</strong></a></p>',
             esc_url('https://anypress.io'),
+            esc_attr(\AnyPressClient\Core\Brand::menu_icon()),
+            esc_html__('Powered by', 'anypress-client'),
             esc_html__('AnyPress', 'anypress-client')
         );
     }
