@@ -10,10 +10,13 @@ final class WpHttpException extends \RuntimeException implements NetworkExceptio
 {
     private RequestInterface $request;
 
-    public function __construct(RequestInterface $request, string $message)
+    /** The exception for a request WordPress could not send, with its (already escaped) reason. */
+    public static function failed(RequestInterface $request, string $message): self
     {
-        parent::__construct($message);
-        $this->request = $request;
+        $error = new self($message);
+        $error->request = $request;
+
+        return $error;
     }
 
     public function getRequest(): RequestInterface
