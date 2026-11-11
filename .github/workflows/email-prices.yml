@@ -1,0 +1,20 @@
+name: Email prices
+# The shop's email automations (crm-emails.json) against the API's price list (scripts/check-email-prices.mjs):
+# on every change, and every night so a price changed in the API shows up here the next morning.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '50 3 * * *'
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/check-email-prices.mjs
