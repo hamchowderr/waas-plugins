@@ -184,7 +184,7 @@
     "day": 14,
     "subject": "Start for $39 a month",
     "preheader": "30-day money-back guarantee.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Community & courses plan is $39 a month (or $390 a year). If it isn't right for you in the first 30 days, you get your money back.</p><p>Moving from another platform? Reply and we'll tell you how.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Community & courses plan is $49 a month (or $490 a year). If it isn't right for you in the first 30 days, you get your money back.</p><p>Moving from another platform? Reply and we'll tell you how.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
  },
@@ -246,7 +246,7 @@
     "day": 14,
     "subject": "Start for $79 a month",
     "preheader": "30-day money-back guarantee.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Everything plan is $79 a month (or $790 a year). Smaller churches often start with Community & courses at $39. If it isn't right in the first 30 days, you get your money back.</p><p>Part of a network of churches? Reply, and we'll show you how to run sites for all of them.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Everything plan is $79 a month (or $790 a year). Smaller churches often start with Community & courses at $49. If it isn't right in the first 30 days, you get your money back.</p><p>Part of a network of churches? Reply, and we'll show you how to run sites for all of them.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
  },
