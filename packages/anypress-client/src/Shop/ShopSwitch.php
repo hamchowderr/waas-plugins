@@ -156,7 +156,7 @@ class ShopSwitch
     /** Turns on the FluentCart Migrator add-on when it is installed but off (the store template ships it off). */
     private static function turn_on_addon(): void
     {
-        if (FluentPlugin::TURNS_ON && !class_exists(self::ADDON_CLASS)) {
+        if (FluentPlugin::turns_on() && !class_exists(self::ADDON_CLASS)) {
             FluentPlugin::turn_on_quietly(self::ADDON_FILE);
         }
     }
@@ -187,7 +187,7 @@ class ShopSwitch
         }
         if (!$addon) {
             $installed = function_exists('get_plugins') && array_key_exists(self::ADDON_FILE, get_plugins());
-            if ($installed && FluentPlugin::TURNS_ON) {
+            if ($installed && FluentPlugin::turns_on()) {
                 $report['warnings'][] = __('The FluentCart Migrator add-on is installed but off. The switch turns it on when it runs.', 'anypress-client');
             } elseif ($installed) {
                 $report['blockers'][] = __('The FluentCart Migrator add-on is installed but off. Turn it on under Plugins, then run this again.', 'anypress-client');

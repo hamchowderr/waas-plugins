@@ -16,7 +16,10 @@ use WP_Error;
  */
 class FluentPlugin
 {
-    public const TURNS_ON = false;
+    public static function turns_on(): bool
+    {
+        return false;
+    }
 
     /** Never turns anything on: the switch's own check reports the plugin that is off. */
     public static function turn_on(string $file, string $name, bool $ready): ?WP_Error

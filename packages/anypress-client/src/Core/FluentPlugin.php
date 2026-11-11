@@ -16,7 +16,10 @@ class FluentPlugin
      * copy of this class that never does: a wordpress.org plugin must not change other plugins' activation, so there
      * the switch's check asks the site owner to turn the plugin on instead.
      */
-    public const TURNS_ON = true;
+    public static function turns_on(): bool
+    {
+        return true;
+    }
 
     /**
      * Null when there is nothing to do (the plugin is already running, or isn't installed, or couldn't be turned on:
