@@ -6,7 +6,7 @@
 //
 //   npm run care        # screenshots in shots/care/
 
-import { mkdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -198,6 +198,23 @@ check(team.history?.map((e) => e.minutes).join() === '5,40,50' && team.history[0
 check(team.logged?.items?.[0]?.detail === '50 min', 'the ticket sidebar lists the time logged', JSON.stringify(team.logged));
 check(team.mails?.length === 1 && team.mails[0] === '30 min of care time left this month', 'at a quarter left the owner gets "time running low", once', JSON.stringify(team.mails));
 check(team.late_before === 0 && team.late?.length === 1 && team.late[0].package === 'Care Plus', 'a request waiting past Care Plus\'s 1 business day shows as late', JSON.stringify([team.late_before, team.late]));
+
+// 6b. Early next month: the monthly report, for a website that had care all of last month.
+const report = JSON.parse((await php(`${boot}
+    $mails = [];
+    add_filter('pre_wp_mail', function ($short, $atts) use (&$mails) { $mails[] = [$atts['subject'], $atts['message']]; return true; }, 10, 2);
+    $last = ${NS}FluentCartCareEmails::last_month();
+    $store->update_subscription_meta($website, ${NS}FluentCartCare::SINCE_META, $last);
+    $log = $care->history($website);
+    foreach ($log as $i => $entry) { $log[$i]['at'] = $last . '-15T12:00:00+00:00'; }
+    $store->update_subscription_meta($website, ${NS}FluentCartCare::LOG_META, $log);
+    $emails = new ${NS}FluentCartCareEmails($adapter, $store, $care);
+    echo wp_json_encode(['sent' => [$emails->send_reports(), $emails->send_reports()], 'mails' => $mails, 'scheduled' => (bool) wp_next_scheduled(${NS}FluentCartCareEmails::REPORT_HOOK)]);
+`)).replace(/^[^{]*/, ''));
+check(report.sent.join() === '1,0', 'the monthly report goes out once', JSON.stringify(report.sent));
+check(/care report$/.test(report.mails?.[0]?.[0] ?? '') && report.mails[0][1].includes('1 h 35 min of your 2 h') && report.mails[0][1].includes('last bit (5 min)'), 'the report lists last month\'s work and time', report.mails?.[0]?.[0]);
+check(report.scheduled, 'the daily report check is scheduled');
+writeFileSync(resolve(OUT, 'report-email.html'), report.mails?.[0]?.[1] ?? '');
 
 // 7. AnyPress > Care, opened from the sidebar's "Log time": the website's row ready, with its time log.
 {

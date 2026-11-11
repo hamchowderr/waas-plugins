@@ -83,6 +83,7 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
             'care_minutes' => '',
             'care_answer' => '',
             'care_priority' => self::PRIORITY_NORMAL,
+            'care_call_url' => '',
             'service_minutes' => '',
             'role' => '',
             'group_name' => '',
@@ -163,6 +164,14 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
                 'options' => self::priorities(),
                 'dependency' => ['depends_on' => 'product_type', 'operator' => '=', 'value' => self::PRODUCT_TYPE_CARE],
                 'inline_tip' => __('Care packages only: the priority each request of this package gets in Fluent Support. Requests are also tagged with the package\'s name, so your team can sort and filter by package.', 'anypress-host'),
+            ],
+            [
+                'key' => 'care_call_url',
+                'label' => __('Monthly call booking link', 'anypress-host'),
+                'component' => 'text',
+                'required' => false,
+                'dependency' => ['depends_on' => 'product_type', 'operator' => '=', 'value' => self::PRODUCT_TYPE_CARE],
+                'inline_tip' => __('Care packages with a monthly call only: the booking page where the customer picks a time, such as a FluentBooking calendar link. The website card and the monthly report show it as "Book this month\'s call". Leave empty for packages without a call.', 'anypress-host'),
             ],
             [
                 'key' => 'service_minutes',

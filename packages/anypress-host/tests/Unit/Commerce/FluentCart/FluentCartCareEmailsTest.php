@@ -21,7 +21,7 @@ class FluentCartCareEmailsTest extends TestCase
     private $care;
     private array $meta = [];
     private array $sent = [];
-    private array $summary = ['subscription_id' => 950, 'package' => 'Care Plus', 'answer' => '1 business day', 'priority' => 'medium', 'minutes' => 120, 'used' => 0, 'left' => 120, 'extra' => 0];
+    private array $summary = ['subscription_id' => 950, 'package' => 'Care Plus', 'answer' => '1 business day', 'priority' => 'medium', 'call_url' => 'https://shop.example/book/care-call', 'minutes' => 120, 'used' => 0, 'left' => 120, 'extra' => 0];
     private FluentCartCareEmails $emails;
 
     protected function setUp(): void
@@ -38,7 +38,8 @@ class FluentCartCareEmailsTest extends TestCase
         Functions\when('get_theme_mod')->justReturn(0);
         Functions\when('get_site_icon_url')->justReturn('');
         Functions\when('get_option')->alias(fn ($name, $default = false) => $default);
-        Functions\when('wp_date')->justReturn('2026-11');
+        Functions\when('wp_timezone')->justReturn(new \DateTimeZone('UTC'));
+        Functions\when('wp_date')->alias(fn ($format, $ts = null) => gmdate($format, $ts ?? time()));
         Functions\when('is_email')->alias(fn ($email) => filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : false);
         Functions\when('wp_mail')->alias(function ($to, $subject, $body) {
             $this->sent[] = [$to, $subject, $body];
@@ -66,7 +67,7 @@ class FluentCartCareEmailsTest extends TestCase
     {
         $emails = $this->emails->add_emails([]);
 
-        $this->assertSame(['care_on', 'care_low'], array_keys($emails));
+        $this->assertSame(['care_on', 'care_low', 'care_report'], array_keys($emails));
         $this->assertContains('care_left', $emails['care_low']['placeholders']);
     }
 
@@ -98,11 +99,33 @@ class FluentCartCareEmailsTest extends TestCase
 
     public function test_extra_time_alone_sends_nothing(): void
     {
-        $this->summary = ['subscription_id' => 0, 'package' => '', 'answer' => '', 'priority' => 'normal', 'minutes' => 0, 'used' => 0, 'left' => 0, 'extra' => 60];
+        $this->summary = ['subscription_id' => 0, 'package' => '', 'answer' => '', 'priority' => 'normal', 'call_url' => '', 'minutes' => 0, 'used' => 0, 'left' => 0, 'extra' => 60];
 
         $this->emails->send_on(0, self::WEBSITE);
         $this->emails->maybe_send_low(self::WEBSITE);
 
         $this->assertSame([], $this->sent);
+    }
+
+    public function test_the_monthly_report_lists_last_months_work_once_for_websites_with_care_all_month(): void
+    {
+        $last = FluentCartCareEmails::last_month();
+        $this->care->allows('websites_with_care')->andReturn([self::WEBSITE, 901]);
+        $this->care->allows('month_log')->andReturn([
+            ['at' => '', 'minutes' => 45, 'note' => 'Ticket #14: menu links', 'by' => 'Robin'],
+            ['at' => '', 'minutes' => 50, 'note' => 'Ticket #12: Spring workshop page', 'by' => 'Robin'],
+        ]);
+        $this->meta[self::WEBSITE][FluentCartCare::SINCE_META] = $last;
+        $this->meta[901][FluentCartCare::SINCE_META] = gmdate('Y-m'); // added this month: no report yet
+
+        $this->assertSame(1, $this->emails->send_reports());
+        $this->assertSame(0, $this->emails->send_reports(), 'one report a month');
+
+        [$to, $subject, $body] = $this->sent[0];
+        $this->assertSame('owner@apexresearch.example', $to);
+        $this->assertSame('Your ' . gmdate('F', strtotime($last . '-01')) . ' care report', $subject);
+        $this->assertStringContainsString('1 h 35 min of your 2 h', $body);
+        $this->assertMatchesRegularExpression('/Spring workshop page \(50 min\).*menu links \(45 min\)/s', $body);
+        $this->assertStringContainsString('https://shop.example/book/care-call', $body);
     }
 }

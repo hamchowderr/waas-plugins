@@ -322,6 +322,10 @@ class Notifications
             'care_time' => __('2 h', 'anypress-host'),
             'care_left' => __('25 min', 'anypress-host'),
             'care_answer' => __('1 business day', 'anypress-host'),
+            'care_month' => __('October', 'anypress-host'),
+            'care_used' => __('1 h 35 min', 'anypress-host'),
+            'care_report' => '<ul><li>' . esc_html__('Ticket #12: new Spring workshop page (50 min)', 'anypress-host') . '</li><li>' . esc_html__('Ticket #14: menu and footer links (45 min)', 'anypress-host') . '</li></ul>',
+            'care_call' => '',
         ];
     }
 

@@ -120,6 +120,7 @@ class FluentCartCareTest extends TestCase
             'package' => 'Care Plus',
             'answer' => '1 business day',
             'priority' => 'medium',
+            'call_url' => '',
             'minutes' => 120,
             'used' => 40,
             'left' => 80,

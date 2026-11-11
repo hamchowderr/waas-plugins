@@ -114,7 +114,7 @@ class FluentCartCarePortalTest extends TestCase
 
     public function test_a_website_with_care_shows_the_time_left_and_how_to_manage_it(): void
     {
-        $this->care->allows('summary')->andReturn(['subscription_id' => 950, 'package' => 'Care Plus', 'answer' => '1 business day', 'minutes' => 120, 'used' => 40, 'left' => 80, 'extra' => 60]);
+        $this->care->allows('summary')->andReturn(['call_url' => '', 'subscription_id' => 950, 'package' => 'Care Plus', 'answer' => '1 business day', 'call_url' => 'https://shop.example/book/care-call', 'minutes' => 120, 'used' => 40, 'left' => 80, 'extra' => 60]);
         $_GET[FluentCartCarePortal::SITE_ARG] = '900';
         $_GET[FluentCartCarePortal::RESULT_ARG] = 'sent';
 
@@ -125,6 +125,7 @@ class FluentCartCarePortalTest extends TestCase
         $this->assertStringContainsString('Plus 1 h of extra time', $html);
         $this->assertStringContainsString('We answer by email within 1 business day', $html);
         $this->assertStringContainsString('Manage or cancel care', $html);
+        $this->assertStringContainsString('href="https://shop.example/book/care-call" target="_blank" rel="noopener">Book this month&#039;s call', str_replace("'", '&#039;', $html));
         $this->assertStringNotContainsString('anypress_website=', $html, 'no offers once it has a package');
     }
 

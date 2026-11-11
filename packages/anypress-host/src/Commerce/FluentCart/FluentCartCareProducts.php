@@ -101,6 +101,7 @@ class FluentCartCareProducts
             'care_minutes' => '',
             'care_answer' => '',
             'care_priority' => AnyPressProvisioningIntegration::PRIORITY_NORMAL,
+            'care_call_url' => '',
             'service_minutes' => '',
             'role' => '',
             'group_name' => '',

@@ -313,6 +313,9 @@ class FluentCartCarePortal
                 . esc_attr__('For example: add a "Spring workshop" page with a booking button, and put it in the menu.', 'anypress-host') . '"></textarea></label>';
             echo '<button type="submit" class="anypress-acct-btn is-primary">' . esc_html__('Send request', 'anypress-host') . '</button></form>';
         }
+        if ($summary['call_url'] !== '') {
+            echo '<p><a class="anypress-acct-btn" href="' . esc_url($summary['call_url']) . '" target="_blank" rel="noopener">' . esc_html__('Book this month\'s call', 'anypress-host') . '</a></p>';
+        }
         if ($summary['subscription_id'] > 0) {
             echo '<p class="anypress-acct-note"><a href="' . esc_url($this->adapter->get_subscription_url($summary['subscription_id'])) . '">' . esc_html__('Manage or cancel care', 'anypress-host') . '</a></p>';
         }

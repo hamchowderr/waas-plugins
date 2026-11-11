@@ -31,6 +31,8 @@ class FluentCartCare
      * subscription, so cancelling and buying care again in the same month doesn't give the month's time again.
      */
     public const USED_META = '_anypress_care_used';
+    /** Website subscription meta: the month ('Y-m') its current care package was added. */
+    public const SINCE_META = '_anypress_care_since';
     /** Website subscription meta: the time log, newest first: [['at' => ISO 8601, 'minutes', 'note', 'by'], ...]. */
     public const LOG_META = '_anypress_care_log';
     /** Log entries kept per website. */
@@ -100,7 +102,7 @@ class FluentCartCare
      * The website's care now: its package, this month's time and extra time. Null when it has neither a package nor
      * extra time.
      *
-     * @return array{subscription_id: int, package: string, answer: string, priority: string, minutes: int, used: int, left: int, extra: int}|null
+     * @return array{subscription_id: int, package: string, answer: string, priority: string, call_url: string, minutes: int, used: int, left: int, extra: int}|null
      */
     public function summary($website_id): ?array
     {
@@ -119,6 +121,7 @@ class FluentCartCare
             'package' => $feed !== null ? (string) get_the_title($this->store->get_subscription_product_id($care_id)) : '',
             'answer' => $feed !== null ? sanitize_text_field((string) ($feed['care_answer'] ?? '')) : '',
             'priority' => $feed !== null ? AnyPressProvisioningIntegration::priority($feed) : AnyPressProvisioningIntegration::PRIORITY_NORMAL,
+            'call_url' => $feed !== null && !empty($feed['care_call_url']) ? esc_url_raw((string) $feed['care_call_url']) : '',
             'minutes' => $minutes,
             'used' => $used,
             'left' => max(0, $minutes - $used),
@@ -159,6 +162,32 @@ class FluentCartCare
         }
 
         return array_slice($entries, 0, max(0, $limit));
+    }
+
+    /** @return int[] websites with an active care package */
+    public function websites_with_care(): array
+    {
+        $websites = [];
+        foreach ($this->store->find_subscription_meta(self::WEBSITE_META, []) as $care_id => $website_id) {
+            if ($this->adapter->is_subscription_active($care_id)) {
+                $websites[] = (int) $website_id;
+            }
+        }
+
+        return array_values(array_unique($websites));
+    }
+
+    /**
+     * The log entries of one month ('Y-m', the site's time zone), newest first.
+     *
+     * @return array<int, array{at: string, minutes: int, note: string, by: string}>
+     */
+    public function month_log($website_id, string $month): array
+    {
+        return array_values(array_filter(
+            $this->history($website_id),
+            fn ($entry) => $entry['at'] !== '' && wp_date('Y-m', (int) strtotime($entry['at'])) === $month
+        ));
     }
 
     /** This month in the site's time zone, e.g. 2026-11. */
@@ -277,6 +306,7 @@ class FluentCartCare
     {
         $this->store->update_subscription_meta($care_id, self::WEBSITE_META, $website_id);
         $this->store->add_subscription_note($care_id, __('Care added to a website', 'anypress-host'), sprintf('For %s (subscription #%d).', $this->domain($website_id), $website_id));
+        $this->store->update_subscription_meta($website_id, self::SINCE_META, self::month());
         do_action('anypress_care_added', $care_id, $website_id);
     }
 

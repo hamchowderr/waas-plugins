@@ -6,7 +6,8 @@ use AnyPressHost\Features\Notifications;
 
 /**
  * The care emails, edited on AnyPress > Settings > Emails like the website emails: "Care is on" when a package is
- * added to a website, and "Time running low" once a month when a website's care time drops to a quarter or less.
+ * added to a website, "Time running low" once a month when a website's care time drops to a quarter or less, and the
+ * monthly check-in report early each month: last month's work and time, this month's time, and the call link.
  */
 class FluentCartCareEmails
 {
@@ -16,6 +17,13 @@ class FluentCartCareEmails
     public const LOW_SEND = 'anypress_care_low_email_send';
     public const LOW_SUBJECT = 'anypress_care_low_email_subject';
     public const LOW_BODY = 'anypress_care_low_email_body';
+    public const REPORT_SEND = 'anypress_care_report_email_send';
+    public const REPORT_SUBJECT = 'anypress_care_report_email_subject';
+    public const REPORT_BODY = 'anypress_care_report_email_body';
+    /** Website subscription meta: the month ('Y-m') the last monthly report covered. */
+    public const REPORT_SENT_META = '_anypress_care_report_sent';
+    /** Daily: sends the reports that are due. */
+    public const REPORT_HOOK = 'anypress_care_monthly_reports';
     /** Website subscription meta: the month ('Y-m') the "time running low" email went out. */
     public const LOW_SENT_META = '_anypress_care_low_sent';
     /** The share of the month's time left at which "time running low" goes out. */
@@ -37,6 +45,16 @@ class FluentCartCareEmails
         add_filter('anypress_customer_emails', [$this, 'add_emails']);
         add_action('anypress_care_added', [$this, 'send_on'], 10, 2);
         add_action('anypress_care_time_logged', [$this, 'maybe_send_low'], 10, 1);
+        add_action(self::REPORT_HOOK, [$this, 'run_reports']);
+        add_action('init', [$this, 'schedule']);
+    }
+
+    /** Checks daily for reports to send; one wp-cron event, made once. */
+    public function schedule(): void
+    {
+        if (!wp_next_scheduled(self::REPORT_HOOK)) {
+            wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', self::REPORT_HOOK);
+        }
     }
 
     /** The two emails in the Emails settings list. */
@@ -62,6 +80,16 @@ class FluentCartCareEmails
             'default_subject' => [self::class, 'default_low_subject'],
             'default_body' => [self::class, 'default_low_body'],
             'placeholders' => array_merge($common, ['care_left']),
+        ];
+        $emails['care_report'] = [
+            'title' => __('Care monthly report', 'anypress-host'),
+            'when' => __('Sent early each month to each website with care: what was done last month, the time used, and this month\'s time.', 'anypress-host'),
+            'send' => self::REPORT_SEND,
+            'subject' => self::REPORT_SUBJECT,
+            'body' => self::REPORT_BODY,
+            'default_subject' => [self::class, 'default_report_subject'],
+            'default_body' => [self::class, 'default_report_body'],
+            'placeholders' => array_merge($common, ['care_month', 'care_used', 'care_report', 'care_call']),
         ];
 
         return $emails;
@@ -93,6 +121,70 @@ class FluentCartCareEmails
 <p class="anypress-note">Your package and billing are in your <a href="{{ storefront_subscription_details_url }}">subscription details</a> at <a href="{{ storefront_url }}">{{ storefront_name }}</a>.</p>';
     }
 
+    public static function default_report_subject(): string
+    {
+        return __('Your {{ care_month }} care report', 'anypress-host');
+    }
+
+    public static function default_report_body(): string
+    {
+        return '<p>Here is what we did on <a href="{{ tenant_domain }}">{{ tenant_domain }}</a> in {{ care_month }}: {{ care_used }} of your {{ care_time }}.</p>
+{{ care_report }}
+<p>Your {{ care_time }} for this month is ready. Tell us what you\'d like next, or reply to this email.</p>
+<p><a class="anypress-button" href="{{ tenant_one_click_login_url }}">Ask for a change</a></p>
+{{ care_call }}
+<p class="anypress-note">Your {{ care_package }} package and billing are in your <a href="{{ storefront_subscription_details_url }}">subscription details</a> at <a href="{{ storefront_url }}">{{ storefront_name }}</a>.</p>';
+    }
+
+    /** Last month in the site's time zone, e.g. 2026-10. */
+    public static function last_month(): string
+    {
+        return (new \DateTimeImmutable('first day of this month', wp_timezone()))->modify('-1 month')->format('Y-m');
+    }
+
+    /** REPORT_HOOK. */
+    public function run_reports(): void
+    {
+        $this->send_reports();
+    }
+
+    /** Last month's report for each website that had care all of last month and hasn't had it yet. Returns how many went out. */
+    public function send_reports(): int
+    {
+        $month = self::last_month();
+        $sent = 0;
+        foreach ($this->care->websites_with_care() as $website_id) {
+            $since = (string) $this->adapter->get_subscription_meta($website_id, FluentCartCare::SINCE_META);
+            if ($since === '' || $since > $month || $this->adapter->get_subscription_meta($website_id, self::REPORT_SENT_META) === $month) {
+                continue;
+            }
+            // Marked first: a failed send is not retried every day.
+            $this->store->update_subscription_meta($website_id, self::REPORT_SENT_META, $month);
+            $sent += $this->send('report', $website_id) ? 1 : 0;
+        }
+
+        return $sent;
+    }
+
+    /** The report's own placeholders: the month, its time used and a list of what was done. */
+    private function report_replaceables(int $website_id, array $summary): array
+    {
+        $month = self::last_month();
+        $entries = $this->care->month_log($website_id, $month);
+        $used = array_sum(array_column($entries, 'minutes'));
+        $items = '';
+        foreach (array_reverse($entries) as $entry) {
+            $items .= '<li>' . esc_html(($entry['note'] !== '' ? $entry['note'] : __('Changes', 'anypress-host')) . ' (' . FluentCartCare::format_minutes((int) $entry['minutes']) . ')') . '</li>';
+        }
+
+        return [
+            'care_month' => wp_date('F', (int) strtotime($month . '-01 12:00')),
+            'care_used' => FluentCartCare::format_minutes($used),
+            'care_report' => $items !== '' ? '<ul>' . $items . '</ul>' : '<p>' . esc_html__('Nothing was asked for last month.', 'anypress-host') . '</p>',
+            'care_call' => $summary['call_url'] !== '' ? '<p><a class="anypress-button" href="' . esc_url($summary['call_url']) . '">' . esc_html__('Book this month\'s call', 'anypress-host') . '</a></p>' : '',
+        ];
+    }
+
     /** anypress_care_added: the care package $care_id now looks after the website $website_id. */
     public function send_on($care_id, $website_id): void
     {
@@ -116,8 +208,12 @@ class FluentCartCareEmails
 
     private function send(string $which, int $website_id): bool
     {
-        $on = $which === 'on';
-        if (get_option($on ? self::ON_SEND : self::LOW_SEND, 'on') !== 'on') {
+        $options = [
+            'on' => [self::ON_SEND, self::ON_SUBJECT, self::ON_BODY, [self::class, 'default_on_subject'], [self::class, 'default_on_body']],
+            'low' => [self::LOW_SEND, self::LOW_SUBJECT, self::LOW_BODY, [self::class, 'default_low_subject'], [self::class, 'default_low_body']],
+            'report' => [self::REPORT_SEND, self::REPORT_SUBJECT, self::REPORT_BODY, [self::class, 'default_report_subject'], [self::class, 'default_report_body']],
+        ][$which];
+        if (get_option($options[0], 'on') !== 'on') {
             return false;
         }
         $summary = $this->care->summary($website_id);
@@ -126,10 +222,14 @@ class FluentCartCareEmails
             return false;
         }
 
+        $replaceables = Notifications::get_replaceables($website_id, $recipient) + self::replaceables($summary);
+        if ($which === 'report') {
+            $replaceables += $this->report_replaceables($website_id, $summary);
+        }
         $email = Notifications::render_email(
-            (string) get_option($on ? self::ON_SUBJECT : self::LOW_SUBJECT) ?: ($on ? self::default_on_subject() : self::default_low_subject()),
-            (string) get_option($on ? self::ON_BODY : self::LOW_BODY) ?: ($on ? self::default_on_body() : self::default_low_body()),
-            Notifications::get_replaceables($website_id, $recipient) + self::replaceables($summary)
+            (string) get_option($options[1]) ?: call_user_func($options[3]),
+            (string) get_option($options[2]) ?: call_user_func($options[4]),
+            $replaceables
         );
 
         return (bool) wp_mail($recipient, $email['subject'], $email['body'], Notifications::headers());
