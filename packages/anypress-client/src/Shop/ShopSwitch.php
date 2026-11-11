@@ -156,14 +156,8 @@ class ShopSwitch
     /** Turns on the FluentCart Migrator add-on when it is installed but off (the store template ships it off). */
     private static function turn_on_addon(): void
     {
-        if (class_exists(self::ADDON_CLASS)) {
-            return;
-        }
-        if (!function_exists('get_plugins')) {
-            require_once ABSPATH . 'wp-admin/includes/plugin.php';
-        }
-        if (array_key_exists(self::ADDON_FILE, get_plugins())) {
-            activate_plugin(self::ADDON_FILE);
+        if (FluentPlugin::turns_on() && !class_exists(self::ADDON_CLASS)) {
+            FluentPlugin::turn_on_quietly(self::ADDON_FILE);
         }
     }
 
@@ -193,8 +187,10 @@ class ShopSwitch
         }
         if (!$addon) {
             $installed = function_exists('get_plugins') && array_key_exists(self::ADDON_FILE, get_plugins());
-            if ($installed) {
+            if ($installed && FluentPlugin::turns_on()) {
                 $report['warnings'][] = __('The FluentCart Migrator add-on is installed but off. The switch turns it on when it runs.', 'anypress-client');
+            } elseif ($installed) {
+                $report['blockers'][] = __('The FluentCart Migrator add-on is installed but off. Turn it on under Plugins, then run this again.', 'anypress-client');
             } else {
                 $report['blockers'][] = sprintf(
                     /* translators: 1: FluentCart add-ons page, 2: download link. */                    __('The FluentCart Migrator add-on isn\'t installed. It is free from FluentCart\'s add-ons page (%1$s), download: %2$s. Install and activate it, then run this again.', 'anypress-client'),
