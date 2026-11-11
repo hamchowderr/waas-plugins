@@ -39,7 +39,7 @@ class PluginBootstrap
     /** [products] and the other product shortcodes. */
     public function hide_addon_products_from_shortcodes($query_args)
     {
-        $query_args['tax_query'] = array_merge((array) ($query_args['tax_query'] ?? []), [self::exclude_addons()]);
+        $query_args['tax_query'] = array_merge((array) ($query_args['tax_query'] ?? []), [self::exclude_addons()]); // phpcs:ignore WordPress.DB.SlowDBQuery -- keeps plan add-ons out of product lists, as the shop query above does.
 
         return $query_args;
     }

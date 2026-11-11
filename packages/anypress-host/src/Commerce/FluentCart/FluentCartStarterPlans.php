@@ -155,7 +155,7 @@ class FluentCartStarterPlans
             wp_update_post(['ID' => $id, 'post_status' => 'draft']);
             return false;
         }
-        ProductMeta::create(['object_id' => $id, 'object_type' => 'product_integration', 'meta_key' => AnyPressProvisioningIntegration::KEY, 'meta_value' => $data]);
+        ProductMeta::create(['object_id' => $id, 'object_type' => 'product_integration', 'meta_key' => AnyPressProvisioningIntegration::KEY, 'meta_value' => $data]); // phpcs:ignore WordPress.DB.SlowDBQuery -- a FluentCart model write, not a query.
 
         return true;
     }

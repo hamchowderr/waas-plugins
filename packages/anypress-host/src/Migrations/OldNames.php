@@ -10,6 +10,8 @@ use AnyPressHost\Features\Webhooks;
 if (!defined('ABSPATH'))
     exit;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- a one-time rename of AnyPress's own old option, meta and scheduled-task names. WordPress has no function that finds options or meta by name prefix, and Action Scheduler has none that renames a hook; nothing here is worth caching.
+
 /**
  * Moves what the plugin saved before it was called AnyPress Host (2.11.0) to its anypress_ names: settings, order,
  * subscription and product meta, and scheduled jobs. Secrets sealed under the old names are opened and sealed again

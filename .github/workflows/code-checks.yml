@@ -97,7 +97,10 @@ jobs:
             accessibility
           exclude-checks: |
             plugin_updater
-          ignore-warnings: true
+          # Warnings fail the build too, so they can't pile up unseen. These plugins update through AnyPress, not
+          # wordpress.org, so the directory (plugin_repo) category and the updater check stay off.
+          ignore-warnings: false
+          strict: true
 
   plugin-check-wporg:
     # Plugins listed on wordpress.org: Plugin Check with every category, the directory checks (plugin_repo)

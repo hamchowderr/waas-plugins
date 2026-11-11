@@ -298,7 +298,7 @@ class WooCommerceAdapter implements CommerceAdapter
         // through to WP_Query with this filter.
         $pass_meta_query = function ($wp_query_args, $query_vars) {
             if (!empty($query_vars['meta_query'])) {
-                $wp_query_args['meta_query'] = $query_vars['meta_query'];
+                $wp_query_args['meta_query'] = $query_vars['meta_query']; // phpcs:ignore WordPress.DB.SlowDBQuery -- passes on the lookup below.
             }
             return $wp_query_args;
         };
@@ -309,7 +309,7 @@ class WooCommerceAdapter implements CommerceAdapter
                 'type' => $this->get_subscription_plugin()->get_order_type(),
                 'status' => 'any',
                 'limit' => $limit,
-                'meta_query' => $meta_query,
+                'meta_query' => $meta_query, // phpcs:ignore WordPress.DB.SlowDBQuery -- finds a store's subscriptions by the AnyPress keys on them; WooCommerce has no other lookup.
             ]);
         } finally {
             remove_filter('woocommerce_order_data_store_cpt_get_orders_query', $pass_meta_query, 10);

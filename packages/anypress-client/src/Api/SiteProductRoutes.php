@@ -165,7 +165,7 @@ trait SiteProductRoutes
 
     private function product_from(string $source)
     {
-        $found = get_posts(['post_type' => \FluentCart\App\CPT\FluentProducts::CPT_NAME, 'post_status' => 'any', 'numberposts' => 1, 'meta_key' => self::$source_meta, 'meta_value' => $source]);
+        $found = get_posts(['post_type' => \FluentCart\App\CPT\FluentProducts::CPT_NAME, 'post_status' => 'any', 'numberposts' => 1, 'meta_key' => self::$source_meta, 'meta_value' => $source]); // phpcs:ignore WordPress.DB.SlowDBQuery -- one lookup by an exact key and value, only when an assistant adds a product.
 
         return $found[0] ?? null;
     }

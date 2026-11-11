@@ -101,7 +101,9 @@ class GettingStartedChecklist
 
         $products = get_posts([
             'post_type' => 'product',
-            'meta_query' => [StoreProduct::get_anypress_product_meta_query()],
+            'meta_query' => [StoreProduct::get_anypress_product_meta_query()], // phpcs:ignore WordPress.DB.SlowDBQuery -- one check on the admin checklist.
+            'fields' => 'ids',
+            'numberposts' => 1,
         ]);
 
         $checklist_items['create_woo_anypress_product']['is_done'] = count($products) > 0;
