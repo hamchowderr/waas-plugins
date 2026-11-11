@@ -40,7 +40,7 @@ final class EddPages
     private static function products(): array
     {
         $map = [];
-        $downloads = get_posts(['post_type' => 'download', 'post_status' => 'any', 'fields' => 'ids', 'numberposts' => -1, 'meta_key' => '_fcart_migrated_id']);
+        $downloads = get_posts(['post_type' => 'download', 'post_status' => 'any', 'fields' => 'ids', 'numberposts' => -1]);
         foreach ($downloads as $id) {
             $product = (int) get_post_meta((int) $id, '_fcart_migrated_id', true);
             if ($product > 0 && get_post($product)) {

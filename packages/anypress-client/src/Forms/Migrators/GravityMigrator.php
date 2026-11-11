@@ -61,7 +61,9 @@ class GravityMigrator extends GravityFormsMigrator
         }
         // The same entries the importer read, in the same order.
         $total = \GFAPI::count_entries($formId);
-        $limit = apply_filters('fluentform/entry_migration_max_limit', static::DEFAULT_ENTRY_MIGRATION_MAX_LIMIT, $this->key, $total, $formId);
+        // Fluent Forms' own limit (its BaseMigrator's constant, 1000 in 6.2), with the filter it applies.
+        $default = defined(static::class . '::DEFAULT_ENTRY_MIGRATION_MAX_LIMIT') ? (int) constant(static::class . '::DEFAULT_ENTRY_MIGRATION_MAX_LIMIT') : 1000;
+        $limit = apply_filters('fluentform/entry_migration_max_limit', $default, $this->key, $total, $formId);
         $rows = \GFAPI::get_entries($formId, [], ['key' => 'id', 'direction' => 'ASC'], ['offset' => 0, 'page_size' => $limit]);
         foreach (is_array($rows) ? $rows : [] as $row) {
             $this->entryDetails[] = [
