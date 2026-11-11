@@ -62,7 +62,9 @@ class CleanAdmin
         add_filter('plugin_auto_update_setting_html', [$this, 'auto_update_html'], PHP_INT_MAX, 2);
         add_filter('site_transient_update_plugins', [$this, 'hide_managed_updates']);
         add_filter('wp_get_update_data', [$this, 'update_counts'], PHP_INT_MAX);
-        add_filter('admin_footer_text', [$this, 'footer_text'], PHP_INT_MAX);
+        add_filter('admin_footer_text', '__return_empty_string', PHP_INT_MAX);
+        // The platform's own must-use plugins and drop-ins (page cache, mail, plan limits) are not the owner's to manage.
+        add_filter('show_advanced_plugins', [$this, 'hide_platform_plugins'], PHP_INT_MAX, 2);
         add_filter('update_footer', '__return_empty_string', PHP_INT_MAX);
         add_action('admin_head', [$this, 'hide_in_page_upsells']);
     }
@@ -258,10 +260,13 @@ class CleanAdmin
         return $data;
     }
 
-    /** No "rate us" footers on the included plugins' screens. */
-    public function footer_text($text)
+    /**
+     * No Must-Use or Drop-ins tab on the Plugins screen: they list what AnyPress runs the store with, which the owner
+     * can't change (and on a reseller's store would show AnyPress's name to the reseller's clients).
+     */
+    public function hide_platform_plugins($show, $type)
     {
-        return $this->on_managed_screen() ? '' : $text;
+        return in_array($type, ['mustuse', 'dropins'], true) ? false : $show;
     }
 
     /**

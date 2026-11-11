@@ -9,10 +9,10 @@ require_once ABSPATH . '/wp-admin/includes/plugin.php';
 
 /*
 Plugin Name: AnyPress Client
-Plugin URI: https://github.com/hamchowderr/waas-plugins
+Plugin URI: https://anypress.io
 Description: Runs on each AnyPress website: one-click login from the storefront, turns plugins on or off to match the store's plan (roles), and lets the AnyPress connector edit the site's design and content.
 Author: Otaku Solutions
-Version: 2.28.1
+Version: 2.29.0
 Author URI: https://otakusolutions.io
 Update URI: anypress-client
 Requires at least: 6.9
@@ -25,7 +25,7 @@ Text Domain: anypress-client
 define( 'ANYPRESS_CLIENT_SLUG', 'anypress-client' );
 define( 'ANYPRESS_CLIENT_BASENAME', plugin_basename( __FILE__ ) );
 define( 'ANYPRESS_CLIENT_UPDATE_URI', 'anypress-client' );
-define( 'ANYPRESS_CLIENT_VERSION', '2.28.1' );
+define( 'ANYPRESS_CLIENT_VERSION', '2.29.0' );
 define( 'ANYPRESS_CLIENT_TEXTDOMAIN', 'anypress-client' );
 
 use AnyPressClient\Api\AdminLogin;
@@ -41,6 +41,7 @@ use AnyPressClient\Features\PluginBootstrap;
 use AnyPressClient\Features\RolesManager;
 use AnyPressClient\Features\AdminTenantSettings;
 use AnyPressClient\Features\CustomerPlanPage;
+use AnyPressClient\Features\SiteBrand;
 use AnyPressClient\Features\CleanAdmin;
 use AnyPressClient\Features\ConnectPage;
 use AnyPressClient\Features\McpServer;
@@ -90,6 +91,8 @@ if (!wp_doing_ajax()) {
     PluginBootstrap::init();
     // On a reseller's website the plugin goes by the reseller's brand (anypress_brand_name, set by the AnyPress API).
     Brand::init();
+    // The site's own logo and name on the login page and wp-admin tab titles, not WordPress's.
+    SiteBrand::init();
 
     new SingleSignOnController($decryptionService);
     // "Log in to WordPress" from the AnyPress dashboard: a one-time link the API signs with the store's site key.

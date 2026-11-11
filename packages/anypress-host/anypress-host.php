@@ -41,10 +41,10 @@ require_once __DIR__ . '/vendor/autoload.php';
  */
 /*
 Plugin Name: AnyPress Host
-Plugin URI: https://github.com/hamchowderr/waas-plugins
+Plugin URI: https://anypress.io
 Description: Sells AnyPress websites from your storefront: creates, suspends and restores each customer's website through the AnyPress API, with FluentCart or WooCommerce (and WooCommerce Subscriptions) for billing.
 Author: Otaku Solutions
-Version: 2.14.0
+Version: 2.15.0
 Author URI: https://otakusolutions.io
 Update URI: anypress-host
 Requires at least: 6.4
@@ -57,7 +57,7 @@ Text Domain: anypress-host
 define( 'ANYPRESS_HOST_SLUG', 'anypress-host' );
 define( 'ANYPRESS_HOST_BASENAME', plugin_basename( __FILE__ ) );
 define( 'ANYPRESS_HOST_UPDATE_URI', 'anypress-host' );
-define( 'ANYPRESS_HOST_VERSION', '2.14.0' );
+define( 'ANYPRESS_HOST_VERSION', '2.15.0' );
 define( 'ANYPRESS_HOST_TEXTDOMAIN', 'anypress-host' );
 
 // Settings and data saved before the AnyPress names (2.11.0) move to them before anything reads them
@@ -105,6 +105,8 @@ if (defined('WP_CLI') && WP_CLI) {
 }
 AdminNotices::init();
 new AdminHome($configService);
+// The storefront's own logo and name on the login page and wp-admin tab titles, not WordPress's.
+AnyPressHost\Features\SiteBrand::init();
 new AdminSettings($provisioningApi, $configService);
 new Webhooks($provisioningApi, $configService);
 AnyPressHost\Assets\Module::init();

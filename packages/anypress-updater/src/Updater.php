@@ -48,6 +48,14 @@ final class Updater
     public const CACHE_TTL = 43200;  // 12 hours, as WordPress's own update check
     public const FAILURE_TTL = 3600; // an unreachable channel is asked again after an hour
 
+    /** The AnyPress ribbon on Dashboard > Updates and in "View details", and where the plugin's name links to. */
+    public const ICONS = [
+        'svg' => 'https://anypress.io/logo-mark.svg',
+        '1x' => 'https://anypress.io/logo-512.png',
+        '2x' => 'https://anypress.io/logo-512.png',
+    ];
+    public const HOMEPAGE = 'https://anypress.io';
+
     public const RELEASE_VERSION = '/^\d+\.\d+\.\d+(-beta\.\d+)?$/';
 
     /** @var string */
@@ -132,7 +140,8 @@ final class Updater
             'plugin' => $this->basename,
             'version' => $info['version'],
             'new_version' => $info['version'],
-            'url' => '',
+            'url' => self::HOMEPAGE,
+            'icons' => self::ICONS,
             'package' => $this->package_marker($info['version']),
             'requires' => isset($info['requires']) ? $info['requires'] : '',
             'requires_php' => isset($info['requiresPhp']) ? $info['requiresPhp'] : '',
@@ -158,6 +167,9 @@ final class Updater
         return (object) [
             'name' => $this->name,
             'slug' => $this->slug,
+            'author' => '<a href="' . esc_url(self::HOMEPAGE) . '">AnyPress</a>',
+            'homepage' => self::HOMEPAGE,
+            'icons' => self::ICONS,
             'version' => $info['version'],
             'requires' => isset($info['requires']) ? $info['requires'] : '',
             'requires_php' => isset($info['requiresPhp']) ? $info['requiresPhp'] : '',

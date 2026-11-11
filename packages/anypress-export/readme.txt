@@ -4,7 +4,7 @@ Tags: migration, move site, export, backup, anypress
 Requires at least: 5.6
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.2.2
+Stable tag: 1.2.3
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -26,6 +26,9 @@ From WP-CLI: `wp anypress-export send <code>` and `wp anypress-export status --w
 The plugin sends this site's database and its `wp-content` folder (plugins, themes, must-use plugins, uploads, languages; caches and backup archives are left out) to the AnyPress address inside the import code you paste, and nowhere else. Nothing is sent until you paste a code and start. AnyPress: https://anypress.io
 
 == Changelog ==
+
+= 1.2.3 =
+* The plugin's website link goes to anypress.io/move.
 
 = 1.2.2 =
 * The check counts waiting and overdue scheduled tasks through Action Scheduler's own functions.
