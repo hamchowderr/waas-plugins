@@ -43,7 +43,25 @@ class MovePage
 
     public function menu(): void
     {
-        add_management_page(__('Move to Fluent', 'anypress-move'), __('Move to Fluent', 'anypress-move'), 'manage_options', self::SLUG, [$this, 'render']);
+        $hook = add_management_page(__('Move to Fluent', 'anypress-move'), __('Move to Fluent', 'anypress-move'), 'manage_options', self::SLUG, [$this, 'render']);
+        if ($hook) {
+            add_action('admin_enqueue_scripts', function (string $page) use ($hook) {
+                if ($page === $hook) {
+                    $this->assets();
+                }
+            });
+        }
+    }
+
+    /** The page's few lines of style and its "are you sure?" prompts, on this page only. */
+    private function assets(): void
+    {
+        wp_register_style(self::SLUG, false, [], ANYPRESS_MOVE_VERSION);
+        wp_enqueue_style(self::SLUG);
+        wp_add_inline_style(self::SLUG, '.anypress-move-card{max-width:none}.anypress-move-card table{margin:8px 0}.anypress-move-card ul{list-style:disc;margin-left:2em}.anypress-move-card pre{white-space:pre-wrap}');
+        wp_register_script(self::SLUG, false, [], ANYPRESS_MOVE_VERSION, ['in_footer' => true]);
+        wp_enqueue_script(self::SLUG);
+        wp_add_inline_script(self::SLUG, 'document.addEventListener("click",function(e){var b=e.target.closest(".anypress-move-card button[data-ask]");if(b&&!window.confirm(b.dataset.ask)){e.preventDefault();}});');
     }
 
     /** @return array<string, array{0: string, 1: string}> key => [title, what it brings across]. */
@@ -146,7 +164,7 @@ class MovePage
 
     private function card(string $key, string $title, string $what, ?array $last): void
     {
-        echo '<div class="card" id="switch-' . esc_attr($key) . '" style="max-width:none"><h2 class="title">' . esc_html($title) . '</h2><p>' . esc_html($what) . '</p>';
+        echo '<div class="card anypress-move-card" id="switch-' . esc_attr($key) . '"><h2 class="title">' . esc_html($title) . '</h2><p>' . esc_html($what) . '</p>';
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
         wp_nonce_field(self::ACTION);
         echo '<input type="hidden" name="action" value="' . esc_attr(self::ACTION) . '"><input type="hidden" name="switch" value="' . esc_attr($key) . '">';
@@ -162,8 +180,8 @@ class MovePage
         }
         echo '<p class="submit">';
         echo '<button class="button" name="act" value="check">' . esc_html__('Check', 'anypress-move') . '</button> ';
-        echo '<button class="button button-primary" name="act" value="switch" onclick="return confirm(this.dataset.ask)" data-ask="' . esc_attr__('Run this switch now?', 'anypress-move') . '">' . esc_html__('Switch', 'anypress-move') . '</button> ';
-        echo '<button class="button button-link-delete" name="act" value="undo" onclick="return confirm(this.dataset.ask)" data-ask="' . esc_attr__('Take out everything this switch added?', 'anypress-move') . '">' . esc_html__('Undo', 'anypress-move') . '</button>';
+        echo '<button class="button button-primary" name="act" value="switch" data-ask="' . esc_attr__('Run this switch now?', 'anypress-move') . '">' . esc_html__('Switch', 'anypress-move') . '</button> ';
+        echo '<button class="button button-link-delete" name="act" value="undo" data-ask="' . esc_attr__('Take out everything this switch added?', 'anypress-move') . '">' . esc_html__('Undo', 'anypress-move') . '</button>';
         echo '</p></form>';
         if ($last) {
             $this->result($last['act'], $last['result']);
@@ -193,7 +211,7 @@ class MovePage
         $compare = array_values(array_filter((array) ($result['compare'] ?? []), 'is_array'));
         if ($compare) {
             $columns = array_keys((array) $compare[0]);
-            echo '<table class="widefat striped" style="margin:8px 0"><thead><tr>';
+            echo '<table class="widefat striped"><thead><tr>';
             foreach ($columns as $column) {
                 echo '<th>' . esc_html(ucfirst(str_replace('_', ' ', (string) $column))) . '</th>';
             }
@@ -209,7 +227,7 @@ class MovePage
             echo '</tbody></table>';
         }
         self::items(__('Can\'t come across', 'anypress-move'), array_filter((array) ($result['lost'] ?? []), 'is_string'));
-        echo '<details><summary>' . esc_html__('Full report', 'anypress-move') . '</summary><pre style="white-space:pre-wrap">' . esc_html((string) wp_json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) . '</pre></details></div>';
+        echo '<details><summary>' . esc_html__('Full report', 'anypress-move') . '</summary><pre>' . esc_html((string) wp_json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) . '</pre></details></div>';
     }
 
     private static function items(string $label, array $items): void
@@ -221,7 +239,7 @@ class MovePage
         if ($label !== '') {
             echo '<p>' . esc_html($label) . ':</p>';
         }
-        echo '<ul style="list-style:disc;margin-left:2em">';
+        echo '<ul>';
         foreach ($items as $item) {
             echo '<li>' . esc_html($item) . '</li>';
         }

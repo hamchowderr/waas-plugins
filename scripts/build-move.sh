@@ -36,6 +36,11 @@ if (!defined('"'"'ABSPATH'"'"')) {\
     "$file"
 done
 
+# A wordpress.org plugin must not turn other plugins on: AnyPress Move has its own FluentPlugin that never does.
+cp "$root/scripts/move/FluentPlugin.php" "$lib/Core/FluentPlugin.php"
+
 left=$(grep -rlE "AnyPressClient|SiteAbilities|'anypress-client'" "$lib" || true)
 [ -z "$left" ] || { echo "Client names left in: $left" >&2; exit 1; }
+turns_on=$(grep -rlE "activate_plugin|deactivate_plugins" "$lib" || true)
+[ -z "$turns_on" ] || { echo "AnyPress Move must not change other plugins' activation: $turns_on" >&2; exit 1; }
 echo "built $(find "$lib" -name '*.php' | wc -l | tr -d ' ') files into $lib"
