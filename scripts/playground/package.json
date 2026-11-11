@@ -25,6 +25,7 @@
     "products": "node products.mjs",
     "courses": "node courses.mjs",
     "circle": "node circle.mjs",
+    "lms": "node lms.mjs",
     "languages": "node languages.mjs"
   },
   "dependencies": {

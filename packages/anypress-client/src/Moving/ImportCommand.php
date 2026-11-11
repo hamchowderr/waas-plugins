@@ -25,7 +25,8 @@ class ImportCommand
      * agents. affiliate: AffiliateWP, Affiliates Manager, Solid Affiliate, SliceWP or Ultimate Affiliate Pro
      * affiliates, referrals, customers, payouts and visits (into an empty FluentAffiliate only). community:
      * BuddyPress or BuddyBoss groups, members, posts, comments and reactions (into an empty FluentCommunity only).
-     * course: LearnDash courses with their lessons, topics, students and progress, as FluentCommunity courses.
+     * course: LearnDash, Tutor LMS or LifterLMS courses with their outline, students and progress, as FluentCommunity
+     * courses (--from=learndash, tutor or lifterlms when more than one is here).
      * circle: a Circle community through Circle's Admin API: discussion spaces with their members and moderators,
      * space groups, topics, posts, comments and replies, course spaces as courses with their sections, lessons and
      * students, members as WordPress users (into an empty FluentCommunity).
@@ -63,6 +64,7 @@ class ImportCommand
      *     wp anypress affiliate switch --user=admin --from=slicewp
      *     wp anypress community switch --user=admin --undo
      *     wp anypress course switch --user=admin --dry-run
+     *     wp anypress course switch --user=admin --from=tutor
      *     CIRCLE_API_TOKEN=... wp anypress circle switch --user=admin --dry-run
      *
      * @subcommand switch

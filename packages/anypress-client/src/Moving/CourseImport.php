@@ -5,31 +5,29 @@ namespace AnyPressClient\Moving;
 use WP_REST_Request;
 
 /**
- * LearnDash courses into FluentCommunity courses: each course with its lessons and topics, its students and how far
- * each student got.
+ * Courses from LearnDash, Tutor LMS or LifterLMS into FluentCommunity courses: each course with its outline, its
+ * students and how far each student got.
  *
- * FluentCommunity has no LearnDash importer of its own yet, so this builds the courses through FluentCommunity's own
+ * FluentCommunity has no importer of its own for these, so this builds the courses through FluentCommunity's own
  * course admin routes (the ones behind its course editor): a course, its sections, its lessons, then its students.
  * Lesson progress comes across as FluentCommunity records it (its Reaction and Activity models), without the
  * "lesson completed" hooks, so old progress doesn't start automations or award anything again.
  *
- * LearnDash doesn't need to be active: a store of the community site type turns it off, and LearnDash keeps its
- * courses as WordPress posts and its enrolments and progress as user meta, so this reads those directly.
- *
- * How the outline maps (FluentCommunity has sections holding lessons; LearnDash has lessons holding topics):
- * - a course with LearnDash section headings: each heading becomes a section, its lessons and their topics its lessons;
- * - otherwise a course whose lessons have topics: each lesson becomes a section, its own text (when it has any) its
- *   first lesson, and its topics the lessons after it;
- * - otherwise: one section holding every lesson.
- * Courses already in FluentCommunity are left alone, and undo removes only the courses this added.
+ * The course plugin doesn't need to be active: a store of the community site type turns it off, and each source (see
+ * CourseSource) reads what its plugin leaves in WordPress directly. Courses already in FluentCommunity are left
+ * alone, and undo removes only the courses this added.
  */
 class CourseImport extends NativeImport
 {
     private const ROUTE = '/fluent-community/v2/admin/courses';
-    private const LIVE = "('publish', 'draft', 'pending', 'private', 'future')";
 
-    /** @var array|null The outline of every LearnDash course, worked out once per request. */
-    private ?array $plan = null;
+    /** @var CourseSource[] slug => source. */
+    private array $readers;
+
+    public function __construct()
+    {
+        $this->readers = ['learndash' => new LearnDashCourses(), 'tutor' => new TutorCourses(), 'lifterlms' => new LifterCourses()];
+    }
 
     public function key(): string
     {
@@ -53,25 +51,28 @@ class CourseImport extends NativeImport
 
     protected function sources(): array
     {
-        $found = self::count('posts', "post_type = 'sfwd-courses' AND post_status IN " . self::LIVE) > 0;
-        $counts = [];
-        if ($found) {
-            $counts = array_fill_keys(['courses', 'sections', 'lessons', 'students', 'completed_lessons', 'completed_courses'], 0);
-            foreach ($this->plan() as $course) {
-                $counts['courses']++;
-                $counts['sections'] += count($course['sections']);
-                foreach ($course['sections'] as $section) {
-                    $counts['lessons'] += count($section['lessons']);
+        $out = [];
+        foreach ($this->readers as $slug => $reader) {
+            $found = $reader->found();
+            $counts = [];
+            if ($found) {
+                $counts = array_fill_keys(['courses', 'sections', 'lessons', 'students', 'completed_lessons', 'completed_courses'], 0);
+                foreach ($reader->courses() as $course) {
+                    $counts['courses']++;
+                    $counts['sections'] += count($course['sections']);
+                    foreach ($course['sections'] as $section) {
+                        $counts['lessons'] += count($section['lessons']);
+                    }
+                    $counts['students'] += count($course['students']);
+                    $counts['completed_lessons'] += array_sum(array_map('count', $course['completed']));
+                    $counts['completed_courses'] += count($course['finished']);
                 }
-                $counts['students'] += count($course['students']);
-                $counts['completed_lessons'] += array_sum(array_map('count', $course['completed']));
-                $counts['completed_courses'] += count($course['finished']);
+                $counts += $reader->extra_counts();
             }
-            $counts['quizzes'] = self::count('posts', "post_type = 'sfwd-quiz' AND post_status IN " . self::LIVE);
+            $out[$slug] = ['name' => $reader->name(), 'found' => $found, 'counts' => $counts];
         }
-        $name = defined('LEARNDASH_VERSION') ? 'LearnDash' : __('LearnDash (switched off, its courses are still here)', 'anypress-client');
 
-        return ['learndash' => ['name' => $name, 'found' => $found, 'counts' => $counts]];
+        return $out;
     }
 
     protected function target_counts(): array
@@ -117,7 +118,7 @@ class CourseImport extends NativeImport
         $state = array_merge($this->state(), ['courses' => [], 'profiles_before' => self::profile_ids(), 'skipped' => 0]);
         update_option($this->option(), $state, false);
         $skipped = 0;
-        foreach ($this->plan() as $ld_id => $course) {
+        foreach ($this->readers[$source]->courses() as $source_id => $course) {
             $made = self::call('POST', '', [
                 'title' => $course['title'],
                 'description' => $course['description'],
@@ -131,7 +132,7 @@ class CourseImport extends NativeImport
                 throw new \RuntimeException(sprintf('FluentCommunity made no course for "%s".', esc_html($course['title'])));
             }
             // Recorded at once, so undo finds the course even if a later step stops the run.
-            $state['courses'][$ld_id] = $course_id;
+            $state['courses'][$source_id] = $course_id;
             update_option($this->option(), $state, false);
 
             $lessons = self::build_outline($course_id, $course['sections']);
@@ -151,7 +152,7 @@ class CourseImport extends NativeImport
     /**
      * Makes the course's sections and lessons, in order.
      *
-     * @return array LearnDash lesson or topic id => FluentCommunity lesson id.
+     * @return array Source lesson id => FluentCommunity lesson id.
      */
     public static function build_outline(int $course_id, array $sections): array
     {
@@ -183,8 +184,8 @@ class CourseImport extends NativeImport
     /**
      * Lessons each student finished, and courses they completed, recorded as FluentCommunity records them.
      *
-     * @param array $lessons   LearnDash step id => FluentCommunity lesson id.
-     * @param array $completed User id => LearnDash step ids they finished.
+     * @param array $lessons   Source lesson id => FluentCommunity lesson id.
+     * @param array $completed User id => source lesson ids they finished.
      * @param array $finished  User ids who completed the course.
      */
     private static function restore_progress(int $course_id, array $lessons, array $completed, array $finished): void
@@ -274,287 +275,6 @@ class CourseImport extends NativeImport
 
     protected function lost(string $source): array
     {
-        return [
-            __('Quizzes, assignments and certificates. Their lessons come across; the quizzes and certificates have to be made again.', 'anypress-client'),
-            __('Course prices and how access is sold. Sell access to the courses with FluentCart instead.', 'anypress-client'),
-            __('Drip schedules (lessons that open after a number of days) and prerequisites.', 'anypress-client'),
-            __('LearnDash groups as such: their members come across as students of the group\'s courses.', 'anypress-client'),
-            __('LearnDash shortcodes and blocks inside lessons show as plain text: check the lessons that used them.', 'anypress-client'),
-        ];
-    }
-
-    /**
-     * Every LearnDash course as FluentCommunity will hold it: course fields, sections with their lessons, students,
-     * and progress.
-     */
-    private function plan(): array
-    {
-        if ($this->plan !== null) {
-            return $this->plan;
-        }
-        global $wpdb;
-        $p = $wpdb->prefix;
-        $this->plan = [];
-        $courses = $wpdb->get_results("SELECT ID, post_title, post_content, post_excerpt, post_status FROM {$p}posts WHERE post_type = 'sfwd-courses' AND post_status IN " . self::LIVE . ' ORDER BY menu_order, ID'); // phpcs:ignore WordPress.DB.PreparedSQL
-        if (!$courses) {
-            return $this->plan;
-        }
-        $progress = self::progress();
-        foreach ($courses as $course) {
-            $id = (int) $course->ID;
-            $open = self::price_type($id) === 'open';
-            $students = self::students($id, $open ? array_keys($progress['steps'][$id] ?? []) : []);
-            $sections = self::sections($id, (string) $course->post_title);
-            $steps = [];
-            foreach ($sections as $section) {
-                foreach ($section['lessons'] as $step) {
-                    $steps[] = $step['post'];
-                }
-            }
-            $completed = [];
-            foreach ($students as $user_id) {
-                $done = array_values(array_intersect($steps, $progress['steps'][$id][$user_id] ?? []));
-                if ($done) {
-                    $completed[$user_id] = $done;
-                }
-            }
-            $text = trim(wp_strip_all_tags(strip_shortcodes((string) $course->post_content)));
-            $excerpt = trim(wp_strip_all_tags((string) $course->post_excerpt));
-            $this->plan[$id] = [
-                'title' => (string) $course->post_title,
-                'description' => $excerpt !== '' ? $excerpt : ($text !== '' ? wp_trim_words($text, 55) : (string) $course->post_title),
-                'details' => $text,
-                'privacy' => $open ? 'public' : 'private',
-                'status' => $course->post_status === 'publish' ? 'published' : 'draft',
-                'sections' => $sections,
-                'students' => $students,
-                'completed' => $completed,
-                'finished' => array_values(array_intersect($students, $progress['finished'][$id] ?? [])),
-            ];
-        }
-
-        return $this->plan;
-    }
-
-    /** The course's sections, each ['title', 'lessons' => [step, ..]], in LearnDash's order (see the class comment). */
-    private static function sections(int $course, string $title): array
-    {
-        $outline = self::outline($course);
-        $lessons = array_values(array_filter($outline, fn ($item) => isset($item['lesson'])));
-        $headings = count($lessons) < count($outline);
-        $sections = [];
-        if ($headings) {
-            $current = null;
-            foreach ($outline as $item) {
-                if (isset($item['heading'])) {
-                    $sections[] = ['title' => $item['heading'], 'lessons' => []];
-                    $current = count($sections) - 1;
-                    continue;
-                }
-                if ($current === null) {
-                    $sections[] = ['title' => __('Lessons', 'anypress-client'), 'lessons' => []];
-                    $current = 0;
-                }
-                $sections[$current]['lessons'][] = self::step($item['lesson']);
-                foreach ($item['topics'] as $topic) {
-                    $sections[$current]['lessons'][] = self::step($topic);
-                }
-            }
-        } elseif (array_filter(array_column($lessons, 'topics'))) {
-            foreach ($lessons as $item) {
-                $lesson = self::step($item['lesson']);
-                $section = ['title' => $lesson['title'], 'lessons' => []];
-                if (!$item['topics'] || $lesson['has_body']) {
-                    $section['lessons'][] = $lesson;
-                }
-                foreach ($item['topics'] as $topic) {
-                    $section['lessons'][] = self::step($topic);
-                }
-                $sections[] = $section;
-            }
-        } elseif ($lessons) {
-            $sections[] = ['title' => __('Lessons', 'anypress-client'), 'lessons' => array_map(fn ($item) => self::step($item['lesson']), $lessons)];
-        }
-
-        return array_values(array_filter($sections, fn ($section) => $section['lessons']));
-    }
-
-    /**
-     * The course's lessons with their topics, and its section headings, in order: ['heading' => title] or
-     * ['lesson' => id, 'topics' => [ids]]. From the course builder's saved steps when there are any, else from the
-     * lessons' and topics' own course and lesson settings.
-     */
-    private static function outline(int $course): array
-    {
-        global $wpdb;
-        $p = $wpdb->prefix;
-        $items = [];
-        $steps = maybe_unserialize(get_post_meta($course, 'ld_course_steps', true));
-        $tree = is_array($steps) ? ($steps['steps']['h']['sfwd-lessons'] ?? null) : null;
-        if (is_array($tree) && $tree) {
-            $live = self::live_ids(array_merge(array_keys($tree), ...array_map(fn ($lesson) => array_keys((array) ($lesson['sfwd-topic'] ?? [])), array_values($tree))));
-            foreach ($tree as $lesson => $children) {
-                if (isset($live[(int) $lesson])) {
-                    $topics = array_values(array_filter(array_map('intval', array_keys((array) ($children['sfwd-topic'] ?? []))), fn ($id) => isset($live[$id])));
-                    $items[] = ['lesson' => (int) $lesson, 'topics' => $topics];
-                }
-            }
-        } else {
-            $lessons = array_map('intval', $wpdb->get_col($wpdb->prepare("SELECT p.ID FROM {$p}posts p JOIN {$p}postmeta m ON m.post_id = p.ID AND m.meta_key = 'course_id' AND m.meta_value = %d WHERE p.post_type = 'sfwd-lessons' AND p.post_status IN " . self::LIVE . ' ORDER BY p.menu_order, p.ID', $course))); // phpcs:ignore WordPress.DB.PreparedSQL
-            foreach ($lessons as $lesson) {
-                $topics = array_map('intval', $wpdb->get_col($wpdb->prepare("SELECT p.ID FROM {$p}posts p JOIN {$p}postmeta l ON l.post_id = p.ID AND l.meta_key = 'lesson_id' AND l.meta_value = %d JOIN {$p}postmeta c ON c.post_id = p.ID AND c.meta_key = 'course_id' AND c.meta_value = %d WHERE p.post_type = 'sfwd-topic' AND p.post_status IN " . self::LIVE . ' ORDER BY p.menu_order, p.ID', $lesson, $course))); // phpcs:ignore WordPress.DB.PreparedSQL
-                $items[] = ['lesson' => $lesson, 'topics' => $topics];
-            }
-        }
-        // Section headings sit between lessons; "order" is the heading's place among lessons and headings together.
-        $headings = json_decode((string) get_post_meta($course, 'course_sections', true), true);
-        $headings = is_array($headings) ? array_filter($headings, fn ($h) => is_array($h) && isset($h['order'], $h['post_title'])) : [];
-        usort($headings, fn ($a, $b) => (int) $a['order'] <=> (int) $b['order']);
-        $outline = [];
-        $placed = 0;
-        foreach ($headings as $heading) {
-            while ($items && $placed < (int) $heading['order']) {
-                $outline[] = array_shift($items);
-                $placed++;
-            }
-            $placed++;
-            $outline[] = ['heading' => sanitize_text_field((string) $heading['post_title'])];
-        }
-
-        return array_merge($outline, $items);
-    }
-
-    /** @return array<int, true> Which of these posts exist and aren't in the bin. */
-    private static function live_ids(array $ids): array
-    {
-        global $wpdb;
-        $ids = array_values(array_filter(array_map('intval', $ids)));
-        if (!$ids) {
-            return [];
-        }
-        $found = $wpdb->get_col("SELECT ID FROM {$wpdb->prefix}posts WHERE ID IN (" . implode(',', $ids) . ') AND post_status IN ' . self::LIVE); // phpcs:ignore WordPress.DB.PreparedSQL
-
-        return array_fill_keys(array_map('intval', $found), true);
-    }
-
-    /** One lesson or topic as a FluentCommunity lesson: its title, text (video first), status and image. */
-    private static function step(int $id): array
-    {
-        $post = get_post($id);
-        $type = $post ? $post->post_type : 'sfwd-lessons';
-        $settings = (array) maybe_unserialize(get_post_meta($id, '_' . $type, true));
-        $video = (string) ($settings[$type . '_lesson_video_url'] ?? '');
-        $video_on = ($settings[$type . '_lesson_video_enabled'] ?? '') === 'on';
-        $body = $post ? (string) $post->post_content : '';
-        $has_body = trim(wp_strip_all_tags($body)) !== '' || ($video_on && $video !== '');
-        if ($video_on && filter_var($video, FILTER_VALIDATE_URL)) {
-            $url = esc_url_raw($video);
-            $body = '<!-- wp:embed ' . wp_json_encode(['url' => $url]) . " -->\n<figure class=\"wp-block-embed\"><div class=\"wp-block-embed__wrapper\">\n" . esc_url($url) . "\n</div></figure>\n<!-- /wp:embed -->\n\n" . $body;
-        }
-
-        return [
-            'post' => $id,
-            'title' => $post ? (string) $post->post_title : '',
-            'body' => $body,
-            'has_body' => $has_body,
-            'status' => $post && $post->post_status === 'publish' ? 'published' : 'draft',
-            'image' => (int) get_post_thumbnail_id($id),
-        ];
-    }
-
-    /** open, free, paynow, subscribe or closed. */
-    private static function price_type(int $course): string
-    {
-        $type = (string) get_post_meta($course, '_ld_price_type', true);
-        if ($type === '') {
-            $settings = (array) maybe_unserialize(get_post_meta($course, '_sfwd-courses', true));
-            $type = (string) ($settings['sfwd-courses_course_price_type'] ?? 'open');
-        }
-
-        return $type !== '' ? $type : 'open';
-    }
-
-    /**
-     * Users with access to the course: enrolled one by one, through a LearnDash group, or on the course's old access
-     * list; for an open course (anyone may take it), everyone who started it.
-     *
-     * @param int[] $started Users with progress in the course.
-     * @return int[]
-     */
-    private static function students(int $course, array $started): array
-    {
-        global $wpdb;
-        $p = $wpdb->prefix;
-        $ids = $wpdb->get_col($wpdb->prepare("SELECT user_id FROM {$p}usermeta WHERE meta_key = %s", 'course_' . $course . '_access_from')); // phpcs:ignore WordPress.DB.PreparedSQL
-        $groups = $wpdb->get_col($wpdb->prepare("SELECT SUBSTRING(meta_key, 26) FROM {$p}postmeta WHERE post_id = %d AND meta_key LIKE %s", $course, $wpdb->esc_like('learndash_group_enrolled_') . '%')); // phpcs:ignore WordPress.DB.PreparedSQL
-        foreach (array_filter(array_map('intval', $groups)) as $group) {
-            $ids = array_merge($ids, $wpdb->get_col($wpdb->prepare("SELECT user_id FROM {$p}usermeta WHERE meta_key = %s", 'learndash_group_users_' . $group))); // phpcs:ignore WordPress.DB.PreparedSQL
-        }
-        $settings = (array) maybe_unserialize(get_post_meta($course, '_sfwd-courses', true));
-        $ids = array_merge($ids, explode(',', (string) ($settings['sfwd-courses_course_access_list'] ?? '')), $started);
-        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
-        if (!$ids) {
-            return [];
-        }
-        $real = array_map('intval', $wpdb->get_col("SELECT ID FROM {$p}users WHERE ID IN (" . implode(',', $ids) . ') ORDER BY ID')); // phpcs:ignore WordPress.DB.PreparedSQL
-
-        return $real;
-    }
-
-    /**
-     * What LearnDash recorded each user finished: lessons and topics from their course progress (user meta) and
-     * LearnDash's activity table, and courses they completed.
-     *
-     * @return array{steps: array<int, array<int, int[]>>, finished: array<int, int[]>} course => user => step ids;
-     *     course => user ids.
-     */
-    private static function progress(): array
-    {
-        global $wpdb;
-        $p = $wpdb->prefix;
-        $steps = [];
-        $finished = [];
-        $rows = $wpdb->get_results("SELECT user_id, meta_value FROM {$p}usermeta WHERE meta_key = '_sfwd-course_progress'"); // phpcs:ignore WordPress.DB.PreparedSQL
-        foreach ((array) $rows as $row) {
-            $user = (int) $row->user_id;
-            foreach ((array) maybe_unserialize($row->meta_value) as $course => $done) {
-                $course = (int) $course;
-                $steps[$course][$user] = $steps[$course][$user] ?? [];
-                foreach ((array) ($done['lessons'] ?? []) as $lesson => $complete) {
-                    if ((int) $complete === 1) {
-                        $steps[$course][$user][] = (int) $lesson;
-                    }
-                }
-                foreach ((array) ($done['topics'] ?? []) as $topics) {
-                    foreach ((array) $topics as $topic => $complete) {
-                        if ((int) $complete === 1) {
-                            $steps[$course][$user][] = (int) $topic;
-                        }
-                    }
-                }
-            }
-        }
-        if (self::table_exists('learndash_user_activity')) {
-            $rows = $wpdb->get_results("SELECT user_id, post_id, course_id, activity_type FROM {$p}learndash_user_activity WHERE activity_status = 1 AND activity_type IN ('lesson', 'topic', 'course')"); // phpcs:ignore WordPress.DB.PreparedSQL
-            foreach ((array) $rows as $row) {
-                $course = (int) ($row->activity_type === 'course' ? $row->post_id : $row->course_id);
-                if ($row->activity_type === 'course') {
-                    $finished[$course][] = (int) $row->user_id;
-                } else {
-                    $steps[$course][(int) $row->user_id][] = (int) $row->post_id;
-                }
-            }
-        }
-        $rows = $wpdb->get_results($wpdb->prepare("SELECT user_id, meta_key FROM {$p}usermeta WHERE meta_key LIKE %s AND meta_value > 0", $wpdb->esc_like('course_completed_') . '%')); // phpcs:ignore WordPress.DB.PreparedSQL
-        foreach ((array) $rows as $row) {
-            $finished[(int) substr($row->meta_key, 17)][] = (int) $row->user_id;
-        }
-        foreach ($steps as $course => $users) {
-            foreach ($users as $user => $ids) {
-                $steps[$course][$user] = array_values(array_unique($ids));
-            }
-        }
-
-        return ['steps' => $steps, 'finished' => array_map(fn ($ids) => array_values(array_unique($ids)), $finished)];
+        return isset($this->readers[$source]) ? $this->readers[$source]->lost() : [];
     }
 }
