@@ -4,7 +4,7 @@ Moves a WordPress site's forms, shop, contacts, help desk, affiliates, community
 
 | Switch | From | Into |
 |---|---|---|
-| Forms | Contact Form 7, WPForms, Ninja Forms | Fluent Forms |
+| Forms | Contact Form 7, WPForms, Ninja Forms, Gravity Forms | Fluent Forms |
 | Shop | WooCommerce | FluentCart (with the FluentCart Migrator add-on) |
 | Contacts | WooCommerce buyers, MailPoet, Newsletter | FluentCRM |
 | Help desk | Awesome Support, SupportCandy, JS Help Desk | Fluent Support |

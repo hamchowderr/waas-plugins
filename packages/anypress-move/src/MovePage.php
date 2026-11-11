@@ -68,7 +68,7 @@ class MovePage
     private function switches(): array
     {
         return [
-            'forms' => [__('Forms', 'anypress-move'), __('Contact Form 7, WPForms and Ninja Forms forms and entries into Fluent Forms, and the pages that show them.', 'anypress-move')],
+            'forms' => [__('Forms', 'anypress-move'), __('Contact Form 7, WPForms, Ninja Forms and Gravity Forms forms and entries into Fluent Forms, and the pages that show them.', 'anypress-move')],
             'shop' => [__('Shop', 'anypress-move'), __('A WooCommerce shop into FluentCart with the FluentCart Migrator add-on: products, orders, customers, coupons and gallery images.', 'anypress-move')],
             'crm' => [__('Contacts', 'anypress-move'), __('WooCommerce buyers (guests too), MailPoet and Newsletter subscribers into FluentCRM, with their lists and tags.', 'anypress-move')],
             'support' => [__('Help desk', 'anypress-move'), __('Awesome Support, SupportCandy or JS Help Desk tickets into Fluent Support, with replies, attachments, customers and agents.', 'anypress-move')],

@@ -3,7 +3,7 @@
 namespace AnyPressClient\Forms;
 
 /**
- * Swaps Contact Form 7, WPForms and Ninja Forms shortcodes and blocks in a piece of content for the Fluent Forms
+ * Swaps Contact Form 7, WPForms, Ninja Forms and Gravity Forms shortcodes and blocks in a piece of content for the Fluent Forms
  * form each was converted to, and puts them back. Plain string work, so it can be tested without WordPress.
  *
  * The map lists the converted forms by source:
@@ -19,6 +19,8 @@ class PageSwitcher
         'ninja_forms_display_form' => 'ninja_forms',
         'ninja_forms' => 'ninja_forms',
         'ninja_form' => 'ninja_forms',
+        'gravityforms' => 'gravityform',
+        'gravityform' => 'gravityform',
     ];
 
     /** Blocks each source plugin registers, and the attribute that holds the form id. */
@@ -26,10 +28,11 @@ class PageSwitcher
         'contact-form-7/contact-form-selector' => ['contactform7', 'id'],
         'wpforms/form-selector' => ['wpforms', 'formId'],
         'ninja-forms/form' => ['ninja_forms', 'formID'],
+        'gravityforms/form' => ['gravityform', 'formId'],
     ];
 
     /** Text that shows a source form may be in a piece of content (for a quick database search). */
-    public const NEEDLES = ['[contact-form', '[wpforms', '[ninja_form', 'wp:contact-form-7/', 'wp:wpforms/', 'wp:ninja-forms/'];
+    public const NEEDLES = ['[contact-form', '[wpforms', '[ninja_form', 'wp:contact-form-7/', 'wp:wpforms/', 'wp:ninja-forms/', '[gravityform', 'wp:gravityforms/'];
 
     private array $map;
 
@@ -76,6 +79,10 @@ class PageSwitcher
                 }
                 $source = self::SHORTCODES[$m[2]];
                 $attrs = self::attributes(rtrim($m[3], '/ '));
+                // [gravityforms action="conditional"] and the like show content, not a form: leave them.
+                if ($source === 'gravityform' && ($attrs['action'] ?? 'form') !== 'form') {
+                    return $m[0];
+                }
                 $fluent = $this->find($source, ['id' => (string) ($attrs['id'] ?? ''), 'hash' => '', 'title' => (string) ($attrs['title'] ?? '')]);
                 if (!$fluent) {
                     $missing[] = $m[0];

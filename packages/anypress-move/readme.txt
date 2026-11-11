@@ -4,7 +4,7 @@ Tags: migration, fluentcrm, fluent forms, fluentcommunity, fluentcart
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.1.1
+Stable tag: 1.2.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -14,7 +14,7 @@ Moves your forms, shop, contacts, help desk, affiliates, community, courses and 
 
 Each switch copies one plugin's data into the Fluent plugin that replaces it, using the Fluent plugin's own importer where it has one:
 
-* Forms: Contact Form 7, WPForms and Ninja Forms into Fluent Forms, with entries, and the pages that show them.
+* Forms: Contact Form 7, WPForms, Ninja Forms and Gravity Forms into Fluent Forms, with entries, and the pages that show them.
 * Shop: WooCommerce into FluentCart, with the FluentCart Migrator add-on.
 * Contacts: WooCommerce buyers, MailPoet and Newsletter subscribers into FluentCRM.
 * Help desk: Awesome Support, SupportCandy or JS Help Desk into Fluent Support.
@@ -45,6 +45,9 @@ This plugin connects to one outside service, and only when you run its Circle sw
 No other switch sends anything off your site. The Shop switch links to FluentCart's own page for its free Migrator add-on but never downloads it; you install it yourself.
 
 == Changelog ==
+
+= 1.2.0 =
+* Forms: Gravity Forms forms and their entries move to Fluent Forms, through Fluent Forms' own importer with its mistakes put right (hidden name and address parts stay hidden, dates and times keep their format, entry limits and messages keep their values, the default confirmation stays the main one, and entries keep the visitor's IP address, browser and page). Pages, blocks and drafts that show a Gravity Forms form are swapped, and Check lists the show/hide rules and add-on feeds that don't come across.
 
 = 1.1.1 =
 * The plugin's website link goes to anypress.io/move.
