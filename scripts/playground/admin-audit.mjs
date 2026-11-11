@@ -67,6 +67,8 @@ try {
             } echo "aged $n options";`));
     }
     report.options = JSON.parse(await php(`global $wpdb; echo wp_json_encode($wpdb->get_col("SELECT option_name FROM {$wpdb->options} WHERE option_name REGEXP 'install|activat|notice|review|rating|wizard|onboard|setup|dismiss|nag|redirect' ORDER BY option_name"));`));
+    // BRAND=<name>: a reseller's store, where AnyPress Client goes by the reseller's name and shows no AnyPress look.
+    if (process.env.BRAND) await php(`update_option('anypress_brand_name', ${JSON.stringify(process.env.BRAND)});`);
     const { chromium } = createRequire(import.meta.url)('playwright');
     const browser = await chromium.launch();
     const page = await browser.newPage({ viewport: { width: 1366, height: 900 } });
@@ -99,12 +101,18 @@ try {
             };
         });
         report.dashboard = dash;
+        // The admin bar: the site's name, New, Edit and the account; no WordPress logo, comments or included plugins' items (CleanAdminBar).
+        const bar = await page.evaluate(() => [...document.querySelectorAll('#wp-admin-bar-root-default > li, #wp-admin-bar-top-secondary > li')].map((li) => li.id.replace('wp-admin-bar-', '')));
+        report.adminBar = bar;
+        const barOk = !bar.some((id) => ['wp-logo', 'comments', 'customize', 'updates'].includes(id) || /fluent|rank-math|automator|wp-fusion|fluentform/i.test(id));
+        console.log(barOk ? `ok   the admin bar is short (${bar.join(', ')})` : `FAIL the admin bar: ${bar.join(', ')}`);
+        if (!barOk) process.exitCode = 1;
         const ok = dash.core.length === 0 && dash.home && dash.site && dash.plan;
         console.log(ok ? `ok   the Dashboard shows the store's home (${dash.boxes.join(', ')})` : `FAIL the Dashboard: ${JSON.stringify(dash)}`);
         if (!ok) process.exitCode = 1;
         for (const [name, size] of [['desktop', { width: 1366, height: 900 }], ['phone', { width: 390, height: 844 }]]) {
             await page.setViewportSize(size);
-            await page.screenshot({ path: `${OUT}/dashboard-${process.env.SITE_TYPE}-${name}.png`, fullPage: true });
+            await page.screenshot({ path: `${OUT}/dashboard-${process.env.SITE_TYPE}${process.env.BRAND ? '-reseller' : ''}-${name}.png`, fullPage: true });
         }
         await page.setViewportSize({ width: 1366, height: 900 });
     }
