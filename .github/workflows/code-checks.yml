@@ -63,14 +63,15 @@ jobs:
         run: composer stan -- --no-progress --error-format=github
 
   plugin-check:
-    # The same Plugin Check wordpress.org runs. The plugins update through the AnyPress API rather than
-    # wordpress.org, so its updater rule and the directory-only checks are left out.
+    # The same Plugin Check wordpress.org runs. These plugins update through the AnyPress API rather than
+    # wordpress.org, so its updater rule and the directory-only checks are left out. Plugins that go on
+    # wordpress.org get every check in plugin-check-wporg below.
     name: Plugin Check (${{ matrix.package }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        package: [anypress-host, anypress-client, anypress-payments, anypress-export, anypress-move]
+        package: [anypress-host, anypress-client, anypress-payments, anypress-export]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -97,3 +98,32 @@ jobs:
           exclude-checks: |
             plugin_updater
           ignore-warnings: true
+
+  plugin-check-wporg:
+    # Plugins listed on wordpress.org: Plugin Check with every category, the directory checks (plugin_repo)
+    # included and nothing excluded, so a build fails here on anything the plugin review team would flag.
+    name: Plugin Check for wordpress.org (${{ matrix.package }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [anypress-move]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Build the plugin
+        run: |
+          scripts/release/build.sh ${{ matrix.package }} 0.0.0 dist
+          mkdir -p build
+          unzip -q dist/${{ matrix.package }}.zip -d build
+      - name: Plugin Check (every category)
+        uses: WordPress/plugin-check-action@v1
+        with:
+          build-dir: build/${{ matrix.package }}
+          ignore-warnings: false

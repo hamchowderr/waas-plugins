@@ -28,6 +28,11 @@ find "$lib" -name '*.php' -print0 | while IFS= read -r -d '' file; do
     -e '1a\
 \
 // Built by scripts/build-move.sh from packages/anypress-client: edit that copy, not this one.' \
+    -e '/^namespace .*;$/a\
+\
+if (!defined('"'"'ABSPATH'"'"')) {\
+    exit;\
+}' \
     "$file"
 done
 

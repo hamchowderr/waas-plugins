@@ -2,6 +2,10 @@
 
 namespace AnyPressMove;
 
+if (!defined('ABSPATH')) {
+    exit;
+}
+
 /** The abilities category the switches register under, so AI tools on the site (the MCP Adapter) can run them. */
 class Category
 {
