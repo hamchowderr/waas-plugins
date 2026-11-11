@@ -333,6 +333,59 @@ jobs:
         working-directory: scripts/playground
         run: npm run moving
 
+  playground-cache-checkout:
+    # The store page cache around FluentCart's shop, product, cart and checkout pages, on a Playground store of the
+    # online-store site type: a real browser adds to cart and places an order while a cookie-less visitor keeps getting
+    # cached pages, and no saved page holds a shopper's details.
+    name: Store page cache around FluentCart cart and checkout on WordPress Playground
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Checkout the store template and the store agent's page cache
+        uses: actions/checkout@v4
+        with:
+          repository: hamchowderr/waas-provisioning-api
+          path: waas-provisioning-api
+          sparse-checkout: |
+            templates/anypress-store/roles.json
+            templates/anypress-store/build.sh
+            templates/anypress-store/plugins/fluent-cart-migrator-*.zip
+            src/provisioner/coolify/agent.php
+          sparse-checkout-cone-mode: false
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/anypress-client
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground and Playwright
+        working-directory: scripts/playground
+        run: |
+          npm ci
+          npm install --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: Cache around cart and checkout test
+        working-directory: scripts/playground
+        env:
+          ANYPRESS_API_DIR: ${{ github.workspace }}/waas-provisioning-api
+        run: npm run cache-checkout
+      - name: Keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cache-checkout
+          path: scripts/playground/shots/cache-checkout/
+
   playground-courses:
     # The course switch (wp anypress course switch and its abilities): LearnDash courses, students and progress into
     # FluentCommunity courses, on a Playground store of the community site type, with the store's FluentCommunity and
