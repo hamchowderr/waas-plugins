@@ -22,7 +22,7 @@ How they fit together: `docs/architecture/`. Releases and the update channel: `d
 
 ## Releasing
 
-Merge to `main`, then run the **Tag and release plugin** workflow (`tag-release.yml`) with the tag and changelog, from the session (GitHub `actions_run_trigger`). Tags: `anypress-host-vX.Y.Z`, `anypress-client-vX.Y.Z`, `anypress-payments-vX.Y.Z`, `anypress-export-vX.Y.Z`; `-beta.N` goes to the beta channel only. Bump the plugin header and its version constant in the same PR as the change.
+Raise the version in the PR; merging it to `main` releases it (**Release on merge**, `release-on-merge.yml`, which runs **Tag and release plugin** for every plugin whose version has no tag yet, with the merge commit's message as the changelog). Run **Tag and release plugin** (`tag-release.yml`, GitHub `actions_run_trigger`) by hand only to release an older commit. Tags: `anypress-host-vX.Y.Z`, `anypress-client-vX.Y.Z`, `anypress-payments-vX.Y.Z`, `anypress-export-vX.Y.Z`; `-beta.N` goes to the beta channel only. Bump the plugin header and its version constant in the same PR as the change.
 
 AnyPress Client never updates itself in stores: a new release reaches stores only through a new store template version built from `waas-provisioning-api/templates/anypress-store`.
 
@@ -30,7 +30,7 @@ AnyPress Client never updates itself in stores: a new release reaches stores onl
 
 - Use the WordPress skills in `.claude/skills/` (list in its README): `wp-plugin-development` for structure and security, `wp-rest-api` for routes, `wp-abilities-api` and `wp-abilities-verify` for abilities, `wp-playground` and `blueprint` for tests and previews, `wp-phpstan` for static analysis.
 - Stores run WordPress 7.1 on PHP 8.3 with the **AnyPress** block theme (`hamchowderr/anypress-theme`; stores made before it run Ollie). Anything AnyPress Client adds to a store's pages must be block markup that uses the theme's patterns and its `theme.json` colour, font and spacing slugs, not fixed values (`wp-block-themes`, `wp-patterns`). Store pages are edited in WordPress, never headless.
-- Every Playground blueprint and preview installs the AnyPress theme from `scripts/playground/preview-zips/anypress.zip` (kept at the latest theme release), never Ollie or Twenty Twenty-Five.
+- Every Playground blueprint and preview installs the AnyPress theme from `scripts/playground/preview-zips/anypress.zip`, never Ollie or Twenty Twenty-Five. The **Update pins** workflow keeps that zip, the Blocks zip and every other pin in `.github/pins.json` on the newest release, and CI fails when one is behind; never pin a commit or an old release in a blueprint.
 - Every write route checks a capability or the request signature, every input is sanitized and every output escaped. Site-editing writes keep a revision so they can be undone.
 - Sites must keep working when the API can't be reached: cache answers, fail quietly in the front end, and show admins a plain notice.
 

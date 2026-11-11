@@ -1,0 +1,54 @@
+name: Release on merge
+# A merge to main that raises a plugin's version (its header) releases that version, so nothing sits merged and
+# unreleased. -beta.N versions go to the beta channel only, as with "Tag and release plugin".
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/anypress-host/anypress-host.php'
+      - 'packages/anypress-client/anypress-client.php'
+      - 'packages/anypress-payments/anypress-payments.php'
+      - 'packages/anypress-export/anypress-export.php'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  versions:
+    name: Unreleased versions
+    runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.find.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: find
+        run: |
+          tags=()
+          for p in host client payments export; do
+            v=$(sed -n 's/^[ *]*Version: *//p' "packages/anypress-$p/anypress-$p.php" | head -1 | tr -d '\r')
+            tag="anypress-$p-v$v"
+            if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+              echo "$tag is released"
+            else
+              echo "$tag is not released yet"
+              tags+=("$tag")
+            fi
+          done
+          echo "tags=$(printf '%s\n' "${tags[@]}" | jq -R . | jq -sc 'map(select(length > 0))')" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: versions
+    if: needs.versions.outputs.tags != '[]'
+    strategy:
+      max-parallel: 1
+      matrix:
+        tag: ${{ fromJson(needs.versions.outputs.tags) }}
+    uses: ./.github/workflows/tag-release.yml
+    with:
+      tag: ${{ matrix.tag }}
+      notes: ${{ github.event.head_commit.message || format('Release {0}', matrix.tag) }}
+      commit: ${{ github.sha }}
+    secrets: inherit

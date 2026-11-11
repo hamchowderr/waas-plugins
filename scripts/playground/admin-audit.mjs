@@ -26,7 +26,8 @@ const steps = [
     { step: 'installTheme', themeData: { resource: 'literal', name: 'anypress.zip', contents: readFileSync(resolve(HERE, 'preview-zips/anypress.zip')) }, options: { activate: true } },
     ...org.map(([slug, version]) => ({ step: 'installPlugin', pluginData: { resource: 'url', url: `https://downloads.wordpress.org/plugin/${slug}.${version}.zip` } })),
     { step: 'installPlugin', pluginData: { resource: 'url', url: `https://github.com/hamchowderr/anypress-blocks/releases/download/v${build.match(/BLOCKS_VERSION=\$\{BLOCKS_VERSION:-([0-9.]+)\}/)[1]}/anypress-blocks.zip` } },
-    { step: 'installPlugin', pluginData: { resource: 'literal', name: 'fluent-toolkit.zip', contents: readFileSync(`${API}/templates/anypress-store/plugins/fluent-toolkit-2.1.4.zip`) } },
+    // The vendored plugins the template ships (VENDORED in build.sh), from its plugins/ folder.
+    ...list('VENDORED').map(([slug, version]) => ({ step: 'installPlugin', pluginData: { resource: 'literal', name: `${slug}.zip`, contents: readFileSync(`${API}/templates/anypress-store/plugins/${slug}-${version}.zip`) } })),
 ];
 // The template's own mu-plugin (telemetry and upgrade nags off, install dates set on the first run), as on a store.
 steps.push({ step: 'writeFile', path: '/wordpress/wp-content/mu-plugins/anypress-store.php', data: readFileSync(`${API}/templates/anypress-store/mu-plugins/anypress-store.php`, 'utf8') });
@@ -48,7 +49,7 @@ if (CLIENT) {
     steps.push({ step: 'activatePlugin', pluginPath: 'anypress-client/anypress-client.php' });
 }
 const cli = await runCLI({
-    command: 'server', wp: 'https://wordpress.org/wordpress-7.1.3.zip', php: '8.3', port: Number(process.env.PLAYGROUND_PORT || 9441),
+    command: 'server', wp: `https://wordpress.org/wordpress-${build.match(/WP_VERSION=\$\{WP_VERSION:-([0-9.]+)\}/)[1]}.zip`, php: '8.3', port: Number(process.env.PLAYGROUND_PORT || 9441),
     blueprint: { steps },
     mount: CLIENT ? [{ hostPath: resolve(ROOT, 'packages/anypress-client'), vfsPath: '/wordpress/wp-content/plugins/anypress-client' }] : [],
     verbosity: 'quiet',
@@ -106,14 +107,24 @@ try {
                 const r = el.getBoundingClientRect(); return vis(el) && r.width > 250 && r.height > 120;
             }).map((el) => ({ cls: String(el.className).slice(0, 120), id: el.id, text: txt(el) }));
             const upsell = [...document.querySelectorAll('#wpbody-content a, #wpbody-content button')].filter((el) => vis(el) && /\b(pro|premium|upgrade|unlock|buy|pricing|go pro|get pro|license|rate us|review|★)\b/i.test(el.innerText)).map(txt).slice(0, 25);
-            return { title: document.title, notices, popups, upsell };
+            const broken = /There has been a critical error|Fatal error:|Parse error:/i.test(document.body.innerText);
+            return { title: document.title, notices, popups, upsell, broken };
         }));
         await page.screenshot({ path: `${OUT}/${String(i).padStart(3, '0')}.png` });
         entry.shot = `${String(i).padStart(3, '0')}.png`;
+        if (entry.broken) {
+            console.log(`FAIL ${url.replace(cli.serverUrl, '')} shows a PHP error`);
+            process.exitCode = 1;
+        }
         report.pages.push(entry);
         writeFileSync(`${OUT}/report.json`, JSON.stringify(report, null, 2));
         console.log(i, url.replace(cli.serverUrl, ''), entry.notices.length, entry.popups.length, entry.upsell.length);
     }
+    // The site itself, as a visitor sees it.
+    const front = await page.goto(`${cli.serverUrl}/`, { waitUntil: 'networkidle', timeout: 45000 }).catch(() => null);
+    report.front = { status: front?.status() ?? 0, broken: /There has been a critical error|Fatal error:|Parse error:/i.test(await page.innerText('body').catch(() => '')) };
+    console.log(report.front.status === 200 && !report.front.broken ? 'ok   the home page loads' : `FAIL the home page: ${report.front.status}${report.front.broken ? ', PHP error' : ''}`);
+    if (report.front.status !== 200 || report.front.broken) process.exitCode = 1;
     await browser.close();
 } finally {
     writeFileSync(`${OUT}/report.json`, JSON.stringify(report, null, 2));
