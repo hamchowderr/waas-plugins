@@ -328,7 +328,7 @@ class CleanAdmin
     }
 
     /** The function that draws an admin page, from its hook name. */
-    private static function page_callback(?string $hookname)
+    public static function page_callback(?string $hookname)
     {
         global $wp_filter;
         if ($hookname === null || $hookname === '' || !isset($wp_filter[$hookname])) {

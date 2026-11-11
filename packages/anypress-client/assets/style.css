@@ -93,3 +93,73 @@
     font-size: 11px;
     line-height: 18px;
 }
+
+/* The Dashboard home (CleanDashboard). */
+#anypress_home .anypress-home-hello {
+    margin: 0 0 4px;
+    font-size: 20px;
+    line-height: 1.4;
+    font-weight: 400;
+}
+
+#anypress_home .anypress-home-site {
+    margin: 0 0 16px;
+    color: #50575e;
+}
+
+#anypress_home .anypress-home-site a {
+    margin-left: 8px;
+}
+
+#anypress_home .anypress-home-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+}
+
+#anypress_home .anypress-home-links li {
+    margin: 0;
+}
+
+#anypress_home .anypress-home-links .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#anypress_home .anypress-home-links .dashicons {
+    line-height: 1;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+#anypress_site .anypress-site-plugins {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+    margin: 0;
+}
+
+#anypress_site .anypress-site-plugins li {
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+}
+
+#anypress_site .anypress-site-plugin-name {
+    display: block;
+    font-weight: 600;
+}
+
+#anypress_site .anypress-site-plugin-about {
+    display: block;
+    margin-top: 2px;
+    color: #50575e;
+}
+
+#anypress_plan .anypress-plan p:first-child {
+    margin-top: 0;
+}
