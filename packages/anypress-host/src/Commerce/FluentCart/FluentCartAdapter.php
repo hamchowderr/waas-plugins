@@ -76,6 +76,7 @@ class FluentCartAdapter implements CommerceAdapter
         (new FluentCartCareDesk($this, $store, $care, $care_call))->register();
         (new FluentCartCareEmails($this, $store, $care))->register();
         (new FluentCartCareProducts())->register();
+        (new FluentCartTrialLimit($store))->register();
         new FluentCartPortal($this, $store, $domain_settings, $email_packs, $domains, $care_portal, $storage_packs);
 
         add_filter('anypress_getting_started_checklist', [$this, 'mark_plan_product_checklist_item'], 20);
