@@ -111,7 +111,7 @@ class AdminHome
     }
 
     /** The storefront's name, its website domain, and buttons, above every AnyPress page. */
-    public static function render_header(string $title, ConfigService $config): void
+    public static function render_header(string $title, ?ConfigService $config = null): void
     {
         $root_domain = (string) get_option('anypress_root_domain', '');
         $account_url = (string) apply_filters('anypress_account_page_url', '');
@@ -144,12 +144,30 @@ class AdminHome
             <?php
             // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- which admin page is open.
             $page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
-            foreach ([self::SLUG => [__('Overview', 'anypress-host'), admin_url('admin.php?page=' . self::SLUG)], AdminSettings::SLUG => [__('Settings', 'anypress-host'), AdminSettings::url()]] as $slug => [$label, $url]) {
+            foreach (self::tabs() as $slug => [$label, $url]) {
                 printf('<a href="%s"%s>%s</a>', esc_url($url), $page === $slug ? ' aria-current="page"' : '', esc_html($label));
             }
             ?>
         </nav>
         <?php
+    }
+
+    /**
+     * The AnyPress pages, as tabs under the header: slug => [label, url]. Filter anypress_admin_tabs adds pages such
+     * as Care, which then get the AnyPress look too.
+     *
+     * @return array<string, array{0: string, 1: string}>
+     */
+    public static function tabs(): array
+    {
+        $tabs = [
+            self::SLUG => [__('Overview', 'anypress-host'), admin_url('admin.php?page=' . self::SLUG)],
+        ];
+        $tabs = (array) apply_filters('anypress_admin_tabs', $tabs);
+        // Settings stays last.
+        $tabs[AdminSettings::SLUG] = [__('Settings', 'anypress-host'), AdminSettings::url()];
+
+        return $tabs;
     }
 
     /** True on the AnyPress admin pages, which show the API's alerts in place instead of as notices. */
@@ -158,7 +176,7 @@ class AdminHome
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- which admin page is open.
         $page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
 
-        return in_array($page, [self::SLUG, AdminSettings::SLUG], true);
+        return $page !== '' && array_key_exists($page, self::tabs());
     }
 
     public function render_anypress_admin_page()

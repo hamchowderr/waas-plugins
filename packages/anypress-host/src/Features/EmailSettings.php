@@ -36,7 +36,7 @@ class EmailSettings
     {
         $common = ['tenant_domain', 'tenant_one_click_login_url', 'storefront_name', 'storefront_url', 'storefront_subscription_details_url'];
 
-        return [
+        return (array) apply_filters('anypress_customer_emails', [
             'ready' => [
                 'title' => __('Website ready', 'anypress-host'),
                 'when' => __('Sent when a new website is up.', 'anypress-host'),
@@ -67,7 +67,7 @@ class EmailSettings
                 'default_body' => [Notifications::class, 'get_default_suspended_body'],
                 'placeholders' => array_merge($common, ['delete_date', 'deletion_grace_days']),
             ],
-        ];
+        ]);
     }
 
     private static function email_group(string $key): string
@@ -99,7 +99,7 @@ class EmailSettings
 
         if (!isset($emails[$key])) {
             echo '<h2>' . esc_html__('Customer emails', 'anypress-host') . '</h2><p class="ap-muted">'
-                . esc_html__('What customers get when their website is ready, when they cancel, and when it goes offline.', 'anypress-host') . '</p><div class="ap-emails">';
+                . esc_html__('What customers get by email from this shop, such as when their website is ready, when they cancel, and when it goes offline.', 'anypress-host') . '</p><div class="ap-emails">';
             foreach ($emails as $slug => $email) {
                 $on = get_option($email['send'], 'on') === 'on';
                 $subject = (string) get_option($email['subject']) ?: call_user_func($email['default_subject']);

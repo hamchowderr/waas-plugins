@@ -15,7 +15,8 @@ use AnyPressHost\Migrations\FluentCartFeedTriggers;
  * fct_subscriptions ids and their data lives in fct_subscription_meta. A product is a
  * website plan when the "AnyPress websites" integration is enabled on it; the feed
  * holds the role and snapshot group, and its triggers create and remove the store. A feed
- * set to "Email pack" makes the product an email pack instead (FluentCartEmailPacks), never a plan.
+ * set to "Email pack" makes the product an email pack instead (FluentCartEmailPacks), and "Care package" or "One-time
+ * service" care for a website (FluentCartCare); none of those is a plan.
  */
 class FluentCartAdapter implements CommerceAdapter
 {
@@ -65,7 +66,14 @@ class FluentCartAdapter implements CommerceAdapter
         $storage_packs->register();
         $domains = new FluentCartDomains($provisioning_api, $this, $store);
         $domains->register();
-        new FluentCartPortal($this, $store, $domain_settings, $email_packs, $domains, $storage_packs);
+        $care = new FluentCartCare($this, $store, $email_packs);
+        $care->register();
+        $care_portal = new FluentCartCarePortal($this, $store, $care);
+        $care_portal->register();
+        (new FluentCartCareDesk($this, $store, $care))->register();
+        (new FluentCartCareEmails($this, $store, $care))->register();
+        (new FluentCartCareProducts())->register();
+        new FluentCartPortal($this, $store, $domain_settings, $email_packs, $domains, $care_portal, $storage_packs);
 
         add_filter('anypress_getting_started_checklist', [$this, 'mark_plan_product_checklist_item'], 20);
         (new FluentCartStarterPlans($provisioning_api, $store))->register();

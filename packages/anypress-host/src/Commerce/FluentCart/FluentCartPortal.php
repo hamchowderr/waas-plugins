@@ -30,10 +30,12 @@ class FluentCartPortal
     private ?FluentCartEmailPacks $email_packs;
     private ?FluentCartStoragePacks $storage_packs;
     private ?FluentCartDomains $domains;
+    private ?FluentCartCarePortal $care;
 
-    public function __construct(FluentCartAdapter $adapter, FluentCartStore $store, UserAccountSubscriptionsSettings $domain_settings, ?FluentCartEmailPacks $email_packs = null, ?FluentCartDomains $domains = null, ?FluentCartStoragePacks $storage_packs = null)
+    public function __construct(FluentCartAdapter $adapter, FluentCartStore $store, UserAccountSubscriptionsSettings $domain_settings, ?FluentCartEmailPacks $email_packs = null, ?FluentCartDomains $domains = null, ?FluentCartCarePortal $care = null, ?FluentCartStoragePacks $storage_packs = null)
     {
         $this->domains = $domains;
+        $this->care = $care;
         $this->adapter = $adapter;
         $this->store = $store;
         $this->domain_settings = $domain_settings;
@@ -231,6 +233,9 @@ class FluentCartPortal
         }
         if ($this->domains) {
             $this->domains->render_section($subscription_id);
+        }
+        if ($this->care) {
+            $this->care->render_section($subscription_id);
         }
         $this->render_email_pack_links($subscription_id);
         $this->render_storage_pack_link($subscription_id);

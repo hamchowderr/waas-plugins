@@ -18,7 +18,11 @@ use AnyPressHost\Features\PluginBootstrap;
  * "Emails per pack" emails (times the quantity) to one of the customer's websites (FluentCartEmailPacks). A pack is
  * never a website plan, and its feed's triggers do nothing. "Product type: Storage pack" makes a subscription product
  * that adds storage to one of the customer's websites while it is paid (FluentCartStoragePacks): its triggers tell
- * the store how many packs it has now. Feeds saved before the product type existed are plans.
+ * the store how many packs it has now.
+ *
+ * "Product type: Care package" makes a subscription product a monthly care package for one of the customer's websites,
+ * and "One-time service" a one-off job such as setting a site up (FluentCartCare). Neither creates a website either.
+ * Feeds saved before the product type existed are plans.
  */
 class AnyPressProvisioningIntegration extends BaseIntegrationManager
 {
@@ -40,6 +44,9 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
     public const PRODUCT_TYPE_PLAN = 'plan';
     public const PRODUCT_TYPE_EMAIL_PACK = 'email_pack';
     public const PRODUCT_TYPE_STORAGE_PACK = 'storage_pack';
+    public const PRODUCT_TYPE_CARE = 'care';
+    public const PRODUCT_TYPE_SERVICE = 'service';
+    public const PRIORITY_NORMAL = 'normal';
 
     /** The most emails one pack line may add (the API's limit per call). */
     public const MAX_EMAILS_PER_PACK = 1000000;
@@ -77,6 +84,11 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
             'name' => __('Website plan', 'anypress-host'),
             'product_type' => self::PRODUCT_TYPE_PLAN,
             'emails_per_pack' => '',
+            'care_minutes' => '',
+            'care_answer' => '',
+            'care_priority' => self::PRIORITY_NORMAL,
+            'care_call_url' => '',
+            'service_minutes' => '',
             'role' => '',
             'group_name' => '',
             'size' => '',
@@ -119,8 +131,10 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
                     self::PRODUCT_TYPE_PLAN => __('Website plan', 'anypress-host'),
                     self::PRODUCT_TYPE_EMAIL_PACK => __('Email pack', 'anypress-host'),
                     self::PRODUCT_TYPE_STORAGE_PACK => __('Storage pack', 'anypress-host'),
+                    self::PRODUCT_TYPE_CARE => __('Care package', 'anypress-host'),
+                    self::PRODUCT_TYPE_SERVICE => __('One-time service', 'anypress-host'),
                 ],
-                'inline_tip' => __('A website plan is a subscription that creates a website. An email pack is a one-time product that adds emails to one of the customer\'s websites; the emails never expire and are used once the plan\'s monthly emails run out. For an email pack, only "Emails per pack" below applies. A storage pack is a subscription that adds 25 GB of storage to one of the customer\'s websites for as long as it is paid; none of the fields below apply to it.', 'anypress-host'),
+                'inline_tip' => __('A website plan is a subscription that creates a website. An email pack is a one-time product that adds emails to one of the customer\'s websites; the emails never expire and are used once the plan\'s monthly emails run out. For an email pack, only "Emails per pack" below applies. A storage pack is a subscription that adds 25 GB of storage to one of the customer\'s websites for as long as it is paid; none of the fields below apply to it. A care package is a monthly or yearly subscription for changes to one of the customer\'s websites; a one-time service is a single job for one website, such as setting it up. For those, only the care fields below apply.', 'anypress-host'),
             ],
             [
                 'key' => 'emails_per_pack',
@@ -129,6 +143,48 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
                 'required' => false,
                 'dependency' => ['depends_on' => 'product_type', 'operator' => '=', 'value' => self::PRODUCT_TYPE_EMAIL_PACK],
                 'inline_tip' => __('Email packs only: how many emails one pack adds. Buying several adds this many times the quantity.', 'anypress-host'),
+            ],
+            [
+                'key' => 'care_minutes',
+                'label' => __('Minutes of changes a month', 'anypress-host'),
+                'component' => 'number',
+                'required' => false,
+                'dependency' => ['depends_on' => 'product_type', 'operator' => '=', 'value' => self::PRODUCT_TYPE_CARE],
+                'inline_tip' => __('Care packages only: the time for changes the package includes each month, also on a yearly price. Unused time does not carry over.', 'anypress-host'),
+            ],
+            [
+                'key' => 'care_answer',
+                'label' => __('Answered within', 'anypress-host'),
+                'component' => 'text',
+                'required' => false,
+                'dependency' => ['depends_on' => 'product_type', 'operator' => '=', 'value' => self::PRODUCT_TYPE_CARE],
+                'inline_tip' => __('Care packages only: how soon requests are answered, as the customer and your team see it, e.g. "1 business day".', 'anypress-host'),
+            ],
+            [
+                'key' => 'care_priority',
+                'label' => __('Ticket priority', 'anypress-host'),
+                'component' => 'select',
+                'is_multiple' => false,
+                'required' => false,
+                'options' => self::priorities(),
+                'dependency' => ['depends_on' => 'product_type', 'operator' => '=', 'value' => self::PRODUCT_TYPE_CARE],
+                'inline_tip' => __('Care packages only: the priority each request of this package gets in Fluent Support. Requests are also tagged with the package\'s name, so your team can sort and filter by package.', 'anypress-host'),
+            ],
+            [
+                'key' => 'care_call_url',
+                'label' => __('Monthly call booking link', 'anypress-host'),
+                'component' => 'text',
+                'required' => false,
+                'dependency' => ['depends_on' => 'product_type', 'operator' => '=', 'value' => self::PRODUCT_TYPE_CARE],
+                'inline_tip' => __('Care packages with a monthly call only: the booking page where the customer picks a time, such as a FluentBooking calendar link. The website card and the monthly report show it as "Book this month\'s call". Leave empty for packages without a call.', 'anypress-host'),
+            ],
+            [
+                'key' => 'service_minutes',
+                'label' => __('Minutes of extra time', 'anypress-host'),
+                'component' => 'number',
+                'required' => false,
+                'dependency' => ['depends_on' => 'product_type', 'operator' => '=', 'value' => self::PRODUCT_TYPE_SERVICE],
+                'inline_tip' => __('One-time services only: time this adds to the website, used once its care package\'s monthly time runs out (e.g. 60 for a single hour). Leave empty for a job such as setting a site up.', 'anypress-host'),
             ],
             [
                 'key' => 'role',
@@ -180,22 +236,59 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
         ];
     }
 
+    /** What a feed's settings make the product: one of the PRODUCT_TYPE_ values. Feeds without one are plans. */
+    public static function product_type($settings): string
+    {
+        $type = is_array($settings) ? (string) ($settings['product_type'] ?? '') : '';
+
+        return in_array($type, [self::PRODUCT_TYPE_EMAIL_PACK, self::PRODUCT_TYPE_STORAGE_PACK, self::PRODUCT_TYPE_CARE, self::PRODUCT_TYPE_SERVICE], true) ? $type : self::PRODUCT_TYPE_PLAN;
+    }
+
+    /** True when a feed's settings make the product a website plan (not an email pack, care package or service). */
+    public static function is_plan($settings): bool
+    {
+        return self::product_type($settings) === self::PRODUCT_TYPE_PLAN;
+    }
+
     /** True when a feed's settings make the product an email pack, not a website plan. */
     public static function is_email_pack($settings): bool
     {
-        return is_array($settings) && ($settings['product_type'] ?? '') === self::PRODUCT_TYPE_EMAIL_PACK;
+        return self::product_type($settings) === self::PRODUCT_TYPE_EMAIL_PACK;
+    }
+
+    /** A whole number of minutes from a feed field, 0 when it is empty or not one (at most a month of minutes). */
+    /** @return array<string, string> Fluent Support's ticket priorities */
+    public static function priorities(): array
+    {
+        return [
+            self::PRIORITY_NORMAL => __('Normal', 'anypress-host'),
+            'medium' => __('Medium', 'anypress-host'),
+            'critical' => __('Critical', 'anypress-host'),
+        ];
+    }
+
+    /** The ticket priority of a care feed: one of priorities(), normal when unset or unknown. */
+    public static function priority($settings): string
+    {
+        $priority = is_array($settings) ? (string) ($settings['care_priority'] ?? '') : '';
+
+        return array_key_exists($priority, self::priorities()) ? $priority : self::PRIORITY_NORMAL;
+    }
+
+    public static function minutes($settings, string $key): int
+    {
+        $minutes = is_array($settings) ? ($settings[$key] ?? '') : '';
+        if (!is_numeric($minutes) || (float) $minutes != (int) $minutes) {
+            return 0;
+        }
+
+        return max(0, min((int) $minutes, 31 * 24 * 60));
     }
 
     /** True when a feed's settings make the product a storage pack, not a website plan. */
     public static function is_storage_pack($settings): bool
     {
-        return is_array($settings) && ($settings['product_type'] ?? '') === self::PRODUCT_TYPE_STORAGE_PACK;
-    }
-
-    /** True when a feed's settings make the product an add-on for a website (an email or storage pack), not a plan. */
-    public static function is_add_on($settings): bool
-    {
-        return self::is_email_pack($settings) || self::is_storage_pack($settings);
+        return self::product_type($settings) === self::PRODUCT_TYPE_STORAGE_PACK;
     }
 
     /** The emails one pack of an email-pack feed adds; 0 when the feed is not a pack or has no valid number. */
@@ -225,8 +318,10 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
             do_action(FluentCartStoragePacks::CHANGED_HOOK, $order, $eventData['event_data']['subscription'] ?? null, ($eventData['is_revoke_hook'] ?? '') === 'yes');
             return;
         }
-        if (self::is_email_pack($eventData['feed'] ?? null)) {
-            return; // FluentCartEmailPacks adds the emails when the order is paid; a pack never creates or removes a website
+        if (!self::is_plan($eventData['feed'] ?? null)) {
+            // Email packs (FluentCartEmailPacks), care packages and services (FluentCartCare) are handled when the order
+            // is paid; they never create or remove a website.
+            return;
         }
 
         $trigger = (string) ($eventData['trigger'] ?? '');

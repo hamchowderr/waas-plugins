@@ -120,7 +120,7 @@ class SupportDesk
             return self::error('invalid_ticket', 'title and content are required.', 400);
         }
 
-        $customer = $this->customer($email, $name, true);
+        $customer = self::customer($email, $name, true);
         if (!$customer) {
             return self::error('invalid_customer', 'Fluent Support could not add this customer.', 400);
         }
@@ -128,24 +128,73 @@ class SupportDesk
             return self::error('blocked', 'This customer may not open tickets.', 403);
         }
 
-        $ticket = FluentSupportApi('tickets')->createTicket([
-            'customer_id' => $customer->id,
-            'title' => $title,
-            'content' => $content,
-            'source' => 'web',
-        ]);
+        $ticket = self::create_ticket($customer, $title, $content);
         if (!$ticket) {
             return self::error('invalid_ticket', 'Fluent Support did not take the ticket.', 400);
         }
-        // The created model only holds the fields we passed; the database fills in the rest (status "new").
-        $ticket = \FluentSupport\App\Models\Ticket::find($ticket->id) ?: $ticket;
 
         return new WP_REST_Response(['ticket' => self::ticket_view($ticket, true)], 201);
     }
 
+    /**
+     * Files a ticket for a customer (made if new) through Fluent Support's own API, as a ticket from the portal: its
+     * emails, activity log and automations run. $content is HTML, as message() makes it. Null when Fluent Support is
+     * off, the customer is blocked, or the ticket was refused. Used by care requests from the account page too.
+     */
+    public static function file_ticket(string $email, string $name, string $title, string $content, array $options = [])
+    {
+        if (!self::available() || !is_email($email) || $title === '' || $content === '') {
+            return null;
+        }
+        $customer = self::customer($email, $name, true);
+        if (!$customer || (method_exists($customer, 'isBlocked') && $customer->isBlocked())) {
+            return null;
+        }
+
+        $ticket = self::create_ticket($customer, self::clip($title, self::MAX_TITLE), $content, (string) ($options['priority'] ?? ''));
+        if ($ticket && !empty($options['tag'])) {
+            self::tag($ticket, (string) $options['tag']);
+        }
+
+        return $ticket;
+    }
+
+    private static function create_ticket($customer, string $title, string $content, string $priority = '')
+    {
+        $data = [
+            'customer_id' => $customer->id,
+            'title' => $title,
+            'content' => $content,
+            'source' => 'web',
+        ];
+        if ($priority !== '') {
+            $data['priority'] = $priority;
+        }
+        $ticket = FluentSupportApi('tickets')->createTicket($data);
+        if (!$ticket) {
+            return null;
+        }
+
+        // The created model only holds the fields we passed; the database fills in the rest (status "new").
+        return \FluentSupport\App\Models\Ticket::find($ticket->id) ?: $ticket;
+    }
+
+    /** Adds the Fluent Support tag of this title to the ticket, making the tag the first time. */
+    private static function tag($ticket, string $title): void
+    {
+        $title = self::clip(sanitize_text_field($title), 190);
+        if ($title === '' || !class_exists(\FluentSupport\App\Services\Tickets\TicketService::class)) {
+            return;
+        }
+        $tag = \FluentSupport\App\Models\TicketTag::where('title', $title)->first() ?: FluentSupportApi('tags')->createTag(['title' => $title]);
+        if ($tag) {
+            (new \FluentSupport\App\Services\Tickets\TicketService())->addTags($ticket, [(int) $tag->id]);
+        }
+    }
+
     private function list_tickets(string $email): WP_REST_Response
     {
-        $customer = $this->customer($email, '', false);
+        $customer = self::customer($email, '', false);
         if (!$customer) {
             return new WP_REST_Response(['tickets' => []], 200);
         }
@@ -176,7 +225,7 @@ class SupportDesk
         if ($content === '') {
             return self::error('invalid_reply', 'content is required.', 400);
         }
-        $customer = $this->customer($email, '', false);
+        $customer = self::customer($email, '', false);
         $ticket = $this->own_ticket($email, $ticket_id);
         if (!$customer || !$ticket) {
             return self::not_found();
@@ -200,7 +249,7 @@ class SupportDesk
 
     private function close(string $email, int $ticket_id): WP_REST_Response
     {
-        $customer = $this->customer($email, '', false);
+        $customer = self::customer($email, '', false);
         $ticket = $this->own_ticket($email, $ticket_id);
         if (!$customer || !$ticket) {
             return self::not_found();
@@ -212,7 +261,7 @@ class SupportDesk
     }
 
     /** The Fluent Support customer for this email; made (with the name) when $create is set. */
-    private function customer(string $email, string $name, bool $create)
+    private static function customer(string $email, string $name, bool $create)
     {
         $existing = \FluentSupport\App\Models\Customer::where('email', $email)->first();
         if ($existing || !$create) {
@@ -230,7 +279,7 @@ class SupportDesk
     /** One of this customer's own tickets, or null: someone else's ticket is the same as no ticket. */
     private function own_ticket(string $email, int $ticket_id)
     {
-        $customer = $this->customer($email, '', false);
+        $customer = self::customer($email, '', false);
         if (!$customer || $ticket_id <= 0) {
             return null;
         }

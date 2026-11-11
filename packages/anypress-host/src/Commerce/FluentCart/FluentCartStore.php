@@ -49,6 +49,28 @@ class FluentCartStore
         return $subscription ? max(1, (int) ($subscription->quantity ?? 1)) : 0;
     }
 
+    /** The product the subscription is for, 0 when there is no such subscription. */
+    public function get_subscription_product_id($subscription_id): int
+    {
+        $subscription = $this->find_subscription($subscription_id);
+
+        return $subscription ? (int) $subscription->product_id : 0;
+    }
+
+    /**
+     * Cancels the subscription now through FluentCart, which also cancels it at the payment gateway, as a cancel from
+     * FluentCart's admin does. False when it was not active or FluentCart refused.
+     */
+    public function cancel_subscription($subscription_id, string $reason): bool
+    {
+        $subscription = $this->find_subscription($subscription_id);
+        if (!$subscription || !in_array((string) $subscription->status, self::ACTIVE_STATUSES, true)) {
+            return false;
+        }
+
+        return !is_wp_error($subscription->cancelRemoteSubscription(['reason' => $reason, 'note' => $reason]));
+    }
+
     /**
      * When the subscription's paid period ends: its next billing date (FluentCart keeps it on a cancel), as a unix
      * time. 0 when there is none.
