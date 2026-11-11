@@ -172,27 +172,27 @@ class FluentCartCarePortal
         }
 
         $picked = self::picked();
-        echo '<fieldset class="anypress-care-box"><legend>' . esc_html__('Want us to look after it?', 'anypress-host') . '</legend>';
-        echo '<label class="anypress-care-option"><input type="radio" name="anypress_care_pick" value="0"' . checked($picked, 0, false) . '> <span><strong>'
-            . esc_html__('No thanks', 'anypress-host') . '</strong> <small>' . esc_html__('You can add care later from your account.', 'anypress-host') . '</small></span></label>';
+        echo '<div class="anypress-care-box"><fieldset><legend>' . esc_html__('Want us to look after it?', 'anypress-host') . '</legend>';
+        echo '<p class="anypress-care-intro">' . esc_html__('Pick a care package and we make the changes for you each month. It is ready to add on your account once your website is up.', 'anypress-host') . '</p>';
         foreach ($packages as $package) {
             $monthly = self::first_variation($package, 'monthly');
             echo '<label class="anypress-care-option"><input type="radio" name="anypress_care_pick" value="' . esc_attr((string) $monthly['id']) . '"' . checked($picked, $monthly['id'], false) . '> <span><strong>'
                 . esc_html($package['title']) . '</strong> <small>' . esc_html(self::package_line($package)) . '</small></span> <b>' . esc_html(self::price_label($monthly)) . '</b></label>';
         }
-        echo '<p class="anypress-care-note">' . esc_html__('Care is its own small subscription for this website. Once your website is ready, your account\'s My website page has your pick ready to add, and either can be cancelled alone.', 'anypress-host') . '</p>';
+        echo '<label class="anypress-care-option is-none"><input type="radio" name="anypress_care_pick" value="0"' . checked($picked, 0, false) . '> <span><strong>'
+            . esc_html__('No thanks', 'anypress-host') . '</strong> <small>' . esc_html__('You can add care later from your account.', 'anypress-host') . '</small></span></label>';
+        echo '</fieldset>';
 
         $services = $this->care->services();
         if ($services) {
-            echo '<p class="anypress-care-note"><strong>' . esc_html__('Get started faster (one-time):', 'anypress-host') . '</strong> ';
-            $links = [];
+            echo '<p class="anypress-care-sub">' . esc_html__('One-time help', 'anypress-host') . '</p><ul class="anypress-care-services">';
             foreach ($services as $service) {
-                $links[] = esc_html($service['title']) . ' &middot; ' . esc_html(self::price_label($service['variations'][0]));
+                echo '<li><span>' . esc_html($service['title']) . '</span> <b>' . esc_html(self::price_label($service['variations'][0])) . '</b></li>';
             }
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- each part is escaped above.
-            echo implode('; ', $links) . '. ' . esc_html__('Also on your account once your website is ready.', 'anypress-host') . '</p>';
+            echo '</ul>';
         }
-        echo '</fieldset>';
+        echo '<p class="anypress-care-note">' . esc_html__('Care is its own small subscription, separate from the plan, so either can be cancelled alone. One-time help is on your account too.', 'anypress-host') . '</p>';
+        echo '</div>';
         $this->print_product_assets();
     }
 
@@ -212,12 +212,22 @@ class FluentCartCarePortal
     {
         $version = defined('ANYPRESS_HOST_VERSION') ? ANYPRESS_HOST_VERSION : null;
         wp_register_style('anypress-care-box', false, [], $version);
-        wp_add_inline_style('anypress-care-box', '.anypress-care-box{grid-column:1/-1;flex:1 0 100%;width:100%;box-sizing:border-box;border:1px solid currentColor;border-color:color-mix(in srgb,currentColor 25%,transparent);border-radius:12px;padding:14px 16px;margin:18px 0 0;display:grid;gap:8px;min-width:0}'
-            . '.anypress-care-box legend{font-weight:700;padding:0 6px}'
-            . '.anypress-care-option{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid color-mix(in srgb,currentColor 18%,transparent);border-radius:10px;cursor:pointer}'
-            . '.anypress-care-option:has(input:checked){border-color:currentColor}'
-            . '.anypress-care-option span{display:grid;gap:2px;flex:1;min-width:0}.anypress-care-option small{opacity:.75}.anypress-care-option b{white-space:nowrap}'
-            . '.anypress-care-option input{margin-top:5px}.anypress-care-note{margin:4px 0 0;font-size:.92em;opacity:.85}');
+        wp_add_inline_style('anypress-care-box', '.anypress-care-box{grid-column:1/-1;flex:1 0 100%;width:100%;box-sizing:border-box;border:1px solid color-mix(in srgb,currentColor 18%,transparent);border-radius:14px;padding:18px;margin:20px 0 0;display:grid;gap:12px;min-width:0}'
+            . '.anypress-care-box *{box-sizing:border-box}.anypress-care-box fieldset{border:0;margin:0;padding:0;display:grid;gap:8px;min-width:0}'
+            . '.anypress-care-box legend{font-weight:700;font-size:1.1em;padding:0;margin:0 0 2px}'
+            . '.anypress-care-intro{margin:0 0 4px;font-size:.92em;opacity:.75}'
+            . '.anypress-care-option{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:12px 14px;border:1px solid color-mix(in srgb,currentColor 16%,transparent);border-radius:10px;cursor:pointer;transition:border-color .15s,background .15s}'
+            . '.anypress-care-option:hover{border-color:color-mix(in srgb,currentColor 40%,transparent)}'
+            . '.anypress-care-option:has(input:checked){border-color:currentColor;box-shadow:inset 0 0 0 1px currentColor;background:color-mix(in srgb,currentColor 4%,transparent)}'
+            . '.anypress-care-option input{margin:0;width:18px;height:18px;accent-color:currentColor}'
+            . '.anypress-care-option span{display:grid;gap:1px;min-width:0}.anypress-care-option small{font-size:.86em;opacity:.7}.anypress-care-option b{white-space:nowrap;font-variant-numeric:tabular-nums}'
+            . '.anypress-care-option.is-none{padding:9px 14px}.anypress-care-option.is-none strong{font-weight:600}'
+            . '.anypress-care-sub{margin:6px 0 0;font-size:.78em;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.6}'
+            . '.anypress-care-services{list-style:none;margin:0;padding:0;display:grid}'
+            . '.anypress-care-services li{display:flex;justify-content:space-between;gap:12px;padding:7px 0;margin:0;border-top:1px solid color-mix(in srgb,currentColor 10%,transparent);font-size:.94em}'
+            . '.anypress-care-services li:first-child{border-top:0}.anypress-care-services b{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}'
+            . '.anypress-care-note{margin:0;font-size:.86em;opacity:.65}'
+            . '@media (max-width:480px){.anypress-care-box{padding:14px}.anypress-care-option{grid-template-columns:auto minmax(0,1fr)}.anypress-care-option b{grid-column:2}}');
         wp_print_styles('anypress-care-box');
 
         wp_register_script('anypress-care-box', false, [], $version, true);
@@ -286,23 +296,41 @@ class FluentCartCarePortal
             'error' => __('We could not take that just now. Try again in a minute, or write to support@anypress.io.', 'anypress-host'),
         ];
         if (isset($messages[$result])) {
-            echo '<p class="' . ($result === 'sent' || $result === 'added' ? 'anypress-acct-step' : 'anypress-acct-error') . '" role="status">' . esc_html($messages[$result]) . '</p>';
+            $ok = $result === 'sent' || $result === 'added';
+            echo '<p class="anypress-acct-care-result ' . ($ok ? 'is-ok' : 'is-bad') . '" role="status">' . esc_html($messages[$result]) . '</p>';
         }
     }
 
-    /** A website with care or extra time: what's left, and the request form. */
+    /** A website with care or extra time: what's left this month, the request form, the call and the subscription. */
     private function render_care(int $website_id, array $summary): void
     {
-        if ($summary['subscription_id'] > 0 && $summary['minutes'] > 0) {
-            $percent = (int) round(100 * $summary['left'] / $summary['minutes']);
-            echo '<div class="anypress-acct-care-meter" role="img" aria-label="' . esc_attr(self::time_line($summary)) . '"><i style="width:' . esc_attr((string) $percent) . '%"></i></div>';
-        }
-        if ($summary['extra'] > 0) {
-            echo '<p class="anypress-acct-note">' . esc_html(sprintf(
-                /* translators: %s: time */
-                __('Plus %s of extra time, used once this month\'s time runs out. It never expires.', 'anypress-host'),
-                FluentCartCare::format_minutes($summary['extra'])
-            )) . '</p>';
+        $has_package = $summary['subscription_id'] > 0 && $summary['minutes'] > 0;
+        if ($has_package || $summary['extra'] > 0) {
+            $share = $has_package ? $summary['left'] / $summary['minutes'] : 1.0;
+            $state = $has_package && $summary['left'] <= 0 ? ' is-out' : ($has_package && $share <= FluentCartCareEmails::LOW_SHARE ? ' is-low' : '');
+            echo '<div class="anypress-acct-care-time' . esc_attr($state) . '">';
+            if ($has_package) {
+                echo '<p class="anypress-acct-care-left"><b>' . esc_html(FluentCartCare::format_minutes($summary['left'])) . '</b> <span>' . esc_html(sprintf(
+                    /* translators: %s: time a month, e.g. 2 h */
+                    __('left of %s this month', 'anypress-host'),
+                    FluentCartCare::format_minutes($summary['minutes'])
+                )) . '</span></p>';
+                echo '<div class="anypress-acct-care-meter" role="img" aria-label="' . esc_attr(self::time_line($summary)) . '"><i style="width:' . esc_attr((string) (int) round(100 * $share)) . '%"></i></div>';
+                echo '<p class="anypress-acct-care-facts"><span>' . esc_html__('Starts again on the 1st', 'anypress-host') . '</span>'
+                    . ($summary['answer'] !== '' ? '<span>' . esc_html(sprintf(
+                        /* translators: %s: e.g. 1 business day */
+                        __('We answer within %s', 'anypress-host'),
+                        $summary['answer']
+                    )) . '</span>' : '') . '</p>';
+            }
+            if ($summary['extra'] > 0) {
+                echo '<p class="anypress-acct-care-extra">' . esc_html(sprintf(
+                    /* translators: %s: time */
+                    __('Plus %s of extra time, used once this month\'s time runs out. It never expires.', 'anypress-host'),
+                    FluentCartCare::format_minutes($summary['extra'])
+                )) . '</p>';
+            }
+            echo '</div>';
         }
 
         if (SupportDesk::available()) {
@@ -313,11 +341,17 @@ class FluentCartCarePortal
                 . esc_attr__('For example: add a "Spring workshop" page with a booking button, and put it in the menu.', 'anypress-host') . '"></textarea></label>';
             echo '<button type="submit" class="anypress-acct-btn is-primary">' . esc_html__('Send request', 'anypress-host') . '</button></form>';
         }
+
+        $links = [];
         if ($summary['call_url'] !== '') {
-            echo '<p><a class="anypress-acct-btn" href="' . esc_url($summary['call_url']) . '" target="_blank" rel="noopener">' . esc_html__('Book this month\'s call', 'anypress-host') . '</a></p>';
+            $links[] = '<a class="anypress-acct-btn" href="' . esc_url($summary['call_url']) . '" target="_blank" rel="noopener">' . esc_html__('Book this month\'s call', 'anypress-host') . '</a>';
         }
         if ($summary['subscription_id'] > 0) {
-            echo '<p class="anypress-acct-note"><a href="' . esc_url($this->adapter->get_subscription_url($summary['subscription_id'])) . '">' . esc_html__('Manage or cancel care', 'anypress-host') . '</a></p>';
+            $links[] = '<a class="anypress-acct-care-manage" href="' . esc_url($this->adapter->get_subscription_url($summary['subscription_id'])) . '">' . esc_html__('Manage or cancel care', 'anypress-host') . '</a>';
+        }
+        if ($links) {
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- each link is escaped above.
+            echo '<p class="anypress-acct-care-links">' . implode('', $links) . '</p>';
         }
     }
 
@@ -336,45 +370,107 @@ class FluentCartCarePortal
         }
 
         $picked = self::picked();
-        echo '<ul class="anypress-acct-domain-list anypress-acct-care-list">';
-        foreach ($this->offers() as $offer) {
-            [$item, $variation] = $offer;
-            $url = add_query_arg(FluentCartEmailPacks::QUERY_ARG, $website_id, $variation['checkout_url']);
-            echo '<li><a class="anypress-acct-care-offer' . ($variation['id'] === $picked ? ' is-picked' : '') . '" href="' . esc_url($url) . '"><strong>' . esc_html($item['title'])
-                . ($variation['interval'] === 'yearly' ? ' <small>' . esc_html__('yearly', 'anypress-host') . '</small>' : '') . '</strong>'
-                . ($variation['id'] === $picked ? ' <em>' . esc_html__('Your pick', 'anypress-host') . '</em>' : '')
-                . ' <span>' . esc_html(self::price_label($variation)) . '</span>'
-                . ($item['line'] !== '' ? '<small>' . esc_html($item['line']) . '</small>' : '') . '</a></li>';
-        }
-        echo '</ul><p class="anypress-acct-note">' . esc_html__('Unused time doesn\'t carry over. Care renews on its own and can be cancelled any time; it ends with the website\'s plan.', 'anypress-host') . '</p>';
-    }
-
-    /**
-     * What a website without a package can buy: each package monthly then yearly, then each service. The pick from
-     * the product page comes first.
-     *
-     * @return array<int, array{0: array{title: string, line: string}, 1: array}>
-     */
-    private function offers(): array
-    {
-        $offers = [];
-        foreach ($this->care->packages() as $package) {
-            foreach (['monthly', 'yearly'] as $interval) {
-                foreach ($package['variations'] as $variation) {
-                    if ($variation['interval'] === $interval) {
-                        $offers[] = [['title' => $package['title'], 'line' => $interval === 'monthly' ? self::package_line($package) : ''], $variation];
-                    }
-                }
+        $packages = $this->care->packages();
+        $yearly_picked = false;
+        $has_yearly = false;
+        foreach ($packages as $package) {
+            foreach ($package['variations'] as $variation) {
+                $has_yearly = $has_yearly || $variation['interval'] === 'yearly';
+                $yearly_picked = $yearly_picked || ($variation['interval'] === 'yearly' && $variation['id'] === $picked);
             }
         }
-        foreach ($this->care->services() as $service) {
-            $offers[] = [['title' => $service['title'], 'line' => wp_strip_all_tags($service['excerpt'])], $service['variations'][0]];
+
+        // Monthly or yearly: two radios the tiers' prices follow, in CSS alone.
+        if ($has_yearly) {
+            $name = 'anypress_care_period_' . $website_id;
+            echo '<div class="anypress-acct-care-period" role="radiogroup" aria-label="' . esc_attr__('Billing', 'anypress-host') . '">'
+                . '<label><input type="radio" name="' . esc_attr($name) . '" value="monthly"' . checked(!$yearly_picked, true, false) . '><span>' . esc_html__('Monthly', 'anypress-host') . '</span></label>'
+                . '<label><input type="radio" name="' . esc_attr($name) . '" value="yearly"' . checked($yearly_picked, true, false) . '><span>' . esc_html__('Yearly', 'anypress-host') . self::months_free($packages) . '</span></label></div>';
         }
 
-        $picked = self::picked();
-        usort($offers, fn ($a, $b) => (int) ($b[1]['id'] === $picked) <=> (int) ($a[1]['id'] === $picked));
+        echo '<div class="anypress-acct-care-tiers">';
+        foreach ($packages as $package) {
+            $ids = array_column($package['variations'], 'id');
+            $is_picked = in_array($picked, $ids, true);
+            echo '<div class="anypress-acct-care-tier' . ($is_picked ? ' is-picked' : '') . '"><p class="anypress-acct-care-name"><strong>' . esc_html($package['title']) . '</strong>'
+                . ($is_picked ? ' <em>' . esc_html__('Your pick', 'anypress-host') . '</em>' : '') . '</p>';
+            foreach (['monthly', 'yearly'] as $interval) {
+                foreach ($package['variations'] as $variation) {
+                    if ($variation['interval'] !== $interval) {
+                        continue;
+                    }
+                    $url = add_query_arg(FluentCartEmailPacks::QUERY_ARG, $website_id, $variation['checkout_url']);
+                    echo '<div class="anypress-acct-care-price is-' . esc_attr($interval) . '"><p><b>' . esc_html(self::money($variation['price'])) . '</b> <span>'
+                        . esc_html($interval === 'yearly' ? __('a year', 'anypress-host') : __('a month', 'anypress-host')) . '</span></p>'
+                        . '<a class="anypress-acct-btn anypress-acct-care-offer' . ($is_picked ? ' is-primary' : '') . '" href="' . esc_url($url) . '">'
+                        . esc_html(sprintf(
+                            /* translators: %s: care package */
+                            __('Add %s', 'anypress-host'),
+                            $package['title']
+                        )) . ($interval === 'yearly' ? ' <span class="screen-reader-text">' . esc_html__('yearly', 'anypress-host') . '</span>' : '') . '</a></div>';
+                }
+            }
+            echo '<ul>' . self::package_points($package) . '</ul></div>';
+        }
+        echo '</div><p class="anypress-acct-note">' . esc_html__('Unused time doesn\'t carry over. Care renews on its own and can be cancelled any time; it ends with the website\'s plan.', 'anypress-host') . '</p>';
 
-        return $offers;
+        $services = $this->care->services();
+        if ($services) {
+            echo '<p class="anypress-acct-care-sub">' . esc_html__('One-time help', 'anypress-host') . '</p><ul class="anypress-acct-care-services">';
+            foreach ($services as $service) {
+                $variation = $service['variations'][0];
+                $url = add_query_arg(FluentCartEmailPacks::QUERY_ARG, $website_id, $variation['checkout_url']);
+                echo '<li><div><strong>' . esc_html($service['title']) . '</strong><small>' . esc_html(wp_strip_all_tags($service['excerpt'])) . '</small></div>'
+                    . '<b>' . esc_html(self::price_label($variation)) . '</b><a class="anypress-acct-btn" href="' . esc_url($url) . '">' . esc_html__('Buy', 'anypress-host')
+                    . ' <span class="screen-reader-text">' . esc_html($service['title']) . '</span></a></li>';
+            }
+            echo '</ul>';
+        }
+    }
+
+    /** " 2 months free" when a year of every package costs that many months less than paying monthly, else ''. */
+    private static function months_free(array $packages): string
+    {
+        $free = null;
+        foreach ($packages as $package) {
+            $monthly = self::first_variation($package, 'monthly');
+            $yearly = self::first_variation($package, 'yearly');
+            if ($monthly['interval'] !== 'monthly' || $yearly['interval'] !== 'yearly' || $monthly['price'] <= 0) {
+                return '';
+            }
+            $months = (int) round(12 - $yearly['price'] / $monthly['price']);
+            if ($free !== null && $months !== $free) {
+                return '';
+            }
+            $free = $months;
+        }
+        if (!$free || $free < 1) {
+            return '';
+        }
+
+        /* translators: %d: months */
+        return ' <small>' . esc_html(sprintf(_n('%d month free', '%d months free', $free, 'anypress-host'), $free)) . '</small>';
+    }
+
+    /** A package's points as list items: its time and its answer time. */
+    private static function package_points(array $package): string
+    {
+        $minutes = AnyPressProvisioningIntegration::minutes($package['settings'], 'care_minutes');
+        $answer = sanitize_text_field((string) ($package['settings']['care_answer'] ?? ''));
+        $points = '';
+        if ($minutes > 0) {
+            /* translators: %s: time, e.g. 2 h */
+            $points .= '<li>' . esc_html(sprintf(__('%s of changes a month', 'anypress-host'), FluentCartCare::format_minutes($minutes))) . '</li>';
+        }
+        if ($answer !== '') {
+            /* translators: %s: e.g. 1 business day */
+            $points .= '<li>' . esc_html(sprintf(__('Answer within %s', 'anypress-host'), $answer)) . '</li>';
+        }
+        if (!empty($package['settings']['care_call_url'])) {
+            $points .= '<li>' . esc_html__('A call each month', 'anypress-host') . '</li>';
+        }
+
+        return $points . '<li>' . esc_html__('Monthly report by email', 'anypress-host') . '</li>';
     }
 
     // ---- Account: form posts ----

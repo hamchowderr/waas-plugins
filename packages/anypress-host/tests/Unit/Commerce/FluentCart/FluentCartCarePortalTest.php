@@ -56,7 +56,10 @@ class FluentCartCarePortalTest extends TestCase
             ],
             [
                 'product_id' => 402, 'title' => 'Care Plus', 'excerpt' => '', 'settings' => ['care_minutes' => '120', 'care_answer' => '1 business day'],
-                'variations' => [['id' => 43, 'title' => 'Monthly', 'price' => 19900, 'interval' => 'monthly', 'checkout_url' => 'https://shop.example/?fluent-cart=instant_checkout&item_id=43&quantity=1']],
+                'variations' => [
+                    ['id' => 43, 'title' => 'Monthly', 'price' => 19900, 'interval' => 'monthly', 'checkout_url' => 'https://shop.example/?fluent-cart=instant_checkout&item_id=43&quantity=1'],
+                    ['id' => 44, 'title' => 'Yearly', 'price' => 199000, 'interval' => 'yearly', 'checkout_url' => 'https://shop.example/?fluent-cart=instant_checkout&item_id=44&quantity=1'],
+                ],
             ],
         ]);
         $this->care->allows('services')->andReturn([
@@ -86,7 +89,7 @@ class FluentCartCarePortalTest extends TestCase
         $this->assertStringContainsString('Want us to look after it?', $html);
         $this->assertStringContainsString('value="0" checked', $html);
         $this->assertStringContainsString('<strong>Care Plus</strong> <small>2 h of changes a month, answered within 1 business day</small></span> <b>$199 a month</b>', $html);
-        $this->assertStringContainsString('Set up my site for me &middot; $299', $html);
+        $this->assertStringContainsString('<li><span>Set up my site for me</span> <b>$299</b></li>', $html);
     }
 
     public function test_the_box_is_only_on_plan_pages(): void
@@ -95,7 +98,7 @@ class FluentCartCarePortalTest extends TestCase
         $this->assertSame('', $this->output(fn () => $this->portal->render_product_box([])));
     }
 
-    public function test_a_website_without_care_leads_with_the_pick_from_the_product_page_linked_to_its_checkout(): void
+    public function test_a_website_without_care_shows_the_packages_as_tiers_with_the_pick_from_the_product_page_marked(): void
     {
         $_COOKIE[FluentCartCarePortal::PICK_COOKIE] = '43';
         $this->care->allows('summary')->andReturn(null);
@@ -103,12 +106,12 @@ class FluentCartCarePortalTest extends TestCase
         $html = $this->output(fn () => $this->portal->render_section(900));
 
         $this->assertStringContainsString('class="anypress-acct-panel anypress-acct-care"', $html);
-        $first = strpos($html, 'item_id=43');
-        $this->assertNotFalse($first);
-        $this->assertLessThan(strpos($html, 'item_id=41'), $first);
-        $this->assertStringContainsString('item_id=43&quantity=1&anypress_website=900', $html);
-        $this->assertStringContainsString('Your pick', $html);
-        $this->assertStringContainsString('item_id=42&quantity=1&anypress_website=900"><strong>Care <small>yearly</small></strong> <span>$790 a year</span>', $html);
+        $this->assertStringContainsString('<div class="anypress-acct-care-tier is-picked"><p class="anypress-acct-care-name"><strong>Care Plus</strong> <em>Your pick</em>', $html);
+        $this->assertStringContainsString('item_id=43&quantity=1&anypress_website=900">Add Care Plus</a>', $html);
+        $this->assertMatchesRegularExpression('/is-yearly"><p><b>\$790<\/b> <span>a year<\/span><\/p><a [^>]*item_id=42&quantity=1&anypress_website=900"/', $html);
+        $this->assertStringContainsString('value="monthly" checked', $html, 'monthly first, as the pick is monthly');
+        $this->assertStringContainsString('Yearly <small>2 months free</small>', $html);
+        $this->assertStringContainsString('<li>2 h of changes a month</li><li>Answer within 1 business day</li>', $html);
         $this->assertStringContainsString('item_id=51', $html);
     }
 

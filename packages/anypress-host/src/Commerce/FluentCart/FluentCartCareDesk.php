@@ -32,6 +32,7 @@ class FluentCartCareDesk
         add_filter('fluent_support/customer_extra_widgets', [$this, 'ticket_widget'], 20, 3);
         // After AdminHome's menu (11), as one of its pages.
         add_action('admin_menu', [$this, 'add_page'], 20);
+        add_filter('anypress_admin_tabs', [$this, 'add_tab']);
         add_action('admin_post_' . self::LOG_ACTION, [$this, 'handle_log']);
     }
 
@@ -177,7 +178,7 @@ class FluentCartCareDesk
 
     public function add_page(): void
     {
-        add_submenu_page(AdminHome::SLUG, __('Care', 'anypress-host'), __('Care', 'anypress-host'), 'manage_options', self::PAGE, [$this, 'render_page']);
+        add_submenu_page(AdminHome::SLUG, __('Care', 'anypress-host'), __('Care', 'anypress-host'), 'manage_options', self::PAGE, [$this, 'render_page'], 1);
     }
 
     /** @return int[] websites with an active care package or extra time */
@@ -198,47 +199,159 @@ class FluentCartCareDesk
         return array_keys($websites);
     }
 
+    /** AnyPress > Care joins the tabs under the AnyPress header, and so gets its look. */
+    public function add_tab($tabs)
+    {
+        $tabs = is_array($tabs) ? $tabs : [];
+        $tabs[self::PAGE] = [__('Care', 'anypress-host'), admin_url('admin.php?page=' . self::PAGE)];
+
+        return $tabs;
+    }
+
     public function render_page(): void
     {
         if (!current_user_can('manage_options')) {
             return;
         }
-        echo '<div class="wrap"><h1>' . esc_html__('Care', 'anypress-host') . '</h1>';
-        echo '<p>' . esc_html__('Websites with a care package or extra time. Requests arrive in Fluent Support; log the time each one took here. This month\'s time is used first, then extra time.', 'anypress-host') . '</p>';
+        $rows = [];
+        foreach ($this->websites() as $website_id) {
+            $summary = $this->care->summary($website_id);
+            if ($summary !== null) {
+                $rows[$website_id] = $summary;
+            }
+        }
+        $late = $this->late_requests();
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only picks the website to open.
+        $focus = isset($_GET['log']) ? absint(wp_unslash($_GET['log'])) : 0;
+
+        echo '<div class="wrap ap-admin ap-care">';
+        AdminHome::render_header(__('Care', 'anypress-host'));
+        echo '<hr class="wp-header-end">';
         $this->render_logged();
         $this->render_products_step();
-        $this->render_late();
-
-        $websites = $this->websites();
-        if (!$websites) {
-            echo '<p><em>' . esc_html__('No website has care yet.', 'anypress-host') . '</em></p></div>';
-            return;
+        if ($rows) {
+            $this->render_tiles($rows, count($late));
         }
 
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only picks the row to focus.
-        $focus = isset($_GET['log']) ? absint(wp_unslash($_GET['log'])) : 0;
-        echo '<table class="widefat striped"><thead><tr><th>' . esc_html__('Website', 'anypress-host') . '</th><th>' . esc_html__('Customer', 'anypress-host') . '</th><th>'
-            . esc_html__('Package', 'anypress-host') . '</th><th>' . esc_html__('Time left', 'anypress-host') . '</th><th>' . esc_html__('Log time', 'anypress-host') . '</th></tr></thead><tbody>';
-        foreach ($websites as $website_id) {
-            $summary = $this->care->summary($website_id);
-            if ($summary === null) {
+        echo '<div class="ap-columns"><section class="ap-card"><div class="ap-card-head"><h2>' . esc_html__('Websites with care', 'anypress-host') . '</h2><span class="ap-muted">'
+            . esc_html__('This month\'s time is used first, then extra time.', 'anypress-host') . '</span></div>';
+        if (!$rows) {
+            echo '<p class="ap-empty">' . esc_html__('No website has care yet. When a customer adds a package or buys an hour of changes, their website shows here with its time.', 'anypress-host') . '</p>';
+        } else {
+            echo '<div class="ap-care-sites">';
+            foreach ($rows as $website_id => $summary) {
+                $this->render_site((int) $website_id, $summary, $website_id === $focus);
+            }
+            echo '</div>';
+        }
+        echo '</section><div class="ap-stack">';
+        $this->render_late($late);
+        $this->render_recent(array_keys($rows));
+        echo '</div></div></div>';
+    }
+
+    /** The counts across the top: websites, time used, running low, late. */
+    private function render_tiles(array $rows, int $late): void
+    {
+        $minutes = 0;
+        $used = 0;
+        $low = 0;
+        foreach ($rows as $summary) {
+            if ($summary['package'] === '' || $summary['minutes'] <= 0) {
                 continue;
             }
-            $customer = $this->store->get_subscription_customer($website_id);
-            echo '<tr id="care-' . esc_attr((string) $website_id) . '"' . ($website_id === $focus ? ' class="active"' : '') . '><td><a href="' . esc_url($this->store->get_admin_subscription_url($website_id)) . '">' . esc_html($this->care->domain($website_id)) . '</a></td>';
-            echo '<td>' . esc_html(trim(($customer['name'] ?? '') . ' ' . ($customer['email'] ?? ''))) . '</td>';
-            echo '<td>' . esc_html($summary['package'] !== '' ? $summary['package'] . ($summary['answer'] !== '' ? ' (' . $summary['answer'] . ')' : '') : '—') . '</td>';
-            echo '<td>' . esc_html(self::time_detail($summary)) . '</td><td>';
-            echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="display:flex;gap:6px;flex-wrap:wrap">';
-            echo '<input type="hidden" name="action" value="' . esc_attr(self::LOG_ACTION) . '"><input type="hidden" name="website" value="' . esc_attr((string) $website_id) . '">';
-            wp_nonce_field(self::LOG_ACTION . '_' . $website_id);
-            echo '<label><span class="screen-reader-text">' . esc_html__('Minutes', 'anypress-host') . '</span><input type="number" name="minutes" min="1" max="' . esc_attr((string) FluentCartCare::MAX_LOG_MINUTES) . '" step="1" required class="small-text" placeholder="min"' . ($website_id === $focus ? ' autofocus' : '') . '></label>';
-            echo '<label><span class="screen-reader-text">' . esc_html__('What was done', 'anypress-host') . '</span><input type="text" name="note" class="regular-text" placeholder="' . esc_attr__('Ticket #, what was done', 'anypress-host') . '"></label>';
-            echo '<button type="submit" class="button">' . esc_html__('Log', 'anypress-host') . '</button></form>';
-            $this->render_history($website_id);
-            echo '</td></tr>';
+            $minutes += $summary['minutes'];
+            $used += $summary['minutes'] - $summary['left'];
+            $low += $summary['left'] <= $summary['minutes'] * FluentCartCareEmails::LOW_SHARE ? 1 : 0;
         }
-        echo '</tbody></table></div>';
+        $tiles = [
+            [(string) count($rows), _n('Website with care', 'Websites with care', count($rows), 'anypress-host'), false],
+            /* translators: %s: time, e.g. 12 h */
+            [FluentCartCare::format_minutes($used), sprintf(__('used of %s this month', 'anypress-host'), FluentCartCare::format_minutes($minutes)), false],
+            [(string) $low, __('Running low on time', 'anypress-host'), false],
+            [(string) $late, __('Late requests', 'anypress-host'), $late > 0],
+        ];
+        echo '<div class="ap-tiles">';
+        foreach ($tiles as [$number, $label, $alert]) {
+            echo '<div class="ap-tile' . ($alert ? ' is-alert' : '') . '"><b>' . esc_html($number) . '</b><span>' . esc_html($label) . '</span></div>';
+        }
+        echo '</div>';
+    }
+
+    /** One website: who, which package, a meter of the month's time, and its log form with the time log. */
+    private function render_site(int $website_id, array $summary, bool $focus): void
+    {
+        $customer = $this->store->get_subscription_customer($website_id) ?? [];
+        $has_package = $summary['package'] !== '' && $summary['minutes'] > 0;
+        $share = $has_package ? $summary['left'] / $summary['minutes'] : 1.0;
+        $state = !$has_package ? '' : ($summary['left'] <= 0 ? ' is-out' : ($share <= FluentCartCareEmails::LOW_SHARE ? ' is-low' : ''));
+
+        echo '<article class="ap-care-site' . ($focus ? ' is-focus' : '') . '" id="care-' . esc_attr((string) $website_id) . '">';
+        echo '<div class="ap-care-who"><a class="ap-care-domain" href="' . esc_url($this->store->get_admin_subscription_url($website_id)) . '">' . esc_html($this->care->domain($website_id)) . '</a>'
+            . '<small>' . esc_html(implode(' · ', array_filter([(string) ($customer['name'] ?? ''), (string) ($customer['email'] ?? '')]))) . '</small></div>';
+        echo '<div class="ap-care-pkg">' . ($has_package
+            ? '<span class="ap-pill is-ok">' . esc_html($summary['package']) . '</span>' . ($summary['answer'] !== '' ? '<small>' . esc_html(sprintf(
+                /* translators: %s: e.g. 1 business day */
+                __('Answer within %s', 'anypress-host'),
+                $summary['answer']
+            )) . '</small>' : '')
+            : '<span class="ap-pill">' . esc_html__('Extra time only', 'anypress-host') . '</span>') . '</div>';
+
+        echo '<div class="ap-care-time' . esc_attr($state) . '">';
+        if ($has_package) {
+            echo '<p><b>' . esc_html(sprintf(
+                /* translators: %s: time */
+                __('%s left', 'anypress-host'),
+                FluentCartCare::format_minutes($summary['left'])
+            )) . '</b> <span>' . esc_html(sprintf(
+                /* translators: %s: time */
+                __('of %s', 'anypress-host'),
+                FluentCartCare::format_minutes($summary['minutes'])
+            )) . '</span></p>';
+            echo '<div class="ap-meter" role="img" aria-label="' . esc_attr(self::time_detail($summary)) . '"><i style="width:' . esc_attr((string) (int) round(100 * $share)) . '%"></i></div>';
+        }
+        if ($summary['extra'] > 0) {
+            echo '<small>' . esc_html(sprintf(
+                /* translators: %s: time */
+                __('+ %s extra time', 'anypress-host'),
+                FluentCartCare::format_minutes($summary['extra'])
+            )) . '</small>';
+        }
+        echo '</div>';
+
+        echo '<details class="ap-care-log"' . ($focus ? ' open' : '') . '><summary class="ap-btn is-sm">' . esc_html__('Log time', 'anypress-host') . '</summary><div class="ap-care-log-body">';
+        echo '<form class="ap-care-form" method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+        echo '<input type="hidden" name="action" value="' . esc_attr(self::LOG_ACTION) . '"><input type="hidden" name="website" value="' . esc_attr((string) $website_id) . '">';
+        wp_nonce_field(self::LOG_ACTION . '_' . $website_id);
+        echo '<label><span>' . esc_html__('Minutes', 'anypress-host') . '</span><input type="number" name="minutes" min="1" max="' . esc_attr((string) FluentCartCare::MAX_LOG_MINUTES) . '" step="1" required inputmode="numeric" placeholder="30"' . ($focus ? ' autofocus' : '') . '></label>';
+        echo '<label class="ap-care-note"><span>' . esc_html__('What was done', 'anypress-host') . '</span><input type="text" name="note" placeholder="' . esc_attr__('Ticket #12: new workshop page', 'anypress-host') . '"></label>';
+        echo '<button type="submit" class="ap-btn is-ink">' . esc_html__('Log time', 'anypress-host') . '</button></form>';
+        $this->render_history($website_id);
+        echo '</div></details></article>';
+    }
+
+    /** The newest time logged on any website, so the team sees what was done lately. */
+    private function render_recent(array $websites): void
+    {
+        $entries = [];
+        foreach ($websites as $website_id) {
+            foreach ($this->care->history((int) $website_id, 6) as $entry) {
+                $entries[] = $entry + ['website' => $this->care->domain((int) $website_id)];
+            }
+        }
+        usort($entries, fn ($a, $b) => strcmp($b['at'], $a['at']));
+        echo '<section class="ap-card"><h2>' . esc_html__('Time logged lately', 'anypress-host') . '</h2>';
+        if (!$entries) {
+            echo '<p class="ap-empty">' . esc_html__('Nothing logged yet.', 'anypress-host') . '</p></section>';
+            return;
+        }
+        echo '<ul class="ap-care-feed">';
+        foreach (array_slice($entries, 0, 6) as $entry) {
+            echo '<li><div><strong>' . esc_html($entry['note'] !== '' ? $entry['note'] : __('Changes', 'anypress-host')) . '</strong><small>'
+                . esc_html(implode(' · ', array_filter([$entry['website'], $entry['by'], $entry['at'] !== '' ? wp_date((string) get_option('date_format'), (int) strtotime($entry['at'])) : '']))) . '</small></div>'
+                . '<b>' . esc_html(FluentCartCare::format_minutes($entry['minutes'])) . '</b></li>';
+        }
+        echo '</ul></section>';
     }
 
     // ---- Answer times ----
@@ -314,40 +427,40 @@ class FluentCartCareDesk
     }
 
     /** "Waiting longer than promised": the late requests, oldest first, each linked to its ticket. */
-    private function render_late(): void
+    private function render_late(array $late): void
     {
-        $late = $this->late_requests();
+        echo '<section class="ap-card"><h2>' . esc_html__('Waiting longer than promised', 'anypress-host') . '</h2>';
         if (!$late) {
+            echo '<p class="ap-empty">' . esc_html__('Every open request is within its answer time.', 'anypress-host') . '</p></section>';
             return;
         }
-        echo '<div class="notice notice-warning inline"><p><strong>' . esc_html__('Waiting longer than promised', 'anypress-host') . '</strong></p><ul>';
+        echo '<div class="ap-attn">';
         foreach ($late as $ticket) {
             $url = admin_url('admin.php?page=fluent-support#/tickets/' . $ticket['id'] . '/view');
-            echo '<li><a href="' . esc_url($url) . '">' . esc_html('#' . $ticket['id'] . ' ' . $ticket['title']) . '</a> · ' . esc_html(sprintf(
+            echo '<div class="ap-attn-item"><div><strong>' . esc_html('#' . $ticket['id'] . ' ' . $ticket['title']) . '</strong><p>' . esc_html(sprintf(
                 /* translators: 1: package, 2: date */
-                __('%1$s, due %2$s', 'anypress-host'),
+                __('%1$s · was due %2$s', 'anypress-host'),
                 $ticket['package'],
                 wp_date((string) get_option('date_format'), (int) strtotime($ticket['due']))
-            )) . '</li>';
+            )) . '</p></div><a class="ap-btn is-sm is-ink" href="' . esc_url($url) . '">' . esc_html__('Open ticket', 'anypress-host') . '</a></div>';
         }
-        echo '</ul></div>';
+        echo '</div></section>';
     }
 
-    /** The website's time log, folded under its form. */
+    /** The website's time log, under its form. */
     private function render_history(int $website_id): void
     {
         $history = $this->care->history($website_id, 10);
         if (!$history) {
+            echo '<p class="ap-muted">' . esc_html__('No time logged yet.', 'anypress-host') . '</p>';
             return;
         }
-        /* translators: %d: number of entries */
-        echo '<details style="margin-top:6px"><summary>' . esc_html(sprintf(__('Time log (last %d)', 'anypress-host'), count($history))) . '</summary><ul style="margin:6px 0 0">';
+        echo '<table class="ap-list ap-care-history"><caption class="screen-reader-text">' . esc_html__('Time log', 'anypress-host') . '</caption><tbody>';
         foreach ($history as $entry) {
-            $when = $entry['at'] !== '' ? wp_date(get_option('date_format'), (int) strtotime($entry['at'])) : '';
-            $line = trim($when . ' · ' . FluentCartCare::format_minutes($entry['minutes']) . ($entry['note'] !== '' ? ' · ' . $entry['note'] : '') . ($entry['by'] !== '' ? ' · ' . $entry['by'] : ''), ' ·');
-            echo '<li>' . esc_html($line) . '</li>';
+            $when = $entry['at'] !== '' ? wp_date((string) get_option('date_format'), (int) strtotime($entry['at'])) : '';
+            echo '<tr><td>' . esc_html($when) . '</td><td>' . esc_html($entry['note'] !== '' ? $entry['note'] : __('Changes', 'anypress-host')) . ($entry['by'] !== '' ? '<small>' . esc_html($entry['by']) . '</small>' : '') . '</td><td class="ap-c-act">' . esc_html(FluentCartCare::format_minutes($entry['minutes'])) . '</td></tr>';
         }
-        echo '</ul></details>';
+        echo '</tbody></table>';
     }
 
     /** Until the shop has care products: a button that makes them as drafts. */
@@ -356,16 +469,17 @@ class FluentCartCareDesk
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only shows how many were made.
         $made = isset($_GET['care_products_made']) ? absint(wp_unslash($_GET['care_products_made'])) : -1;
         if ($made >= 0) {
-            echo '<div class="notice notice-' . ($made > 0 ? 'success' : 'warning') . '"><p>' . esc_html($made > 0
+            echo '<div class="ap-banner ' . ($made > 0 ? 'is-ok' : 'is-warn') . '" role="status"><span>' . esc_html($made > 0
                 /* translators: %d: number of products */
                 ? sprintf(_n('%d care product made as a draft. Check it in FluentCart, then publish it to sell it.', '%d care products made as drafts. Check them in FluentCart, then publish them to sell them.', $made, 'anypress-host'), $made)
-                : __('No care products were made: the shop already has some.', 'anypress-host')) . '</p></div>';
+                : __('No care products were made: the shop already has some.', 'anypress-host')) . '</span></div>';
         }
         if (FluentCartCareProducts::exist()) {
             return;
         }
-        echo '<p><a class="button button-primary" href="' . esc_url(FluentCartCareProducts::url()) . '">' . esc_html__('Create the care products', 'anypress-host') . '</a> '
-            . esc_html__('Makes Care, Care Plus and Care Pro (monthly and yearly) and three one-time services as drafts in FluentCart, so nothing is on sale until you publish them.', 'anypress-host') . '</p>';
+        echo '<section class="ap-card ap-setup"><div class="ap-card-head"><div><h2>' . esc_html__('Sell care with your websites', 'anypress-host') . '</h2><p class="ap-muted">'
+            . esc_html__('Makes Care, Care Plus and Care Pro (monthly and yearly) and three one-time services as drafts in FluentCart, so nothing is on sale until you publish them.', 'anypress-host') . '</p></div>'
+            . '<a class="ap-btn is-ink" href="' . esc_url(FluentCartCareProducts::url()) . '">' . esc_html__('Create the care products', 'anypress-host') . '</a></div></section>';
     }
 
     /** What the last log did, from the redirect's numbers. */
@@ -393,7 +507,7 @@ class FluentCartCareDesk
                 FluentCartCare::format_minutes($over)
             );
         }
-        echo '<div class="notice notice-success"><p>' . esc_html($message) . '</p></div>';
+        echo '<div class="ap-banner ' . ($over > 0 ? 'is-warn' : 'is-ok') . '" role="status"><span>' . esc_html($message) . '</span></div>';
     }
 
     public function handle_log(): void

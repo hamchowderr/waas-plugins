@@ -15,6 +15,8 @@ import { runCLI } from '@wp-playground/cli';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const HOST = resolve(HERE, '../../packages/anypress-host');
 const OUT = resolve(HERE, 'shots/care');
+// Desktop, laptop, tablet and phone.
+const SIZES = [['desktop', 1440, 900], ['laptop', 1280, 800], ['tablet', 820, 1180], ['phone', 390, 844]];
 mkdirSync(OUT, { recursive: true });
 
 const cli = await runCLI({
@@ -66,7 +68,7 @@ check(products.length === 6 && products[1][0] === 'Care Plus' && products[1][1].
 const { chromium } = createRequire(import.meta.url)('playwright');
 const browser = await chromium.launch();
 let carePlusMonthly = 0;
-for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844]]) {
+for (const [label, width, height] of SIZES) {
     const context = await browser.newContext({ viewport: { width, height } });
     const page = await context.newPage();
     await page.goto(`${base}/wp-login.php`);
@@ -95,8 +97,14 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
     const section = page.locator('details.anypress-acct-care');
     check((await section.count()) === 1, `${label}: the website card has a Care section`);
     await section.locator('summary').click();
-    const first = section.locator('.anypress-acct-care-offer').first();
-    check((await first.innerText()).includes('Care Plus') && (await first.innerText()).includes('Your pick'), `${label}: the pick from the product page comes first`);
+    const tier = section.locator('.anypress-acct-care-tier.is-picked');
+    check((await tier.count()) === 1 && (await tier.innerText()).includes('Care Plus') && (await tier.innerText()).includes('Your pick'), `${label}: the pick from the product page is marked`);
+    check((await section.locator('.anypress-acct-care-offer:visible').count()) === 3, `${label}: three packages, monthly prices showing`);
+    await section.locator('.anypress-acct-care-period label', { hasText: 'Yearly' }).click();
+    check((await tier.locator('.is-yearly').innerText()).includes('$1,990'), `${label}: Yearly shows the yearly price`);
+    await page.screenshot({ path: resolve(OUT, `${label}-2b-account-offer-yearly.png`), fullPage: true });
+    await section.locator('.anypress-acct-care-period label', { hasText: 'Monthly' }).click();
+    const first = tier.locator('.anypress-acct-care-offer:visible');
     await page.screenshot({ path: resolve(OUT, `${label}-2-account-offer.png`), fullPage: true });
 
     // 3. Its link: FluentCart's checkout for Care Plus.
@@ -222,7 +230,7 @@ check(service.extra === 60, 'once paid, the hour is added to the website as extr
 check(service.title === 'One hour of changes: sams-studio.anypress.site' && service.tags.includes('One hour of changes'), 'and filed as a tagged Fluent Support ticket', JSON.stringify(service));
 
 // 5. The account with care: time left and "Ask for a change".
-for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844]]) {
+for (const [label, width, height] of SIZES) {
     const page = await browser.newPage({ viewport: { width, height } });
     await page.goto(`${base}/wp-login.php`);
     await page.fill('#user_login', 'shopper');
@@ -300,14 +308,19 @@ writeFileSync(resolve(OUT, 'report-email.html'), report.mails?.[0]?.[1] ?? '');
     await page.waitForLoadState('networkidle');
     const logUrl = team.widget?.links?.[0]?.url ?? '';
     await page.goto(logUrl, { waitUntil: 'networkidle' });
-    const row = page.locator('tr.active');
+    const row = page.locator('.ap-care-site.is-focus');
     check(logUrl.includes('&log=') && (await row.count()) === 1, 'the sidebar\'s Log time opens the website\'s row', logUrl);
     const focused = await row.locator('input[name="minutes"][autofocus]').count();
     check(focused === 1, 'the minutes box is the one focused', String(focused));
-    await row.locator('summary').click();
     check((await row.innerText()).includes('50 min'), 'the row shows its time log');
+    check((await page.locator('.ap-tabs a[aria-current="page"]').innerText()).trim() === 'Care', 'Care is a tab of the AnyPress pages');
     check((await page.innerText('body')).includes('Waiting longer than promised'), 'the Care page lists the late request');
-    await page.screenshot({ path: resolve(OUT, 'desktop-7-care-page.png'), fullPage: true });
+    for (const [label, width, height] of SIZES) {
+        await page.setViewportSize({ width, height });
+        await page.screenshot({ path: resolve(OUT, `${label}-7-care-page.png`), fullPage: true });
+    }
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    check(overflow <= 0, 'the Care page fits a phone without sideways scrolling', String(overflow));
     await context.close();
 }
 
