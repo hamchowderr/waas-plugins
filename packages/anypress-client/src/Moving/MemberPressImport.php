@@ -338,7 +338,6 @@ class MemberPressImport extends NativeImport
             'post_status' => ['publish', 'private', 'draft'],
             'orderby' => ['menu_order' => 'ASC', 'ID' => 'ASC'],
             'numberposts' => -1,
-            'suppress_filters' => true,
         ]);
     }
 

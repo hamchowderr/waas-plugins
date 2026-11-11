@@ -134,7 +134,6 @@ abstract class CourseSource
             'post_status' => self::LIVE,
             'orderby' => ['menu_order' => 'ASC', 'ID' => 'ASC'],
             'numberposts' => -1,
-            'suppress_filters' => true,
             'no_found_rows' => true,
         ]);
     }

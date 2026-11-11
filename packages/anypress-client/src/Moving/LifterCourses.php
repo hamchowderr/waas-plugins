@@ -115,7 +115,6 @@ class LifterCourses extends CourseSource
             'meta_query' => [['key' => '_llms_product_id', 'value' => $course], ['key' => '_llms_is_free', 'value' => 'yes']], // phpcs:ignore WordPress.DB.SlowDBQuery -- one admin run.
             'fields' => 'ids',
             'numberposts' => 1,
-            'suppress_filters' => true,
         ]);
     }
 }

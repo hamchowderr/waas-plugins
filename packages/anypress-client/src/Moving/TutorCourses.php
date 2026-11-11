@@ -52,7 +52,7 @@ class TutorCourses extends CourseSource
             // Active enrolments only: a pending one waits on payment, a cancelled one was taken back.
             // Tutor LMS's "completed" status isn't registered with WordPress while Tutor LMS is off, so WordPress can't
             // filter on it: take every enrolment that isn't in the bin and keep the completed ones.
-            $enrolments = get_posts(['post_type' => 'tutor_enrolled', 'post_parent' => $id, 'post_status' => 'any', 'numberposts' => -1, 'suppress_filters' => true, 'no_found_rows' => true]);
+            $enrolments = get_posts(['post_type' => 'tutor_enrolled', 'post_parent' => $id, 'post_status' => 'any', 'numberposts' => -1, 'no_found_rows' => true]);
             $students = self::real_users(array_map(fn ($post) => (int) $post->post_author, array_filter($enrolments, fn ($post) => $post->post_status === 'completed')));
             $completed = [];
             $lesson_ids = self::lesson_ids($sections);

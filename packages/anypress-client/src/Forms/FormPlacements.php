@@ -111,7 +111,7 @@ final class FormPlacements
                 $or[] = ['key' => $key, 'value' => $needle, 'compare' => 'LIKE'];
             }
         }
-        $ids = get_posts(['post_type' => array_values(array_diff(get_post_types(), self::SKIP_POST_TYPES)), 'post_status' => 'any', 'meta_query' => [$or], 'fields' => 'ids', 'numberposts' => -1, 'suppress_filters' => true]);
+        $ids = get_posts(['post_type' => array_values(array_diff(get_post_types(), self::SKIP_POST_TYPES)), 'post_status' => 'any', 'meta_query' => [$or], 'fields' => 'ids', 'numberposts' => -1]); // phpcs:ignore WordPress.DB.SlowDBQuery -- one admin run.
         foreach ($ids as $id) {
             $post = get_post((int) $id);
             if ($post && $post->post_type !== 'revision') {
@@ -219,7 +219,6 @@ final class FormPlacements
                 'search_columns' => ['post_content'],
                 'fields' => 'ids',
                 'numberposts' => -1,
-                'suppress_filters' => true,
             ]);
             $ids = array_merge($ids, array_map('intval', $found));
         }

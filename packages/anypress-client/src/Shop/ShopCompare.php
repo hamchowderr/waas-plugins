@@ -276,7 +276,7 @@ class ShopCompare
      */
     public static function posts_with(string $type, string $key): array
     {
-        $ids = get_posts(['post_type' => $type, 'post_status' => ['any', 'trash'], 'meta_key' => $key, 'fields' => 'ids', 'numberposts' => -1, 'suppress_filters' => true, 'no_found_rows' => true]); // phpcs:ignore WordPress.DB.SlowDBQuery -- one admin run.
+        $ids = get_posts(['post_type' => $type, 'post_status' => ['any', 'trash'], 'meta_key' => $key, 'fields' => 'ids', 'numberposts' => -1, 'no_found_rows' => true]); // phpcs:ignore WordPress.DB.SlowDBQuery -- one admin run.
         $map = [];
         foreach (array_map('intval', $ids) as $id) {
             $map[$id] = (int) get_post_meta($id, $key, true);
