@@ -387,6 +387,7 @@ class FluentCartCare
         if ($website_id > 0 && $minutes > 0) {
             $this->store->update_subscription_meta($website_id, self::EXTRA_META, $this->extra_minutes($website_id) + $minutes);
             $this->store->add_subscription_note($website_id, __('Extra care time added', 'anypress-host'), sprintf('%s from order #%d.', self::format_minutes($minutes), (int) $order->id));
+            do_action('anypress_care_extra_added', $website_id);
         }
 
         $customer = $this->store->get_order_customer($order);

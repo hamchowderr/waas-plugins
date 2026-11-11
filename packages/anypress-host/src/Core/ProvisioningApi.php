@@ -270,6 +270,18 @@ class ProvisioningApi
     }
 
     /**
+     * Records the store's care package and this month's care time, for the dashboard; null as the package ends it.
+     * Each send replaces the one before, so sending again is safe.
+     *
+     * @param array{minutes?: int, used?: int, extra?: int, answer?: string, month?: string} $time
+     * @throws \Exception
+     */
+    public function set_care($external_id, ?string $package, array $time = [])
+    {
+        return $this->httpService->put('/v1/tenants/care?externalId=' . rawurlencode((string) $external_id), ['package' => $package] + $time);
+    }
+
+    /**
      * Domains to buy for a name or an exact domain, with what each costs the storefront (cents, USD).
      *
      * @throws \Exception
