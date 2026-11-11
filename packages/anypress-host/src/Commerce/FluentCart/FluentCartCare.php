@@ -258,18 +258,6 @@ class FluentCartCare
         return $this->orders->can_buy_emails($subscription_id) && $this->adapter->is_subscription_active($subscription_id);
     }
 
-    /** True when one of the user's websites is live. */
-    public function has_live_website(int $user_id): bool
-    {
-        foreach ($this->adapter->get_customer_subscription_ids($user_id) as $id) {
-            if ($this->is_live_website((int) $id)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     /** True when one of the user's live websites has an active care package. */
     public function has_care_package(int $user_id): bool
     {
