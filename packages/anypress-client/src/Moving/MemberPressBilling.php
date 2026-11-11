@@ -334,9 +334,8 @@ class MemberPressBilling
     private static function active_rows(array $gateways): array
     {
         global $wpdb;
-        $in = implode(', ', array_fill(0, count($gateways), '%s'));
+        $rows = (array) $wpdb->get_results($wpdb->prepare("SELECT s.*, (SELECT MAX(t.expires_at) FROM %i t WHERE t.subscription_id = s.id AND t.status IN (%s, %s)) AS next_billing FROM %i s JOIN %i u ON u.ID = s.user_id WHERE s.status = %s ORDER BY s.product_id, s.id", $wpdb->prefix . 'mepr_transactions', 'complete', 'confirmed', $wpdb->prefix . 'mepr_subscriptions', $wpdb->users, 'active')); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- see above.
 
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- see above; $in is only %s placeholders.
-        return (array) $wpdb->get_results($wpdb->prepare("SELECT s.*, (SELECT MAX(t.expires_at) FROM %i t WHERE t.subscription_id = s.id AND t.status IN ('complete', 'confirmed')) AS next_billing FROM %i s JOIN %i u ON u.ID = s.user_id WHERE s.status = 'active' AND s.gateway IN ($in) ORDER BY s.product_id, s.id", $wpdb->prefix . 'mepr_transactions', $wpdb->prefix . 'mepr_subscriptions', $wpdb->users, ...$gateways));
+        return array_values(array_filter($rows, fn ($row) => in_array((string) $row->gateway, $gateways, true)));
     }
 }
