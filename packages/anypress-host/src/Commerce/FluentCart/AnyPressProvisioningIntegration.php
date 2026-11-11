@@ -155,9 +155,9 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
                 'is_multiple' => false,
                 'required' => false,
                 'options' => [
-                    'small' => __('Small: 1 CPU, 512 MB memory, 5 GB storage, 5,000 emails a month', 'anypress-host'),
-                    'medium' => __('Medium: 2 CPUs, 512 MB memory, 10 GB storage, 20,000 emails a month', 'anypress-host'),
-                    'large' => __('Large: 4 CPUs, 768 MB memory, 25 GB storage, 50,000 emails a month', 'anypress-host'),
+                    'small' => __('Small: 1 CPU, 768 MB memory, 10 GB storage, 5,000 emails a month', 'anypress-host'),
+                    'medium' => __('Medium: 2 CPUs, 1.25 GB memory, 20 GB storage, 20,000 emails a month', 'anypress-host'),
+                    'large' => __('Large: 4 CPUs, 2 GB memory, 30 GB storage, 50,000 emails a month', 'anypress-host'),
                 ],
                 'inline_tip' => __('How much computing power, storage and email the website gets. Leave empty for Small.', 'anypress-host'),
             ],
