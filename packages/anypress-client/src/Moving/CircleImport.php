@@ -508,7 +508,7 @@ class CircleImport extends NativeImport
         $removed['spaces'] = self::delete_in('fcom_spaces', 'id', $spaces, $dry_run, "type = 'community'");
         $removed['groups'] = self::delete_in('fcom_spaces', 'id', (array) ($state['groups'] ?? []), $dry_run, "type = 'space_group'");
         if ($spaces && !$dry_run) {
-            $wpdb->query($wpdb->prepare("DELETE FROM %i WHERE object_type = 'term_space_relation' AND meta_key IN (" . implode(',', array_fill(0, count($spaces), '%s')) . ')', $p . 'fcom_meta', ...array_values(array_map('strval', $spaces))));
+            $wpdb->query($wpdb->prepare("DELETE FROM %i WHERE object_type = 'term_space_relation' AND meta_key IN (" . implode(',', array_fill(0, count($spaces), '%s')) . ')', ...array_merge([$p . 'fcom_meta'], array_map('strval', $spaces))));
         }
         $removed['topics'] = self::delete_in('fcom_terms', 'id', (array) ($state['topics'] ?? []), $dry_run, "taxonomy_name = 'post_topic'");
         if (isset($state['profiles_before'])) {

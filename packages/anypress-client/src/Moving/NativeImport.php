@@ -386,8 +386,8 @@ abstract class NativeImport
         foreach (array_chunk($ids, 500) as $chunk) {
             // phpcs:disable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
             $total += $dry_run
-                ? (int) $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM %i WHERE %i IN (' . implode(',', array_fill(0, count($chunk), '%d')) . "){$extra}", $wpdb->prefix . $table, $column, ...$chunk))
-                : (int) $wpdb->query($wpdb->prepare('DELETE FROM %i WHERE %i IN (' . implode(',', array_fill(0, count($chunk), '%d')) . "){$extra}", $wpdb->prefix . $table, $column, ...$chunk));
+                ? (int) $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM %i WHERE %i IN (' . implode(',', array_fill(0, count($chunk), '%d')) . "){$extra}", ...array_merge([$wpdb->prefix . $table, $column], $chunk)))
+                : (int) $wpdb->query($wpdb->prepare('DELETE FROM %i WHERE %i IN (' . implode(',', array_fill(0, count($chunk), '%d')) . "){$extra}", ...array_merge([$wpdb->prefix . $table, $column], $chunk)));
             // phpcs:enable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
         }
 
