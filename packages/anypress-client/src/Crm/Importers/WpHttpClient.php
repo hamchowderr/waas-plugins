@@ -42,7 +42,7 @@ final class WpHttpClient implements ClientInterface
             'redirection' => 0,
         ]);
         if (is_wp_error($result)) {
-            throw new WpHttpException($request, $result->get_error_message());
+            throw new WpHttpException($request, esc_html($result->get_error_message()));
         }
 
         $response = $this->factory->createResponse((int) wp_remote_retrieve_response_code($result), (string) wp_remote_retrieve_response_message($result));

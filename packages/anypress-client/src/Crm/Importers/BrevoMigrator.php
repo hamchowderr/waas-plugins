@@ -228,7 +228,8 @@ class BrevoMigrator extends BaseMigrator
             $batch = (array) ($page?->lists ?? []);
             $all = array_merge($all, $batch);
             $offset += 50;
-        } while (count($batch) === 50 && $offset < (int) ($page?->count ?? 0));
+            $full = count($batch) === 50;
+        } while ($full && $offset < (int) ($page?->count ?? 0));
 
         return $all;
     }

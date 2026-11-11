@@ -56,8 +56,8 @@ rm -f "$zip_file"
 listing=$(unzip -Z1 "$zip_file")
 bad=$(echo "$listing" | grep -v "^$PACKAGE/" || true)
 [ -z "$bad" ] || { echo "files outside $PACKAGE/ in the zip: $bad" >&2; exit 1; }
-echo "$listing" | grep -qx "$PACKAGE/vendor/autoload.php" || { echo "no vendor/autoload.php in the zip" >&2; exit 1; }
-echo "$listing" | grep -qx "$PACKAGE/$MAIN" || { echo "no $MAIN in the zip" >&2; exit 1; }
-! echo "$listing" | grep -qE "^$PACKAGE/(tests/|vendor/(phpunit|brain|mockery)/|phpunit\.xml)" || { echo "dev files in the zip" >&2; exit 1; }
+grep -qx "$PACKAGE/vendor/autoload.php" <<<"$listing" || { echo "no vendor/autoload.php in the zip" >&2; exit 1; }
+grep -qx "$PACKAGE/$MAIN" <<<"$listing" || { echo "no $MAIN in the zip" >&2; exit 1; }
+! grep -qE "^$PACKAGE/(tests/|vendor/(phpunit|brain|mockery)/|phpunit\.xml)" <<<"$listing" || { echo "dev files in the zip" >&2; exit 1; }
 
 sha256sum "$zip_file" | cut -d' ' -f1
