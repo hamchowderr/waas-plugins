@@ -199,6 +199,8 @@ class FluentCartCare
         }
         $this->store->add_subscription_note($care_id > 0 ? $care_id : $website_id, __('Care time logged', 'anypress-host'), $detail);
 
+        do_action('anypress_care_time_logged', (int) $website_id);
+
         return ['monthly' => $monthly, 'extra' => $extra, 'over' => $over];
     }
 
@@ -275,6 +277,7 @@ class FluentCartCare
     {
         $this->store->update_subscription_meta($care_id, self::WEBSITE_META, $website_id);
         $this->store->add_subscription_note($care_id, __('Care added to a website', 'anypress-host'), sprintf('For %s (subscription #%d).', $this->domain($website_id), $website_id));
+        do_action('anypress_care_added', $care_id, $website_id);
     }
 
     public function domain(int $website_id): string

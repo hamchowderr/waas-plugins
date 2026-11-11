@@ -287,4 +287,20 @@ class FluentCartCareTest extends TestCase
 
         $this->assertSame([900, 901], $desk->websites());
     }
+
+    public function test_answer_times_are_counted_in_business_days(): void
+    {
+        $this->assertSame(0, FluentCartCareDesk::answer_days('the same business day'));
+        $this->assertSame(1, FluentCartCareDesk::answer_days('1 business day'));
+        $this->assertSame(2, FluentCartCareDesk::answer_days('2 business days'));
+        $this->assertNull(FluentCartCareDesk::answer_days('soon'));
+
+        $zone = new \DateTimeZone('America/Los_Angeles');
+        $friday = new \DateTimeImmutable('2026-11-13 16:00', $zone);
+        $this->assertSame('2026-11-13 23:59', FluentCartCareDesk::due($friday, 0)->format('Y-m-d H:i'));
+        $this->assertSame('2026-11-16 23:59', FluentCartCareDesk::due($friday, 1)->format('Y-m-d H:i'), 'Friday + 1 is Monday');
+        $saturday = new \DateTimeImmutable('2026-11-14 10:00', $zone);
+        $this->assertSame('2026-11-16 23:59', FluentCartCareDesk::due($saturday, 0)->format('Y-m-d H:i'), 'a weekend request is due Monday');
+        $this->assertSame('2026-11-18 23:59', FluentCartCareDesk::due($saturday, 2)->format('Y-m-d H:i'));
+    }
 }

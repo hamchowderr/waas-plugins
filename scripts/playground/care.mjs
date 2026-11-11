@@ -135,15 +135,18 @@ const paid = await php(`${boot}
     $order = \\FluentCart\\App\\Models\\Order::query()->create(['customer_id' => $customer->id, 'status' => 'processing', 'payment_status' => 'paid', 'type' => 'subscription', 'total_amount' => 19900, 'currency' => 'USD']);
     \\FluentCart\\App\\Models\\OrderItem::query()->create(['order_id' => $order->id, 'post_id' => $variation->post_id, 'object_id' => $variation->id, 'quantity' => 1, 'unit_price' => 19900, 'line_total' => 19900, 'payment_type' => 'subscription', 'post_title' => 'Care Plus', 'title' => 'Monthly']);
     \\FluentCart\\App\\Models\\Subscription::query()->create(['customer_id' => $customer->id, 'parent_order_id' => $order->id, 'product_id' => $variation->post_id, 'variation_id' => $variation->id, 'item_name' => 'Care Plus', 'status' => 'active', 'billing_interval' => 'monthly', 'recurring_amount' => 19900, 'recurring_total' => 19900, 'bill_times' => 0]);
+    $mails = [];
+    add_filter('pre_wp_mail', function ($short, $atts) use (&$mails) { $mails[] = [$atts['to'], $atts['subject']]; return true; }, 10, 2);
     $packs->save_website_on_order(['cart' => $cart, 'order' => $order]);
     $order = \\FluentCart\\App\\Models\\Order::query()->find($order->id);
     $care->order_paid(['order' => $order]);
-    echo wp_json_encode(['chosen' => $store->get_order_meta($order, '_anypress_email_pack_website'), 'website' => $website, 'summary' => $care->summary($website)]);
+    echo wp_json_encode(['mails' => $mails, 'chosen' => $store->get_order_meta($order, '_anypress_email_pack_website'), 'website' => $website, 'summary' => $care->summary($website)]);
 `);
 console.log('paid:', paid);
 const after = JSON.parse(paid.slice(paid.indexOf('{')));
 check(Number(after.chosen) === after.website, 'checkout kept the website on the order');
 check(after.summary?.package === 'Care Plus' && after.summary.left === 120, 'once paid, Care Plus belongs to the website with 2 h this month');
+check(after.mails?.length === 1 && after.mails[0][0] === 'shopper@example.com' && after.mails[0][1] === 'Care Plus is on for your website', 'the owner gets the "Care is on" email', JSON.stringify(after.mails));
 
 // 5. The account with care: time left and "Ask for a change".
 for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844]]) {
@@ -174,16 +177,27 @@ const desk = await php(`${boot}
     wp_set_current_user(1);
     $care->log_time($website, 50, 'Ticket #' . $ticket->id);
     $after = \\FluentSupport\\App\\Services\\ProfileInfoService::getProfileExtraWidgets($ticket->customer);
-    echo wp_json_encode(['logged' => $after['anypress_care']['sections'][1] ?? null, 'history' => $care->history($website), 'title' => $ticket->title, 'priority' => $ticket->priority, 'tags' => $ticket->tags()->pluck('title')->all(), 'widget' => $widgets['anypress_care'] ?? null, 'left' => $care->summary($website)['left']]);
+    $mails = [];
+    add_filter('pre_wp_mail', function ($short, $atts) use (&$mails) { $mails[] = $atts['subject']; return true; }, 10, 2);
+    $care->log_time($website, 40, 'Ticket #' . $ticket->id . ': more');
+    $care->log_time($website, 5, 'Ticket #' . $ticket->id . ': last bit');
+    $desk = new ${NS}FluentCartCareDesk($adapter, $store, $care);
+    $before = count($desk->late_requests());
+    $ticket->waiting_since = (new DateTimeImmutable('-6 days', wp_timezone()))->format('Y-m-d H:i:s');
+    $ticket->save();
+    $late = $desk->late_requests();
+    echo wp_json_encode(['mails' => $mails, 'late_before' => $before, 'late' => $late, 'logged' => $after['anypress_care']['sections'][1] ?? null, 'history' => $care->history($website), 'title' => $ticket->title, 'priority' => $ticket->priority, 'tags' => $ticket->tags()->pluck('title')->all(), 'widget' => $widgets['anypress_care'] ?? null, 'left' => $care->summary($website)['left']]);
 `);
 console.log('desk:', desk);
 const team = JSON.parse(desk.slice(desk.indexOf('{')));
 check(team.title === 'Care Plus: change for sams-studio.anypress.site', 'the request is a Fluent Support ticket named for the package and website', team.title);
 check(team.widget?.sections?.[0]?.items?.[0]?.subtitle === 'Care Plus · answer within 1 business day', 'the ticket sidebar shows the package and answer time');
 check(team.priority === 'medium' && (team.tags || []).includes('Care Plus'), 'the ticket has Care Plus\'s priority (medium) and a "Care Plus" tag', JSON.stringify([team.priority, team.tags]));
-check(team.left === 70, 'logged time comes off the month');
-check(team.history?.[0]?.minutes === 50 && team.history[0].by !== '', 'the website keeps a time log with who logged it', JSON.stringify(team.history));
+check(team.left === 25, 'logged time comes off the month (50 + 40 + 5 of 2 h)', String(team.left));
+check(team.history?.map((e) => e.minutes).join() === '5,40,50' && team.history[0].by !== '', 'the website keeps a time log with who logged it', JSON.stringify(team.history));
 check(team.logged?.items?.[0]?.detail === '50 min', 'the ticket sidebar lists the time logged', JSON.stringify(team.logged));
+check(team.mails?.length === 1 && team.mails[0] === '30 min of care time left this month', 'at a quarter left the owner gets "time running low", once', JSON.stringify(team.mails));
+check(team.late_before === 0 && team.late?.length === 1 && team.late[0].package === 'Care Plus', 'a request waiting past Care Plus\'s 1 business day shows as late', JSON.stringify([team.late_before, team.late]));
 
 // 7. AnyPress > Care, opened from the sidebar's "Log time": the website's row ready, with its time log.
 {
@@ -202,6 +216,7 @@ check(team.logged?.items?.[0]?.detail === '50 min', 'the ticket sidebar lists th
     check(focused === 1, 'the minutes box is the one focused', String(focused));
     await row.locator('summary').click();
     check((await row.innerText()).includes('50 min'), 'the row shows its time log');
+    check((await page.innerText('body')).includes('Waiting longer than promised'), 'the Care page lists the late request');
     await page.screenshot({ path: resolve(OUT, 'desktop-7-care-page.png'), fullPage: true });
     await context.close();
 }

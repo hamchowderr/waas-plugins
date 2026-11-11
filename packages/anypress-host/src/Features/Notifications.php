@@ -318,6 +318,10 @@ class Notifications
             'suspend_date' => self::format_date(time() + 30 * DAY_IN_SECONDS),
             'delete_date' => self::format_date(time() + TenantsSubscriptionManager::get_deletion_grace_days() * DAY_IN_SECONDS),
             'deletion_grace_days' => (string) TenantsSubscriptionManager::get_deletion_grace_days(),
+            'care_package' => __('Care Plus', 'anypress-host'),
+            'care_time' => __('2 h', 'anypress-host'),
+            'care_left' => __('25 min', 'anypress-host'),
+            'care_answer' => __('1 business day', 'anypress-host'),
         ];
     }
 

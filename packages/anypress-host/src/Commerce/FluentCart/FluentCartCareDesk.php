@@ -207,6 +207,7 @@ class FluentCartCareDesk
         echo '<p>' . esc_html__('Websites with a care package or extra time. Requests arrive in Fluent Support; log the time each one took here. This month\'s time is used first, then extra time.', 'anypress-host') . '</p>';
         $this->render_logged();
         $this->render_products_step();
+        $this->render_late();
 
         $websites = $this->websites();
         if (!$websites) {
@@ -238,6 +239,98 @@ class FluentCartCareDesk
             echo '</td></tr>';
         }
         echo '</tbody></table></div>';
+    }
+
+    // ---- Answer times ----
+
+    /** Business days a package's answer time allows: "the same business day" 0, "2 business days" 2; null if unclear. */
+    public static function answer_days(string $answer): ?int
+    {
+        $answer = strtolower($answer);
+        if (strpos($answer, 'same') !== false) {
+            return 0;
+        }
+        if (preg_match('/(\d+)\s*business\s*day/', $answer, $m)) {
+            return (int) $m[1];
+        }
+
+        return null;
+    }
+
+    /** The end of the business day $days business days after $since (weekends skipped), in the site's time zone. */
+    public static function due(\DateTimeImmutable $since, int $days): \DateTimeImmutable
+    {
+        $day = $since;
+        while ((int) $day->format('N') >= 6) {
+            $day = $day->modify('+1 day')->setTime(9, 0);
+        }
+        for ($left = $days; $left > 0;) {
+            $day = $day->modify('+1 day');
+            if ((int) $day->format('N') < 6) {
+                $left--;
+            }
+        }
+
+        return $day->setTime(23, 59, 59);
+    }
+
+    /**
+     * Open care requests waiting past their package's answer time: tickets tagged with a package's name whose
+     * customer has waited longer than promised.
+     *
+     * @return array<int, array{id: int, title: string, package: string, waiting_since: string, due: string}>
+     */
+    public function late_requests(?\DateTimeImmutable $now = null): array
+    {
+        if (!class_exists(\FluentSupport\App\Models\Ticket::class)) {
+            return [];
+        }
+        $zone = wp_timezone();
+        $now = $now ?? new \DateTimeImmutable('now', $zone);
+        $late = [];
+        foreach ($this->care->packages() as $package) {
+            $days = self::answer_days((string) ($package['settings']['care_answer'] ?? ''));
+            $title = (string) $package['title'];
+            if ($days === null || $title === '') {
+                continue;
+            }
+            $tickets = \FluentSupport\App\Models\Ticket::query()
+                ->whereIn('status', ['new', 'active'])
+                ->whereNotNull('waiting_since')
+                ->whereHas('tags', fn ($q) => $q->where('title', $title))
+                ->limit(50)
+                ->get();
+            foreach ($tickets as $ticket) {
+                $since = new \DateTimeImmutable((string) $ticket->waiting_since, $zone);
+                $due = self::due($since, $days);
+                if ($due < $now) {
+                    $late[] = ['id' => (int) $ticket->id, 'title' => (string) $ticket->title, 'package' => $title, 'waiting_since' => $since->format('c'), 'due' => $due->format('c')];
+                }
+            }
+        }
+        usort($late, fn ($a, $b) => strcmp($a['due'], $b['due']));
+
+        return $late;
+    }
+
+    /** "Waiting longer than promised": the late requests, oldest first, each linked to its ticket. */
+    private function render_late(): void
+    {
+        $late = $this->late_requests();
+        if (!$late) {
+            return;
+        }
+        echo '<div class="notice notice-warning inline"><p><strong>' . esc_html__('Waiting longer than promised', 'anypress-host') . '</strong></p><ul>';
+        foreach ($late as $ticket) {
+            $url = admin_url('admin.php?page=fluent-support#/tickets/' . $ticket['id'] . '/view');
+            echo '<li><a href="' . esc_url($url) . '">' . esc_html('#' . $ticket['id'] . ' ' . $ticket['title']) . '</a> · ' . esc_html(sprintf(
+                /* translators: 1: package, 2: date */
+                __('%1$s, due %2$s', 'anypress-host'),
+                $ticket['package'],
+                wp_date((string) get_option('date_format'), (int) strtotime($ticket['due']))
+            )) . '</li>';
+        }
+        echo '</ul></div>';
     }
 
     /** The website's time log, folded under its form. */
