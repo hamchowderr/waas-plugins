@@ -112,6 +112,10 @@
         {
           "file": "scripts/playground/support.mjs",
           "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/mail-log.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
         }
       ]
     },
@@ -148,6 +152,20 @@
         {
           "file": "scripts/playground/lms.mjs",
           "match": "FLUENT_COMMUNITY \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/mail-log.mjs",
+          "match": "fluent\\-community\\.(?<version>[0-9][0-9.]*[0-9])\\.zip"
+        }
+      ]
+    },
+    {
+      "name": "FluentSMTP (Playground tests)",
+      "source": "wordpress-plugin:fluent-smtp",
+      "places": [
+        {
+          "file": "scripts/playground/mail-log.mjs",
+          "match": "fluent\\-smtp\\.(?<version>[0-9][0-9.]*[0-9])\\.zip"
         }
       ]
     },
