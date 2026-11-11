@@ -143,10 +143,37 @@
 }
 
 #anypress_site .anypress-site-plugins li {
+    position: relative;
     margin: 0;
-    padding: 10px 12px;
+    padding: 10px 12px 10px 52px;
+    min-height: 32px;
     border: 1px solid #dcdcde;
-    border-radius: 4px;
+    border-radius: 6px;
+}
+
+#anypress_site .anypress-site-plugin-initial {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: #f0f0f1;
+    color: #3c434a;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 30px;
+    text-align: center;
+    overflow: hidden;
+}
+
+#anypress_site .anypress-site-plugin-initial img,
+#anypress_site .anypress-site-plugin-initial svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: #fff;
 }
 
 #anypress_site .anypress-site-plugin-name {
@@ -162,4 +189,171 @@
 
 #anypress_plan .anypress-plan p:first-child {
     margin-top: 0;
+}
+
+#anypress_plan .anypress-plan-type strong {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 10px;
+    border-radius: 999px;
+    background: #f0f0f1;
+}
+
+/*
+ * The AnyPress look, on AnyPress's own stores only (body class anypress-brand): the ribbon's ink and its
+ * orange-to-magenta gradient. A reseller's stores keep WordPress's own colours.
+ */
+.anypress-brand {
+    --anypress-ink: #14141a;
+    --anypress-ink-2: #23232c;
+    --anypress-gradient: linear-gradient(100deg, #ffb338 0%, #ff7a2a 30%, #f2413a 55%, #ee2f5e 75%, #d21fa4 100%);
+    --anypress-warm: linear-gradient(100deg, #ffb338 0%, #ff7a2a 55%, #f2413a 100%);
+    --anypress-accent: #c4164f;
+    --anypress-tint: #fff1ee;
+}
+
+.anypress-brand #anypress_home {
+    border: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: radial-gradient(120% 140% at 100% 0%, rgba(238, 47, 94, .35) 0%, rgba(255, 122, 42, .12) 35%, transparent 60%), var(--anypress-ink);
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(20, 20, 26, .2);
+}
+
+.anypress-brand #anypress_home .postbox-header {
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.anypress-brand #anypress_home .postbox-header .hndle,
+.anypress-brand #anypress_home .handle-actions button,
+.anypress-brand #anypress_home .handle-actions .order-higher-indicator::before,
+.anypress-brand #anypress_home .handle-actions .order-lower-indicator::before,
+.anypress-brand #anypress_home .handle-actions .toggle-indicator::before {
+    color: rgba(255, 255, 255, .7);
+}
+
+.anypress-brand #anypress_home .inside {
+    padding: 8px 20px 20px;
+}
+
+.anypress-brand #anypress_home .anypress-mark {
+    display: block;
+    width: 44px;
+    height: 44px;
+    margin: 4px 0 14px;
+    border-radius: 10px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .1);
+}
+
+.anypress-brand #anypress_home .anypress-home-hello {
+    font-size: 24px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.anypress-brand #anypress_home .anypress-home-site {
+    color: rgba(255, 255, 255, .72);
+}
+
+.anypress-brand #anypress_home .anypress-home-site strong {
+    color: #fff;
+}
+
+.anypress-brand #anypress_home .anypress-home-site a {
+    color: #ffb36b;
+}
+
+.anypress-brand #anypress_home .anypress-home-links .button {
+    min-height: 34px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 999px;
+    background: var(--anypress-ink-2);
+    color: #fff;
+    box-shadow: none;
+}
+
+.anypress-brand #anypress_home .anypress-home-links .button:hover,
+.anypress-brand #anypress_home .anypress-home-links .button:focus {
+    border-color: rgba(255, 255, 255, .45);
+    background: #2e2e39;
+    color: #fff;
+}
+
+.anypress-brand #anypress_home .anypress-home-links .button:focus {
+    box-shadow: 0 0 0 2px var(--anypress-ink), 0 0 0 4px #ff7a2a;
+}
+
+.anypress-brand #anypress_home .anypress-home-links .button-primary {
+    border-color: transparent;
+    background: var(--anypress-warm);
+    color: #14141a;
+    font-weight: 600;
+}
+
+.anypress-brand #anypress_home .anypress-home-links .button-primary:hover,
+.anypress-brand #anypress_home .anypress-home-links .button-primary:focus {
+    border-color: transparent;
+    background: var(--anypress-warm);
+    color: #14141a;
+    filter: brightness(1.06);
+}
+
+.anypress-brand #anypress_site,
+.anypress-brand #anypress_plan {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.anypress-brand #anypress_site .anypress-site-plugins li {
+    border-color: #e6e6ea;
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.anypress-brand #anypress_site .anypress-site-plugins li:hover {
+    border-color: #f2a48f;
+    box-shadow: 0 2px 8px rgba(238, 47, 94, .08);
+}
+
+.anypress-brand #anypress_site .anypress-site-plugin-initial {
+    background: var(--anypress-warm);
+    color: #14141a;
+}
+
+.anypress-brand #anypress_site .anypress-site-plugin-name a,
+.anypress-brand #anypress_plan a:not(.button) {
+    color: var(--anypress-accent);
+}
+
+.anypress-brand #anypress_plan {
+    border-top: 0;
+    background-image: var(--anypress-gradient);
+    background-size: 100% 4px;
+    background-repeat: no-repeat;
+}
+
+.anypress-brand #anypress_plan .anypress-plan-type strong {
+    background: var(--anypress-tint);
+    color: var(--anypress-accent);
+}
+
+.anypress-brand #anypress_plan .anypress-plan-link {
+    border-color: var(--anypress-ink);
+    border-radius: 999px;
+    background: var(--anypress-ink);
+    color: #fff;
+}
+
+.anypress-brand #anypress_plan .anypress-plan-link:hover,
+.anypress-brand #anypress_plan .anypress-plan-link:focus {
+    border-color: var(--anypress-ink-2);
+    background: var(--anypress-ink-2);
+    color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .anypress-brand #anypress_site .anypress-site-plugins li {
+        transition: none;
+    }
 }
