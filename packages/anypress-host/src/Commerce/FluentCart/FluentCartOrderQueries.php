@@ -164,6 +164,41 @@ trait FluentCartOrderQueries
         ];
     }
 
+    /** @return int[] the products of a checkout cart's subscription lines that start with free days */
+    public function get_cart_trial_product_ids($cart): array
+    {
+        $ids = [];
+        foreach ((array) ($cart->cart_data ?? []) as $item) {
+            if (($item['other_info']['payment_type'] ?? '') === 'subscription' && (int) ($item['other_info']['trial_days'] ?? 0) > 0) {
+                $ids[] = (int) ($item['post_id'] ?? 0);
+            }
+        }
+
+        return array_values(array_unique(array_filter($ids)));
+    }
+
+    /**
+     * Takes the free days off the cart's subscription lines for $product_ids and locks their price, so FluentCart
+     * doesn't put the catalog's trial back before the order is made. Saves the cart when a line changed.
+     */
+    public function remove_cart_trials($cart, array $product_ids): void
+    {
+        $lines = (array) ($cart->cart_data ?? []);
+        $changed = false;
+        foreach ($lines as $index => $item) {
+            if (!in_array((int) ($item['post_id'] ?? 0), $product_ids, true) || (int) ($item['other_info']['trial_days'] ?? 0) <= 0) {
+                continue;
+            }
+            $lines[$index]['other_info']['trial_days'] = 0;
+            $lines[$index]['other_info']['is_price_locked'] = 'yes';
+            $changed = true;
+        }
+        if ($changed) {
+            $cart->cart_data = $lines;
+            $cart->save();
+        }
+    }
+
     /** @return int[] the product of each line in a checkout cart, repeats kept */
     public function get_cart_line_product_ids($cart): array
     {
