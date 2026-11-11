@@ -68,6 +68,7 @@ class FluentCartAdapter implements CommerceAdapter
         $domains->register();
         $care = new FluentCartCare($this, $store, $email_packs);
         $care->register();
+        (new FluentCartCareSync($provisioning_api, $this, $care))->register();
         $care_portal = new FluentCartCarePortal($this, $store, $care);
         $care_portal->register();
         (new FluentCartCareDesk($this, $store, $care))->register();
