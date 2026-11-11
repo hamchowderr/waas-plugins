@@ -42,7 +42,8 @@ final class WpHttpClient implements ClientInterface
             'redirection' => 0,
         ]);
         if (is_wp_error($result)) {
-            throw WpHttpException::failed($request, esc_html($result->get_error_message()));
+            $error = WpHttpException::failed($request, esc_html($result->get_error_message()));
+            throw $error; // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- its message is escaped above; the request object is not output.
         }
 
         $response = $this->factory->createResponse((int) wp_remote_retrieve_response_code($result), (string) wp_remote_retrieve_response_message($result));
