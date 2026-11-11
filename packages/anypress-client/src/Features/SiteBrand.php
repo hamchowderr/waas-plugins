@@ -1,6 +1,6 @@
 <?php
 
-namespace AnyPressClientFeatures;
+namespace AnyPressClient\Features;
 
 if (!defined('ABSPATH')) {
     exit;
