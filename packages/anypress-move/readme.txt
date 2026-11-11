@@ -8,7 +8,7 @@ Stable tag: 1.3.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
-Moves your forms, shop, contacts, bookings, help desk, affiliates, community, courses and members into the Fluent plugins, with a check first and an undo.
+Moves your forms, shop, contacts, bookings, help desk, affiliates, community, courses and members into the Fluent plugins, with an undo.
 
 == Description ==
 

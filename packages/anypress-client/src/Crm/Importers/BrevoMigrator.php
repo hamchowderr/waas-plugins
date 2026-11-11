@@ -79,7 +79,7 @@ class BrevoMigrator extends BaseMigrator
                 $tags[] = ['remote_name' => (string) $list->name, 'remote_id' => (string) $list->id, 'will_create' => 'no', 'fluentcrm_id' => ''];
             }
             $fields = [];
-            foreach ((array) ($api->contacts->getAttributes()?->attributes ?? []) as $attribute) {
+            foreach ((array) ($api->contacts->getAttributes()->attributes ?? []) as $attribute) {
                 if ($attribute->category !== 'normal') {
                     continue;
                 }
@@ -153,7 +153,7 @@ class BrevoMigrator extends BaseMigrator
 
         $field_maps = (array) ($settings['contact_fields'] ?? []);
         $local_list = (int) ($settings['map_settings']['local_list_id'] ?? 0);
-        foreach ($page?->contacts ?? [] as $remote) {
+        foreach ($page->contacts ?? [] as $remote) {
             $email = sanitize_email((string) $remote->email);
             if (!is_email($email)) {
                 continue;
@@ -181,7 +181,7 @@ class BrevoMigrator extends BaseMigrator
         }
 
         $done = (int) $tracker['offset'] + self::PER_PAGE;
-        $tracker = $done < (int) ($page?->count ?? 0)
+        $tracker = $done < (int) ($page->count ?? 0)
             ? ['current_index' => (int) $tracker['current_index'], 'offset' => $done]
             : ['current_index' => (int) $tracker['current_index'] + 1, 'offset' => 0];
 
@@ -225,11 +225,11 @@ class BrevoMigrator extends BaseMigrator
         $offset = 0;
         do {
             $page = $api->contacts->getLists(new GetListsRequest(['limit' => 50, 'offset' => $offset]));
-            $batch = (array) ($page?->lists ?? []);
+            $batch = (array) ($page->lists ?? []);
             $all = array_merge($all, $batch);
             $offset += 50;
             $full = count($batch) === 50;
-        } while ($full && $offset < (int) ($page?->count ?? 0));
+        } while ($full && $offset < (int) ($page->count ?? 0));
 
         return $all;
     }

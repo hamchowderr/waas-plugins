@@ -15,8 +15,6 @@ class CalendlyApi
     public const BASE = 'https://api.calendly.com/';
     private const PER_PAGE = 100;
 
-    public int $requests = 0;
-
     private string $token;
 
     public function __construct(string $token)
@@ -64,7 +62,6 @@ class CalendlyApi
         $url = add_query_arg(array_map('rawurlencode', array_map('strval', $query)), self::BASE . ltrim($path, '/'));
         $try = 0;
         do {
-            $this->requests++;
             $response = wp_remote_get($url, [
                 'timeout' => 30,
                 'headers' => ['Authorization' => 'Bearer ' . $this->token, 'Accept' => 'application/json'],
