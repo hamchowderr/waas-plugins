@@ -72,7 +72,7 @@
     "day": 7,
     "subject": "Three easy ways to share your link",
     "preheader": "Small things that work.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>1. Put it in your email signature or link-in-bio with one line, like \"My website runs on AnyPress\".</p><p>2. When someone asks who built your site or how you set up your shop, send them the link.</p><p>3. Pick the group you know best (shops, coaches, churches, chambers, agencies) and use that wording from the kit.</p><p><a href=\"https://anypress.io/affiliates/kit\"><strong>Open the affiliate kit</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>1. Put it in your email signature or link-in-bio with one line, like \"My website runs on AnyPress\".</p><p>2. When someone asks who built your site or how you set up your shop, send them the link.</p><p>3. Pick the group you know best (shops, coaches, churches, chambers, web designers) and use that wording from the kit.</p><p><a href=\"https://anypress.io/affiliates/kit\"><strong>Open the affiliate kit</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
  },
@@ -122,7 +122,7 @@
     "day": 14,
     "subject": "Start your shop for $29 a month",
     "preheader": "30-day money-back guarantee.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Store plan is $29 a month (or $290 a year) and includes everything above. If it isn't right for you in the first 30 days, you get your money back.</p><p>Already selling somewhere else? We can help you move your shop over.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Store plan is $29 a month (or $290 a year) and includes everything above. The first 7 days are free: add a card when you start, and cancel before day 8 to pay nothing. After that, your first payment is covered by our 30-day money-back guarantee.</p><p>Already selling somewhere else? We can help you move your shop over.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
  },
@@ -153,7 +153,7 @@
     "day": 14,
     "subject": "Start your store for $29 a month",
     "preheader": "30-day money-back guarantee.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Store plan is $29 a month (or $290 a year). If it isn't right for you in the first 30 days, you get your money back.</p><p>Questions about your products or payment setup? Reply and ask before you buy.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Store plan is $29 a month (or $290 a year). The first 7 days are free: add a card when you start, and cancel before day 8 to pay nothing. After that, your first payment is covered by our 30-day money-back guarantee.</p><p>Questions about your products or payment setup? Reply and ask before you buy.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
  },
@@ -184,7 +184,7 @@
     "day": 14,
     "subject": "Start for $49 a month",
     "preheader": "30-day money-back guarantee.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Community & courses plan is $49 a month (or $490 a year). If it isn't right for you in the first 30 days, you get your money back.</p><p>Moving from another platform? Reply and we'll tell you how.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Community & courses plan is $49 a month (or $490 a year). The first 7 days are free: add a card when you start, and cancel before day 8 to pay nothing. After that, your first payment is covered by our 30-day money-back guarantee.</p><p>Moving from another platform? Reply and we'll tell you how.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
  },
@@ -215,7 +215,7 @@
     "day": 14,
     "subject": "Start for $79 a month",
     "preheader": "30-day money-back guarantee.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Everything plan is $79 a month (or $790 a year) and includes membership, events, bookings and your newsletter. If it isn't right in the first 30 days, you get your money back.</p><p>Want to talk about websites for your members too? Just reply.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Everything plan is $79 a month (or $790 a year) and includes membership, events, bookings and your newsletter. The first 7 days are free: add a card when you start, and cancel before day 8 to pay nothing. After that, your first payment is covered by our 30-day money-back guarantee.</p><p>Want to talk about websites for your members too? Just reply.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
  },
@@ -246,7 +246,7 @@
     "day": 14,
     "subject": "Start for $79 a month",
     "preheader": "30-day money-back guarantee.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Everything plan is $79 a month (or $790 a year). Smaller churches often start with Community & courses at $49. If it isn't right in the first 30 days, you get your money back.</p><p>Part of a network of churches? Reply, and we'll show you how to run sites for all of them.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>The Everything plan is $79 a month (or $790 a year). Smaller churches often start with Community & courses at $49. The first 7 days are free: add a card when you start, and cancel before day 8 to pay nothing. After that, your first payment is covered by our 30-day money-back guarantee.</p><p>Part of a network of churches? Reply, and we'll show you how to run sites for all of them.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
  },
@@ -290,7 +290,7 @@
     "day": 0,
     "subject": "Sell websites as a monthly service",
     "preheader": "Under your own name.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>Building a website once pays once. Selling it as a monthly service pays every month. AnyPress lets you do that under your own brand, while we run the servers, updates, security and backups.</p><p>Your clients deal with you and never see AnyPress.</p><p><a href=\"https://anypress.io/sell\"><strong>Learn more</strong></a></p><p>Free, no sign-up needed: <a href=\"https://anypress.io/guides/agencies\">Agency profit calculator</a>.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Building a website once pays once. Selling it as a monthly service pays every month. AnyPress lets you do that under your own brand, while we run the servers, updates, security and backups.</p><p>Your clients deal with you and never see AnyPress.</p><p><a href=\"https://anypress.io/sellers\"><strong>Learn more</strong></a></p><p>Free, no sign-up needed: <a href=\"https://anypress.io/guides/sellers\">Profit calculator for selling websites</a>.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    },
    {
     "day": 3,
@@ -308,7 +308,7 @@
     "day": 14,
     "subject": "Apply to become a seller",
     "preheader": "We review every application by hand.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>It takes two minutes to apply. Once we approve you, you get a dashboard, your storefront and everything you need to make your first sale.</p><p>Questions first? Just reply.</p><p><a href=\"https://anypress.io/sell\"><strong>Apply to sell</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>It takes two minutes to apply. Then you book a short call with us, where we get you set up and agree how billing works. Once we approve you, you get a dashboard, your storefront and everything you need to make your first sale.</p><p>Questions first? Just reply.</p><p><a href=\"https://anypress.io/sell\"><strong>Apply to sell</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
  },
@@ -339,7 +339,7 @@
     "day": 14,
     "subject": "Get an API key",
     "preheader": "Apply in two minutes.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>Apply as a seller and tell us you want API access. Once approved, you can create keys from your dashboard.</p><p>The docs are at anypress.io/developers. Questions? Just reply.</p><p><a href=\"https://anypress.io/developers\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Apply as a seller and tell us you want API access, then book a short call with us to get set up, billing included. Once approved, you can create keys from your dashboard.</p><p>The docs are at anypress.io/developers. Questions? Just reply.</p><p><a href=\"https://anypress.io/developers\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
  },
@@ -381,7 +381,7 @@
     "day": 1,
     "subject": "Any questions before you start?",
     "preheader": "What happens after you check out.",
-    "body": "<p>Hi {{contact.first_name|there}},</p><p>If something made you stop, here is what happens after you check out:</p><p>We build your website in a few minutes and email you when it's ready. You sign in from your account and change anything you like, or just ask Claude or ChatGPT to make the changes for you. If it isn't right for you, you get a full refund in the first 30 days.</p><p>Not sure which plan fits? Reply to this email and tell us what you need. A person will answer.</p><p><a href=\"##ab_cart_fluent_cart.recovery_url##\"><strong>Go back to your checkout</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>If something made you stop, here is what happens after you check out:</p><p>We build your website in a few minutes and email you when it's ready. You sign in from your account and change anything you like, or just ask Claude or ChatGPT to make the changes for you. The first 7 days are free, so you can try it before you pay. After that, your first payment is covered by our 30-day money-back guarantee.</p><p>Not sure which plan fits? Reply to this email and tell us what you need. A person will answer.</p><p><a href=\"##ab_cart_fluent_cart.recovery_url##\"><strong>Go back to your checkout</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    },
    {
     "day": 3,
