@@ -195,6 +195,23 @@ add_filter(
 );
 
 /**
+ * FluentAuth's Google and GitHub buttons move themselves into WordPress's #loginform, which FluentAffiliate's portal
+ * sign-in doesn't have: the move throws and the buttons stay hidden on /affiliates. Give them a place in that form first
+ * (this listener runs before FluentAuth's, which is printed later in the page).
+ */
+add_action(
+	'wp_head',
+	static function () {
+		if ( ! is_singular() || ! has_shortcode( (string) get_post_field( 'post_content', get_queried_object_id() ), 'fluent_affiliate_portal' ) ) {
+			return;
+		}
+		wp_print_inline_script_tag(
+			'document.addEventListener("DOMContentLoaded",function(){var f=document.getElementById("fluent_aff_user_login_form");if(f&&!document.getElementById("loginform")){var d=document.createElement("div");d.id="loginform";f.appendChild(d);}});'
+		);
+	}
+);
+
+/**
  * The empty cart says where to go next, and the buttons read like the rest of the shop.
  */
 add_filter(

@@ -531,6 +531,7 @@ final class AnyPress_CRM
             'By group: ' . $by_field('customer_group'),
             'By source: ' . $by_field('source'),
             'Seller applications: ' . $tagged('Seller', 'Interested'),
+            'Beta sign-ups: ' . $tagged('Beta', 'Interested'),
         ];
         if (class_exists('\\FluentCart\\App\\Models\\Subscription')) {
             $lines[] = 'Paid orders: ' . $count("SELECT COUNT(*) FROM {$p}fct_orders WHERE payment_status = 'paid' AND created_at >= %s", $since);
@@ -665,6 +666,9 @@ final class AnyPress_CRM
         self::set_fields($contact, $fields);
         if ($interest && !self::has($contact, $interest, 'Active') && !self::has($contact, $interest, 'Past')) {
             self::add($contact, $interest, 'Interested');
+        }
+        if (!empty($body['beta'])) {
+            self::add($contact, 'Beta', 'Interested'); // the beta list on anypress.io/beta; not an offering, so no nurture
         }
         if ($contact->status === 'pending') {
             $contact->sendDoubleOptinEmail();
