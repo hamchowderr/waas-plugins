@@ -16,7 +16,9 @@ use AnyPressHost\Features\PluginBootstrap;
  *
  * The same feed with "Product type: Email pack" makes the product an email pack instead: buying it adds
  * "Emails per pack" emails (times the quantity) to one of the customer's websites (FluentCartEmailPacks). A pack is
- * never a website plan, and its feed's triggers do nothing. Feeds saved before the product type existed are plans.
+ * never a website plan, and its feed's triggers do nothing. "Product type: Storage pack" makes a subscription product
+ * that adds storage to one of the customer's websites while it is paid (FluentCartStoragePacks): its triggers tell
+ * the store how many packs it has now. Feeds saved before the product type existed are plans.
  */
 class AnyPressProvisioningIntegration extends BaseIntegrationManager
 {
@@ -37,6 +39,7 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
     /** product_type values. A feed without one is a website plan. */
     public const PRODUCT_TYPE_PLAN = 'plan';
     public const PRODUCT_TYPE_EMAIL_PACK = 'email_pack';
+    public const PRODUCT_TYPE_STORAGE_PACK = 'storage_pack';
 
     /** The most emails one pack line may add (the API's limit per call). */
     public const MAX_EMAILS_PER_PACK = 1000000;
@@ -52,7 +55,7 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
 
         $this->provisioning_api = $provisioning_api;
         $this->store = $store;
-        $this->description = __('Create a website for the customer when they subscribe to this product. When the subscription ends, the website is backed up and taken offline, then deleted after the grace period set in the AnyPress settings. Or set Product type to Email pack to sell extra emails for a website.', 'anypress-host');
+        $this->description = __('Create a website for the customer when they subscribe to this product. When the subscription ends, the website is backed up and taken offline, then deleted after the grace period set in the AnyPress settings. Or set Product type to Email pack or Storage pack to sell extra emails or storage for a website.', 'anypress-host');
         $this->disableGlobalSettings = true;
     }
 
@@ -115,8 +118,9 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
                 'options' => [
                     self::PRODUCT_TYPE_PLAN => __('Website plan', 'anypress-host'),
                     self::PRODUCT_TYPE_EMAIL_PACK => __('Email pack', 'anypress-host'),
+                    self::PRODUCT_TYPE_STORAGE_PACK => __('Storage pack', 'anypress-host'),
                 ],
-                'inline_tip' => __('A website plan is a subscription that creates a website. An email pack is a one-time product that adds emails to one of the customer\'s websites; the emails never expire and are used once the plan\'s monthly emails run out. For an email pack, only "Emails per pack" below applies.', 'anypress-host'),
+                'inline_tip' => __('A website plan is a subscription that creates a website. An email pack is a one-time product that adds emails to one of the customer\'s websites; the emails never expire and are used once the plan\'s monthly emails run out. For an email pack, only "Emails per pack" below applies. A storage pack is a subscription that adds 25 GB of storage to one of the customer\'s websites for as long as it is paid; none of the fields below apply to it.', 'anypress-host'),
             ],
             [
                 'key' => 'emails_per_pack',
@@ -182,6 +186,18 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
         return is_array($settings) && ($settings['product_type'] ?? '') === self::PRODUCT_TYPE_EMAIL_PACK;
     }
 
+    /** True when a feed's settings make the product a storage pack, not a website plan. */
+    public static function is_storage_pack($settings): bool
+    {
+        return is_array($settings) && ($settings['product_type'] ?? '') === self::PRODUCT_TYPE_STORAGE_PACK;
+    }
+
+    /** True when a feed's settings make the product an add-on for a website (an email or storage pack), not a plan. */
+    public static function is_add_on($settings): bool
+    {
+        return self::is_email_pack($settings) || self::is_storage_pack($settings);
+    }
+
     /** The emails one pack of an email-pack feed adds; 0 when the feed is not a pack or has no valid number. */
     public static function emails_per_pack($settings): int
     {
@@ -204,6 +220,11 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
      */
     public function processAction($order, $eventData)
     {
+        if (self::is_storage_pack($eventData['feed'] ?? null)) {
+            // FluentCartStoragePacks tells the website's store how many packs it has now; a pack never creates or removes a website.
+            do_action(FluentCartStoragePacks::CHANGED_HOOK, $order, $eventData['event_data']['subscription'] ?? null, ($eventData['is_revoke_hook'] ?? '') === 'yes');
+            return;
+        }
         if (self::is_email_pack($eventData['feed'] ?? null)) {
             return; // FluentCartEmailPacks adds the emails when the order is paid; a pack never creates or removes a website
         }

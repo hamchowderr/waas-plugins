@@ -83,6 +83,7 @@ class FluentCartEmailPacksTest extends TestCase
             }
             return null;
         });
+        $this->store->allows('is_storage_pack_product')->andReturnUsing(fn ($product_id) => $product_id === 401);
         $this->store->allows('get_email_pack_products')->andReturn([
             ['product_id' => self::PACK, 'emails' => 5000, 'title' => '5,000 emails', 'checkout_url' => 'https://storefront.example/?fluent-cart=instant_checkout&item_id=31&quantity=1'],
         ])->byDefault();
@@ -202,6 +203,17 @@ class FluentCartEmailPacksTest extends TestCase
         $this->packs->save_website_on_order(['cart' => $cart, 'order' => $this->order]);
 
         $this->assertSame(900, $this->order_meta[FluentCartEmailPacks::ORDER_WEBSITE_META]);
+    }
+
+    public function test_a_cart_with_a_storage_pack_keeps_the_website_on_the_order_too(): void
+    {
+        $cart = (object) [];
+        $this->store->allows('get_cart_checkout_value')->with($cart, FluentCartEmailPacks::CART_KEY)->andReturn(901);
+        $this->store->allows('get_cart_product_ids')->with($cart)->andReturn([401]);
+
+        $this->packs->save_website_on_order(['cart' => $cart, 'order' => $this->order]);
+
+        $this->assertSame(901, $this->order_meta[FluentCartEmailPacks::ORDER_WEBSITE_META]);
     }
 
     public function test_a_cart_without_a_pack_puts_no_website_on_the_order(): void

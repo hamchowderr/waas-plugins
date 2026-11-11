@@ -41,6 +41,14 @@ class FluentCartStore
         return $subscription ? (string) $subscription->status : '';
     }
 
+    /** How many of the product the subscription bills for (FluentCart's quantity), at least 1. */
+    public function get_subscription_quantity($subscription_id): int
+    {
+        $subscription = $this->find_subscription($subscription_id);
+
+        return $subscription ? max(1, (int) ($subscription->quantity ?? 1)) : 0;
+    }
+
     /**
      * When the subscription's paid period ends: its next billing date (FluentCart keeps it on a cancel), as a unix
      * time. 0 when there is none.
