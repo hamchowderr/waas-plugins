@@ -20,6 +20,24 @@ final class SiteBrand
         add_action('login_enqueue_scripts', [self::class, 'login_logo']);
         add_filter('login_title', [self::class, 'title']);
         add_filter('admin_title', [self::class, 'title']);
+        add_action('login_footer', [self::class, 'powered_by']);
+    }
+
+    /**
+     * A small "Powered by AnyPress" under the login form on AnyPress's own stores. Reseller stores show nothing, so their
+     * clients see only the reseller; the template website (not a store) shows nothing either.
+     */
+    public static function powered_by(): void
+    {
+        if (!PluginBootstrap::is_store() || \AnyPressClient\Core\Brand::reseller() !== '') {
+            return;
+        }
+        printf(
+            '<p class="anypress-powered-by" style="text-align:center;margin:24px 0 0;font-size:13px;color:#50575e">%s <a href="%s" style="color:inherit">%s</a></p>',
+            esc_html__('Powered by', 'anypress-client'),
+            esc_url('https://anypress.io'),
+            esc_html__('AnyPress', 'anypress-client')
+        );
     }
 
     public static function login_url(): string
