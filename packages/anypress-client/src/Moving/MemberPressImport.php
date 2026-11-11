@@ -378,8 +378,10 @@ class MemberPressImport extends NativeImport
     {
         $base = sanitize_title($name) ?: 'membership';
         $try = $base;
-        for ($n = 2; self::count('fcom_spaces', 'slug = %s', [$try]); $n++) {
+        $taken = self::count('fcom_spaces', 'slug = %s', [$try]);
+        for ($n = 2; $taken; $n++) {
             $try = $base . '-' . $n;
+            $taken = self::count('fcom_spaces', 'slug = %s', [$try]);
         }
 
         return $try;

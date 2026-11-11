@@ -566,8 +566,10 @@ class CircleImport extends NativeImport
     {
         $base = sanitize_title($name) ?: $fallback;
         $try = $base;
-        for ($n = 2; self::count($table, 'slug = %s', [$try]); $n++) {
+        $taken = self::count($table, 'slug = %s', [$try]);
+        for ($n = 2; $taken; $n++) {
             $try = $base . '-' . $n;
+            $taken = self::count($table, 'slug = %s', [$try]);
         }
 
         return $try;
