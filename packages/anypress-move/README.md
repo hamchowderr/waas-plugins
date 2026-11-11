@@ -12,7 +12,7 @@ Moves a WordPress site's forms, shop, contacts, help desk, affiliates, community
 | Community | BuddyPress, BuddyBoss | FluentCommunity |
 | Courses | LearnDash, Tutor LMS, LifterLMS | FluentCommunity courses |
 | Circle | Circle (Admin API token) | FluentCommunity |
-| MemberPress | MemberPress memberships | FluentCommunity spaces and courses, FluentCRM tags |
+| MemberPress | MemberPress memberships (and, with billing, Stripe subscriptions) | FluentCommunity spaces and courses, FluentCRM tags, FluentCart subscriptions |
 
 Each one has **Check** (says what would come across and changes nothing), **Switch** and **Undo** (takes out only what the switch added). The source plugin is never changed, and email is held while a switch runs. The same switches run as `wp anypress <switch> switch` and as WordPress abilities (`anypress/check-<switch>`, `anypress/switch-<switch>`). With AnyPress Client active, AnyPress Move does nothing.
 
@@ -26,3 +26,5 @@ cd packages/anypress-move && composer install
 ```
 
 `npm run move` in `scripts/playground` checks it on WordPress Playground.
+
+The wordpress.org listing's icon and banner images are in `.wordpress-org/` (they go in the plugin's SVN `assets` folder, not the zip).

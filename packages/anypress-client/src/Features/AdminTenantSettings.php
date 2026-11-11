@@ -47,7 +47,7 @@ class AdminTenantSettings
             'manage_options',
             self::PAGE,
             [$this, 'render_anypress_admin_tenant_page'],
-            'dashicons-networking',
+            Brand::menu_icon(),
             10
         );
 

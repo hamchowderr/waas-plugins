@@ -358,7 +358,7 @@ Undo deletes what the switch made: the courses (through FluentCommunity's own co
 
 ## Moving MemberPress Members
 
-Since 2.27.0 the MemberPress switch gives everyone with an active MemberPress membership the same access in FluentCommunity. It brings access only: payments stay where they are. MemberPress's subscriptions renew through its own payment gateway, so they keep running until the owner cancels them, and members subscribe again through FluentCart from a date the owner picks.
+Since 2.27.0 the MemberPress switch gives everyone with an active MemberPress membership the same access in FluentCommunity. Payments stay where they are unless billing is on (below). MemberPress's subscriptions renew through its own payment gateway, so they keep running until the owner cancels them, and members subscribe again through FluentCart from a date the owner picks.
 
 ```sh
 wp anypress memberpress switch --user=admin --dry-run              # check and count; changes nothing
@@ -374,7 +374,19 @@ The abilities are `anypress/check-memberpress` and `anypress/switch-memberpress`
 | An active member (a complete or confirmed transaction that hasn't run out) | A member of that space, or a student of that course. They are already the website's users, so no account is made. |
 | The member in FluentCRM (when it's active) | A "MemberPress: <membership>" tag and the "MemberPress membership ends" field (the latest end date, or "never"). A new contact is transactional, not subscribed to marketing; an existing contact keeps its status and tags. |
 
-MemberPress doesn't need to be active: its memberships are posts and its transactions its own table, and the switch reads them. What doesn't come across: payments and subscriptions; expired, cancelled and refunded memberships; MemberPress's content rules (put that content in the space or course); coupons, account and pricing pages and shortcodes. Undo takes out the members it added, the spaces it made, the contacts it made, its tags and end dates, and the field. Sources: `src/Moving/MemberPressImport.php`. Tested on a store of the community site type by `scripts/playground/memberpress.mjs` (`npm run memberpress`). MemberPress is a paid plugin, so the test writes its memberships and tables as MemberPress keeps them instead of installing it.
+### Stripe Subscriptions Into FluentCart (2.29.0)
+
+With billing on (`--billing`, or `{"billing": true}`), active MemberPress subscriptions on a Stripe gateway also move to FluentCart, so they keep renewing:
+
+```sh
+wp anypress memberpress switch --user=admin --billing --dry-run
+```
+
+Stripe holds the subscription and the card and keeps charging on its own schedule, so nothing changes in Stripe. Each subscription gets a FluentCart subscription with the same Stripe subscription id (`vendor_subscription_id`), the Stripe customer, the price, tax and next billing date, `current_payment_method` stripe and the gateway's mode (test or live), the way FluentCart's own EDD migrator carries EDD's Stripe subscriptions. FluentCart's Stripe webhook then finds it by that id on each `invoice.paid` and records the renewal: a renewal order and transaction, the bill count, the next billing date. Each membership with Stripe subscriptions becomes a draft FluentCart subscription product (FluentCart's `BulkProductInsertService`) with its price and interval; each member gets a FluentCart customer (theirs, if they already have one) and a parent order.
+
+For the renewals to reach FluentCart, its Stripe settings must be connected to the same Stripe account, with its webhook added in Stripe. Then switch off MemberPress's Stripe gateway so a renewal isn't recorded twice. Not carried: subscriptions on PayPal and other gateways (PayPal can't hand a subscription to another plugin), and billing periods FluentCart has no interval for (every 2 weeks, every 2 months...), which the check lists. Undo takes out the FluentCart subscriptions, orders, customers and products the switch made, except a subscription FluentCart has already recorded a renewal for: those are real payments, so it keeps that subscription with its order, customer and product. `src/Moving/MemberPressBilling.php`. The Playground test plays a renewal webhook against a stand-in for Stripe's API.
+
+MemberPress doesn't need to be active: its memberships are posts and its transactions its own table, and the switch reads them. What doesn't come across: payments and subscriptions (except Stripe subscriptions with billing on); expired, cancelled and refunded memberships; MemberPress's content rules (put that content in the space or course); coupons, account and pricing pages and shortcodes. Undo takes out the members it added, the spaces it made, the contacts it made, its tags and end dates, and the field. Sources: `src/Moving/MemberPressImport.php`. Tested on a store of the community site type by `scripts/playground/memberpress.mjs` (`npm run memberpress`). MemberPress is a paid plugin, so the test writes its memberships and tables as MemberPress keeps them instead of installing it.
 
 ## The Website Assistant Beside the Page
 

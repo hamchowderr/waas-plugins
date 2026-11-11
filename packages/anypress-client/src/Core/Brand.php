@@ -38,6 +38,18 @@ final class Brand
         return sprintf(__('%s Client', 'anypress-client'), self::name());
     }
 
+    /** The AnyPress ribbon for the admin menu, as a data URI (WordPress shows it as an image). */
+    public static function menu_icon(): string
+    {
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="14 12 80 76">'
+            . '<defs><linearGradient id="l" x1="8" y1="80" x2="66" y2="40" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFB338"/><stop offset=".55" stop-color="#FF7A2A"/><stop offset="1" stop-color="#F2413A"/></linearGradient>'
+            . '<linearGradient id="r" x1="56" y1="14" x2="86" y2="86" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FF5A33"/><stop offset=".5" stop-color="#EE2F5E"/><stop offset="1" stop-color="#D21FA4"/></linearGradient></defs>'
+            . '<path d="M48.5 17.5Q51 14 55 15L56 27 50.5 48H62.3L66.2 59 48 64 44 77.5H20Q16 77.5 18.5 75Q28 68 32 58Z" fill="url(#l)"/>'
+            . '<path d="M51 15H62Q65.5 15 66.8 18.5L90 80Q91.5 84 87.5 84H77.5Q75 84 74 81.5L55 27Z" fill="url(#r)"/></svg>';
+
+        return 'data:image/svg+xml;base64,' . base64_encode($svg);
+    }
+
     public static function init(): void
     {
         add_filter('all_plugins', [self::class, 'plugins_list']);

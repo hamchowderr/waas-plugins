@@ -179,6 +179,7 @@ await check('Tools, Move to Fluent lists every switch with Check, Switch and Und
     for (const k of SWITCHES) expect(html.includes(`id="switch-${k}"`), `no ${k} card`);
     expect((html.match(/value="check"/g) || []).length === SWITCHES.length, 'a Check button per switch');
     expect(html.includes('type="password" id="circle-token"'), 'the Circle token is a password field');
+    expect(!/ (onclick|style)=/.test(html), 'no inline script or style attributes (they are enqueued)');
 });
 
 await check('Check on the page says what would come across and changes nothing', async () => {
@@ -222,6 +223,16 @@ await check('an editor cannot open the page or press its buttons', async () => {
     expect(res.status === 403, `check-course as an editor: HTTP ${res.status}`);
 });
 
+await check('a switch never turns plugins on: with FluentCommunity off, Check asks for it and it stays off', async () => {
+    await php(`deactivate_plugins('fluent-community/fluent-community.php'); echo json_encode([]);`);
+    const pressed = await press('course', 'check');
+    const text = JSON.stringify(pressed.result?.result ?? pressed);
+    const on = await php(`echo json_encode(['on' => is_plugin_active('fluent-community/fluent-community.php')]);`);
+    await php(`activate_plugin('fluent-community/fluent-community.php'); echo json_encode([]);`);
+    expect(on.on === false, `FluentCommunity was turned on: ${short(pressed)}`);
+    expect(text.includes("FluentCommunity isn't active") || text.includes('FluentCommunity isn\\u0027t active'), short(pressed));
+});
+
 await check('with AnyPress Client active, AnyPress Move does nothing', async () => {
     await php(`activate_plugin('anypress-client/anypress-client.php'); echo json_encode(['ok' => is_plugin_active('anypress-client/anypress-client.php')]);`);
     const state = await php(`require_once ABSPATH . 'wp-admin/includes/admin.php'; do_action('admin_menu');
@@ -232,7 +243,7 @@ await check('with AnyPress Client active, AnyPress Move does nothing', async () 
 
 const log = await cli.playground.readFileAsText('/wordpress/wp-content/debug.log').catch(() => '');
 await check('no PHP errors from AnyPress Move', async () => {
-    const bad = log.split('\n').filter((line) => /PHP (Fatal|Warning|Parse)/.test(line) && /anypress-move/.test(line));
+    const bad = log.split('\n').filter((line) => /PHP (Fatal|Warning|Parse|Notice|Deprecated)/.test(line) && /anypress-move/.test(line));
     expect(!bad.length, bad.slice(0, 5).join('\n'));
 });
 

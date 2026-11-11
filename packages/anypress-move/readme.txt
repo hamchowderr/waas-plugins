@@ -4,11 +4,11 @@ Tags: migration, fluentcrm, fluent forms, fluentcommunity, fluentcart
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.2
+Stable tag: 1.1.1
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
-Moves your forms, shop, contacts, help desk, affiliates, community, courses and members into the Fluent plugins, with a check first and an undo after.
+Moves your forms, shop, contacts, help desk, affiliates, community, courses and members into the Fluent plugins, with a check first and an undo.
 
 == Description ==
 
@@ -22,13 +22,13 @@ Each switch copies one plugin's data into the Fluent plugin that replaces it, us
 * Community: BuddyPress or BuddyBoss into FluentCommunity.
 * Courses: LearnDash, Tutor LMS or LifterLMS into FluentCommunity courses, with students and their progress.
 * Circle: a Circle community into FluentCommunity, through Circle's Admin API.
-* MemberPress: active members into FluentCommunity spaces and courses, with FluentCRM tags. Payments stay in MemberPress.
+* MemberPress: active members into FluentCommunity spaces and courses, with FluentCRM tags. Tick billing and active Stripe subscriptions move to FluentCart, where they keep renewing in Stripe; PayPal and other gateways stay in MemberPress.
 
 Open Tools > Move to Fluent. Check says what would come across, what can't, and anything in the way, and changes nothing. Switch runs it. Undo takes out only what the switch added. The old plugin and its data are never changed, and emails are held while a switch runs, so nobody gets a welcome email for a copied account. Take a backup before you switch.
 
 The same switches run from WP-CLI (`wp anypress course switch --dry-run`, `wp anypress forms switch`, and so on) and as WordPress abilities, so AI tools connected through the MCP Adapter can check and run them.
 
-Install the Fluent plugin a switch copies into first.
+Install and turn on the Fluent plugin a switch copies into first (and, for the shop, FluentCart's free Migrator add-on). The switches never turn plugins on or off; Check says which one is still off.
 
 On an AnyPress website the switches are already built in, and this plugin does nothing.
 
@@ -45,6 +45,16 @@ This plugin connects to one outside service, and only when you run its Circle sw
 No other switch sends anything off your site. The Shop switch links to FluentCart's own page for its free Migrator add-on but never downloads it; you install it yourself.
 
 == Changelog ==
+
+= 1.1.1 =
+* The plugin's website link goes to anypress.io/move.
+
+= 1.1.0 =
+* MemberPress: with billing ticked, active Stripe subscriptions move to FluentCart. Each keeps the same Stripe subscription, so Stripe goes on charging as before and FluentCart records the renewals; connect FluentCart's Stripe settings to the same Stripe account, then switch off MemberPress's Stripe gateway. Undo keeps any subscription FluentCart has already recorded a payment on.
+
+= 1.0.3 =
+* The switches never turn other plugins on or off. When the Fluent plugin a switch copies into (or FluentCart's Migrator add-on) is off, Check says so and asks you to turn it on.
+* The Move to Fluent page loads its few lines of style and its "are you sure?" prompts the WordPress way, on that page only.
 
 = 1.0.2 =
 * The switches read and write through each plugin's own functions (FluentCRM, Fluent Forms, FluentCommunity, Fluent Support, FluentAffiliate, FluentCart, BuddyPress, MailPoet, WooCommerce) and WordPress's own post, user and comment queries, instead of their database tables. The only direct reads left are of tables a plugin keeps for itself and offers no function for while it is switched off (MemberPress, LearnDash and LifterLMS progress, MailPoet's sign-up IP addresses, The Newsletter Plugin's subscribers).
