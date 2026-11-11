@@ -2,7 +2,6 @@
 
 namespace AnyPressClient\Features;
 
-
 if (!defined('ABSPATH')) {
     exit;
 }
