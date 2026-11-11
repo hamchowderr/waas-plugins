@@ -230,19 +230,24 @@ class CleanDashboard
     }
 
     /**
-     * roles.json lines can start with the plugin's short name ("FluentHub: one dashboard..."): that name is shown
-     * instead of the plugin header's longer one ("FluentCRM - Marketing Automation For WordPress"), and not twice.
+     * The plugin's short name and what it is for. roles.json lines start with a label ("FluentHub: one dashboard...",
+     * "SEO: page titles..."): the label is dropped from the line, and is the name when it names the plugin (has the
+     * first word of its name: "FluentCRM" for "FluentCRM - Marketing Automation For WordPress"); otherwise the
+     * header's name up to its dash ("FluentAuth - Auth Security Plugin" is FluentAuth, "SEO" is Rank Math SEO).
      *
      * @return array{0: string, 1: string}
      */
     private static function name_and_about(string $name, string $about): array
     {
+        $short = trim((string) preg_split('/\s+[-–—]\s+/u', $name, 2)[0]);
         $parts = explode(': ', $about, 2);
-        if (count($parts) === 2 && strlen($parts[0]) <= 40) {
-            return [$parts[0], ucfirst($parts[1])];
+        if (count($parts) !== 2 || strlen($parts[0]) > 40) {
+            return [$short, $about];
         }
-        // "FluentAuth - Auth Security Plugin", "FluentPlayer – Video Player With ...": the part before the dash.
-        return [trim((string) preg_split('/\s+[-–—]\s+/u', $name, 2)[0]), $about];
+        $label = trim($parts[0]);
+        $own = stripos($label, (string) strtok($short, ' ')) !== false;
+
+        return [$own ? $label : $short, ucfirst($parts[1])];
     }
 
     /**
