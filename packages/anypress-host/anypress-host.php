@@ -37,7 +37,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 /**
  * @package AnyPressHost
- * @version 2.14.0
+ * @version 2.15.0
  */
 /*
 Plugin Name: AnyPress Host
