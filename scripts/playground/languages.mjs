@@ -27,7 +27,7 @@ const ROOT = resolve(HERE, '../..');
 const CLIENT = resolve(ROOT, 'packages/anypress-client');
 const API = process.env.ANYPRESS_API_DIR || resolve(ROOT, '../waas-provisioning-api');
 const THEME = resolve(HERE, 'preview-zips/anypress.zip');
-const WP = process.env.PLAYGROUND_WP || '7.1.3';
+const WP = process.env.PLAYGROUND_WP || '7.1.4';
 const PHP = process.env.PLAYGROUND_PHP || '8.3';
 const PORT = Number(process.env.PLAYGROUND_PORT || 9404);
 const SERVE = process.argv.includes('--serve');
@@ -36,8 +36,8 @@ const SITE_KEY = randomBytes(24).toString('hex');
 // The store template's versions (waas-provisioning-api templates/anypress-store/build.sh).
 const POLYLANG = 'polylang.3.9.2.zip';
 const FLUENT = {
-    'online-store': { zip: 'fluent-cart.2.2.0.zip', slug: 'fluent-cart' },
-    community: { zip: 'fluent-community.2.12.0.zip', slug: 'fluent-community' },
+    'online-store': { zip: 'fluent-cart.2.3.1.zip', slug: 'fluent-cart' },
+    community: { zip: 'fluent-community.2.13.0.zip', slug: 'fluent-community' },
 }[SITE_TYPE];
 
 if (!FLUENT) {

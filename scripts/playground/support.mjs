@@ -13,13 +13,13 @@ import { runCLI } from '@wp-playground/cli';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const HOST = resolve(HERE, '../../packages/anypress-host');
-const FS_VERSION = process.env.FLUENT_SUPPORT || '2.4.7';
+const FS_VERSION = process.env.FLUENT_SUPPORT || '2.5.0';
 // A test secret only, made up here.
 const SECRET = `whsec_${Buffer.alloc(24, 9).toString('base64')}`;
 
 const cli = await runCLI({
     command: 'server',
-    wp: `https://wordpress.org/wordpress-${process.env.PLAYGROUND_WP || '7.1.3'}.zip`,
+    wp: `https://wordpress.org/wordpress-${process.env.PLAYGROUND_WP || '7.1.4'}.zip`,
     php: '8.3',
     port: Number(process.env.PLAYGROUND_PORT || 9441),
     blueprint: {

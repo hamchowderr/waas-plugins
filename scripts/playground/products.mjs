@@ -25,7 +25,7 @@ const CLIENT = resolve(ROOT, 'packages/anypress-client');
 const API = process.env.ANYPRESS_API_DIR || resolve(ROOT, '../waas-provisioning-api');
 const MIGRATOR = resolve(API, 'templates/anypress-store/plugins/fluent-cart-migrator-1.1.0-beta.zip');
 const THEME = resolve(HERE, 'preview-zips/anypress.zip');
-const WP = process.env.PLAYGROUND_WP || '7.1.3';
+const WP = process.env.PLAYGROUND_WP || '7.1.4';
 const PHP = process.env.PLAYGROUND_PHP || '8.3';
 const PORT = Number(process.env.PLAYGROUND_PORT || 9403);
 const SERVE = process.argv.includes('--serve');
@@ -47,7 +47,7 @@ const blueprint = {
     steps: [
         { step: 'defineWpConfigConsts', consts: { WP_DEBUG: true, WP_DEBUG_LOG: true, WP_DEBUG_DISPLAY: false, AUTOMATIC_UPDATER_DISABLED: true, DISABLE_WP_CRON: true } },
         { step: 'installTheme', themeData: { resource: 'literal', name: 'anypress.zip', contents: readFileSync(THEME) }, options: { activate: true } },
-        { step: 'installPlugin', pluginData: { resource: 'url', url: 'https://downloads.wordpress.org/plugin/fluent-cart.2.2.0.zip' }, options: { activate: true } },
+        { step: 'installPlugin', pluginData: { resource: 'url', url: 'https://downloads.wordpress.org/plugin/fluent-cart.2.3.1.zip' }, options: { activate: true } },
         // Installed switched off, as the store template ships it.
         { step: 'installPlugin', pluginData: { resource: 'literal', name: 'fluent-cart-migrator.zip', contents: readFileSync(MIGRATOR) }, options: { activate: false } },
         { step: 'mkdir', path: '/wordpress/wp-content/plugins/anypress-client-data' },
