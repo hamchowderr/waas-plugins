@@ -30,7 +30,8 @@
     "move": "node move.mjs",
     "languages": "node languages.mjs",
     "mail-log": "node mail-log.mjs",
-    "download-site": "node download-site.mjs"
+    "download-site": "node download-site.mjs",
+    "community-portal": "node community-portal.mjs"
   },
   "dependencies": {
     "@wp-playground/cli": "3.1.59"
