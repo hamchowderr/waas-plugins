@@ -155,5 +155,7 @@ if (!wp_doing_ajax()) {
         new CustomerPlanPage();
         // A clean wp-admin: no upgrade, review or setup asks from the plugins that come with the website.
         new CleanAdmin();
+        // The Dashboard home: the store's own boxes instead of WordPress's Welcome, Site Health, Quick Draft and the rest.
+        new \AnyPressClient\Features\CleanDashboard();
     }
 }

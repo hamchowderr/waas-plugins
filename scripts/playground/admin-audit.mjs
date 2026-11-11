@@ -86,6 +86,28 @@ try {
         console.log(report.sitePlugins.ok ? 'ok   only the site type\'s plugins are on' : `FAIL plugins on: ${active.join(', ')}; want ${want.join(', ')}`);
         if (!report.sitePlugins.ok) process.exitCode = 1;
     }
+    if (CLIENT) {
+        // The Dashboard home: none of WordPress's own boxes, the store's home in their place (CleanDashboard).
+        const dash = await page.evaluate(() => {
+            const shown = (sel) => { const el = document.querySelector(sel); return !!el && el.getBoundingClientRect().height > 0; };
+            const core = ['#welcome-panel', '#dashboard_right_now', '#dashboard_activity', '#dashboard_quick_press', '#dashboard_primary', '#dashboard_site_health'];
+            return {
+                core: core.filter(shown),
+                boxes: [...document.querySelectorAll('#dashboard-widgets .postbox')].filter((el) => el.getBoundingClientRect().height > 0).map((el) => el.id),
+                home: shown('#anypress_home'), site: shown('#anypress_site'), plan: shown('#anypress_plan'),
+                links: [...document.querySelectorAll('#anypress_site a')].map((a) => ({ text: a.innerText.trim(), href: a.href })),
+            };
+        });
+        report.dashboard = dash;
+        const ok = dash.core.length === 0 && dash.home && dash.site && dash.plan;
+        console.log(ok ? `ok   the Dashboard shows the store's home (${dash.boxes.join(', ')})` : `FAIL the Dashboard: ${JSON.stringify(dash)}`);
+        if (!ok) process.exitCode = 1;
+        for (const [name, size] of [['desktop', { width: 1366, height: 900 }], ['phone', { width: 390, height: 844 }]]) {
+            await page.setViewportSize(size);
+            await page.screenshot({ path: `${OUT}/dashboard-${process.env.SITE_TYPE}-${name}.png`, fullPage: true });
+        }
+        await page.setViewportSize({ width: 1366, height: 900 });
+    }
     if (!menu.length) writeFileSync(`${OUT}/landing.html`, await page.content());
     const only = (process.env.ONLY || '').split(',').filter(Boolean);
     const urls = [...new Set(menu.map((m) => m.href.split('#')[0]))].filter((u) => u.includes('/wp-admin/') && (!only.length || only.some((o) => u.includes(o))));
