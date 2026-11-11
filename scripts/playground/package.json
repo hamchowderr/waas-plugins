@@ -21,6 +21,7 @@
     "highlevel": "node highlevel.mjs",
     "domains": "node domains.mjs",
     "care": "node care.mjs",
+    "storage-packs": "node storage-packs.mjs",
     "admin-audit": "node admin-audit.mjs",
     "support": "node support.mjs",
     "products": "node products.mjs",

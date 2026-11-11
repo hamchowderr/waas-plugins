@@ -28,10 +28,11 @@ class FluentCartPortal
     private FluentCartStore $store;
     private UserAccountSubscriptionsSettings $domain_settings;
     private ?FluentCartEmailPacks $email_packs;
+    private ?FluentCartStoragePacks $storage_packs;
     private ?FluentCartDomains $domains;
     private ?FluentCartCarePortal $care;
 
-    public function __construct(FluentCartAdapter $adapter, FluentCartStore $store, UserAccountSubscriptionsSettings $domain_settings, ?FluentCartEmailPacks $email_packs = null, ?FluentCartDomains $domains = null, ?FluentCartCarePortal $care = null)
+    public function __construct(FluentCartAdapter $adapter, FluentCartStore $store, UserAccountSubscriptionsSettings $domain_settings, ?FluentCartEmailPacks $email_packs = null, ?FluentCartDomains $domains = null, ?FluentCartCarePortal $care = null, ?FluentCartStoragePacks $storage_packs = null)
     {
         $this->domains = $domains;
         $this->care = $care;
@@ -39,6 +40,7 @@ class FluentCartPortal
         $this->store = $store;
         $this->domain_settings = $domain_settings;
         $this->email_packs = $email_packs;
+        $this->storage_packs = $storage_packs;
 
         add_action('fluent_cart/init', [$this, 'register_endpoint']);
         add_filter('fluent_cart/customer_portal/subscription_data', [$this, 'add_subscription_actions'], 10, 2);
@@ -236,6 +238,7 @@ class FluentCartPortal
             $this->care->render_section($subscription_id);
         }
         $this->render_email_pack_links($subscription_id);
+        $this->render_storage_pack_link($subscription_id);
         echo '</section>';
     }
 
@@ -294,6 +297,21 @@ class FluentCartPortal
         }
         // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- each link in $html is escaped as it is built.
         echo '<p class="anypress-acct-emails">' . esc_html__('Sending lots of email?', 'anypress-host') . ' ' . implode(' &middot; ', $html) . '. <small>' . esc_html__('Extra emails never expire. They are used once the plan\'s monthly emails run out, and resume paused campaigns.', 'anypress-host') . '</small></p>';
+    }
+
+    /** "Add 25 GB storage": checkout for a storage pack, for this website. Nothing when the shop sells no storage pack. */
+    private function render_storage_pack_link($subscription_id): void
+    {
+        $link = $this->storage_packs ? $this->storage_packs->link($subscription_id) : null;
+        if ($link === null) {
+            return;
+        }
+
+        $note = $link['packs'] > 0
+            /* translators: 1: number of storage packs, 2: gigabytes they add */
+            ? sprintf(_n('This website has %1$d storage pack (%2$d GB more).', 'This website has %1$d storage packs (%2$d GB more).', $link['packs'], 'anypress-host'), $link['packs'], $link['packs'] * FluentCartStoragePacks::PACK_GB) . ' '
+            : '';
+        echo '<p class="anypress-acct-emails">' . esc_html__('Running out of space?', 'anypress-host') . ' <a class="anypress-buy-emails" href="' . esc_url($link['url']) . '">' . esc_html($link['label']) . '</a>. <small>' . esc_html($note . __('Each pack is billed monthly with its own subscription; cancel it any time and the storage stays until the paid month ends.', 'anypress-host')) . '</small></p>';
     }
 
     /** When a cancelled subscription's website goes offline (end of its paid period); 0 when not planned. */

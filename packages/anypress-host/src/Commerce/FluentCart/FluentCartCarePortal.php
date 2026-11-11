@@ -383,9 +383,14 @@ class FluentCartCarePortal
         // Monthly or yearly: two radios the tiers' prices follow, in CSS alone.
         if ($has_yearly) {
             $name = 'anypress_care_period_' . $website_id;
+            $free = self::months_free($packages);
             echo '<div class="anypress-acct-care-period" role="radiogroup" aria-label="' . esc_attr__('Billing', 'anypress-host') . '">'
                 . '<label><input type="radio" name="' . esc_attr($name) . '" value="monthly"' . checked(!$yearly_picked, true, false) . '><span>' . esc_html__('Monthly', 'anypress-host') . '</span></label>'
-                . '<label><input type="radio" name="' . esc_attr($name) . '" value="yearly"' . checked($yearly_picked, true, false) . '><span>' . esc_html__('Yearly', 'anypress-host') . self::months_free($packages) . '</span></label></div>';
+                . '<label><input type="radio" name="' . esc_attr($name) . '" value="yearly"' . checked($yearly_picked, true, false) . '><span>' . esc_html__('Yearly', 'anypress-host') . ($free > 0 ? ' <small>' . esc_html(sprintf(
+                    /* translators: %d: months */
+                    _n('%d month free', '%d months free', $free, 'anypress-host'),
+                    $free
+                )) . '</small>' : '') . '</span></label></div>';
         }
 
         echo '<div class="anypress-acct-care-tiers">';
@@ -410,7 +415,11 @@ class FluentCartCarePortal
                         )) . ($interval === 'yearly' ? ' <span class="screen-reader-text">' . esc_html__('yearly', 'anypress-host') . '</span>' : '') . '</a></div>';
                 }
             }
-            echo '<ul>' . self::package_points($package) . '</ul></div>';
+            echo '<ul>';
+            foreach (self::package_points($package) as $point) {
+                echo '<li>' . esc_html($point) . '</li>';
+            }
+            echo '</ul></div>';
         }
         echo '</div><p class="anypress-acct-note">' . esc_html__('Unused time doesn\'t carry over. Care renews on its own and can be cancelled any time; it ends with the website\'s plan.', 'anypress-host') . '</p>';
 
@@ -428,49 +437,49 @@ class FluentCartCarePortal
         }
     }
 
-    /** " 2 months free" when a year of every package costs that many months less than paying monthly, else ''. */
-    private static function months_free(array $packages): string
+    /** The months a year of every package saves over paying monthly (2 when yearly is 10 months' price), else 0. */
+    private static function months_free(array $packages): int
     {
         $free = null;
         foreach ($packages as $package) {
             $monthly = self::first_variation($package, 'monthly');
             $yearly = self::first_variation($package, 'yearly');
             if ($monthly['interval'] !== 'monthly' || $yearly['interval'] !== 'yearly' || $monthly['price'] <= 0) {
-                return '';
+                return 0;
             }
             $months = (int) round(12 - $yearly['price'] / $monthly['price']);
             if ($free !== null && $months !== $free) {
-                return '';
+                return 0;
             }
             $free = $months;
         }
-        if (!$free || $free < 1) {
-            return '';
-        }
-
-        /* translators: %d: months */
-        return ' <small>' . esc_html(sprintf(_n('%d month free', '%d months free', $free, 'anypress-host'), $free)) . '</small>';
+        return max(0, (int) $free);
     }
 
-    /** A package's points as list items: its time and its answer time. */
-    private static function package_points(array $package): string
+    /**
+     * A package's points: its time, its answer time, the monthly call when it has one, and the report.
+     *
+     * @return string[]
+     */
+    private static function package_points(array $package): array
     {
         $minutes = AnyPressProvisioningIntegration::minutes($package['settings'], 'care_minutes');
         $answer = sanitize_text_field((string) ($package['settings']['care_answer'] ?? ''));
-        $points = '';
+        $points = [];
         if ($minutes > 0) {
             /* translators: %s: time, e.g. 2 h */
-            $points .= '<li>' . esc_html(sprintf(__('%s of changes a month', 'anypress-host'), FluentCartCare::format_minutes($minutes))) . '</li>';
+            $points[] = sprintf(__('%s of changes a month', 'anypress-host'), FluentCartCare::format_minutes($minutes));
         }
         if ($answer !== '') {
             /* translators: %s: e.g. 1 business day */
-            $points .= '<li>' . esc_html(sprintf(__('Answer within %s', 'anypress-host'), $answer)) . '</li>';
+            $points[] = sprintf(__('Answer within %s', 'anypress-host'), $answer);
         }
         if (!empty($package['settings']['care_call_url'])) {
-            $points .= '<li>' . esc_html__('A call each month', 'anypress-host') . '</li>';
+            $points[] = __('A call each month', 'anypress-host');
         }
+        $points[] = __('Monthly report by email', 'anypress-host');
 
-        return $points . '<li>' . esc_html__('Monthly report by email', 'anypress-host') . '</li>';
+        return $points;
     }
 
     // ---- Account: form posts ----

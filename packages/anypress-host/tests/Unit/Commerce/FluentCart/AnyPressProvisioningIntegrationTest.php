@@ -189,7 +189,7 @@ class AnyPressProvisioningIntegrationTest extends TestCase
         $this->assertSame(['peptide-store' => 'Peptide store'], $fields['role']['options']);
         $this->assertSame(['peptide-starter' => 'peptide-starter'], $fields['group_name']['options']);
         $this->assertArrayHasKey('event_trigger', $fields);
-        $this->assertSame(['plan', 'email_pack', 'care', 'service'], array_keys($fields['product_type']['options']));
+        $this->assertSame(['plan', 'email_pack', 'storage_pack', 'care', 'service'], array_keys($fields['product_type']['options']));
         $this->assertSame(['depends_on' => 'product_type', 'operator' => '=', 'value' => 'care'], $fields['care_minutes']['dependency']);
         $this->assertSame(['depends_on' => 'product_type', 'operator' => '=', 'value' => 'service'], $fields['service_minutes']['dependency']);
         $this->assertSame('number', $fields['emails_per_pack']['component']);

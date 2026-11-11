@@ -16,10 +16,13 @@ use AnyPressHost\Features\PluginBootstrap;
  *
  * The same feed with "Product type: Email pack" makes the product an email pack instead: buying it adds
  * "Emails per pack" emails (times the quantity) to one of the customer's websites (FluentCartEmailPacks). A pack is
- * never a website plan, and its feed's triggers do nothing. Feeds saved before the product type existed are plans.
+ * never a website plan, and its feed's triggers do nothing. "Product type: Storage pack" makes a subscription product
+ * that adds storage to one of the customer's websites while it is paid (FluentCartStoragePacks): its triggers tell
+ * the store how many packs it has now.
  *
  * "Product type: Care package" makes a subscription product a monthly care package for one of the customer's websites,
  * and "One-time service" a one-off job such as setting a site up (FluentCartCare). Neither creates a website either.
+ * Feeds saved before the product type existed are plans.
  */
 class AnyPressProvisioningIntegration extends BaseIntegrationManager
 {
@@ -40,6 +43,7 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
     /** product_type values. A feed without one is a website plan. */
     public const PRODUCT_TYPE_PLAN = 'plan';
     public const PRODUCT_TYPE_EMAIL_PACK = 'email_pack';
+    public const PRODUCT_TYPE_STORAGE_PACK = 'storage_pack';
     public const PRODUCT_TYPE_CARE = 'care';
     public const PRODUCT_TYPE_SERVICE = 'service';
     public const PRIORITY_NORMAL = 'normal';
@@ -58,7 +62,7 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
 
         $this->provisioning_api = $provisioning_api;
         $this->store = $store;
-        $this->description = __('Create a website for the customer when they subscribe to this product. When the subscription ends, the website is backed up and taken offline, then deleted after the grace period set in the AnyPress settings. Or set Product type to Email pack to sell extra emails for a website.', 'anypress-host');
+        $this->description = __('Create a website for the customer when they subscribe to this product. When the subscription ends, the website is backed up and taken offline, then deleted after the grace period set in the AnyPress settings. Or set Product type to Email pack or Storage pack to sell extra emails or storage for a website.', 'anypress-host');
         $this->disableGlobalSettings = true;
     }
 
@@ -126,10 +130,11 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
                 'options' => [
                     self::PRODUCT_TYPE_PLAN => __('Website plan', 'anypress-host'),
                     self::PRODUCT_TYPE_EMAIL_PACK => __('Email pack', 'anypress-host'),
+                    self::PRODUCT_TYPE_STORAGE_PACK => __('Storage pack', 'anypress-host'),
                     self::PRODUCT_TYPE_CARE => __('Care package', 'anypress-host'),
                     self::PRODUCT_TYPE_SERVICE => __('One-time service', 'anypress-host'),
                 ],
-                'inline_tip' => __('A website plan is a subscription that creates a website. An email pack is a one-time product that adds emails to one of the customer\'s websites; the emails never expire and are used once the plan\'s monthly emails run out. For an email pack, only "Emails per pack" below applies. A care package is a monthly or yearly subscription for changes to one of the customer\'s websites; a one-time service is a single job for one website, such as setting it up. For those, only the care fields below apply.', 'anypress-host'),
+                'inline_tip' => __('A website plan is a subscription that creates a website. An email pack is a one-time product that adds emails to one of the customer\'s websites; the emails never expire and are used once the plan\'s monthly emails run out. For an email pack, only "Emails per pack" below applies. A storage pack is a subscription that adds 25 GB of storage to one of the customer\'s websites for as long as it is paid; none of the fields below apply to it. A care package is a monthly or yearly subscription for changes to one of the customer\'s websites; a one-time service is a single job for one website, such as setting it up. For those, only the care fields below apply.', 'anypress-host'),
             ],
             [
                 'key' => 'emails_per_pack',
@@ -236,7 +241,7 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
     {
         $type = is_array($settings) ? (string) ($settings['product_type'] ?? '') : '';
 
-        return in_array($type, [self::PRODUCT_TYPE_EMAIL_PACK, self::PRODUCT_TYPE_CARE, self::PRODUCT_TYPE_SERVICE], true) ? $type : self::PRODUCT_TYPE_PLAN;
+        return in_array($type, [self::PRODUCT_TYPE_EMAIL_PACK, self::PRODUCT_TYPE_STORAGE_PACK, self::PRODUCT_TYPE_CARE, self::PRODUCT_TYPE_SERVICE], true) ? $type : self::PRODUCT_TYPE_PLAN;
     }
 
     /** True when a feed's settings make the product a website plan (not an email pack, care package or service). */
@@ -280,6 +285,12 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
         return max(0, min((int) $minutes, 31 * 24 * 60));
     }
 
+    /** True when a feed's settings make the product a storage pack, not a website plan. */
+    public static function is_storage_pack($settings): bool
+    {
+        return self::product_type($settings) === self::PRODUCT_TYPE_STORAGE_PACK;
+    }
+
     /** The emails one pack of an email-pack feed adds; 0 when the feed is not a pack or has no valid number. */
     public static function emails_per_pack($settings): int
     {
@@ -302,6 +313,11 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
      */
     public function processAction($order, $eventData)
     {
+        if (self::is_storage_pack($eventData['feed'] ?? null)) {
+            // FluentCartStoragePacks tells the website's store how many packs it has now; a pack never creates or removes a website.
+            do_action(FluentCartStoragePacks::CHANGED_HOOK, $order, $eventData['event_data']['subscription'] ?? null, ($eventData['is_revoke_hook'] ?? '') === 'yes');
+            return;
+        }
         if (!self::is_plan($eventData['feed'] ?? null)) {
             // Email packs (FluentCartEmailPacks), care packages and services (FluentCartCare) are handled when the order
             // is paid; they never create or remove a website.
