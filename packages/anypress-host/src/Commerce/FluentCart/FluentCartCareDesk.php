@@ -286,7 +286,7 @@ class FluentCartCareDesk
         $share = $has_package ? $summary['left'] / $summary['minutes'] : 1.0;
         $state = !$has_package ? '' : ($summary['left'] <= 0 ? ' is-out' : ($share <= FluentCartCareEmails::LOW_SHARE ? ' is-low' : ''));
 
-        echo '<article class="ap-care-site' . ($focus ? ' is-focus' : '') . '" id="care-' . esc_attr((string) $website_id) . '">';
+        echo '<details class="ap-care-site' . ($focus ? ' is-focus' : '') . '" id="care-' . esc_attr((string) $website_id) . '"' . ($focus ? ' open' : '') . '><summary class="ap-care-row">';
         echo '<div class="ap-care-who"><a class="ap-care-domain" href="' . esc_url($this->store->get_admin_subscription_url($website_id)) . '">' . esc_html($this->care->domain($website_id)) . '</a>'
             . '<small>' . esc_html(implode(' · ', array_filter([(string) ($customer['name'] ?? ''), (string) ($customer['email'] ?? '')]))) . '</small></div>';
         echo '<div class="ap-care-pkg">' . ($has_package
@@ -319,7 +319,7 @@ class FluentCartCareDesk
         }
         echo '</div>';
 
-        echo '<details class="ap-care-log"' . ($focus ? ' open' : '') . '><summary class="ap-btn is-sm">' . esc_html__('Log time', 'anypress-host') . '</summary><div class="ap-care-log-body">';
+        echo '<span class="ap-btn is-sm ap-care-toggle">' . esc_html__('Log time', 'anypress-host') . '</span></summary><div class="ap-care-log-body">';
         echo '<form class="ap-care-form" method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
         echo '<input type="hidden" name="action" value="' . esc_attr(self::LOG_ACTION) . '"><input type="hidden" name="website" value="' . esc_attr((string) $website_id) . '">';
         wp_nonce_field(self::LOG_ACTION . '_' . $website_id);
@@ -327,7 +327,7 @@ class FluentCartCareDesk
         echo '<label class="ap-care-note"><span>' . esc_html__('What was done', 'anypress-host') . '</span><input type="text" name="note" placeholder="' . esc_attr__('Ticket #12: new workshop page', 'anypress-host') . '"></label>';
         echo '<button type="submit" class="ap-btn is-ink">' . esc_html__('Log time', 'anypress-host') . '</button></form>';
         $this->render_history($website_id);
-        echo '</div></details></article>';
+        echo '</div></details>';
     }
 
     /** The newest time logged on any website, so the team sees what was done lately. */
