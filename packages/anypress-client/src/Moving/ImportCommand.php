@@ -29,7 +29,9 @@ class ImportCommand
      * courses (--from=learndash, tutor or lifterlms when more than one is here).
      * circle: a Circle community through Circle's Admin API: discussion spaces with their members and moderators,
      * space groups, topics, posts, comments and replies, course spaces as courses with their sections, lessons and
-     * students, members as WordPress users (into an empty FluentCommunity). memberpress: everyone with an active
+     * students, members as WordPress users (into an empty FluentCommunity). calendly: a Calendly account through
+     * Calendly's API: availability schedules, event types as FluentBooking booking types and upcoming bookings.
+     * memberpress: everyone with an active
      * MemberPress membership into the FluentCommunity space or course for it, tagged in FluentCRM; with --billing, active Stripe
      * subscriptions move to FluentCart and keep renewing in Stripe; other payments stay.
      *
@@ -42,8 +44,9 @@ class ImportCommand
      * : The source plugin, when more than one is active (see the dry run for the names).
      *
      * [--token=<token>]
-     * : circle only: the Circle community's Admin V2 API token. Or set CIRCLE_API_TOKEN, which keeps it out of the
-     * shell history. Used for this run only, never saved.
+     * : circle and calendly only: the Circle community's Admin V2 API token, or a Calendly personal access token. Or
+     * set CIRCLE_API_TOKEN or CALENDLY_API_TOKEN, which keeps it out of the shell history. Used for this run only,
+     * never saved.
      *
      * [--map=<pairs>]
      * : memberpress only: which FluentCommunity space or course each membership opens, as
@@ -75,6 +78,7 @@ class ImportCommand
      *     wp anypress course switch --user=admin --dry-run
      *     wp anypress course switch --user=admin --from=tutor
      *     CIRCLE_API_TOKEN=... wp anypress circle switch --user=admin --dry-run
+     *     CALENDLY_API_TOKEN=... wp anypress calendly switch --user=admin
      *     wp anypress memberpress switch --user=admin --map=12:5,14:9
      *     wp anypress memberpress switch --user=admin --billing --dry-run
      *
@@ -90,7 +94,7 @@ class ImportCommand
         $format = WP_CLI\Utils\get_flag_value($assoc_args, 'format', 'table') === 'json' ? 'json' : 'table';
         $from = (string) WP_CLI\Utils\get_flag_value($assoc_args, 'from', '');
 
-        $token = (string) WP_CLI\Utils\get_flag_value($assoc_args, 'token', (string) getenv('CIRCLE_API_TOKEN'));
+        $token = (string) WP_CLI\Utils\get_flag_value($assoc_args, 'token', (string) getenv($this->import->key() === 'calendly' ? 'CALENDLY_API_TOKEN' : 'CIRCLE_API_TOKEN'));
         $map = [];
         foreach (array_filter(explode(',', (string) WP_CLI\Utils\get_flag_value($assoc_args, 'map', ''))) as $pair) {
             [$membership, $space] = array_pad(explode(':', $pair, 2), 2, 0);

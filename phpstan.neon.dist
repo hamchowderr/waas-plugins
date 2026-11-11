@@ -21,9 +21,12 @@ parameters:
         - packages/anypress-move/anypress-move.php
         - packages/anypress-updater/src
     excludePaths:
-        analyseAndScan:
+        analyse:
             - packages/*/vendor/*
     scanDirectories:
+        # The libraries AnyPress Client ships (the Brevo and MailerLite SDKs and the PSR-7/17/18 parts they use):
+        # composer install --no-dev in packages/anypress-client first.
+        - packages/anypress-client/vendor
         # AnyPress Move's copy of AnyPress Client's switches (scripts/build-move.sh), checked as AnyPress Client.
         - packages/anypress-move/lib
         - tools/qa/vendor/php-stubs/woocommerce-stubs
@@ -37,6 +40,7 @@ parameters:
         - FluentCart\App\Modules\PaymentMethods\Core\AbstractPaymentGateway
         - FluentCart\App\Modules\PaymentMethods\Core\BaseGatewaySettings
         - FluentForm\App\Services\Migrator\Classes\BaseMigratorStub
+        - FluentCrm\App\Services\CrmMigrator\BaseMigrator
     reportUnmatchedIgnoredErrors: true
     ignoreErrors:
         # The plugins work with other plugins and tools that aren't installed here and have no stubs (WP-CLI,

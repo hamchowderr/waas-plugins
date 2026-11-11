@@ -77,6 +77,7 @@ class MovePage
             'community' => [__('Community', 'anypress-move'), __('A BuddyPress or BuddyBoss community into an empty FluentCommunity: groups as spaces with members, posts, comments and reactions.', 'anypress-move')],
             'course' => [__('Courses', 'anypress-move'), __('LearnDash, Tutor LMS or LifterLMS courses into FluentCommunity courses, with sections, lessons, students and their progress.', 'anypress-move')],
             'circle' => [__('Circle', 'anypress-move'), __('A Circle community into an empty FluentCommunity through Circle\'s Admin API: spaces, members, posts, comments and courses.', 'anypress-move')],
+            'calendly' => [__('Calendly', 'anypress-move'), __('A Calendly account into FluentBooking through Calendly\'s API: availability schedules, event types as booking types, and upcoming bookings.', 'anypress-move')],
             'memberpress' => [__('MemberPress', 'anypress-move'), __('Everyone with an active MemberPress membership into the FluentCommunity space or course it opens, with a FluentCRM tag. Payments stay in MemberPress.', 'anypress-move')],
         ];
     }
@@ -184,7 +185,9 @@ class MovePage
             $object = ($schema['type'] ?? '') === 'object';
             $label = $object
                 ? __('Which space or course each membership opens, as membership id:space id pairs (12:40, 13:41). Leave empty for a new private space per membership.', 'anypress-move')
-                : __('Admin V2 API token (Circle: Settings, Developers, Tokens). Used for this run only, never saved.', 'anypress-move');
+                : ($key === 'calendly'
+                    ? __('Personal access token (Calendly: profile menu, Developer, Personal access tokens). Used for this run only, never saved.', 'anypress-move')
+                    : __('Admin V2 API token (Circle: Settings, Developers, Tokens). Used for this run only, never saved.', 'anypress-move'));
             $this->field($key . '-' . $name, $name, $label, $object ? 'text' : 'password');
         }
         echo '<p class="submit">';

@@ -46,3 +46,13 @@ namespace FluentForm\App\Services\Migrator\Classes {
     class WpFormsMigrator extends BaseMigratorStub {}
     class GravityFormsMigrator extends BaseMigratorStub {}
 }
+
+namespace FluentCrm\App\Services\CrmMigrator {
+    abstract class BaseMigrator
+    {
+        public function __construct(...$args) {}
+        public function __call($name, $arguments) {}
+        public function __get($name) {}
+        public static function __callStatic($name, $arguments) {}
+    }
+}

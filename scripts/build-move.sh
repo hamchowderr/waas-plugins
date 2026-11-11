@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copies AnyPress Client's moving switches (forms, shop, CRM and the support, affiliate, community, course,
-# Circle and MemberPress imports) into AnyPress Move's lib/ folder, in AnyPress Move's own namespace and text
+# Circle, Calendly and MemberPress imports) into AnyPress Move's lib/ folder, in AnyPress Move's own namespace and text
 # domain, so the two plugins never load each other's classes. lib/ is built, not kept in git: edit the
 # switches in packages/anypress-client and run this again.
 #
@@ -18,6 +18,9 @@ cp -R "$client/Moving" "$client/Forms" "$client/Shop" "$client/Crm" "$lib/"
 cp "$client/Core/FluentPlugin.php" "$lib/Core/"
 # The HighLevel link belongs to AnyPress stores (it needs the store's site key), not to the switches.
 rm -f "$lib/Crm/HighLevelLink.php"
+# The Brevo and MailerLite importers in FluentCRM's Import screen need AnyPress Client's SDKs (its vendor/); they read
+# online services, so they run on the store itself and AnyPress Move doesn't carry them.
+rm -rf "$lib/Crm/Importers"
 
 find "$lib" -name '*.php' -print0 | while IFS= read -r -d '' file; do
   sed -i \
