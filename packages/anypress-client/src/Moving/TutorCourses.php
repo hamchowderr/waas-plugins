@@ -58,9 +58,7 @@ class TutorCourses extends CourseSource
             $lesson_ids = self::lesson_ids($sections);
             if ($students && $lesson_ids) {
                 $keys = array_map(fn ($lesson) => '_tutor_completed_lesson_id_' . (int) $lesson, $lesson_ids);
-                $key_marks = implode(',', array_fill(0, count($keys), '%s'));
-                $user_marks = implode(',', array_fill(0, count($students), '%d'));
-                $rows = $wpdb->get_results($wpdb->prepare("SELECT user_id, meta_key FROM {$wpdb->usermeta} WHERE meta_key IN ({$key_marks}) AND user_id IN ({$user_marks}) ORDER BY umeta_id", array_merge($keys, array_map('intval', $students)))); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- the marks hold only placeholders.
+                $rows = $wpdb->get_results($wpdb->prepare("SELECT user_id, meta_key FROM {$wpdb->usermeta} WHERE meta_key IN (" . implode(',', array_fill(0, count($keys), '%s')) . ') AND user_id IN (' . implode(',', array_fill(0, count($students), '%d')) . ') ORDER BY umeta_id', ...array_values($keys), ...array_values(array_map('intval', $students))));
                 foreach ((array) $rows as $row) {
                     $completed[(int) $row->user_id][] = (int) substr($row->meta_key, strlen('_tutor_completed_lesson_id_'));
                 }

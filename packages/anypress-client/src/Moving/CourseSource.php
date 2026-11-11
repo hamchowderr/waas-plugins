@@ -121,9 +121,7 @@ abstract class CourseSource
             return [];
         }
 
-        $marks = implode(',', array_fill(0, count($ids), '%d'));
-
-        return array_map('intval', $wpdb->get_col($wpdb->prepare("SELECT ID FROM {$wpdb->users} WHERE ID IN ({$marks}) ORDER BY ID", array_map('intval', $ids)))); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $marks holds only placeholders.
+        return array_map('intval', $wpdb->get_col($wpdb->prepare("SELECT ID FROM {$wpdb->users} WHERE ID IN (" . implode(',', array_fill(0, count($ids), '%d')) . ') ORDER BY ID', ...$ids)));
     }
 
     /** Ids of posts of this type below $parent (post_parent), not in the bin, in the plugin's order. */

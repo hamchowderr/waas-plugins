@@ -384,12 +384,10 @@ abstract class NativeImport
         // $extra is a fixed condition written in this plugin's code; the table, column and ids go through prepare().
         $extra = $extra !== '' ? " AND {$extra}" : '';
         foreach (array_chunk($ids, 500) as $chunk) {
-            $marks = implode(',', array_fill(0, count($chunk), '%d'));
-            $args = array_merge([$wpdb->prefix . $table, $column], $chunk);
             // phpcs:disable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
             $total += $dry_run
-                ? (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM %i WHERE %i IN ({$marks}){$extra}", $args))
-                : (int) $wpdb->query($wpdb->prepare("DELETE FROM %i WHERE %i IN ({$marks}){$extra}", $args));
+                ? (int) $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM %i WHERE %i IN (' . implode(',', array_fill(0, count($chunk), '%d')) . "){$extra}", $wpdb->prefix . $table, $column, ...$chunk))
+                : (int) $wpdb->query($wpdb->prepare('DELETE FROM %i WHERE %i IN (' . implode(',', array_fill(0, count($chunk), '%d')) . "){$extra}", $wpdb->prefix . $table, $column, ...$chunk));
             // phpcs:enable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
         }
 
@@ -405,11 +403,11 @@ abstract class NativeImport
         }
         // $extra is a fixed condition written in this plugin's code; the table, column and ids go through prepare().
         $extra = $extra !== '' ? " AND {$extra}" : '';
-        $args = [$wpdb->prefix . $table, $column, $after, $column, $upto];
+        $name = $wpdb->prefix . $table;
         // phpcs:disable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
         $total = $dry_run
-            ? (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM %i WHERE %i > %d AND %i <= %d{$extra}", $args))
-            : (int) $wpdb->query($wpdb->prepare("DELETE FROM %i WHERE %i > %d AND %i <= %d{$extra}", $args));
+            ? (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM %i WHERE %i > %d AND %i <= %d{$extra}", $name, $column, $after, $column, $upto))
+            : (int) $wpdb->query($wpdb->prepare("DELETE FROM %i WHERE %i > %d AND %i <= %d{$extra}", $name, $column, $after, $column, $upto));
         // phpcs:enable WordPress.DB.PreparedSQL, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
         return $total;
