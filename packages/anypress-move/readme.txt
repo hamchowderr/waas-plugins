@@ -4,7 +4,7 @@ Tags: migration, fluentcrm, fluent forms, fluentcommunity, fluentcart
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -45,6 +45,9 @@ This plugin connects to one outside service, and only when you run its Circle sw
 No other switch sends anything off your site. The Shop switch links to FluentCart's own page for its free Migrator add-on but never downloads it; you install it yourself.
 
 == Changelog ==
+
+= 1.1.1 =
+* The plugin's website link goes to anypress.io/move.
 
 = 1.1.0 =
 * MemberPress: with billing ticked, active Stripe subscriptions move to FluentCart. Each keeps the same Stripe subscription, so Stripe goes on charging as before and FluentCart records the renewals; connect FluentCart's Stripe settings to the same Stripe account, then switch off MemberPress's Stripe gateway. Undo keeps any subscription FluentCart has already recorded a payment on.

@@ -26,3 +26,5 @@ cd packages/anypress-move && composer install
 ```
 
 `npm run move` in `scripts/playground` checks it on WordPress Playground.
+
+The wordpress.org listing's icon and banner images are in `.wordpress-org/` (they go in the plugin's SVN `assets` folder, not the zip).
