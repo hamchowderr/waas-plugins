@@ -127,3 +127,5 @@ jobs:
         with:
           build-dir: build/${{ matrix.package }}
           ignore-warnings: false
+          # Warnings fail too: the wordpress.org reviewers read every one.
+          strict: true

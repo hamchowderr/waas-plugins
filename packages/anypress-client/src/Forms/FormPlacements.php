@@ -2,6 +2,8 @@
 
 namespace AnyPressClient\Forms;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
+
 /**
  * Where the forms appear in the forms switch: swaps the old shortcodes and blocks in posts and widgets, lists the
  * page builder layouts it can't change, and puts the old ones back on undo. Each changed post keeps a revision.
@@ -30,7 +32,7 @@ final class FormPlacements
         $types = implode(', ', array_fill(0, count(self::SKIP_POST_TYPES), '%s'));
         // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- placeholders only.
         $sql = "SELECT ID FROM {$wpdb->posts} WHERE post_type NOT IN ({$types}) AND post_status NOT IN ('trash', 'auto-draft', 'inherit') AND (" . implode(' OR ', $likes) . ') ORDER BY ID ASC';
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $sql above holds only placeholders.
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $sql above holds only placeholders.
         $ids = $wpdb->get_col($wpdb->prepare($sql, array_merge(self::SKIP_POST_TYPES, $values)));
 
         foreach ($ids as $id) {
@@ -125,7 +127,7 @@ final class FormPlacements
         }
         // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- placeholders only.
         $sql = "SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key IN (%s, %s) AND (" . implode(' OR ', $likes) . ')';
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $sql above holds only placeholders.
+        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $sql above holds only placeholders.
         foreach ($wpdb->get_col($wpdb->prepare($sql, $values)) as $id) {
             $post = get_post((int) $id);
             if ($post && $post->post_type !== 'revision') {

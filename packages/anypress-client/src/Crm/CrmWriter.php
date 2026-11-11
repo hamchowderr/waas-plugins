@@ -2,6 +2,8 @@
 
 namespace AnyPressClient\Crm;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
+
 /**
  * Writes the merged contacts into FluentCRM through FluentCRM's own PHP API (FluentCrmApi('contacts')->createOrUpdate
  * and its tag and list models), and takes them back out on undo.
@@ -224,7 +226,7 @@ class CrmWriter
                 if ($term) {
                     $term->delete();
                     // FluentCRM's own cleanup takes the tag or list off every contact.
-                    do_action($hook, (int) $term_id);
+                    do_action($hook, (int) $term_id); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- FluentCRM's own hooks.
                 }
             }
         }

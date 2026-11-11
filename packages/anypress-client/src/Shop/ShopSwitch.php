@@ -2,6 +2,8 @@
 
 namespace AnyPressClient\Shop;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
+
 use AnyPressClient\Core\FluentPlugin;
 use WP_Error;
 
@@ -299,7 +301,8 @@ class ShopSwitch
     private function migrate()
     {
         if (function_exists('set_time_limit')) {
-            @set_time_limit(0);
+            // A switch copies a whole plugin's data in one admin request.
+            @set_time_limit(0); // phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged, WordPress.PHP.NoSilencedErrors.Discouraged
         }
         wp_raise_memory_limit('admin');
         $class = self::ADDON_CLASS;

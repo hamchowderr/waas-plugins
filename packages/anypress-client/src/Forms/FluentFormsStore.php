@@ -2,6 +2,8 @@
 
 namespace AnyPressClient\Forms;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
+
 /**
  * Reads and tidies the forms Fluent Forms' importer made: which Fluent Forms form a source form became, its fields
  * and entry count, and the importer's leftover notification and confirmation rows. Part of the forms switch.

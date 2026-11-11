@@ -2,6 +2,8 @@
 
 namespace AnyPressClient\Moving;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
+
 /**
  * LearnDash courses, read from what LearnDash keeps in WordPress: courses, lessons, topics and quizzes as posts, the
  * course builder's steps and section headings as post meta, enrolments, group access and progress as user meta (and

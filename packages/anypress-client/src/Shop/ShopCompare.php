@@ -2,6 +2,8 @@
 
 namespace AnyPressClient\Shop;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
+
 /**
  * WooCommerce next to FluentCart after the switch: products, SKUs, orders, the sum of order totals, refunds,
  * coupons and customers, each with every difference listed. Read only. Amounts are compared in cents.

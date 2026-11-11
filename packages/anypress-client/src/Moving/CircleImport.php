@@ -2,6 +2,8 @@
 
 namespace AnyPressClient\Moving;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
+
 use FluentCommunity\App\Models\Comment;
 use FluentCommunity\App\Models\Feed;
 use FluentCommunity\App\Models\Space;
@@ -506,8 +508,8 @@ class CircleImport extends NativeImport
         $removed['spaces'] = self::delete_in('fcom_spaces', 'id', $spaces, $dry_run, "type = 'community'");
         $removed['groups'] = self::delete_in('fcom_spaces', 'id', (array) ($state['groups'] ?? []), $dry_run, "type = 'space_group'");
         if ($spaces && !$dry_run) {
-            $in = implode(',', $spaces);
-            $wpdb->query("DELETE FROM {$p}fcom_meta WHERE object_type = 'term_space_relation' AND meta_key IN ('" . str_replace(',', "','", $in) . "')"); // phpcs:ignore WordPress.DB.PreparedSQL
+            $marks = implode(',', array_fill(0, count($spaces), '%s'));
+            $wpdb->query($wpdb->prepare("DELETE FROM %i WHERE object_type = 'term_space_relation' AND meta_key IN ({$marks})", array_merge([$p . 'fcom_meta'], array_map('strval', $spaces)))); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $marks holds only placeholders.
         }
         $removed['topics'] = self::delete_in('fcom_terms', 'id', (array) ($state['topics'] ?? []), $dry_run, "taxonomy_name = 'post_topic'");
         if (isset($state['profiles_before'])) {
@@ -570,7 +572,7 @@ class CircleImport extends NativeImport
         global $wpdb;
         $base = sanitize_title($name) ?: $fallback;
         $try = $base;
-        for ($n = 2; $wpdb->get_var($wpdb->prepare("SELECT id FROM {$wpdb->prefix}{$table} WHERE slug = %s", $try)); $n++) { // phpcs:ignore WordPress.DB.PreparedSQL
+        for ($n = 2; $wpdb->get_var($wpdb->prepare('SELECT id FROM %i WHERE slug = %s', $wpdb->prefix . $table, $try)); $n++) {
             $try = $base . '-' . $n;
         }
 

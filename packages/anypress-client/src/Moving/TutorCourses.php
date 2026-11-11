@@ -2,6 +2,8 @@
 
 namespace AnyPressClient\Moving;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- reads and writes the tables of the plugins it moves between, which offer no API for this, in a one-off admin run where nothing is worth caching.
+
 /**
  * Tutor LMS courses, read from what Tutor LMS keeps in WordPress: courses, topics, lessons, quizzes and assignments as
  * posts (a topic's parent is its course, a lesson's parent its topic), enrolments as tutor_enrolled posts (author the
@@ -55,8 +57,10 @@ class TutorCourses extends CourseSource
             $completed = [];
             $lesson_ids = self::lesson_ids($sections);
             if ($students && $lesson_ids) {
-                $keys = array_map(fn ($lesson) => "'_tutor_completed_lesson_id_" . $lesson . "'", $lesson_ids);
-                $rows = $wpdb->get_results("SELECT user_id, meta_key FROM {$wpdb->usermeta} WHERE meta_key IN (" . implode(',', $keys) . ') AND user_id IN (' . implode(',', $students) . ') ORDER BY umeta_id'); // phpcs:ignore WordPress.DB.PreparedSQL
+                $keys = array_map(fn ($lesson) => '_tutor_completed_lesson_id_' . (int) $lesson, $lesson_ids);
+                $key_marks = implode(',', array_fill(0, count($keys), '%s'));
+                $user_marks = implode(',', array_fill(0, count($students), '%d'));
+                $rows = $wpdb->get_results($wpdb->prepare("SELECT user_id, meta_key FROM {$wpdb->usermeta} WHERE meta_key IN ({$key_marks}) AND user_id IN ({$user_marks}) ORDER BY umeta_id", array_merge($keys, array_map('intval', $students)))); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- the marks hold only placeholders.
                 foreach ((array) $rows as $row) {
                     $completed[(int) $row->user_id][] = (int) substr($row->meta_key, strlen('_tutor_completed_lesson_id_'));
                 }

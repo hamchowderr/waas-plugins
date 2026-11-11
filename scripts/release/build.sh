@@ -45,6 +45,9 @@ if [ "$header" != "$version" ] || [ "$constant" != "$version" ]; then
   exit 1
 fi
 
+# No hidden files (.gitignore and the like) in a plugin zip: wordpress.org refuses them.
+find "$src" -mindepth 1 -name '.*' -prune -exec rm -rf {} +
+
 zip_file="$out/$SLUG.zip"
 rm -f "$zip_file"
 (cd "$work" && find "$PACKAGE" -type f | LC_ALL=C sort | zip -q -X -9 "$zip_file" -@)
