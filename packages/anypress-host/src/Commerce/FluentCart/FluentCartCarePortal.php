@@ -44,6 +44,67 @@ class FluentCartCarePortal
         add_action('fluent_cart/product/single/after_actions_block', [$this, 'render_product_box'], 20, 1);
         add_action('admin_post_' . self::REQUEST_ACTION, [$this, 'handle_request']);
         add_action('admin_post_' . self::ATTACH_ACTION, [$this, 'handle_attach']);
+        add_filter('fluent_cart/shop_query', [$this, 'hide_from_shop'], 10, 1);
+        add_filter('fluent_cart/checkout/validate_data', [$this, 'validate_checkout'], 10, 2);
+    }
+
+    /** @return int[] the published care package and service products */
+    private function care_product_ids(): array
+    {
+        return array_map(fn ($product) => (int) $product['product_id'], array_merge($this->care->packages(), $this->care->services()));
+    }
+
+    /**
+     * fluent_cart/shop_query: care is bought for a website, from its plan's product page or the account, so it stays
+     * out of the shop's product lists (the shop page, product blocks and shortcodes).
+     *
+     * @param mixed $query FluentCart's product query builder
+     * @return mixed
+     */
+    public function hide_from_shop($query)
+    {
+        $ids = $this->care_product_ids();
+
+        return ($ids && is_object($query)) ? $query->whereNotIn('ID', $ids) : $query;
+    }
+
+    /**
+     * fluent_cart/checkout/validate_data: care and services need a website. A cart with one is turned away unless it
+     * also holds a website plan or the buyer (signed in, or by their checkout email) has a live website.
+     *
+     * @param array $errors
+     * @param array $args data, cart
+     */
+    public function validate_checkout($errors, $args)
+    {
+        $cart = $args['cart'] ?? null;
+        if (!$cart) {
+            return $errors;
+        }
+        $in_cart = array_map('intval', $this->store->get_cart_product_ids($cart));
+        if (!array_intersect($in_cart, $this->care_product_ids())) {
+            return $errors;
+        }
+        foreach ($in_cart as $product_id) {
+            if ($this->adapter->is_plan_product($product_id)) {
+                return $errors;
+            }
+        }
+
+        $user_id = get_current_user_id();
+        if ($user_id <= 0) {
+            $email = sanitize_email((string) ($args['data']['billing_email'] ?? ''));
+            $user = $email !== '' ? get_user_by('email', $email) : false;
+            $user_id = $user ? (int) $user->ID : 0;
+        }
+        if ($user_id > 0 && $this->care->has_live_website($user_id)) {
+            return $errors;
+        }
+
+        $errors = is_array($errors) ? $errors : [];
+        $errors['anypress_care']['no_website'] = __('Care is added to one of your websites. Please sign in to the account that has your website, or get a website plan first.', 'anypress-host');
+
+        return $errors;
     }
 
     private static function money(int $cents): string
@@ -334,7 +395,13 @@ class FluentCartCarePortal
             ? sprintf(__('%1$s: change for %2$s', 'anypress-host'), $summary['package'], $domain)
             /* translators: %s: website address */
             : sprintf(__('Change for %s', 'anypress-host'), $domain);
-        $ticket = SupportDesk::file_ticket((string) $user->user_email, (string) $user->display_name, $title, SupportDesk::message($text));
+        $ticket = SupportDesk::file_ticket(
+            (string) $user->user_email,
+            (string) $user->display_name,
+            $title,
+            SupportDesk::message($text),
+            $summary && $summary['package'] !== '' ? ['priority' => $summary['priority'], 'tag' => $summary['package']] : []
+        );
         $this->back($website_id, $ticket ? 'sent' : 'error');
     }
 

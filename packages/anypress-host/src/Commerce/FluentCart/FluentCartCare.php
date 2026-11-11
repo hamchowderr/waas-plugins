@@ -26,8 +26,15 @@ class FluentCartCare
 {
     /** Care subscription meta: the website's subscription id. */
     public const WEBSITE_META = '_anypress_care_website';
-    /** Care subscription meta: ['month' => 'Y-m', 'minutes' => used that month]. */
+    /**
+     * Website subscription meta: ['month' => 'Y-m', 'minutes' => logged that month]. Kept on the website, not the care
+     * subscription, so cancelling and buying care again in the same month doesn't give the month's time again.
+     */
     public const USED_META = '_anypress_care_used';
+    /** Website subscription meta: the time log, newest first: [['at' => ISO 8601, 'minutes', 'note', 'by'], ...]. */
+    public const LOG_META = '_anypress_care_log';
+    /** Log entries kept per website. */
+    public const LOG_KEEP = 50;
     /** Website subscription meta: extra minutes left, from one-time services. */
     public const EXTRA_META = '_anypress_care_extra_minutes';
     /** Order meta: set once the order's care and services were handled. */
@@ -93,7 +100,7 @@ class FluentCartCare
      * The website's care now: its package, this month's time and extra time. Null when it has neither a package nor
      * extra time.
      *
-     * @return array{subscription_id: int, package: string, answer: string, minutes: int, used: int, left: int, extra: int}|null
+     * @return array{subscription_id: int, package: string, answer: string, priority: string, minutes: int, used: int, left: int, extra: int}|null
      */
     public function summary($website_id): ?array
     {
@@ -105,12 +112,13 @@ class FluentCartCare
         }
 
         $minutes = $feed !== null ? AnyPressProvisioningIntegration::minutes($feed, 'care_minutes') : 0;
-        $used = $feed !== null ? $this->used_this_month($care_id) : 0;
+        $used = $feed !== null ? $this->used_this_month((int) $website_id) : 0;
 
         return [
             'subscription_id' => $feed !== null ? $care_id : 0,
             'package' => $feed !== null ? (string) get_the_title($this->store->get_subscription_product_id($care_id)) : '',
             'answer' => $feed !== null ? sanitize_text_field((string) ($feed['care_answer'] ?? '')) : '',
+            'priority' => $feed !== null ? AnyPressProvisioningIntegration::priority($feed) : AnyPressProvisioningIntegration::PRIORITY_NORMAL,
             'minutes' => $minutes,
             'used' => $used,
             'left' => max(0, $minutes - $used),
@@ -123,11 +131,34 @@ class FluentCartCare
         return max(0, (int) $this->adapter->get_subscription_meta($website_id, self::EXTRA_META));
     }
 
-    private function used_this_month(int $care_id): int
+    private function used_this_month(int $website_id): int
     {
-        $used = $this->adapter->get_subscription_meta($care_id, self::USED_META);
+        $used = $this->adapter->get_subscription_meta($website_id, self::USED_META);
 
         return is_array($used) && ($used['month'] ?? '') === self::month() ? max(0, (int) ($used['minutes'] ?? 0)) : 0;
+    }
+
+    /**
+     * The website's logged time, newest first.
+     *
+     * @return array<int, array{at: string, minutes: int, note: string, by: string}>
+     */
+    public function history($website_id, int $limit = self::LOG_KEEP): array
+    {
+        $log = $this->adapter->get_subscription_meta($website_id, self::LOG_META);
+        $entries = [];
+        foreach (is_array($log) ? $log : [] as $entry) {
+            if (is_array($entry) && (int) ($entry['minutes'] ?? 0) > 0) {
+                $entries[] = [
+                    'at' => (string) ($entry['at'] ?? ''),
+                    'minutes' => (int) $entry['minutes'],
+                    'note' => (string) ($entry['note'] ?? ''),
+                    'by' => (string) ($entry['by'] ?? ''),
+                ];
+            }
+        }
+
+        return array_slice($entries, 0, max(0, $limit));
     }
 
     /** This month in the site's time zone, e.g. 2026-11. */
@@ -151,9 +182,13 @@ class FluentCartCare
         $extra = $summary ? min($minutes - $monthly, $summary['extra']) : 0;
         $over = $minutes - $monthly - $extra;
 
-        if ($care_id > 0) {
-            $this->store->update_subscription_meta($care_id, self::USED_META, ['month' => self::month(), 'minutes' => $summary['used'] + $minutes]);
+        if ($minutes <= 0) {
+            return ['monthly' => 0, 'extra' => 0, 'over' => 0];
         }
+        $this->store->update_subscription_meta($website_id, self::USED_META, ['month' => self::month(), 'minutes' => $this->used_this_month((int) $website_id) + $minutes]);
+        $user = wp_get_current_user();
+        $entry = ['at' => gmdate('c'), 'minutes' => $minutes, 'note' => $note, 'by' => $user ? (string) $user->display_name : ''];
+        $this->store->update_subscription_meta($website_id, self::LOG_META, array_slice(array_merge([$entry], $this->history($website_id)), 0, self::LOG_KEEP));
         if ($extra > 0) {
             $this->store->update_subscription_meta($website_id, self::EXTRA_META, $summary['extra'] - $extra);
         }
@@ -190,6 +225,18 @@ class FluentCartCare
     public function is_live_website($subscription_id): bool
     {
         return $this->orders->can_buy_emails($subscription_id) && $this->adapter->is_subscription_active($subscription_id);
+    }
+
+    /** True when one of the user's websites is live. */
+    public function has_live_website(int $user_id): bool
+    {
+        foreach ($this->adapter->get_customer_subscription_ids($user_id) as $id) {
+            if ($this->is_live_website((int) $id)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** @return int[] the user's active care subscriptions that have no website yet */
@@ -311,7 +358,8 @@ class FluentCartCare
                 $title,
                 $domain,
                 (int) $order->id
-            ))
+            )),
+            ['tag' => $title]
         ) : null;
 
         $order->addLog(

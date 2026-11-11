@@ -42,6 +42,7 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
     public const PRODUCT_TYPE_EMAIL_PACK = 'email_pack';
     public const PRODUCT_TYPE_CARE = 'care';
     public const PRODUCT_TYPE_SERVICE = 'service';
+    public const PRIORITY_NORMAL = 'normal';
 
     /** The most emails one pack line may add (the API's limit per call). */
     public const MAX_EMAILS_PER_PACK = 1000000;
@@ -81,6 +82,7 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
             'emails_per_pack' => '',
             'care_minutes' => '',
             'care_answer' => '',
+            'care_priority' => self::PRIORITY_NORMAL,
             'service_minutes' => '',
             'role' => '',
             'group_name' => '',
@@ -151,6 +153,16 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
                 'required' => false,
                 'dependency' => ['depends_on' => 'product_type', 'operator' => '=', 'value' => self::PRODUCT_TYPE_CARE],
                 'inline_tip' => __('Care packages only: how soon requests are answered, as the customer and your team see it, e.g. "1 business day".', 'anypress-host'),
+            ],
+            [
+                'key' => 'care_priority',
+                'label' => __('Ticket priority', 'anypress-host'),
+                'component' => 'select',
+                'is_multiple' => false,
+                'required' => false,
+                'options' => self::priorities(),
+                'dependency' => ['depends_on' => 'product_type', 'operator' => '=', 'value' => self::PRODUCT_TYPE_CARE],
+                'inline_tip' => __('Care packages only: the priority each request of this package gets in Fluent Support. Requests are also tagged with the package\'s name, so your team can sort and filter by package.', 'anypress-host'),
             ],
             [
                 'key' => 'service_minutes',
@@ -231,6 +243,24 @@ class AnyPressProvisioningIntegration extends BaseIntegrationManager
     }
 
     /** A whole number of minutes from a feed field, 0 when it is empty or not one (at most a month of minutes). */
+    /** @return array<string, string> Fluent Support's ticket priorities */
+    public static function priorities(): array
+    {
+        return [
+            self::PRIORITY_NORMAL => __('Normal', 'anypress-host'),
+            'medium' => __('Medium', 'anypress-host'),
+            'critical' => __('Critical', 'anypress-host'),
+        ];
+    }
+
+    /** The ticket priority of a care feed: one of priorities(), normal when unset or unknown. */
+    public static function priority($settings): string
+    {
+        $priority = is_array($settings) ? (string) ($settings['care_priority'] ?? '') : '';
+
+        return array_key_exists($priority, self::priorities()) ? $priority : self::PRIORITY_NORMAL;
+    }
+
     public static function minutes($settings, string $key): int
     {
         $minutes = is_array($settings) ? ($settings[$key] ?? '') : '';

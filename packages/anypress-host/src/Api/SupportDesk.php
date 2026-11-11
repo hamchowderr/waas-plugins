@@ -141,7 +141,7 @@ class SupportDesk
      * emails, activity log and automations run. $content is HTML, as message() makes it. Null when Fluent Support is
      * off, the customer is blocked, or the ticket was refused. Used by care requests from the account page too.
      */
-    public static function file_ticket(string $email, string $name, string $title, string $content)
+    public static function file_ticket(string $email, string $name, string $title, string $content, array $options = [])
     {
         if (!self::available() || !is_email($email) || $title === '' || $content === '') {
             return null;
@@ -151,23 +151,45 @@ class SupportDesk
             return null;
         }
 
-        return self::create_ticket($customer, self::clip($title, self::MAX_TITLE), $content);
+        $ticket = self::create_ticket($customer, self::clip($title, self::MAX_TITLE), $content, (string) ($options['priority'] ?? ''));
+        if ($ticket && !empty($options['tag'])) {
+            self::tag($ticket, (string) $options['tag']);
+        }
+
+        return $ticket;
     }
 
-    private static function create_ticket($customer, string $title, string $content)
+    private static function create_ticket($customer, string $title, string $content, string $priority = '')
     {
-        $ticket = FluentSupportApi('tickets')->createTicket([
+        $data = [
             'customer_id' => $customer->id,
             'title' => $title,
             'content' => $content,
             'source' => 'web',
-        ]);
+        ];
+        if ($priority !== '') {
+            $data['priority'] = $priority;
+        }
+        $ticket = FluentSupportApi('tickets')->createTicket($data);
         if (!$ticket) {
             return null;
         }
 
         // The created model only holds the fields we passed; the database fills in the rest (status "new").
         return \FluentSupport\App\Models\Ticket::find($ticket->id) ?: $ticket;
+    }
+
+    /** Adds the Fluent Support tag of this title to the ticket, making the tag the first time. */
+    private static function tag($ticket, string $title): void
+    {
+        $title = self::clip(sanitize_text_field($title), 190);
+        if ($title === '' || !class_exists(\FluentSupport\App\Services\Tickets\TicketService::class)) {
+            return;
+        }
+        $tag = \FluentSupport\App\Models\TicketTag::where('title', $title)->first() ?: FluentSupportApi('tags')->createTag(['title' => $title]);
+        if ($tag) {
+            (new \FluentSupport\App\Services\Tickets\TicketService())->addTags($ticket, [(int) $tag->id]);
+        }
     }
 
     private function list_tickets(string $email): WP_REST_Response

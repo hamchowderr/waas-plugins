@@ -108,6 +108,25 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
     await context.close();
 }
 
+// 3b. Care stays out of the shop's product list, and checkout turns it away for a buyer with no website.
+const shopUrl = (await php(`echo get_permalink(wp_insert_post(['post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'All products', 'post_content' => '[fluent_cart_products]']));`)).trim();
+{
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    await page.goto(shopUrl, { waitUntil: 'networkidle' });
+    const list = await page.innerText('body');
+    check(list.includes('Community') && !list.includes('Care Plus') && !list.includes('One hour of changes'), 'the shop list shows the plan but no care or services');
+    await page.screenshot({ path: resolve(OUT, 'desktop-3b-shop-list.png'), fullPage: true });
+    await context.close();
+}
+const gate = JSON.parse(await php(`${boot}
+    $cart = \\FluentCart\\App\\Models\\Cart::query()->where('cart_group', 'instant')->orderBy('created_at', 'desc')->first();
+    $ask = fn ($email) => apply_filters('fluent_cart/checkout/validate_data', [], ['data' => ['billing_email' => $email], 'cart' => $cart]);
+    echo wp_json_encode(['stranger' => $ask('nobody@example.com'), 'owner' => $ask('shopper@example.com')]);
+`));
+check(Boolean(gate.stranger?.anypress_care?.no_website), 'checkout turns away care for an email with no website', JSON.stringify(gate));
+check(Array.isArray(gate.owner) ? gate.owner.length === 0 : Object.keys(gate.owner).length === 0, 'checkout takes care for the website owner', JSON.stringify(gate));
+
 // 4. Paying: an order and subscription for the checkout's cart, through the Host plugin's handlers.
 const paid = await php(`${boot}
     $cart = \\FluentCart\\App\\Models\\Cart::query()->where('cart_group', 'instant')->orderBy('created_at', 'desc')->first();
@@ -152,14 +171,40 @@ for (const [label, width, height] of [['desktop', 1440, 900], ['phone', 390, 844
 const desk = await php(`${boot}
     $ticket = \\FluentSupport\\App\\Models\\Ticket::query()->orderBy('id', 'desc')->first();
     $widgets = \\FluentSupport\\App\\Services\\ProfileInfoService::getProfileExtraWidgets($ticket->customer);
+    wp_set_current_user(1);
     $care->log_time($website, 50, 'Ticket #' . $ticket->id);
-    echo wp_json_encode(['title' => $ticket->title, 'widget' => $widgets['anypress_care'] ?? null, 'left' => $care->summary($website)['left']]);
+    $after = \\FluentSupport\\App\\Services\\ProfileInfoService::getProfileExtraWidgets($ticket->customer);
+    echo wp_json_encode(['logged' => $after['anypress_care']['sections'][1] ?? null, 'history' => $care->history($website), 'title' => $ticket->title, 'priority' => $ticket->priority, 'tags' => $ticket->tags()->pluck('title')->all(), 'widget' => $widgets['anypress_care'] ?? null, 'left' => $care->summary($website)['left']]);
 `);
 console.log('desk:', desk);
 const team = JSON.parse(desk.slice(desk.indexOf('{')));
 check(team.title === 'Care Plus: change for sams-studio.anypress.site', 'the request is a Fluent Support ticket named for the package and website', team.title);
 check(team.widget?.sections?.[0]?.items?.[0]?.subtitle === 'Care Plus · answer within 1 business day', 'the ticket sidebar shows the package and answer time');
+check(team.priority === 'medium' && (team.tags || []).includes('Care Plus'), 'the ticket has Care Plus\'s priority (medium) and a "Care Plus" tag', JSON.stringify([team.priority, team.tags]));
 check(team.left === 70, 'logged time comes off the month');
+check(team.history?.[0]?.minutes === 50 && team.history[0].by !== '', 'the website keeps a time log with who logged it', JSON.stringify(team.history));
+check(team.logged?.items?.[0]?.detail === '50 min', 'the ticket sidebar lists the time logged', JSON.stringify(team.logged));
+
+// 7. AnyPress > Care, opened from the sidebar's "Log time": the website's row ready, with its time log.
+{
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    await page.goto(`${base}/wp-login.php`);
+    await page.fill('#user_login', 'admin');
+    await page.fill('#user_pass', 'password');
+    await page.click('#wp-submit');
+    await page.waitForLoadState('networkidle');
+    const logUrl = team.widget?.links?.[0]?.url ?? '';
+    await page.goto(logUrl, { waitUntil: 'networkidle' });
+    const row = page.locator('tr.active');
+    check(logUrl.includes('&log=') && (await row.count()) === 1, 'the sidebar\'s Log time opens the website\'s row', logUrl);
+    const focused = await row.locator('input[name="minutes"][autofocus]').count();
+    check(focused === 1, 'the minutes box is the one focused', String(focused));
+    await row.locator('summary').click();
+    check((await row.innerText()).includes('50 min'), 'the row shows its time log');
+    await page.screenshot({ path: resolve(OUT, 'desktop-7-care-page.png'), fullPage: true });
+    await context.close();
+}
 
 await browser.close();
 if (failed) console.error(await php("echo @file_get_contents('/tmp/debug.log');"));

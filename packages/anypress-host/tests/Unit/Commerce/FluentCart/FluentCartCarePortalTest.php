@@ -127,4 +127,32 @@ class FluentCartCarePortalTest extends TestCase
         $this->assertStringContainsString('Manage or cancel care', $html);
         $this->assertStringNotContainsString('anypress_website=', $html, 'no offers once it has a package');
     }
+
+    public function test_care_and_services_are_left_out_of_the_shop_lists(): void
+    {
+        $query = Mockery::mock();
+        $query->expects('whereNotIn')->with('ID', [401, 402, 501])->andReturnSelf();
+
+        $this->assertSame($query, $this->portal->hide_from_shop($query));
+    }
+
+    public function test_checkout_turns_away_care_for_a_buyer_without_a_website(): void
+    {
+        $this->store->allows('get_cart_product_ids')->andReturn([402]);
+        $this->care->expects('has_live_website')->with(7)->andReturn(false);
+
+        $errors = $this->portal->validate_checkout([], ['cart' => (object) [], 'data' => []]);
+
+        $this->assertArrayHasKey('no_website', $errors['anypress_care']);
+    }
+
+    public function test_checkout_takes_care_for_a_buyer_with_a_website_or_with_a_plan_in_the_cart(): void
+    {
+        $this->store->allows('get_cart_product_ids')->andReturn([501], [501, self::PLAN], [self::PLAN]);
+        $this->care->expects('has_live_website')->once()->with(7)->andReturn(true);
+
+        $this->assertSame([], $this->portal->validate_checkout([], ['cart' => (object) [], 'data' => []]));
+        $this->assertSame([], $this->portal->validate_checkout([], ['cart' => (object) [], 'data' => []]));
+        $this->assertSame([], $this->portal->validate_checkout([], ['cart' => (object) [], 'data' => []]));
+    }
 }

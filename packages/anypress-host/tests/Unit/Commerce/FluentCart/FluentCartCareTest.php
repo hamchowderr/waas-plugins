@@ -47,14 +47,15 @@ class FluentCartCareTest extends TestCase
         Functions\when('get_the_title')->alias(fn ($id) => [self::CARE_PLUS => 'Care Plus', self::HOUR => 'One hour', self::SETUP => 'Set up my site'][$id] ?? "Product $id");
         Functions\when('get_userdata')->alias(fn ($id) => $id === self::OWNER_ID ? (object) ['ID' => $id, 'user_email' => 'owner@apexresearch.example'] : false);
         Functions\when('get_user_by')->justReturn(false);
+        Functions\when('wp_get_current_user')->justReturn((object) ['display_name' => 'Robin']);
         Functions\when('admin_url')->alias(fn ($path = '') => 'https://shop.example/wp-admin/' . $path);
 
         // 900, 901: the owner's live websites; 902: being set up; 950: a Care Plus package for 900; 951: one waiting.
         $this->meta = [
-            900 => [Tenant::TENANT_EXTERNAL_ID_META => 'ext-900', Tenant::DOMAIN_NAME_META => 'apex.sites.example', Tenant::TENANT_STATE => Tenant::READY],
+            900 => [Tenant::TENANT_EXTERNAL_ID_META => 'ext-900', Tenant::DOMAIN_NAME_META => 'apex.sites.example', Tenant::TENANT_STATE => Tenant::READY, FluentCartCare::USED_META => ['month' => '2026-11', 'minutes' => 40]],
             901 => [Tenant::TENANT_EXTERNAL_ID_META => 'ext-901', Tenant::BASE_DOMAIN_NAME_META => 'second.sites.example', Tenant::TENANT_STATE => Tenant::READY],
             902 => [Tenant::TENANT_STATE => Tenant::QUEUED],
-            950 => [FluentCartCare::WEBSITE_META => 900, FluentCartCare::USED_META => ['month' => '2026-11', 'minutes' => 40]],
+            950 => [FluentCartCare::WEBSITE_META => 900],
             951 => [],
         ];
         $this->statuses = [900 => 'active', 901 => 'active', 902 => 'active', 950 => 'active', 951 => 'active'];
@@ -82,7 +83,7 @@ class FluentCartCareTest extends TestCase
         });
         $this->store->allows('get_feed_of_type')->andReturnUsing(function ($product_id, $type) {
             $feeds = [
-                self::CARE_PLUS => ['care', ['product_type' => 'care', 'care_minutes' => '120', 'care_answer' => '1 business day']],
+                self::CARE_PLUS => ['care', ['product_type' => 'care', 'care_minutes' => '120', 'care_answer' => '1 business day', 'care_priority' => 'medium']],
                 self::HOUR => ['service', ['product_type' => 'service', 'service_minutes' => '60']],
                 self::SETUP => ['service', ['product_type' => 'service', 'service_minutes' => '']],
             ];
@@ -118,6 +119,7 @@ class FluentCartCareTest extends TestCase
             'subscription_id' => 950,
             'package' => 'Care Plus',
             'answer' => '1 business day',
+            'priority' => 'medium',
             'minutes' => 120,
             'used' => 40,
             'left' => 80,
@@ -128,9 +130,18 @@ class FluentCartCareTest extends TestCase
 
     public function test_last_months_time_does_not_count(): void
     {
-        $this->meta[950][FluentCartCare::USED_META] = ['month' => '2026-10', 'minutes' => 120];
+        $this->meta[900][FluentCartCare::USED_META] = ['month' => '2026-10', 'minutes' => 120];
 
         $this->assertSame(120, $this->care->summary(900)['left']);
+    }
+
+    public function test_a_new_package_in_the_same_month_keeps_the_months_used_time(): void
+    {
+        $this->statuses[950] = 'canceled';
+        $this->meta[951][FluentCartCare::WEBSITE_META] = 900;
+
+        $this->assertSame(951, $this->care->care_of(900));
+        $this->assertSame(80, $this->care->summary(900)['left']);
     }
 
     public function test_a_cancelled_package_is_no_care(): void
@@ -146,7 +157,8 @@ class FluentCartCareTest extends TestCase
         $this->meta[900][FluentCartCare::EXTRA_META] = 30;
 
         $this->assertSame(['monthly' => 80, 'extra' => 30, 'over' => 10], $this->care->log_time(900, 120, 'Ticket #12'));
-        $this->assertSame(['month' => '2026-11', 'minutes' => 160], $this->meta[950][FluentCartCare::USED_META]);
+        $this->assertSame(['month' => '2026-11', 'minutes' => 160], $this->meta[900][FluentCartCare::USED_META]);
+        $this->assertSame(['minutes' => 120, 'note' => 'Ticket #12', 'by' => 'Robin'], array_diff_key($this->care->history(900)[0], ['at' => 1]));
         $this->assertSame(0, $this->meta[900][FluentCartCare::EXTRA_META]);
         $this->assertSame([950, 'Care time logged', '2 h logged: Ticket #12. 10 min over the time left; bill it as extra time.'], $this->notes[0]);
     }
@@ -252,9 +264,17 @@ class FluentCartCareTest extends TestCase
         $this->assertSame('apex.sites.example', $item['title']);
         $this->assertSame('Care Plus · answer within 1 business day', $item['subtitle']);
         $this->assertSame('1 h 20 min of 2 h left this month', $item['detail']);
+        $this->assertStringEndsWith('page=anypress-care&log=900#care-900', $item['url']);
+        $this->assertCount(1, $widgets['anypress_care']['sections'], 'no time logged yet');
+
+        $this->care->log_time(900, 25, 'Ticket #12: new menu');
+        $widgets = $desk->ticket_widget([], (object) ['user_id' => self::OWNER_ID]);
+        $logged = $widgets['anypress_care']['sections'][1];
+        $this->assertSame('Time logged', $logged['label']);
+        $this->assertSame(['Ticket #12: new menu', 'Robin', '25 min', 'date'], [$logged['items'][0]['title'], $logged['items'][0]['subtitle'], $logged['items'][0]['detail'], $logged['items'][0]['meta_type']]);
 
         $mcp = $desk->ticket_widget([], (object) ['user_id' => self::OWNER_ID], ['format' => 'mcp', 'keys' => null]);
-        $this->assertSame(80, $mcp['anypress_care']['mcp'][0]['left']);
+        $this->assertSame(55, $mcp['anypress_care']['mcp'][0]['left']);
 
         $this->assertSame([], $desk->ticket_widget([], (object) ['user_id' => self::OWNER_ID], ['format' => 'html', 'keys' => ['fluent_cart_purchases']]));
         $this->assertSame([], $desk->ticket_widget([], (object) ['user_id' => 0, 'email' => 'nobody@example.com']));

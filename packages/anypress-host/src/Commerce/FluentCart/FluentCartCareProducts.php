@@ -24,9 +24,9 @@ class FluentCartCareProducts
     public static function catalogue(): array
     {
         return (array) apply_filters('anypress_care_products', [
-            'care' => [__('Care', 'anypress-host'), 7900, __('For owners who mostly run the site themselves and want someone on call: 30 minutes of changes each month, a monthly check-in report, requests answered within 2 business days.', 'anypress-host'), ['product_type' => 'care', 'care_minutes' => '30', 'care_answer' => __('2 business days', 'anypress-host')]],
-            'care-plus' => [__('Care Plus', 'anypress-host'), 19900, __('For a business adding pages, products or courses most months: 2 hours of changes each month, set-up jobs included, requests answered within 1 business day.', 'anypress-host'), ['product_type' => 'care', 'care_minutes' => '120', 'care_answer' => __('1 business day', 'anypress-host')]],
-            'care-pro' => [__('Care Pro', 'anypress-host'), 44900, __('For a busy community, shop or course business: 5 hours of changes each month, a 30-minute planning call, requests answered the same business day.', 'anypress-host'), ['product_type' => 'care', 'care_minutes' => '300', 'care_answer' => __('the same business day', 'anypress-host')]],
+            'care' => [__('Care', 'anypress-host'), 7900, __('For owners who mostly run the site themselves and want someone on call: 30 minutes of changes each month, a monthly check-in report, requests answered within 2 business days.', 'anypress-host'), ['product_type' => 'care', 'care_minutes' => '30', 'care_answer' => __('2 business days', 'anypress-host'), 'care_priority' => 'normal']],
+            'care-plus' => [__('Care Plus', 'anypress-host'), 19900, __('For a business adding pages, products or courses most months: 2 hours of changes each month, set-up jobs included, requests answered within 1 business day.', 'anypress-host'), ['product_type' => 'care', 'care_minutes' => '120', 'care_answer' => __('1 business day', 'anypress-host'), 'care_priority' => 'medium']],
+            'care-pro' => [__('Care Pro', 'anypress-host'), 44900, __('For a busy community, shop or course business: 5 hours of changes each month, a 30-minute planning call, requests answered the same business day.', 'anypress-host'), ['product_type' => 'care', 'care_minutes' => '300', 'care_answer' => __('the same business day', 'anypress-host'), 'care_priority' => 'critical']],
             'set-up-my-site' => [__('Set up my site for me', 'anypress-host'), 29900, __('We fill in your pages, logo, colours, menus and first products, courses or spaces from what you send us.', 'anypress-host'), ['product_type' => 'service', 'service_minutes' => '']],
             'move-my-site-in' => [__('Move my site in for me', 'anypress-host'), 19900, __('We run the move from WordPress, Circle, LearnDash, Tutor LMS, LifterLMS, MemberPress or WooCommerce, then check it.', 'anypress-host'), ['product_type' => 'service', 'service_minutes' => '']],
             'one-hour' => [__('One hour of changes', 'anypress-host'), 12500, __('For a one-off change, with no package. The hour is added to your website and used as you ask.', 'anypress-host'), ['product_type' => 'service', 'service_minutes' => '60']],
@@ -100,6 +100,7 @@ class FluentCartCareProducts
             'emails_per_pack' => '',
             'care_minutes' => '',
             'care_answer' => '',
+            'care_priority' => AnyPressProvisioningIntegration::PRIORITY_NORMAL,
             'service_minutes' => '',
             'role' => '',
             'group_name' => '',
