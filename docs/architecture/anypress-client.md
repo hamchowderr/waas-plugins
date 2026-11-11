@@ -215,6 +215,26 @@ Running it again adds nothing twice: the add-on skips each step it has finished,
 
 The galleries before the switch, the copied zone and method ids and each merged customer (its row and the rows moved off it) are kept in the `anypress_client_shop_switch` option (not autoloaded). Sources: `src/Shop/ShopSwitch.php`, `src/Shop/GalleryImages.php`, `src/Shop/ShippingZones.php`, `src/Shop/CustomerMerge.php`, `src/Shop/ShopReview.php`, `src/Shop/ShopCompare.php`, `src/Shop/ShopCommand.php`, `src/Shop/ShopAbilities.php`. Tested end to end, with HPOS off and on, by `scripts/playground/shop-switch.mjs` (`npm run shop-switch`).
 
+## Moving an Easy Digital Downloads Shop to FluentCart
+
+The shop switch also copies an Easy Digital Downloads 3 shop into FluentCart, through the same FluentCart Migrator add-on's own EDD migration, and then swaps EDD's shortcodes and blocks on the site's pages for FluentCart's (the add-on leaves the pages alone). Run it with WP-CLI as an administrator, with EDD 3, FluentCart and the add-on active:
+
+```
+wp anypress shop switch --from=edd --user=admin --dry-run   # check the shop and list the pages it would switch; changes nothing
+wp anypress shop switch --from=edd --user=admin             # do it
+wp anypress shop switch --from=edd --user=admin --undo      # put EDD's shortcodes and blocks back on the pages
+```
+
+The abilities take `{"from": "edd"}`: `anypress/check-shop` and `anypress/switch-shop`.
+
+1. **Checks** that EDD 3 (not 2.x: EDD's own upgrade moves orders into its 3.0 tables first), FluentCart and the add-on are active, and FluentCart Pro too when EDD Software Licensing is in use (the add-on needs it for the licences). Reports the products, orders, transactions, customers, coupons, subscriptions, licences and payment gateways.
+2. **Runs the add-on's EDD migration** through its PHP classes, the same steps as its admin screen: store settings and products (with their price options), tax rates, coupons, orders with their transactions, subscriptions and licences, customers without orders, and the recount. Orders it couldn't copy, or copied with a gap, are listed from its own log.
+3. **Switches the pages over**: `[download_checkout]`, `[download_cart]`, `[edd_login]`, `[edd_register]`, `[edd_receipt]` and `[downloads]` become FluentCart's checkout, cart, login form, registration form, receipt and product list; `[purchase_history]`, `[download_history]` and `[edd_profile_editor]` become FluentCart's one customer profile (once per page); a buy button (`[purchase_link id="…"]`, the `edd/buy-button` block) becomes `[fluent_cart_product_card product_id="…"]` for the product the add-on made of that download. EDD's blocks (checkout, cart, order history, user downloads, login, register, receipt, confirmation, downloads, buy button) become shortcode blocks. This covers posts, pages, templates, template parts and synced patterns, EDD's own Checkout, Receipt, Order History and Confirmation pages included; each changed post keeps a revision. A buy button whose download isn't copied yet stays as it is and is listed.
+
+EDD Recurring subscriptions are copied, but their renewals keep charging only when FluentCart has the same gateway set up with the same Stripe or PayPal account (FluentCart Pro for subscriptions); switch EDD's gateway off once FluentCart's is connected, so nobody is charged twice. Running it again adds nothing twice: the add-on skips the steps it has finished, and switched pages have nothing left to swap. EDD and its data are never changed or turned off. Undo puts every switched page back; what the add-on copied stays in FluentCart. EDD has to be active while its shop is read, so run this on the website before it moves into an AnyPress store (or with AnyPress Move on any WordPress), not on the store itself, which keeps only its site type's plugins on.
+
+Each changed page's original content is kept in the `anypress_client_edd_switch` option (not autoloaded). Sources: `src/Shop/EddSwitch.php`, `src/Shop/EddShortcodes.php`, `src/Shop/EddPages.php`. Tested end to end by `scripts/playground/edd.mjs` (`npm run edd`, EDD and FluentCart from wordpress.org).
+
 ## Bringing Buyers and Subscribers Into FluentCRM
 
 The CRM switch brings a website's WooCommerce buyers and email-list subscribers into FluentCRM (the free plugin, whose own importers cover only WordPress users, CSV files and a few hosted services; its WooCommerce importer needs FluentCRM Pro). Run it with WP-CLI as an administrator, with FluentCRM active:

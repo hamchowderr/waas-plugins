@@ -70,6 +70,7 @@ class MovePage
         return [
             'forms' => [__('Forms', 'anypress-move'), __('Contact Form 7, WPForms, Ninja Forms and Gravity Forms forms and entries into Fluent Forms, and the pages that show them.', 'anypress-move')],
             'shop' => [__('Shop', 'anypress-move'), __('A WooCommerce shop into FluentCart with the FluentCart Migrator add-on: products, orders, customers, coupons and gallery images.', 'anypress-move')],
+            'edd' => [__('Digital shop', 'anypress-move'), __('An Easy Digital Downloads 3 shop into FluentCart with the FluentCart Migrator add-on: downloads, orders, customers, coupons, subscriptions and licences, and the pages that show them.', 'anypress-move')],
             'crm' => [__('Contacts', 'anypress-move'), __('WooCommerce buyers (guests too), MailPoet and Newsletter subscribers into FluentCRM, with their lists and tags.', 'anypress-move')],
             'support' => [__('Help desk', 'anypress-move'), __('Awesome Support, SupportCandy or JS Help Desk tickets into Fluent Support, with replies, attachments, customers and agents.', 'anypress-move')],
             'affiliate' => [__('Affiliates', 'anypress-move'), __('AffiliateWP, Affiliates Manager, Solid Affiliate, SliceWP or Ultimate Affiliate Pro into an empty FluentAffiliate.', 'anypress-move')],
@@ -132,6 +133,9 @@ class MovePage
         }
         if ($key === 'shop') {
             return $act === 'undo' ? $this->shop->undo() : $this->shop->run($dry);
+        }
+        if ($key === 'edd') {
+            return $act === 'undo' ? $this->shop->undo(false, 'edd') : $this->shop->run($dry, 'edd');
         }
         if ($key === 'crm') {
             return $act === 'undo' ? $this->crm->undo() : $this->crm->run($dry);

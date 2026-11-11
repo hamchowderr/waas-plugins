@@ -16,6 +16,7 @@ Each switch copies one plugin's data into the Fluent plugin that replaces it, us
 
 * Forms: Contact Form 7, WPForms, Ninja Forms and Gravity Forms into Fluent Forms, with entries, and the pages that show them.
 * Shop: WooCommerce into FluentCart, with the FluentCart Migrator add-on.
+* Digital shop: Easy Digital Downloads 3 into FluentCart, with the FluentCart Migrator add-on, and the pages that show it.
 * Contacts: WooCommerce buyers, MailPoet and Newsletter subscribers into FluentCRM.
 * Help desk: Awesome Support, SupportCandy or JS Help Desk into Fluent Support.
 * Affiliates: AffiliateWP, Affiliates Manager, Solid Affiliate, SliceWP or Ultimate Affiliate Pro into FluentAffiliate.
@@ -47,6 +48,7 @@ No other switch sends anything off your site. The Shop switch links to FluentCar
 == Changelog ==
 
 = 1.2.0 =
+* Digital shop: an Easy Digital Downloads 3 shop moves to FluentCart through the FluentCart Migrator add-on's own EDD migration (downloads, orders, customers, coupons, subscriptions and licences), and EDD's shortcodes and blocks on the site's pages, its own checkout and account pages included, become FluentCart's. Undo puts the pages back.
 * Forms: Gravity Forms forms and their entries move to Fluent Forms, through Fluent Forms' own importer with its mistakes put right (hidden name and address parts stay hidden, dates and times keep their format, entry limits and messages keep their values, the default confirmation stays the main one, and entries keep the visitor's IP address, browser and page). Pages, blocks and drafts that show a Gravity Forms form are swapped, and Check lists the show/hide rules and add-on feeds that don't come across.
 
 = 1.1.1 =
