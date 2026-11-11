@@ -161,8 +161,8 @@ class FluentCartCareCall
     public function requested_link(?int $now = null): ?array
     {
         // phpcs:disable WordPress.Security.NonceVerification.Recommended -- checked right below.
-        if (!isset($_GET['pay_website'], $_GET['pay_offer'], $_GET['_wpnonce']) || !current_user_can('manage_options')
-            || !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), self::LINK_ACTION)) {
+        $asked = isset($_GET['pay_website'], $_GET['pay_offer'], $_GET['_wpnonce']) && current_user_can('manage_options');
+        if (!$asked || !wp_verify_nonce(sanitize_text_field(wp_unslash($_GET['_wpnonce'])), self::LINK_ACTION)) {
             return null;
         }
         $website_id = absint(wp_unslash($_GET['pay_website']));
