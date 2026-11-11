@@ -33,6 +33,8 @@ class Languages
     {
         add_action('wp_loaded', [$this, 'finish_setup']);
         add_action('admin_post_' . self::FORM, [$this, 'save_form']);
+        // Polylang sends the next admin page to its set-up wizard when it is activated; AnyPress does that set-up itself.
+        add_action('activate_' . self::PLUGIN, [self::class, 'skip_wizard'], 20);
         if (self::is_on()) {
             add_filter('render_block_core/navigation-link', [$this, 'translate_link'], 10, 2);
             add_filter('render_block_core/navigation-submenu', [$this, 'translate_link'], 10, 2);
@@ -146,8 +148,7 @@ class Languages
                 require_once ABSPATH . 'wp-admin/includes/plugin.php';
             }
             activate_plugin(self::PLUGIN, '', false, true);
-            // Polylang sends the next admin page to its set-up wizard; AnyPress does that set-up itself.
-            delete_transient('pll_activation_redirect');
+            self::skip_wizard();
             self::start_setup();
         }
         if (!$on) {
@@ -155,6 +156,12 @@ class Languages
         }
 
         return self::state();
+    }
+
+    /** Drops Polylang's one-time redirect to its set-up wizard, set when the plan turns Polylang on. */
+    public static function skip_wizard(): void
+    {
+        delete_transient('pll_activation_redirect');
     }
 
     /** Asks the website for any page, without waiting, so the set-up runs now rather than on the next visit. */
