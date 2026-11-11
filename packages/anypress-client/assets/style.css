@@ -137,32 +137,36 @@
 
 #anypress_site .anypress-site-plugins {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 8px;
     margin: 0;
 }
 
 #anypress_site .anypress-site-plugins li {
     position: relative;
     margin: 0;
-    padding: 10px 12px 10px 52px;
-    min-height: 32px;
+    padding: 8px 10px 8px 48px;
+    min-height: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     border: 1px solid #dcdcde;
     border-radius: 6px;
 }
 
 #anypress_site .anypress-site-plugin-initial {
     position: absolute;
-    top: 10px;
-    left: 12px;
-    width: 30px;
-    height: 30px;
+    top: 50%;
+    left: 10px;
+    width: 28px;
+    height: 28px;
+    margin-top: -14px;
     border-radius: 8px;
     background: #f0f0f1;
     color: #3c434a;
     font-weight: 600;
     font-size: 14px;
-    line-height: 30px;
+    line-height: 28px;
     text-align: center;
     overflow: hidden;
 }
@@ -174,6 +178,7 @@
     width: 100%;
     height: 100%;
     background: #fff;
+    object-fit: cover;
 }
 
 #anypress_site .anypress-site-plugin-name {
@@ -181,10 +186,21 @@
     font-weight: 600;
 }
 
+#anypress_site .anypress-site-plugin-name {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* One line each, so the list stays short; the whole line is the item's tooltip. */
 #anypress_site .anypress-site-plugin-about {
     display: block;
-    margin-top: 2px;
+    margin-top: 1px;
+    overflow: hidden;
     color: #50575e;
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 #anypress_plan .anypress-plan p:first-child {

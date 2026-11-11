@@ -66,9 +66,10 @@ class CleanDashboard
 
         $brand = Brand::name();
         wp_add_dashboard_widget('anypress_home', __('Your website', 'anypress-client'), [$this, 'render_home'], null, null, 'normal', 'high');
-        wp_add_dashboard_widget('anypress_site', __('What comes with your website', 'anypress-client'), [$this, 'render_site'], null, null, 'normal');
+        // The plugin list is compact and sits on the right, so the two columns end about level.
+        wp_add_dashboard_widget('anypress_site', __('What comes with your website', 'anypress-client'), [$this, 'render_site'], null, null, 'side', 'high');
         /* translators: %s: the website seller's brand, such as AnyPress */
-        wp_add_dashboard_widget('anypress_plan', sprintf(__('Your plan with %s', 'anypress-client'), $brand), [$this, 'render_plan'], null, null, 'side', 'high');
+        wp_add_dashboard_widget('anypress_plan', sprintf(__('Your plan with %s', 'anypress-client'), $brand), [$this, 'render_plan'], null, null, 'normal');
 
         // AnyPress's own stores get the AnyPress look; a reseller's stores keep WordPress's colours and only the reseller's name.
         if (Brand::reseller() === '') {
@@ -175,12 +176,37 @@ class CleanDashboard
         $screens = self::plugin_screens();
 ?>
         <ul class="anypress-site-plugins">
+            <?php
+            // The theme first: the site's design comes with it too.
+            $theme = wp_get_theme();
+            /* translators: %s: the theme's name, such as AnyPress */
+            $theme_name = sprintf(__('%s theme', 'anypress-client'), (string) $theme->get('Name'));
+            $theme_about = __('The site\'s design: pages, colours and fonts you change in the Site Editor.', 'anypress-client');
+            $theme_screen = current_user_can('edit_theme_options') ? ($theme->is_block_theme() ? admin_url('site-editor.php') : admin_url('themes.php')) : null;
+            ?>
+            <li title="<?php echo esc_attr($theme_about); ?>">
+                <span class="anypress-site-plugin-initial" aria-hidden="true"><?php echo esc_html(strtoupper(mb_substr($theme_name, 0, 1))); ?><?php
+                    if ($theme->get_stylesheet() === 'anypress' && Brand::reseller() === '') {
+                        echo self::mark('t'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- a fixed SVG.
+                    } elseif ($theme->get_screenshot() !== false) {
+                        printf('<img src="%s" alt="" width="30" height="30">', esc_url((string) $theme->get_screenshot()));
+                    }
+                ?></span>
+                <span class="anypress-site-plugin-name">
+                    <?php if ($theme_screen !== null) : ?>
+                        <a href="<?php echo esc_url($theme_screen); ?>"><?php echo esc_html($theme_name); ?></a>
+                    <?php else : ?>
+                        <?php echo esc_html($theme_name); ?>
+                    <?php endif; ?>
+                </span>
+                <span class="anypress-site-plugin-about"><?php echo esc_html($theme_about); ?></span>
+            </li>
             <?php foreach ($installed as $file) :
                 $folder = explode('/', $file)[0];
                 [$name, $about] = self::name_and_about((string) ($wp_plugins[$file]['Name'] ?? $folder), (string) ($plan['about'][$file] ?? ''));
                 $screen = $screens[$folder] ?? null;
             ?>
-                <li>
+                <li<?php echo $about !== '' ? ' title="' . esc_attr($about) . '"' : ''; ?>>
                     <span class="anypress-site-plugin-initial" aria-hidden="true"><?php echo esc_html(strtoupper(mb_substr($name, 0, 1))); ?><?php
                         if ($folder === 'anypress-blocks' && Brand::reseller() === '') {
                             echo self::mark('b'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- a fixed SVG.
