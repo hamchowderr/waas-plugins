@@ -167,7 +167,7 @@ final class Updater
         return (object) [
             'name' => $this->name,
             'slug' => $this->slug,
-            'author' => '<a href="' . esc_url(self::HOMEPAGE) . '">AnyPress</a>',
+            'author' => '<a href="' . self::HOMEPAGE . '">AnyPress</a>',
             'homepage' => self::HOMEPAGE,
             'icons' => self::ICONS,
             'version' => $info['version'],
