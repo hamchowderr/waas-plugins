@@ -103,6 +103,16 @@ class AccountStyles
 .anypress-acct-contact small{font-weight:400;opacity:.7}
 .anypress-acct-contact input{width:100%;padding:10px 12px;font-size:15px;border:1px solid rgba(0,0,0,.25);border-radius:8px;font-weight:400}
 .anypress-acct-emails{margin:14px 0 0;opacity:.85}
+.anypress-acct-care-meter{height:8px;max-width:420px;border-radius:999px;background:rgba(0,0,0,.08);overflow:hidden;margin:4px 0 14px}
+.anypress-acct-care-meter i{display:block;height:100%;background:#17703d;border-radius:999px}
+.anypress-acct-care-request{display:grid;gap:10px;margin:6px 0 12px;justify-items:start}
+.anypress-acct-care-request label{display:grid;gap:6px;font-weight:600;width:100%}
+.anypress-acct-care-request textarea{width:100%;min-height:104px;padding:10px 12px;font:inherit;font-size:15px;font-weight:400;border:1px solid rgba(0,0,0,.25);border-radius:8px}
+.anypress-acct-care-offer{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:12px 14px;border:1px solid rgba(0,0,0,.18);border-radius:10px;color:inherit;text-decoration:none}
+.anypress-acct-care-offer:hover{border-color:#141414;color:inherit}
+.anypress-acct-care-offer.is-picked{border:1.5px solid #141414;box-shadow:3px 3px 0 #ffc75a}
+.anypress-acct-care-offer em{font-style:normal;font-size:.8em;font-weight:700;padding:2px 8px;border-radius:999px;background:#141414;color:#fff}
+.anypress-acct-care-offer small{flex-basis:100%;opacity:.7}
 .anypress-acct-notice{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;border:1.5px solid #141414;border-radius:16px;box-shadow:5px 5px 0 #ffc75a;padding:16px 20px;margin-bottom:18px;background:#fff;font-size:15px}
 .anypress-acct-notice p{margin:0;flex:1 1 260px;overflow-wrap:anywhere}
 .anypress-acct-notice .anypress-acct-actions{margin-top:0}

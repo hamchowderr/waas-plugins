@@ -7,8 +7,8 @@ use FluentCart\App\Models\ProductVariation;
 use AnyPressHost\Migrations\FluentCartFeedTriggers;
 
 /**
- * FluentCartStore's reads and writes of the AnyPress feeds on products: which products are website plans or email
- * packs, and the feed triggers migration.
+ * FluentCartStore's reads and writes of the AnyPress feeds on products: which products are website plans, email
+ * packs, care packages or one-time services, and the feed triggers migration.
  */
 trait FluentCartFeedQueries
 {
@@ -21,7 +21,7 @@ trait FluentCartFeedQueries
     public function get_plan_feed($product_id): ?array
     {
         foreach ($this->get_enabled_feeds($product_id) as $settings) {
-            if (!AnyPressProvisioningIntegration::is_email_pack($settings)) {
+            if (AnyPressProvisioningIntegration::is_plan($settings)) {
                 return $settings;
             }
         }
@@ -67,6 +67,35 @@ trait FluentCartFeedQueries
     }
 
     /**
+     * Settings of the product's enabled AnyPress feed of this product type (AnyPressProvisioningIntegration::PRODUCT_TYPE_),
+     * or null when it has none.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function get_feed_of_type($product_id, string $type): ?array
+    {
+        foreach ($this->get_enabled_feeds($product_id) as $settings) {
+            if (AnyPressProvisioningIntegration::product_type($settings) === $type) {
+                return $settings;
+            }
+        }
+
+        return null;
+    }
+
+    /** True when the product is bought for one of the customer's websites: an email pack, care package or service. */
+    public function is_website_addon($product_id): bool
+    {
+        foreach ($this->get_enabled_feeds($product_id) as $settings) {
+            if (AnyPressProvisioningIntegration::is_email_pack($settings) ? AnyPressProvisioningIntegration::emails_per_pack($settings) > 0 : !AnyPressProvisioningIntegration::is_plan($settings)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * The published email-pack products, fewest emails first, each with the instant-checkout link of its first
      * variation (FluentCart's "Buy now" link: a one-item cart, straight to checkout).
      *
@@ -74,37 +103,81 @@ trait FluentCartFeedQueries
      */
     public function get_email_pack_products(): array
     {
+        $packs = [];
+        foreach ($this->get_typed_products(AnyPressProvisioningIntegration::PRODUCT_TYPE_EMAIL_PACK) as $product) {
+            $emails = AnyPressProvisioningIntegration::emails_per_pack($product['settings']);
+            if ($emails > 0) {
+                $packs[] = [
+                    'product_id' => $product['product_id'],
+                    'emails' => $emails,
+                    'title' => $product['title'],
+                    'checkout_url' => $product['variations'][0]['checkout_url'],
+                ];
+            }
+        }
+
+        usort($packs, fn ($a, $b) => $a['emails'] <=> $b['emails'] ?: $a['product_id'] <=> $b['product_id']);
+
+        return $packs;
+    }
+
+    /**
+     * The published products whose enabled AnyPress feed is of this product type, in menu order, each with its feed
+     * settings and its variations (prices in cents, and FluentCart's instant-checkout link for each).
+     *
+     * @return array<int, array{product_id: int, title: string, excerpt: string, settings: array, variations: array<int, array{id: int, title: string, price: int, interval: string, checkout_url: string}>}>
+     */
+    public function get_typed_products(string $type): array
+    {
         $feeds = ProductMeta::query()
             ->where('object_type', 'product_integration')
             ->where('meta_key', AnyPressProvisioningIntegration::KEY)
             ->get();
 
-        $packs = [];
+        $products = [];
         foreach ($feeds as $feed) {
             $settings = $feed->meta_value;
             $product_id = (int) $feed->object_id;
-            $emails = is_array($settings) && ($settings['enabled'] ?? '') === 'yes' ? AnyPressProvisioningIntegration::emails_per_pack($settings) : 0;
-            if ($emails === 0 || isset($packs[$product_id]) || get_post_status($product_id) !== 'publish') {
+            if (
+                !is_array($settings) || ($settings['enabled'] ?? '') !== 'yes'
+                || AnyPressProvisioningIntegration::product_type($settings) !== $type
+                || isset($products[$product_id]) || get_post_status($product_id) !== 'publish'
+            ) {
                 continue;
             }
 
-            $variation = ProductVariation::query()->where('post_id', $product_id)->orderBy('serial_index', 'ASC')->orderBy('id', 'ASC')->first();
-            if (!$variation) {
+            $variations = [];
+            foreach (ProductVariation::query()->where('post_id', $product_id)->orderBy('serial_index', 'ASC')->orderBy('id', 'ASC')->get() as $variation) {
+                $info = is_array($variation->other_info ?? null) ? $variation->other_info : [];
+                $variations[] = [
+                    'id' => (int) $variation->id,
+                    'title' => (string) ($variation->variation_title ?? ''),
+                    'price' => (int) round((float) ($variation->item_price ?? 0)),
+                    'interval' => ($variation->payment_type ?? '') === 'subscription' ? (string) ($info['repeat_interval'] ?? '') : '',
+                    'checkout_url' => site_url('?fluent-cart=instant_checkout&item_id=' . (int) $variation->id . '&quantity=1'),
+                ];
+            }
+            if (!$variations) {
                 continue;
             }
 
-            $packs[$product_id] = [
+            $products[$product_id] = [
                 'product_id' => $product_id,
-                'emails' => $emails,
                 'title' => (string) get_the_title($product_id),
-                'checkout_url' => site_url('?fluent-cart=instant_checkout&item_id=' . (int) $variation->id . '&quantity=1'),
+                'excerpt' => (string) get_the_excerpt($product_id),
+                'settings' => $settings,
+                'variations' => $variations,
+                'order' => (int) get_post_field('menu_order', $product_id),
             ];
         }
 
-        $packs = array_values($packs);
-        usort($packs, fn ($a, $b) => $a['emails'] <=> $b['emails'] ?: $a['product_id'] <=> $b['product_id']);
+        $products = array_values($products);
+        usort($products, fn ($a, $b) => $a['order'] <=> $b['order'] ?: $a['product_id'] <=> $b['product_id']);
 
-        return $packs;
+        return array_map(static function ($product) {
+            unset($product['order']);
+            return $product;
+        }, $products);
     }
 
     /**
@@ -149,7 +222,7 @@ trait FluentCartFeedQueries
             ->get();
 
         foreach ($feeds as $feed) {
-            if (!AnyPressProvisioningIntegration::is_email_pack($feed->meta_value)) {
+            if (AnyPressProvisioningIntegration::is_plan($feed->meta_value)) {
                 return true;
             }
         }

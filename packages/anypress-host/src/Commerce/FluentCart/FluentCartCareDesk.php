@@ -1,0 +1,270 @@
+<?php
+
+namespace AnyPressHost\Commerce\FluentCart;
+
+use AnyPressHost\Core\Tenant;
+use AnyPressHost\Features\AdminHome;
+
+/**
+ * The team's side of care (FluentCartCare): the customer's care on every Fluent Support ticket (a "Care" card in the
+ * ticket's customer sidebar, through Fluent Support's customer_extra_widgets filter), and AnyPress > Care in wp-admin,
+ * which lists the websites with care and logs the time each request took.
+ */
+class FluentCartCareDesk
+{
+    public const PAGE = 'anypress-care';
+    public const LOG_ACTION = 'anypress_care_log';
+    public const WIDGET_KEY = 'anypress_care';
+
+    private FluentCartAdapter $adapter;
+    private FluentCartStore $store;
+    private FluentCartCare $care;
+
+    public function __construct(FluentCartAdapter $adapter, FluentCartStore $store, FluentCartCare $care)
+    {
+        $this->adapter = $adapter;
+        $this->store = $store;
+        $this->care = $care;
+    }
+
+    public function register(): void
+    {
+        add_filter('fluent_support/customer_extra_widgets', [$this, 'ticket_widget'], 20, 3);
+        // After AdminHome's menu (11), as one of its pages.
+        add_action('admin_menu', [$this, 'add_page'], 20);
+        add_action('admin_post_' . self::LOG_ACTION, [$this, 'handle_log']);
+    }
+
+    // ---- Fluent Support ----
+
+    /**
+     * fluent_support/customer_extra_widgets: each of the customer's websites with its package, answer time and time
+     * left, so whoever answers sees how soon and how much.
+     *
+     * @param array $widgets
+     * @param object|array $customer Fluent Support's customer
+     * @param array|null $context format ('html' or 'mcp') and keys
+     */
+    public function ticket_widget($widgets, $customer, $context = null)
+    {
+        $widgets = is_array($widgets) ? $widgets : [];
+        $keys = is_array($context) && !empty($context['keys']) ? (array) $context['keys'] : null;
+        if ($keys !== null && !in_array(self::WIDGET_KEY, $keys, true)) {
+            return $widgets;
+        }
+
+        $rows = $this->customer_rows($customer);
+        if (!$rows) {
+            return $widgets;
+        }
+
+        if (is_array($context) && ($context['format'] ?? '') === 'mcp') {
+            $widgets[self::WIDGET_KEY] = ['title' => __('Care', 'anypress-host'), 'mcp' => $rows];
+            return $widgets;
+        }
+
+        $items = [];
+        foreach ($rows as $row) {
+            $items[] = [
+                'title' => $row['website'],
+                'subtitle' => $row['package'] !== '' ? $row['package'] . ($row['answer'] !== '' ? ' · ' . sprintf(
+                    /* translators: %s: e.g. 1 business day */
+                    __('answer within %s', 'anypress-host'),
+                    $row['answer']
+                ) : '') : __('No package', 'anypress-host'),
+                'detail' => self::time_detail($row),
+                'url' => admin_url('admin.php?page=' . self::PAGE),
+            ];
+        }
+        $widgets[self::WIDGET_KEY] = [
+            'title' => __('Care', 'anypress-host'),
+            'icon' => 'Clock',
+            'badges' => [['text' => $rows[0]['package'] !== '' ? $rows[0]['package'] : __('Extra time', 'anypress-host'), 'type' => 'primary']],
+            'sections' => [['label' => __('Websites', 'anypress-host'), 'items' => $items]],
+            'links' => [['label' => __('Log time', 'anypress-host'), 'url' => admin_url('admin.php?page=' . self::PAGE)]],
+        ];
+
+        return $widgets;
+    }
+
+    /** "1 h 20 min of 2 h left this month; 1 h extra". */
+    private static function time_detail(array $row): string
+    {
+        $parts = [];
+        if ($row['package'] !== '') {
+            $parts[] = sprintf(
+                /* translators: 1: time left, 2: time a month */
+                __('%1$s of %2$s left this month', 'anypress-host'),
+                FluentCartCare::format_minutes($row['left']),
+                FluentCartCare::format_minutes($row['minutes'])
+            );
+        }
+        if ($row['extra'] > 0) {
+            /* translators: %s: time */
+            $parts[] = sprintf(__('%s extra', 'anypress-host'), FluentCartCare::format_minutes($row['extra']));
+        }
+
+        return implode('; ', $parts);
+    }
+
+    /**
+     * The care of each website of the ticket's customer (found by their WordPress account, or their email).
+     *
+     * @return array<int, array{website: string, package: string, answer: string, minutes: int, left: int, extra: int}>
+     */
+    private function customer_rows($customer): array
+    {
+        $customer = (object) $customer;
+        $user_id = (int) ($customer->user_id ?? 0);
+        if ($user_id <= 0 && !empty($customer->email)) {
+            $user = get_user_by('email', (string) $customer->email);
+            $user_id = $user ? (int) $user->ID : 0;
+        }
+        if ($user_id <= 0) {
+            return [];
+        }
+
+        $rows = [];
+        foreach ($this->adapter->get_customer_subscription_ids($user_id) as $website_id) {
+            if (empty($this->adapter->get_subscription_meta($website_id, Tenant::TENANT_EXTERNAL_ID_META))) {
+                continue;
+            }
+            $summary = $this->care->summary($website_id);
+            if ($summary !== null) {
+                $rows[] = ['website' => $this->care->domain((int) $website_id)] + array_intersect_key($summary, array_flip(['package', 'answer', 'minutes', 'left', 'extra']));
+            }
+        }
+
+        return $rows;
+    }
+
+    // ---- AnyPress > Care ----
+
+    public function add_page(): void
+    {
+        add_submenu_page(AdminHome::SLUG, __('Care', 'anypress-host'), __('Care', 'anypress-host'), 'manage_options', self::PAGE, [$this, 'render_page']);
+    }
+
+    /** @return int[] websites with an active care package or extra time */
+    public function websites(): array
+    {
+        $websites = [];
+        foreach ($this->store->find_subscription_meta(FluentCartCare::WEBSITE_META, []) as $care_id => $website_id) {
+            if ($this->adapter->is_subscription_active($care_id)) {
+                $websites[(int) $website_id] = true;
+            }
+        }
+        foreach ($this->store->find_subscription_meta(FluentCartCare::EXTRA_META, ['', '0']) as $website_id => $minutes) {
+            if ((int) $minutes > 0) {
+                $websites[(int) $website_id] = true;
+            }
+        }
+
+        return array_keys($websites);
+    }
+
+    public function render_page(): void
+    {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+        echo '<div class="wrap"><h1>' . esc_html__('Care', 'anypress-host') . '</h1>';
+        echo '<p>' . esc_html__('Websites with a care package or extra time. Requests arrive in Fluent Support; log the time each one took here. This month\'s time is used first, then extra time.', 'anypress-host') . '</p>';
+        $this->render_logged();
+        $this->render_products_step();
+
+        $websites = $this->websites();
+        if (!$websites) {
+            echo '<p><em>' . esc_html__('No website has care yet.', 'anypress-host') . '</em></p></div>';
+            return;
+        }
+
+        echo '<table class="widefat striped"><thead><tr><th>' . esc_html__('Website', 'anypress-host') . '</th><th>' . esc_html__('Customer', 'anypress-host') . '</th><th>'
+            . esc_html__('Package', 'anypress-host') . '</th><th>' . esc_html__('Time left', 'anypress-host') . '</th><th>' . esc_html__('Log time', 'anypress-host') . '</th></tr></thead><tbody>';
+        foreach ($websites as $website_id) {
+            $summary = $this->care->summary($website_id);
+            if ($summary === null) {
+                continue;
+            }
+            $customer = $this->store->get_subscription_customer($website_id);
+            echo '<tr><td><a href="' . esc_url($this->store->get_admin_subscription_url($website_id)) . '">' . esc_html($this->care->domain($website_id)) . '</a></td>';
+            echo '<td>' . esc_html(trim(($customer['name'] ?? '') . ' ' . ($customer['email'] ?? ''))) . '</td>';
+            echo '<td>' . esc_html($summary['package'] !== '' ? $summary['package'] . ($summary['answer'] !== '' ? ' (' . $summary['answer'] . ')' : '') : '—') . '</td>';
+            echo '<td>' . esc_html(self::time_detail($summary)) . '</td><td>';
+            echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="display:flex;gap:6px;flex-wrap:wrap">';
+            echo '<input type="hidden" name="action" value="' . esc_attr(self::LOG_ACTION) . '"><input type="hidden" name="website" value="' . esc_attr((string) $website_id) . '">';
+            wp_nonce_field(self::LOG_ACTION . '_' . $website_id);
+            echo '<label><span class="screen-reader-text">' . esc_html__('Minutes', 'anypress-host') . '</span><input type="number" name="minutes" min="1" max="' . esc_attr((string) FluentCartCare::MAX_LOG_MINUTES) . '" step="1" required class="small-text" placeholder="min"></label>';
+            echo '<label><span class="screen-reader-text">' . esc_html__('What was done', 'anypress-host') . '</span><input type="text" name="note" class="regular-text" placeholder="' . esc_attr__('Ticket #, what was done', 'anypress-host') . '"></label>';
+            echo '<button type="submit" class="button">' . esc_html__('Log', 'anypress-host') . '</button></form></td></tr>';
+        }
+        echo '</tbody></table></div>';
+    }
+
+    /** Until the shop has care products: a button that makes them as drafts. */
+    private function render_products_step(): void
+    {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only shows how many were made.
+        if (isset($_GET['care_products_made'])) {
+            $made = absint(wp_unslash($_GET['care_products_made']));
+            echo '<div class="notice notice-' . ($made > 0 ? 'success' : 'warning') . '"><p>' . esc_html($made > 0
+                /* translators: %d: number of products */
+                ? sprintf(_n('%d care product made as a draft. Check it in FluentCart, then publish it to sell it.', '%d care products made as drafts. Check them in FluentCart, then publish them to sell them.', $made, 'anypress-host'), $made)
+                : __('No care products were made: the shop already has some.', 'anypress-host')) . '</p></div>';
+        }
+        if (FluentCartCareProducts::exist()) {
+            return;
+        }
+        echo '<p><a class="button button-primary" href="' . esc_url(FluentCartCareProducts::url()) . '">' . esc_html__('Create the care products', 'anypress-host') . '</a> '
+            . esc_html__('Makes Care, Care Plus and Care Pro (monthly and yearly) and three one-time services as drafts in FluentCart, so nothing is on sale until you publish them.', 'anypress-host') . '</p>';
+    }
+
+    /** What the last log did, from the redirect's numbers. */
+    private function render_logged(): void
+    {
+        // phpcs:disable WordPress.Security.NonceVerification.Recommended -- only shows what the last log did.
+        $minutes = isset($_GET['logged']) ? absint(wp_unslash($_GET['logged'])) : 0;
+        $over = isset($_GET['over']) ? absint(wp_unslash($_GET['over'])) : 0;
+        $website_id = isset($_GET['website']) ? absint(wp_unslash($_GET['website'])) : 0;
+        // phpcs:enable
+        if ($minutes <= 0 || $website_id <= 0) {
+            return;
+        }
+
+        $message = sprintf(
+            /* translators: 1: time, 2: website */
+            __('%1$s logged for %2$s.', 'anypress-host'),
+            FluentCartCare::format_minutes($minutes),
+            $this->care->domain($website_id)
+        );
+        if ($over > 0) {
+            $message .= ' ' . sprintf(
+                /* translators: %s: time */
+                __('%s of it was beyond the time left: bill it as extra time.', 'anypress-host'),
+                FluentCartCare::format_minutes($over)
+            );
+        }
+        echo '<div class="notice notice-success"><p>' . esc_html($message) . '</p></div>';
+    }
+
+    public function handle_log(): void
+    {
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- checked right below, with the website in the action.
+        $website_id = isset($_POST['website']) ? absint(wp_unslash($_POST['website'])) : 0;
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You are not allowed to do this.', 'anypress-host'), 403);
+        }
+        check_admin_referer(self::LOG_ACTION . '_' . $website_id);
+        $minutes = isset($_POST['minutes']) ? absint(wp_unslash($_POST['minutes'])) : 0;
+        $note = isset($_POST['note']) ? sanitize_text_field(wp_unslash($_POST['note'])) : '';
+
+        $args = [];
+        if ($website_id > 0 && $minutes > 0) {
+            $used = $this->care->log_time($website_id, $minutes, $note);
+            $args = ['logged' => $minutes, 'over' => $used['over'], 'website' => $website_id];
+        }
+
+        wp_safe_redirect(add_query_arg($args, admin_url('admin.php?page=' . self::PAGE)));
+        exit;
+    }
+}

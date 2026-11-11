@@ -83,6 +83,7 @@ class FluentCartEmailPacksTest extends TestCase
             }
             return null;
         });
+        $this->store->allows('is_website_addon')->andReturnUsing(fn ($product_id) => in_array($product_id, [self::PACK, self::BIG_PACK], true));
         $this->store->allows('get_email_pack_products')->andReturn([
             ['product_id' => self::PACK, 'emails' => 5000, 'title' => '5,000 emails', 'checkout_url' => 'https://storefront.example/?fluent-cart=instant_checkout&item_id=31&quantity=1'],
         ])->byDefault();

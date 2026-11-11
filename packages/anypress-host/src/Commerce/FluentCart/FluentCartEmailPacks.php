@@ -13,7 +13,8 @@ use AnyPressHost\Features\StoreJobs;
  * Choosing the website: each website on the customer's Website page links to FluentCart's instant checkout for the pack
  * with ?anypress_website=<subscription id>. FluentCart passes unknown query args on to the checkout page, where the id is
  * kept in the cart's checkout data, then copied to the order when it is placed. Any instant-checkout landing without
- * the arg clears it, since FluentCart reuses a draft instant cart for the same item.
+ * the arg clears it, since FluentCart reuses a draft instant cart for the same item. Care packages and one-time services
+ * (FluentCartCare) choose their website the same way and use the same order meta.
  *
  * When the order is paid (fluent_cart/order_paid_done, which FluentCart runs in the background), each pack line adds
  * emails per pack x quantity through the provisioning API, with the reference fluentcart-order-<order>-<line>, so the
@@ -152,7 +153,7 @@ class FluentCartEmailPacks
         }
 
         foreach ($this->store->get_cart_product_ids($cart) as $product_id) {
-            if ($this->store->get_email_pack_feed($product_id) !== null) {
+            if ($this->store->is_website_addon($product_id)) {
                 $this->store->update_order_meta($order, self::ORDER_WEBSITE_META, $subscription_id);
                 return;
             }
@@ -297,7 +298,7 @@ class FluentCartEmailPacks
      *
      * @return int[]
      */
-    private function customer_subscription_ids($order): array
+    public function customer_subscription_ids($order): array
     {
         $customer = $this->store->get_order_customer($order);
         if ($customer === null) {

@@ -88,7 +88,7 @@ trait FluentCartOrderQueries
     /**
      * The FluentCart customer who placed the order.
      *
-     * @return array{id: int, user_id: int, email: string}|null
+     * @return array{id: int, user_id: int, email: string, name: string}|null
      */
     public function get_order_customer($order): ?array
     {
@@ -101,6 +101,7 @@ trait FluentCartOrderQueries
             'id' => (int) $customer->id,
             'user_id' => (int) $customer->user_id,
             'email' => (string) $customer->email,
+            'name' => trim((string) ($customer->first_name ?? '') . ' ' . (string) ($customer->last_name ?? '')),
         ];
     }
 

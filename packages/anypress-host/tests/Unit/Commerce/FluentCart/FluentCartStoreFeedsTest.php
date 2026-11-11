@@ -18,6 +18,9 @@ class FluentCartStoreFeedsTest extends TestCase
     private const PACK = 301;
     private const BIG_PACK = 302;
     private const DRAFT_PACK = 303;
+    private const CARE_PLUS = 401;
+    private const CARE = 402;
+    private const SETUP = 501;
 
     private FluentCartStore $store;
 
@@ -26,6 +29,8 @@ class FluentCartStoreFeedsTest extends TestCase
         parent::setUp();
         Functions\when('get_post_status')->alias(fn ($id) => $id === self::DRAFT_PACK ? 'draft' : 'publish');
         Functions\when('get_the_title')->alias(fn ($id) => "Product $id");
+        Functions\when('get_the_excerpt')->justReturn('');
+        Functions\when('get_post_field')->alias(fn ($field, $id) => $id === self::CARE_PLUS ? 2 : 1);
         Functions\when('site_url')->alias(fn ($path = '') => 'https://storefront.example/' . ltrim($path, '/'));
 
         ProductMeta::$rows = [
@@ -36,12 +41,19 @@ class FluentCartStoreFeedsTest extends TestCase
             $this->feed(self::DRAFT_PACK, ['enabled' => 'yes', 'product_type' => 'email_pack', 'emails_per_pack' => 1000]),
             $this->feed(304, ['enabled' => 'no', 'product_type' => 'email_pack', 'emails_per_pack' => 1000]),
             $this->feed(305, ['enabled' => 'yes', 'product_type' => 'email_pack', 'emails_per_pack' => '']), // no emails: not sold
+            $this->feed(self::CARE_PLUS, ['enabled' => 'yes', 'product_type' => 'care', 'care_minutes' => '120', 'care_answer' => '1 business day']),
+            $this->feed(self::CARE, ['enabled' => 'yes', 'product_type' => 'care', 'care_minutes' => '30', 'care_answer' => '2 business days']),
+            $this->feed(self::SETUP, ['enabled' => 'yes', 'product_type' => 'service', 'service_minutes' => '']),
         ];
         ProductVariation::$rows = [
             (object) ['id' => 32, 'post_id' => self::BIG_PACK, 'serial_index' => 1],
             (object) ['id' => 33, 'post_id' => self::PACK, 'serial_index' => 2],
             (object) ['id' => 31, 'post_id' => self::PACK, 'serial_index' => 1],
             (object) ['id' => 34, 'post_id' => self::DRAFT_PACK, 'serial_index' => 1],
+            (object) ['id' => 42, 'post_id' => self::CARE, 'serial_index' => 2, 'variation_title' => 'Yearly', 'item_price' => 79000.0, 'payment_type' => 'subscription', 'other_info' => ['repeat_interval' => 'yearly']],
+            (object) ['id' => 41, 'post_id' => self::CARE, 'serial_index' => 1, 'variation_title' => 'Monthly', 'item_price' => 7900.0, 'payment_type' => 'subscription', 'other_info' => ['repeat_interval' => 'monthly']],
+            (object) ['id' => 43, 'post_id' => self::CARE_PLUS, 'serial_index' => 1, 'variation_title' => 'Monthly', 'item_price' => 19900.0, 'payment_type' => 'subscription', 'other_info' => ['repeat_interval' => 'monthly']],
+            (object) ['id' => 51, 'post_id' => self::SETUP, 'serial_index' => 1, 'variation_title' => 'Once', 'item_price' => 29900.0, 'payment_type' => 'onetime', 'other_info' => []],
         ];
         $this->store = new FluentCartStore();
     }
@@ -111,6 +123,35 @@ class FluentCartStoreFeedsTest extends TestCase
                 'checkout_url' => 'https://storefront.example/?fluent-cart=instant_checkout&item_id=32&quantity=1',
             ],
         ], $this->store->get_email_pack_products());
+    }
+
+    public function test_care_packages_are_never_plans_and_come_in_menu_order_with_every_variation(): void
+    {
+        $this->assertNull($this->store->get_plan_feed(self::CARE));
+        $this->assertNull($this->store->get_email_pack_feed(self::CARE));
+        $this->assertSame('30', $this->store->get_feed_of_type(self::CARE, 'care')['care_minutes']);
+        $this->assertNull($this->store->get_feed_of_type(self::CARE, 'service'));
+
+        $packages = $this->store->get_typed_products('care');
+        $this->assertSame([self::CARE, self::CARE_PLUS], array_column($packages, 'product_id'));
+        $this->assertSame([
+            ['id' => 41, 'title' => 'Monthly', 'price' => 7900, 'interval' => 'monthly', 'checkout_url' => 'https://storefront.example/?fluent-cart=instant_checkout&item_id=41&quantity=1'],
+            ['id' => 42, 'title' => 'Yearly', 'price' => 79000, 'interval' => 'yearly', 'checkout_url' => 'https://storefront.example/?fluent-cart=instant_checkout&item_id=42&quantity=1'],
+        ], $packages[0]['variations']);
+        $this->assertSame('', $this->store->get_typed_products('service')[0]['variations'][0]['interval']);
+    }
+
+    public function test_packs_care_and_services_are_bought_for_a_website_and_plans_are_not(): void
+    {
+        $this->assertTrue($this->store->is_website_addon(self::PACK));
+        $this->assertTrue($this->store->is_website_addon(self::CARE));
+        $this->assertTrue($this->store->is_website_addon(self::SETUP));
+        $this->assertFalse($this->store->is_website_addon(self::PLAN));
+        $this->assertFalse($this->store->is_website_addon(self::LEGACY_PLAN));
+        $this->assertFalse($this->store->is_website_addon(305));
+
+        ProductMeta::$rows = array_values(array_filter(ProductMeta::$rows, fn ($row) => in_array($row->meta_value['product_type'] ?? '', ['care', 'service'], true)));
+        $this->assertFalse($this->store->has_plan_feed());
     }
 
     public function test_cart_checkout_values_are_set_cleared_and_saved_only_on_change(): void
