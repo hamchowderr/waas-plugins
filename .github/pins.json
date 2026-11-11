@@ -7,7 +7,10 @@
       "asset": "anypress.zip",
       "download": "scripts/playground/preview-zips/anypress.zip",
       "places": [
-        { "file": "scripts/playground/preview-zips/README.md", "match": "`anypress\\.zip`: AnyPress theme (?<version>[0-9][^ ]*) " }
+        {
+          "file": "scripts/playground/preview-zips/README.md",
+          "match": "`anypress\\.zip`: AnyPress theme (?<version>[0-9][^ ]*) "
+        }
       ]
     },
     {
@@ -16,7 +19,10 @@
       "asset": "anypress-blocks.zip",
       "download": "scripts/playground/preview-zips/anypress-blocks.zip",
       "places": [
-        { "file": "scripts/playground/preview-zips/README.md", "match": "`anypress-blocks\\.zip`: AnyPress Blocks (?<version>[0-9][^ ,]*)" }
+        {
+          "file": "scripts/playground/preview-zips/README.md",
+          "match": "`anypress-blocks\\.zip`: AnyPress Blocks (?<version>[0-9][^ ,]*)"
+        }
       ]
     },
     {
@@ -24,7 +30,169 @@
       "source": "github:hamchowderr/anypress-theme",
       "asset": "anypress.zip",
       "places": [
-        { "file": "scripts/test-storefront/remote/setup.sh", "match": "THEME_VERSION=(?<version>[0-9][^\\s]*)\\n\\s*THEME_SHA256=(?<sha>[0-9a-f]{64})" }
+        {
+          "file": "scripts/test-storefront/remote/setup.sh",
+          "match": "THEME_VERSION=(?<version>[0-9][^\\s]*)\\n\\s*THEME_SHA256=(?<sha>[0-9a-f]{64})"
+        }
+      ]
+    },
+    {
+      "name": "WordPress (Playground tests)",
+      "source": "wordpress-core:wordpress",
+      "line": "7.1",
+      "places": [
+        {
+          "file": "scripts/playground/circle.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/courses.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/crm-switch.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/domains.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/editor-assistant.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/email-preview.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/export.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/forms.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/highlevel.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/languages.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/lms.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/moving.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/phone.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/products.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/shop-preview.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/shop-switch.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/smoke.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/support.mjs",
+          "match": "PLAYGROUND_WP \\|\\| '(?<version>[0-9.]+)'"
+        }
+      ]
+    },
+    {
+      "name": "FluentCart (Playground tests)",
+      "source": "wordpress-plugin:fluent-cart",
+      "places": [
+        {
+          "file": "scripts/playground/languages.mjs",
+          "match": "fluent\\-cart\\.(?<version>[0-9][0-9.]*[0-9])\\.zip"
+        },
+        {
+          "file": "scripts/playground/products.mjs",
+          "match": "fluent\\-cart\\.(?<version>[0-9][0-9.]*[0-9])\\.zip"
+        }
+      ]
+    },
+    {
+      "name": "FluentCommunity (Playground tests)",
+      "source": "wordpress-plugin:fluent-community",
+      "places": [
+        {
+          "file": "scripts/playground/languages.mjs",
+          "match": "fluent\\-community\\.(?<version>[0-9][0-9.]*[0-9])\\.zip"
+        },
+        {
+          "file": "scripts/playground/circle.mjs",
+          "match": "FLUENT_COMMUNITY \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/courses.mjs",
+          "match": "FLUENT_COMMUNITY \\|\\| '(?<version>[0-9.]+)'"
+        },
+        {
+          "file": "scripts/playground/lms.mjs",
+          "match": "FLUENT_COMMUNITY \\|\\| '(?<version>[0-9.]+)'"
+        }
+      ]
+    },
+    {
+      "name": "Polylang (Playground tests)",
+      "source": "wordpress-plugin:polylang",
+      "places": [
+        {
+          "file": "scripts/playground/languages.mjs",
+          "match": "polylang\\.(?<version>[0-9][0-9.]*[0-9])\\.zip"
+        }
+      ]
+    },
+    {
+      "name": "MCP Adapter (Playground tests)",
+      "source": "wordpress-plugin:mcp-adapter",
+      "places": [
+        {
+          "file": "scripts/playground/smoke.mjs",
+          "match": "mcp\\-adapter\\.(?<version>[0-9][0-9.]*[0-9])\\.zip"
+        },
+        {
+          "file": "scripts/playground/theme-blocks-preview.json",
+          "match": "mcp\\-adapter\\.(?<version>[0-9][0-9.]*[0-9])\\.zip"
+        }
+      ]
+    },
+    {
+      "name": "Fluent Support (Playground tests)",
+      "source": "wordpress-plugin:fluent-support",
+      "places": [
+        {
+          "file": "scripts/playground/support.mjs",
+          "match": "FLUENT_SUPPORT \\|\\| '(?<version>[0-9.]+)'"
+        }
+      ]
+    },
+    {
+      "name": "WP Fusion Lite (Playground tests)",
+      "source": "wordpress-plugin:wp-fusion-lite",
+      "places": [
+        {
+          "file": "scripts/playground/highlevel.mjs",
+          "match": "WPF_VERSION \\|\\| '(?<version>[0-9.]+)'"
+        }
       ]
     }
   ]

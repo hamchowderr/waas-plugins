@@ -26,7 +26,7 @@ import { runCLI } from '@wp-playground/cli';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const CLIENT = resolve(ROOT, 'packages/anypress-client');
-const WP = process.env.PLAYGROUND_WP || '7.1.3';
+const WP = process.env.PLAYGROUND_WP || '7.1.4';
 const PHP = process.env.PLAYGROUND_PHP || '8.3';
 const PORT = Number(process.env.PLAYGROUND_PORT || 9400);
 const SERVE = process.argv.includes('--serve');

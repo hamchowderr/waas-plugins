@@ -22,7 +22,7 @@ const PORT = Number(process.env.PLAYGROUND_PORT || 9420);
 
 const cli = await runCLI({
     command: 'server',
-    wp: `https://wordpress.org/wordpress-${process.env.PLAYGROUND_WP || '7.1.3'}.zip`,
+    wp: `https://wordpress.org/wordpress-${process.env.PLAYGROUND_WP || '7.1.4'}.zip`,
     php: '8.3',
     port: PORT,
     blueprint: {

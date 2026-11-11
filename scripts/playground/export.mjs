@@ -26,7 +26,7 @@ import { runCLI } from '@wp-playground/cli';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const PLUGIN = resolve(ROOT, 'packages/anypress-export');
-const WP = process.env.PLAYGROUND_WP || '7.1.3';
+const WP = process.env.PLAYGROUND_WP || '7.1.4';
 const PHP = process.env.PLAYGROUND_PHP || '8.3';
 const PORT = Number(process.env.PLAYGROUND_PORT || 9401);
 const BIG_FILE_BYTES = 3 * 1024 * 1024;

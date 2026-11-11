@@ -20,7 +20,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '../..');
 const CLIENT = resolve(ROOT, 'packages/anypress-client');
 const THEME = resolve(HERE, 'preview-zips/anypress.zip');
-const WP = process.env.PLAYGROUND_WP || '7.1.3';
+const WP = process.env.PLAYGROUND_WP || '7.1.4';
 const WPF = process.env.WPF_VERSION || '3.48.0';
 const SITE_KEY = randomBytes(24).toString('hex');
 

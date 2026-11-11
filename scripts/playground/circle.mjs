@@ -28,12 +28,12 @@ const CLIENT = resolve(ROOT, 'packages/anypress-client');
 const API = process.env.ANYPRESS_API_DIR || resolve(ROOT, '../waas-provisioning-api');
 const ROLES = resolve(API, 'templates/anypress-store/roles.json');
 const THEME = resolve(HERE, 'preview-zips/anypress.zip');
-const WP = process.env.PLAYGROUND_WP || '7.1.3';
+const WP = process.env.PLAYGROUND_WP || '7.1.4';
 const PHP = process.env.PLAYGROUND_PHP || '8.3';
 const PORT = Number(process.env.PLAYGROUND_PORT || 9405);
 const SERVE = process.argv.includes('--serve');
 const SITE_TYPE = 'community';
-const FLUENT_COMMUNITY = process.env.FLUENT_COMMUNITY || '2.12.0';
+const FLUENT_COMMUNITY = process.env.FLUENT_COMMUNITY || '2.13.0';
 const TOKEN = 'circle-test-token';
 const USER_TOKEN = randomBytes(24).toString('hex');
 

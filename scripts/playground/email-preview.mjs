@@ -13,7 +13,7 @@ const REMOTE = resolve(HERE, '../test-storefront/remote');
 
 const cli = await runCLI({
     command: 'server',
-    wp: `https://wordpress.org/wordpress-${process.env.PLAYGROUND_WP || '7.1.3'}.zip`,
+    wp: `https://wordpress.org/wordpress-${process.env.PLAYGROUND_WP || '7.1.4'}.zip`,
     php: '8.3',
     port: Number(process.env.PLAYGROUND_PORT || 9421),
     blueprint: {
