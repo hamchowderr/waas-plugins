@@ -87,14 +87,15 @@ class PaymentConfirmation
     {
         global $wpdb;
 
-        return (string) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, %d)', self::lockName($transactionHash), self::LOCK_WAIT)) === '1';
+        // A MySQL named lock: WordPress has no function for one, and a lock must never come from a cache. No table is touched.
+        return (string) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, %d)', self::lockName($transactionHash), self::LOCK_WAIT)) === '1'; // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
     }
 
     public static function unlock(string $transactionHash): void
     {
         global $wpdb;
 
-        $wpdb->query($wpdb->prepare('SELECT RELEASE_LOCK(%s)', self::lockName($transactionHash)));
+        $wpdb->query($wpdb->prepare('SELECT RELEASE_LOCK(%s)', self::lockName($transactionHash))); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- releases the lock above.
     }
 
     private static function lockName(string $transactionHash): string
