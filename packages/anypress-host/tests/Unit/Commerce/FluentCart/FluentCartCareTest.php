@@ -7,6 +7,7 @@ use Mockery;
 use Tests\Unit\TestCase;
 use AnyPressHost\Commerce\FluentCart\FluentCartAdapter;
 use AnyPressHost\Commerce\FluentCart\FluentCartCare;
+use AnyPressHost\Commerce\FluentCart\FluentCartCareCall;
 use AnyPressHost\Commerce\FluentCart\FluentCartCareDesk;
 use AnyPressHost\Commerce\FluentCart\FluentCartEmailPacks;
 use AnyPressHost\Commerce\FluentCart\FluentCartStore;
@@ -255,7 +256,7 @@ class FluentCartCareTest extends TestCase
 
     public function test_each_ticket_shows_the_customers_care(): void
     {
-        $desk = new FluentCartCareDesk(new FluentCartAdapter($this->store), $this->store, $this->care);
+        $desk = new FluentCartCareDesk(new FluentCartAdapter($this->store), $this->store, $this->care, Mockery::mock(FluentCartCareCall::class));
 
         $widgets = $desk->ticket_widget([], (object) ['user_id' => self::OWNER_ID, 'email' => 'owner@apexresearch.example']);
 
@@ -284,7 +285,7 @@ class FluentCartCareTest extends TestCase
     public function test_the_care_page_lists_websites_with_care_or_extra_time(): void
     {
         $this->meta[901][FluentCartCare::EXTRA_META] = 60;
-        $desk = new FluentCartCareDesk(new FluentCartAdapter($this->store), $this->store, $this->care);
+        $desk = new FluentCartCareDesk(new FluentCartAdapter($this->store), $this->store, $this->care, Mockery::mock(FluentCartCareCall::class));
 
         $this->assertSame([900, 901], $desk->websites());
     }
