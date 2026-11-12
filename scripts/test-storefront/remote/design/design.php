@@ -498,7 +498,7 @@ function ap_faq( $data, $items = null, $section = '' ) {
 	$items = $items ?? $data['faq'];
 	$qs    = implode( "\n\n", array_map( static fn( $f ) => ap_details( $f[0], $f[1] ), $items ) );
 	return ap_band(
-		ap_head( 'Good to know', 'Questions people ask' ) . "\n\n" . ap_group( $qs, array( 'className' => 'anypress-faq', 'layout' => array( 'type' => 'constrained', 'contentSize' => '46rem' ) ) ),
+		ap_head( 'Questions', 'Frequently asked questions' ) . "\n\n" . ap_group( $qs, array( 'className' => 'anypress-faq', 'layout' => array( 'type' => 'constrained', 'contentSize' => '46rem' ) ) ),
 		$section,
 		'questions'
 	);
@@ -765,7 +765,7 @@ foreach ( $ap_data['types'] as $ap_type ) {
 			'what'
 		) . "\n\n"
 		. ap_band( ap_head( 'the full list', 'Everything you can do with it.', 'All of it is switched on when your site arrives. Nothing extra to buy.' ) . "\n\n" . $ap_can( $ap_type ), 'tint', 'everything' ) . "\n\n"
-		. ap_band( ap_head( 'Pick your size', 'This size and the others', 'Every size has the same features. You can move to another size later: email us and it changes from your next renewal.', 'sizes' ) . "\n\n" . ap_sizes_table( $ap_data, $ap_plans, $ap_type['id'], $ap_size['id'] ) ) . "\n\n"
+		. ap_band( ap_head( 'Pick your size', 'Compare the sizes', 'Every size has the same features. You can move to another size later: email us and it changes from your next renewal.', 'sizes' ) . "\n\n" . ap_sizes_table( $ap_data, $ap_plans, $ap_type['id'], $ap_size['id'] ) ) . "\n\n"
 		. ap_included( $ap_data ) . "\n\n"
 		. ap_faq( $ap_data );
 		wp_update_post(
