@@ -37,11 +37,17 @@ $ap_brand = array_replace(
 			array( 'card', 'Start free', 'Checkout takes a minute. The first 7 days are free: cancel before day 8 and you pay nothing. After that, your first payment is covered by our 30-day money-back guarantee.' ),
 			array( 'open', 'Sign in. It’s all set up', 'A few minutes later your site is ready, with its pages and tools already switched on. We email you, and your account opens it with one click.' ),
 		),
+		// A plan's page, right under Buy now: what happens after buying.
+		'afterBuy'     => array(
+			array( 'card', 'Start free', 'Checkout takes a minute. The first 7 days are free: cancel before day 8 and you pay nothing.' ),
+			array( 'tools', 'We set it all up', 'A few minutes later your site is ready: its pages, tools, secure connection and nightly backups already switched on.' ),
+			array( 'paint', 'Sign in and make it yours', 'We email you, and your account opens your site with one click. You add your words and photos.' ),
+		),
 		'plansLead'    => 'Pick what you need your website to do, then a size. Everything comes included: no add-ons to buy and no cut of your sales. Pay monthly, or yearly and get two months free. Every plan starts with 7 days free (one free trial per person), and the first payment has a 30-day money-back guarantee.',
 		'trust'        => array( array( '<strong>7 days free to start</strong>', '<strong>30-day money-back guarantee</strong>' ), array( '<strong>Cancel any time</strong> from your account' ), array( '<strong>Set up for you</strong>, ready minutes after you pay' ) ),
 		'promises'     => array( 'Everything included, nothing else to buy', 'Pay yearly and get two months free', '30-day money-back guarantee', 'Cancel any time from your account', 'A free anypress.site address, or your own domain', 'Secure card checkout' ),
 		'examples'     => true,
-		'menu'         => array( array( 'Plans', 'plans' ), array( 'Compare sizes', 'sizes' ), array( 'Help', '/docs/' ), array( 'Sell websites', 'https://anypress.io/sell' ), array( 'Account', 'account' ) ),
+		'menu'         => array( array( 'Plans', 'plans' ), array( 'Compare sizes', 'sizes' ), array( 'Help', '/docs/' ), array( 'Sell websites', 'https://anypress.io/sell' ) ),
 		'footerHelp'   => array( array( 'Help pages', '/docs/' ), array( 'Refund policy', '/refund-policy/' ), array( 'Terms of service', '/terms/' ), array( 'Privacy policy', '/privacy/' ) ),
 		'footerMore'   => array( 'AnyPress', array( array( 'anypress.io', 'https://anypress.io' ), array( 'Sell websites', 'https://anypress.io/sell' ), array( 'Affiliates', '/affiliates/' ) ) ),
 		'copyright'    => '© AnyPress, by Otaku Solutions.',
@@ -399,7 +405,7 @@ function ap_columns( $cols, $attrs = array() ) {
 		}
 		$out[] = '<!-- wp:column' . ap_attrs( $ca ) . " -->\n<div class=\"wp-block-column" . ( ! empty( $c[2] ) ? ' ' . $c[2] : '' ) . "\"$style>" . $c[0] . "</div>\n<!-- /wp:column -->";
 	}
-	$classes = 'wp-block-columns' . ( isset( $attrs['verticalAlignment'] ) ? ' are-vertically-aligned-' . $attrs['verticalAlignment'] : '' ) . ( isset( $attrs['align'] ) ? ' align' . $attrs['align'] : '' );
+	$classes = 'wp-block-columns' . ( isset( $attrs['className'] ) ? ' ' . $attrs['className'] : '' ) . ( isset( $attrs['verticalAlignment'] ) ? ' are-vertically-aligned-' . $attrs['verticalAlignment'] : '' ) . ( isset( $attrs['align'] ) ? ' align' . $attrs['align'] : '' );
 	return '<!-- wp:columns' . ap_attrs( $attrs ) . " -->\n<div class=\"$classes\">" . implode( "\n\n", $out ) . "</div>\n<!-- /wp:columns -->";
 }
 /** A grid of items that wraps by itself, at least $min wide each. */
@@ -549,14 +555,19 @@ foreach ( $ap_data['types'] as $ap_type ) {
 		'anypress-type-card anypress-centered'
 	);
 }
-$ap_steps = array();
-foreach ( $ap_brand['steps'] as $ap_i => list( $ap_d, $ap_t, $ap_b ) ) {
-	$ap_n = $ap_i + 1;
-	$ap_steps[] = ap_group(
-		ap_img( ap_asset( "$ap_d.svg" ), '', '120px' ) . "\n\n" . ap_p( ap_e( "Step $ap_n" ), array( 'className' => 'is-style-hand' ) ) . "\n\n" . ap_h( ap_e( $ap_t ), 3, array( 'fontSize' => 'medium' ) ) . "\n\n" . ap_p( ap_e( $ap_b ), array( 'textColor' => 'secondary' ) ),
-		array( 'className' => 'anypress-centered', 'style' => array( 'spacing' => array( 'blockGap' => 'var:preset|spacing|small' ) ), 'layout' => array( 'type' => 'flex', 'orientation' => 'vertical' ) )
-	);
+/** Numbered steps with drawings, for the home page's "How it works" and a plan page's "What happens next". */
+function ap_steps( $steps ) {
+	$out = array();
+	foreach ( $steps as $i => list( $drawing, $title, $body ) ) {
+		$out[] = ap_group(
+			ap_img( ap_asset( "$drawing.svg" ), '', '120px' ) . "\n\n" . ap_p( ap_e( 'Step ' . ( $i + 1 ) ), array( 'className' => 'is-style-hand' ) ) . "\n\n" . ap_h( ap_e( $title ), 3, array( 'fontSize' => 'medium' ) ) . "\n\n" . ap_p( ap_e( $body ), array( 'textColor' => 'secondary' ) ),
+			array( 'className' => 'anypress-centered', 'style' => array( 'spacing' => array( 'blockGap' => 'var:preset|spacing|small' ) ), 'layout' => array( 'type' => 'flex', 'orientation' => 'vertical' ) )
+		);
+	}
+	return $out;
 }
+$ap_steps     = ap_steps( $ap_brand['steps'] );
+$ap_after_buy = ap_steps( $ap_brand['afterBuy'] );
 $ap_home = ap_band(
 	ap_columns(
 		array(
@@ -720,6 +731,20 @@ ap_wrap_store_page( (int) $ap_settings->get( 'customer_profile_page_id' ), 'Your
 ap_wrap_store_page( (int) $ap_settings->get( 'receipt_page_id' ), 'Thank you', 'Your website is being set up. We’ll email you as soon as it’s ready, usually in a few minutes.' );
 
 // ---------------------------------------------------------------------------------------------------------- plan pages
+// The full list, as on the website's page for each kind of site: its groups, then what is looked after on every site.
+$ap_can = static function ( $type ) use ( $ap_data ) {
+	$rows = array();
+	foreach ( array_merge( $type['can'], array( $ap_data['lookedAfter'] ) ) as list( $title, $items, $drawing ) ) {
+		$rows[] = ap_columns(
+			array(
+				array( ap_img( ap_asset( "$drawing.svg" ), '', '56px' ) . "\n\n" . ap_h( ap_e( $title ), 3, array( 'fontSize' => 'medium' ) ), '30%', 'anypress-can__title' ),
+				array( ap_list( array_map( 'ap_e', $items ) ), '', 'anypress-can__items' ),
+			),
+			array( 'className' => 'anypress-can__row' )
+		);
+	}
+	return ap_card( implode( "\n\n", $rows ), 'card-line', 'large', 'anypress-can' );
+};
 // Each plan's words: what the kind of site does, this size against the others, what every plan includes, questions.
 foreach ( $ap_data['types'] as $ap_type ) {
 	foreach ( $ap_data['sizes'] as $ap_size ) {
@@ -728,18 +753,21 @@ foreach ( $ap_data['types'] as $ap_type ) {
 			continue;
 		}
 		$ap_features = array();
-		foreach ( $ap_type['features'] as list( $ap_t, $ap_b ) ) {
-			$ap_features[] = ap_card( ap_h( ap_e( $ap_t ), 3, array( 'fontSize' => 'medium' ) ) . "\n\n" . ap_p( ap_e( $ap_b ), array( 'textColor' => 'secondary' ) ), 'card-line', 'medium', 'anypress-centered' );
+		foreach ( $ap_type['features'] as list( $ap_t, $ap_b, $ap_drawing ) ) {
+			$ap_features[] = ap_card( ap_img( ap_asset( "$ap_drawing.svg" ), '', '72px' ) . "\n\n" . ap_h( ap_e( $ap_t ), 3, array( 'fontSize' => 'medium' ) ) . "\n\n" . ap_p( ap_e( $ap_b ), array( 'textColor' => 'secondary' ) ), 'card-line', 'medium', 'anypress-centered' );
 		}
-		$ap_content = ap_band(
+		// Right under Buy now: what happens after buying.
+		$ap_content = ap_band( ap_head( 'What happens next', 'Buy now, and we set it all up.' ) . "\n\n" . ap_grid( $ap_after_buy, '16rem', 'large', 3, 'anypress-steps' ), 'brand-soft', 'next' ) . "\n\n"
+		. ap_band(
 			ap_head( 'What you get', $ap_type['headline'], $ap_type['pitch'] ) . "\n\n" . ap_grid( $ap_features, '13rem', 'medium', 4, 'anypress-features' ) . "\n\n"
 			. ap_p( 'Made for ' . ap_e( implode( ', ', array_map( 'lcfirst', array_slice( $ap_type['idealFor'], 0, -1 ) ) ) . ' and ' . lcfirst( end( $ap_type['idealFor'] ) ) ) . '.' . ( $ap_brand['examples'] ? ' See one working: <a href="' . esc_url( $ap_type['example']['url'] ) . '">' . ap_e( $ap_type['example']['name'] ) . '</a>.' : '' ), array( 'align' => 'center', 'textColor' => 'secondary' ) ),
 			'',
 			'what'
 		) . "\n\n"
-		. ap_band( ap_head( 'Pick your size', 'Compare the sizes', 'Every size has the same features. You can move to another size later: email us and it changes from your next renewal.', 'sizes' ) . "\n\n" . ap_sizes_table( $ap_data, $ap_plans, $ap_type['id'], $ap_size['id'] ), 'tint' ) . "\n\n"
-		. ap_included( $ap_data, '' ) . "\n\n"
-		. ap_faq( $ap_data, null, 'tint' );
+		. ap_band( ap_head( 'the full list', 'Everything you can do with it.', 'All of it is switched on when your site arrives. Nothing extra to buy.' ) . "\n\n" . $ap_can( $ap_type ), 'tint', 'everything' ) . "\n\n"
+		. ap_band( ap_head( 'Pick your size', 'Compare the sizes', 'Every size has the same features. You can move to another size later: email us and it changes from your next renewal.', 'sizes' ) . "\n\n" . ap_sizes_table( $ap_data, $ap_plans, $ap_type['id'], $ap_size['id'] ) ) . "\n\n"
+		. ap_included( $ap_data ) . "\n\n"
+		. ap_faq( $ap_data );
 		wp_update_post(
 			array(
 				'ID'           => $ap_plan['id'],
@@ -842,7 +870,6 @@ $ap_header = ( $ap_announce ? $ap_announce . "\n\n" : '' ) . ap_group(
 		$ap_logo . "\n\n"
 		. ap_group(
 			'<!-- wp:navigation {"ref":' . (int) $ap_nav . ',"overlayMenu":"mobile","layout":{"type":"flex","justifyContent":"right"}} /-->' . "\n\n"
-			. ap_p( '<a href="' . esc_url( $ap_cart ) . '">Cart</a>', array( 'className' => 'anypress-cart-link' ) ) . "\n\n"
 			. ap_buttons( array( array( 'See the plans', $ap_plans_u ) ) ),
 			array( 'style' => array( 'spacing' => array( 'blockGap' => 'var:preset|spacing|medium' ) ), 'layout' => array( 'type' => 'flex', 'flexWrap' => 'nowrap', 'justifyContent' => 'right' ) )
 		),

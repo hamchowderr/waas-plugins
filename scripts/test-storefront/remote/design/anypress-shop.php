@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AnyPress shop
  * Description: The shop's block styles (sketch panels, tick lists, size table) and two small shortcodes for the plan pages (the size switcher and the way back to the plans), and the AnyPress logo and support address in AnyPress Host's emails. Installed by the shop's `design` step.
- * Version: 1.2.0
+ * Version: 1.3.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -105,7 +105,7 @@ add_shortcode(
 		if ( empty( $found['sizes'] ) ) {
 			return '';
 		}
-		$html = '<nav class="anypress-sizes" aria-label="' . esc_attr__( 'Sizes', 'anypress-shop' ) . '"><span class="anypress-sizes__label">' . esc_html__( 'Size', 'anypress-shop' ) . '</span><ul>';
+		$html = '<nav class="anypress-sizes" aria-label="' . esc_attr__( 'Sizes', 'anypress-shop' ) . '"><div class="anypress-sizes__label">' . esc_html__( 'Size', 'anypress-shop' ) . '</div><ul>';
 		foreach ( $found['sizes'] as $size ) {
 			$html .= '<li><a href="' . esc_url( $size['url'] ) . '"' . ( $size['current'] ? ' aria-current="page"' : '' ) . '><strong>' . esc_html( $size['label'] ) . '</strong><span>' . esc_html( $size['note'] ) . '</span></a></li>';
 		}
@@ -241,3 +241,22 @@ if ( empty( ( (array) get_option( 'anypress_shop_brand', array() ) )['whiteLabel
 	add_filter( 'anypress_email_support_address', static fn () => 'support@anypress.io' );
 	add_filter( 'anypress_email_accent', static fn () => 'linear-gradient(90deg,#ffc75a,#ff7a2a,#ee2f5e,#d21fa4)' );
 }
+
+/**
+ * AnyPress Host puts its care box ("Want us to look after it?") inside FluentCart's buy box. This shop's plan pages
+ * keep Buy now as the only action, so the box comes off them; care is offered after buying instead.
+ */
+add_action(
+	'wp',
+	static function () {
+		$hook = $GLOBALS['wp_filter']['fluent_cart/product/single/after_actions_block'] ?? null;
+		foreach ( $hook ? $hook->callbacks : array() as $priority => $callbacks ) {
+			foreach ( $callbacks as $callback ) {
+				$fn = $callback['function'];
+				if ( is_array( $fn ) && $fn[0] instanceof \AnyPressHost\Commerce\FluentCart\FluentCartCarePortal && 'render_product_box' === $fn[1] ) {
+					remove_action( 'fluent_cart/product/single/after_actions_block', $fn, $priority );
+				}
+			}
+		}
+	}
+);

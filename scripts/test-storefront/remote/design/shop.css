@@ -82,7 +82,7 @@ body{--fct-btn-bg-color:var(--wp--preset--color--main);--fct-btn-border-color:va
 .anypress-buy .fct-product-tab-nav-item{padding:.45em 1em;border-radius:999px;text-align:center;font-weight:700;cursor:pointer;color:var(--wp--preset--color--main)}
 .anypress-buy .fct-product-tab-nav-item.active{background:var(--wp--preset--color--main);color:var(--wp--preset--color--base)}
 .anypress-buy .fct-product-tab-content{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.anypress-buy .fct-product-payment-type{font-size:var(--wp--preset--font-size--large);font-weight:800;letter-spacing:-.02em;color:var(--wp--preset--color--main)}
+.anypress-buy .fct-product-payment-type{font-size:var(--wp--preset--font-size--large);font-weight:800;letter-spacing:-.02em;line-height:1.15;color:var(--wp--preset--color--main)}
 .anypress-buy .fct-product-buttons-wrap{display:flex}
 .anypress-buy a.fluent-cart-direct-checkout-button,.anypress-buy a.fluent-cart-direct-checkout-button:hover{display:flex;width:100%;max-height:none;padding:.9em 1.4em;border-radius:10px;background:var(--wp--preset--color--main);box-shadow:none;color:var(--wp--preset--color--base);font-weight:700;font-size:var(--wp--preset--font-size--base);line-height:1.2;border:1.5px solid var(--wp--preset--color--main);transition:transform .15s ease,box-shadow .15s ease}
 .anypress-buy a.fluent-cart-direct-checkout-button:hover{transform:translateY(-2px);box-shadow:0 4px 0 0 var(--wp--preset--color--amber,#ffb338)}
@@ -153,7 +153,7 @@ body .betterdocs-search-form-wrapper,body .betterdocs-searchbox-wrapper,body [cl
 .anypress-type-grid>.anypress-type-card{grid-row:span 6}
 .anypress-steps>.wp-block-group{grid-row:span 4;row-gap:var(--wp--preset--spacing--small)}
 .anypress-included>.wp-block-group{grid-row:span 3;row-gap:var(--wp--preset--spacing--small)}
-.anypress-features>.wp-block-group{grid-row:span 2}
+.anypress-features>.wp-block-group{grid-row:span 3}
 .anypress-size-grid>.wp-block-group{grid-row:span 5}
 .anypress-steps>*>.wp-block-image,.anypress-included>*>.wp-block-image,.anypress-type-grid>*>.wp-block-image{align-self:end}
 .anypress-type-grid>.anypress-type-card,.anypress-steps>.wp-block-group,.anypress-included>.wp-block-group,.anypress-features>.wp-block-group,.anypress-size-grid>.wp-block-group{align-items:start}
@@ -187,6 +187,9 @@ body .anypress-docs .betterdocs-category-grid-inner-wrapper>.betterdocs-single-c
 /* Buy now and Add to cart side by side at the same height; Add to cart is the quieter one. */
 .anypress-buy .fct-product-buttons-wrap{display:flex;gap:.6rem;align-items:stretch}
 .anypress-buy .fct-product-buttons-wrap>*{flex:1 1 0}
+/* Anything else a plugin adds to the buttons row gets a line of its own, so it can't stretch Buy now. */
+.anypress-buy .fct-product-buttons-wrap{flex-wrap:wrap}
+.anypress-buy .fct-product-buttons-wrap>:not(a):not(button){flex:1 0 100%}
 .anypress-buy .fct-product-buttons-wrap a,.anypress-buy .fct-product-buttons-wrap button{text-transform:none}
 .anypress-buy .fct-product-buttons-wrap .fluent-cart-add-to-cart-button{flex:0 0 auto;display:flex;align-items:center;justify-content:center;white-space:nowrap;padding:.9em 1.4em;border-radius:10px;border:1.5px solid var(--wp--preset--color--main);background:var(--wp--preset--color--base);color:var(--wp--preset--color--main);font-weight:700;font-size:var(--wp--preset--font-size--base);line-height:1.2;max-height:none;box-shadow:none}
 
@@ -205,3 +208,26 @@ body .anypress-docs .betterdocs-faq-main-content{background:transparent!importan
 /* Account, signed out: room between the note and its button. */
 .anypress-sign-in__new p:last-child{margin-top:1.25rem}
 .anypress-sign-in__new .wp-element-button{display:inline-block}
+/* The plan page: the picture stays in view beside the long buy column; the buy box's own parts sit closer together. */
+@media (min-width:782px){.anypress-gallery{position:sticky;top:8.5rem}}
+.anypress-buy .fct_buy_section>*,.anypress-buy .fct-product-tab-nav,.anypress-buy .fct-product-payment-type{margin:0}
+.anypress-buy .fct-product-item-price{margin:.25rem 0 0}
+.anypress-buy .fct-product-payment-type{font-size:clamp(1.4rem,2vw,1.75rem)}
+.anypress-sizes>p:empty{display:none}
+@media (max-width:1024px){.anypress-sizes a{padding:.6em .6em}.anypress-sizes a span{font-size:.72rem;white-space:nowrap}}
+/* Up to tablet width the plan stacks: the picture, then the buy box at full width. */
+@media (max-width:1023px){.wp-block-columns:has(>.anypress-buy){flex-wrap:wrap!important}.wp-block-columns:has(>.anypress-buy)>.wp-block-column{flex-basis:100%!important}.anypress-gallery{position:static}}
+/* Plan pages' full list: one row per group, its drawing and name on the left, its items in two columns. */
+.anypress-can{max-width:64rem;margin-inline:auto!important;background:var(--wp--preset--color--base)}
+.anypress-can .anypress-can__row{margin:0;gap:var(--wp--preset--spacing--large)}
+.anypress-can .anypress-can__row+.anypress-can__row{border-top:1px solid var(--wp--preset--color--border-light);padding-top:var(--wp--preset--spacing--large);margin-top:var(--wp--preset--spacing--large)}
+.anypress-can.wp-block-group{gap:0}
+.anypress-can__title{display:flex;align-items:center;align-self:flex-start!important;gap:var(--wp--preset--spacing--small)}
+.anypress-can__title>*{margin:0!important}
+.anypress-can__title .wp-block-image{flex:0 0 56px}
+.anypress-can__items>.wp-block-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem var(--wp--preset--spacing--large);margin:0}
+.anypress-can__items li{margin:0!important}
+@media (max-width:781px){.anypress-can__items>.wp-block-list{grid-template-columns:minmax(0,1fr)}.anypress-can .anypress-can__row{gap:var(--wp--preset--spacing--small)}}
+.anypress-features>*>.wp-block-image{align-self:end}
+/* Tablets: even rows (two by two, three steps across) and the full list's group name above its items. */
+@media (min-width:600px) and (max-width:1023px){.anypress-features{grid-template-columns:repeat(2,minmax(0,1fr))!important}.anypress-steps{grid-template-columns:repeat(3,minmax(0,1fr))!important}.anypress-can .anypress-can__row{flex-wrap:wrap!important;gap:var(--wp--preset--spacing--small)}.anypress-can .anypress-can__row>.wp-block-column{flex-basis:100%!important}}
