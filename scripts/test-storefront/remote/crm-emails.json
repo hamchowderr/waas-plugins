@@ -121,7 +121,7 @@
    {
     "day": 14,
     "subject": "Start your shop for $29 a month",
-    "preheader": "30-day money-back guarantee.",
+    "preheader": "7 days free to start.",
     "body": "<p>Hi {{contact.first_name|there}},</p><p>The Store plan is $29 a month (or $290 a year) and includes everything above. The first 7 days are free: add a card when you start, and cancel before day 8 to pay nothing. After that, your first payment is covered by our 30-day money-back guarantee.</p><p>Already selling somewhere else? We can help you move your shop over.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
@@ -152,7 +152,7 @@
    {
     "day": 14,
     "subject": "Start your store for $29 a month",
-    "preheader": "30-day money-back guarantee.",
+    "preheader": "7 days free to start.",
     "body": "<p>Hi {{contact.first_name|there}},</p><p>The Store plan is $29 a month (or $290 a year). The first 7 days are free: add a card when you start, and cancel before day 8 to pay nothing. After that, your first payment is covered by our 30-day money-back guarantee.</p><p>Questions about your products or payment setup? Reply and ask before you buy.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
@@ -183,7 +183,7 @@
    {
     "day": 14,
     "subject": "Start for $49 a month",
-    "preheader": "30-day money-back guarantee.",
+    "preheader": "7 days free to start.",
     "body": "<p>Hi {{contact.first_name|there}},</p><p>The Community & courses plan is $49 a month (or $490 a year). The first 7 days are free: add a card when you start, and cancel before day 8 to pay nothing. After that, your first payment is covered by our 30-day money-back guarantee.</p><p>Moving from another platform? Reply and we'll tell you how.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
@@ -214,7 +214,7 @@
    {
     "day": 14,
     "subject": "Start for $79 a month",
-    "preheader": "30-day money-back guarantee.",
+    "preheader": "7 days free to start.",
     "body": "<p>Hi {{contact.first_name|there}},</p><p>The Everything plan is $79 a month (or $790 a year) and includes membership, events, bookings and your newsletter. The first 7 days are free: add a card when you start, and cancel before day 8 to pay nothing. After that, your first payment is covered by our 30-day money-back guarantee.</p><p>Want to talk about websites for your members too? Just reply.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
@@ -245,7 +245,7 @@
    {
     "day": 14,
     "subject": "Start for $79 a month",
-    "preheader": "30-day money-back guarantee.",
+    "preheader": "7 days free to start.",
     "body": "<p>Hi {{contact.first_name|there}},</p><p>The Everything plan is $79 a month (or $790 a year). Smaller churches often start with Community & courses at $49. The first 7 days are free: add a card when you start, and cancel before day 8 to pay nothing. After that, your first payment is covered by our 30-day money-back guarantee.</p><p>Part of a network of churches? Reply, and we'll show you how to run sites for all of them.</p><p><a href=\"https://anypress.io/pricing\"><strong>Get started</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
@@ -307,7 +307,7 @@
    {
     "day": 14,
     "subject": "Apply to become a seller",
-    "preheader": "We review every application by hand.",
+    "preheader": "Apply, then a short call.",
     "body": "<p>Hi {{contact.first_name|there}},</p><p>It takes two minutes to apply. Then you book a short call with us, where we get you set up and agree how billing works. Once we approve you, you get a dashboard, your storefront and everything you need to make your first sale.</p><p>Questions first? Just reply.</p><p><a href=\"https://anypress.io/sell\"><strong>Apply to sell</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
