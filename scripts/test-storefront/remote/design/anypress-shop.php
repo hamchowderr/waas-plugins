@@ -278,6 +278,13 @@ add_shortcode(
 		ob_start();
 		$portal->render_product_box( array( 'product' => $post ) );
 		$box = (string) ob_get_clean();
-		return '' === $box ? '' : '<div class="anypress-care-band">' . $box . '</div>';
+		if ( '' === $box ) {
+			return '';
+		}
+		// One button on a plan's page: Buy now. Care starts with a call, booked from the website's Care section in the
+		// account after buying, so Host's "Book a call" and its note give way to a line that says so.
+		$later = '<p class="anypress-care-later">' . esc_html__( 'Add care any time after you buy: open your website in your account and choose Care. We start with a short call to pick what fits.', 'anypress-shop' ) . '</p>';
+		$box   = preg_replace( '#<p class="anypress-care-call">.*?</p><p class="anypress-care-note">.*?</p>#s', $later, $box, 1 );
+		return '<div class="anypress-care-band">' . $box . '</div>';
 	}
 );
