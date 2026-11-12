@@ -3,6 +3,8 @@
 //
 //   node storefront-preview.mjs                # serve at http://127.0.0.1:9430 (admin / password)
 //   node storefront-preview.mjs --shots <dir>  # screenshot the pages and the seller's wp-admin, exit
+//   SETUP='{"siteTypes":["online-store"],"audiences":["shops"]}' node storefront-preview.mjs ...  # as a seller's
+//     application left it: the storefront's first visit narrows the shop to those site types and customers
 //
 // API=<waas-provisioning-api checkout> (default ../../../waas-provisioning-api), HOST_ZIP=<anypress-host.zip>.
 
@@ -30,8 +32,9 @@ const pins = build.match(/^PLUGINS="\n([\s\S]*?)\n"/m)[1].trim().split('\n').map
 const STAGE = mkdtempSync(resolve(tmpdir(), 'storefront-shop-'));
 const DESIGN = resolve(HERE, '../test-storefront/remote/design');
 cpSync(DESIGN, resolve(STAGE, 'design'), { recursive: true });
-cpSync(resolve(TEMPLATES, 'seller-storefront/brand.json'), resolve(STAGE, 'design/brand.json'));
+cpSync(resolve(TEMPLATES, 'seller-storefront/brand.json'), resolve(STAGE, 'brand.json'));
 cpSync(resolve(TEMPLATES, 'seller-storefront/shop.php'), resolve(STAGE, 'shop.php'));
+cpSync(resolve(TEMPLATES, 'seller-storefront/pages.php'), resolve(STAGE, 'pages.php'));
 cpSync(resolve(TEMPLATES, 'anypress-store/mu-plugins/anypress-patterns.php'), resolve(STAGE, 'anypress-patterns.php'));
 cpSync(resolve(TEMPLATES, 'anypress-store/roles.json'), resolve(STAGE, 'roles.json'));
 cpSync(resolve(TEMPLATES, 'seller-storefront/audiences.json'), resolve(STAGE, 'audiences.json'));
@@ -100,6 +103,36 @@ console.log(seeded.text, seeded.errors || '');
 // build.sh's "Shop" step: plans, packs, the shop design and the pages around it.
 const shop = await cli.playground.run({ code: "<?php require '/wordpress/wp-load.php'; wp_set_current_user(1); require '/wordpress/wp-content/sfshop/shop.php';" });
 console.log(shop.text, shop.errors || '');
+if (process.env.SETUP) {
+    // What the API does for a seller's application (src/storefronts.ts) and what build.sh keeps for the first visit.
+    const narrowed = await cli.playground.run({ code: `<?php require '/wordpress/wp-load.php';
+update_option('anypress_storefront_setup', ${JSON.stringify(process.env.SETUP)});
+update_option('admin_email', 'owner@brightside.example');
+delete_option('seller_storefront_owner_applied');
+@mkdir('/wordpress/wp-content/anypress-storefront');
+foreach (['pages.php', 'brand.json', 'audiences.json', 'anypress-patterns.php'] as $f) { copy("/wordpress/wp-content/sfshop/$f", "/wordpress/wp-content/anypress-storefront/$f"); }
+$copy = function ($from, $to) use (&$copy) { @mkdir($to); foreach (scandir($from) as $f) { if ($f[0] === '.') continue; is_dir("$from/$f") ? $copy("$from/$f", "$to/$f") : copy("$from/$f", "$to/$f"); } };
+$copy('/wordpress/wp-content/sfshop/design', '/wordpress/wp-content/anypress-storefront/design');
+echo "setup ", get_option('anypress_storefront_setup'), "\\n";` });
+    console.log(narrowed.text, narrowed.errors || '');
+    const started = Date.now();
+    const first = await fetch(`${base}/`);
+    await first.text();
+    // The first request after setup (often WordPress's own cron request) remakes the pages; wait for it to finish.
+    for (let i = 0; i < 120; i++) {
+        const done = await cli.playground.run({ code: "<?php require '/wordpress/wp-load.php'; echo get_option('seller_storefront_pages_made') ? 'yes' : 'no';" });
+        if (done.text.trim() === 'yes') break;
+        await new Promise((r) => setTimeout(r, 2000));
+    }
+    console.log(`pages remade ${first.status} in ${Math.round((Date.now() - started) / 1000)}s`);
+    const after = await cli.playground.run({ code: `<?php require '/wordpress/wp-load.php';
+echo 'plans published: ', implode(', ', get_posts(['post_type' => 'fluent-products', 'post_status' => 'publish', 'numberposts' => -1, 'fields' => 'post_name', 'orderby' => 'name', 'order' => 'ASC']) ? array_map(fn ($p) => $p->post_name, get_posts(['post_type' => 'fluent-products', 'post_status' => 'publish', 'numberposts' => -1])) : []), "\\n";
+$hub = get_page_by_path('who-we-help');
+echo 'who we help: ', $hub ? $hub->post_status . ' ' . implode(', ', array_map(fn ($p) => $p->post_name, get_children(['post_parent' => $hub->ID, 'post_type' => 'page', 'post_status' => 'publish']))) : 'none', "\\n";
+echo 'who we help pages: ', $hub ? implode(', ', array_map(fn ($p) => $p->post_name . '=' . $p->post_status, get_children(['post_parent' => $hub->ID, 'post_type' => 'page', 'post_status' => 'any']))) : '', "\\n";
+echo 'kit log: ', implode(' | ', preg_grep('/Seller storefront|Fatal/', @file('/tmp/debug.log') ?: [])), "\\n";` });
+    console.log(after.text, after.errors || '');
+}
 
 if (!SHOTS) {
     console.log(`Storefront preview at ${base} (admin / password). Ctrl+C to stop.`);
