@@ -13,6 +13,9 @@ use AnyPressClient\Core\SignedRequest;
  *
  * The chat signs in by itself: this store asks the API for a one-time handoff, signed with its site key, for
  * administrators who can change the site's design. Stores only: without a site key there is no panel.
+ *
+ * A demo on anypress.io/try has no site key: anypress.io gets a demo sign-in from the API and defines it here as
+ * ANYPRESS_DEMO_ASSISTANT. With it the panel opens the demo's chat, which only changes the page open in the editor.
  */
 class EditorAssistant
 {
@@ -20,6 +23,9 @@ class EditorAssistant
     public const ROUTE_NAMESPACE = 'anypress-client/v1';
     public const ROUTE = '/assistant/handoff';
     public const API_ROUTE = '/oauth/site/store-handoff';
+    /** Where demos run, and so where a demo's chat is (/.assistant there). */
+    private const DEMO_ASSISTANT_URL = 'https://demo.anypress.site/.assistant';
+    private const DEMO_TOKEN = '/^apdemo_[A-Za-z0-9_-]{43}$/';
     /** Opens the panel when the editor loads (the admin bar's button). */
     public const OPEN_PARAM = 'site-assistant';
 
@@ -45,6 +51,9 @@ class EditorAssistant
         if ($set !== '') {
             return rtrim($set, '/');
         }
+        if (self::demo_token() !== '') {
+            return self::DEMO_ASSISTANT_URL;
+        }
         $host = strtolower((string) wp_parse_url(home_url(), PHP_URL_HOST));
         $port = wp_parse_url(home_url(), PHP_URL_PORT);
 
@@ -62,9 +71,17 @@ class EditorAssistant
         return is_string($env) && $env !== '' ? $env : $default;
     }
 
+    /** The demo sign-in anypress.io put in this demo (ANYPRESS_DEMO_ASSISTANT), or '' on a real store. */
+    public static function demo_token(): string
+    {
+        $token = defined('ANYPRESS_DEMO_ASSISTANT') && is_string(constant('ANYPRESS_DEMO_ASSISTANT')) ? constant('ANYPRESS_DEMO_ASSISTANT') : '';
+
+        return preg_match(self::DEMO_TOKEN, $token) ? $token : '';
+    }
+
     public static function is_available(): bool
     {
-        return SignedRequest::key() !== '' && current_user_can(self::CAPABILITY);
+        return (SignedRequest::key() !== '' || self::demo_token() !== '') && current_user_can(self::CAPABILITY);
     }
 
     public function enqueue(): void
@@ -108,6 +125,11 @@ class EditorAssistant
      */
     public function handoff()
     {
+        // A demo signs in with its own demo sign-in: nothing to ask the API for.
+        $demo = self::demo_token();
+        if ($demo !== '' && SignedRequest::key() === '') {
+            return ['url' => self::assistant_url() . '/from-demo?demo=' . rawurlencode($demo)];
+        }
         $body = wp_json_encode([
             'site' => strtolower((string) wp_parse_url(home_url(), PHP_URL_HOST)),
             'assistantUrl' => self::assistant_url(),
