@@ -4,7 +4,7 @@ Tags: migration, fluentcrm, fluent forms, fluentcommunity, fluentbooking
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.3.0
+Stable tag: 1.5.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -49,6 +49,10 @@ This plugin connects to two outside services, each only when you run its switch:
 No other switch sends anything off your site. The Shop switch links to FluentCart's own page for its free Migrator add-on but never downloads it; you install it yourself.
 
 == Changelog ==
+
+= 1.5.0 =
+* When a switch can move from more than one plugin and several are on this website (help desks, affiliate plugins, course plugins), the card lists them to pick from instead of asking you to type one.
+* The report table after Check and Switch uses plain words: "Completed lessons" instead of completed_lessons, and columns named "In the old plugin", "In the Fluent plugin now" and so on.
 
 = 1.3.0 =
 * Calendly: a Calendly account moves to FluentBooking through Calendly's API with a personal access token: availability schedules with their weekly and dated hours, event types as booking types (length, description, locations, seats for group events, inactive ones as drafts), and upcoming bookings with each invitee's name, email, time zone, answers and meeting link. No booking email is sent for what comes across, and Undo takes it all back out.

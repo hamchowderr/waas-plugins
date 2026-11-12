@@ -19,6 +19,7 @@ use WP_Error;
  */
 class MovePage
 {
+
     private const SLUG = 'anypress-move';
     private const ACTION = 'anypress_move';
     private const RESULT = 'anypress_move_result_';
@@ -174,8 +175,14 @@ class MovePage
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
         wp_nonce_field(self::ACTION);
         echo '<input type="hidden" name="action" value="' . esc_attr(self::ACTION) . '"><input type="hidden" name="switch" value="' . esc_attr($key) . '">';
-        if (isset($this->imports[$key])) {
-            $this->field($key . '-from', 'from', __('Source plugin (only when more than one is active, as Check lists them)', 'anypress-move'), 'text');
+        $choices = isset($this->imports[$key]) ? $this->imports[$key]->source_choices() : [];
+        if (count($choices) > 1) {
+            // Only asked when there is a choice: with one source the switch finds it by itself.
+            echo '<p><label for="' . esc_attr($key . '-from') . '">' . esc_html__('Move from', 'anypress-move') . '</label><br><select id="' . esc_attr($key . '-from') . '" name="from">';
+            foreach ($choices as $slug => $name) {
+                echo '<option value="' . esc_attr($slug) . '">' . esc_html($name) . '</option>';
+            }
+            echo '</select></p>';
         }
         foreach ($this->fields($key) as $name => $schema) {
             if (($schema['type'] ?? '') === 'boolean') {
@@ -225,14 +232,15 @@ class MovePage
             $columns = array_keys((array) $compare[0]);
             echo '<table class="widefat striped"><thead><tr>';
             foreach ($columns as $column) {
-                echo '<th>' . esc_html(ucfirst(str_replace('_', ' ', (string) $column))) . '</th>';
+                echo '<th>' . esc_html(self::columns()[$column] ?? self::words((string) $column)) . '</th>';
             }
             echo '</tr></thead><tbody>';
             foreach ($compare as $row) {
                 echo '<tr>';
                 foreach ($columns as $column) {
                     $cell = $row[$column] ?? '';
-                    echo '<td>' . esc_html(is_scalar($cell) ? (string) $cell : (string) wp_json_encode($cell)) . '</td>';
+                    $text = $column === 'item' ? self::words((string) $cell) : (is_scalar($cell) ? (string) $cell : (string) wp_json_encode($cell));
+                    echo '<td>' . esc_html($text) . '</td>';
                 }
                 echo '</tr>';
             }
@@ -240,6 +248,25 @@ class MovePage
         }
         self::items(__('Can\'t come across', 'anypress-move'), array_filter((array) ($result['lost'] ?? []), 'is_string'));
         echo '<details><summary>' . esc_html__('Full report', 'anypress-move') . '</summary><pre>' . esc_html((string) wp_json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) . '</pre></details></div>';
+    }
+
+    /** The report table's columns, in plain words. */
+    private static function columns(): array
+    {
+        return [
+            'item' => __('What', 'anypress-move'),
+            'source' => __('In the old plugin', 'anypress-move'),
+            'before' => __('In the Fluent plugin before', 'anypress-move'),
+            'after' => __('In the Fluent plugin now', 'anypress-move'),
+            'added' => __('Added', 'anypress-move'),
+            'missing' => __('Missing', 'anypress-move'),
+        ];
+    }
+
+    /** "completed_lessons" as "Completed lessons", for the report table. */
+    private static function words(string $key): string
+    {
+        return ucfirst(str_replace('_', ' ', $key));
     }
 
     private static function items(string $label, array $items): void

@@ -66,6 +66,18 @@ class AffiliateImport extends NativeImport
         return new $class();
     }
 
+    public function source_choices(): array
+    {
+        $choices = [];
+        foreach (self::SOURCES as $slug => [$name, $constant]) {
+            if (defined($constant)) {
+                $choices[$slug] = $name;
+            }
+        }
+
+        return $choices;
+    }
+
     protected function sources(): array
     {
         $sources = [];

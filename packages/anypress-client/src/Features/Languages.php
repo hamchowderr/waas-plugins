@@ -94,7 +94,27 @@ class Languages
         return $locale !== '' ? $locale : 'en_US';
     }
 
-    /** Every language Polylang knows: locale => name. Empty when Polylang isn't installed. */
+    /** The languages most websites add, shown first on the "Your plan" page, in this order. */
+    public const COMMON = [
+        'es_ES', 'es_MX', 'fr_FR', 'de_DE', 'it_IT', 'pt_BR', 'pt_PT', 'nl_NL', 'pl_PL', 'ru_RU', 'uk', 'tr_TR', 'ar',
+        'he_IL', 'hi_IN', 'zh_CN', 'zh_TW', 'ja', 'ko_KR', 'vi', 'tl', 'id_ID', 'sv_SE', 'en_US', 'en_GB',
+    ];
+
+    /** English names for the common languages, for servers without PHP's intl extension. */
+    private const ENGLISH = [
+        'es_ES' => 'Spanish (Spain)', 'es_MX' => 'Spanish (Mexico)', 'fr_FR' => 'French (France)', 'de_DE' => 'German (Germany)',
+        'it_IT' => 'Italian', 'pt_BR' => 'Portuguese (Brazil)', 'pt_PT' => 'Portuguese (Portugal)', 'nl_NL' => 'Dutch',
+        'pl_PL' => 'Polish', 'ru_RU' => 'Russian', 'uk' => 'Ukrainian', 'tr_TR' => 'Turkish', 'ar' => 'Arabic',
+        'he_IL' => 'Hebrew', 'hi_IN' => 'Hindi', 'zh_CN' => 'Chinese (China)', 'zh_TW' => 'Chinese (Taiwan)', 'ja' => 'Japanese',
+        'ko_KR' => 'Korean', 'vi' => 'Vietnamese', 'tl' => 'Tagalog', 'id_ID' => 'Indonesian', 'sv_SE' => 'Swedish',
+        'en_US' => 'English (United States)', 'en_GB' => 'English (United Kingdom)',
+    ];
+
+    /**
+     * Every language Polylang knows: locale => a name people can tell apart, in English with the language's own name
+     * ("Spanish (Mexico), Español"). Polylang's own list names many locales the same ("Español" fourteen times).
+     * Empty when Polylang isn't installed.
+     */
     public static function known(): array
     {
         $file = WP_PLUGIN_DIR . '/polylang/src/settings/languages.php';
@@ -104,11 +124,28 @@ class Languages
         $known = [];
         foreach ((array) include $file as $locale => $language) {
             if (is_array($language) && isset($language['name'])) {
-                $known[(string) $locale] = (string) $language['name'];
+                $known[(string) $locale] = self::label((string) $locale, (string) $language['name']);
             }
         }
 
         return $known;
+    }
+
+    /** "Spanish (Mexico), Español" for es_MX; the native name and locale when no English name is found. */
+    public static function label(string $locale, string $native): string
+    {
+        $english = self::ENGLISH[$locale] ?? '';
+        if ($english === '' && class_exists('Locale')) {
+            $english = (string) \Locale::getDisplayName($locale, 'en');
+            // intl gives the code back when it doesn't know the locale.
+            $english = strcasecmp($english, $locale) === 0 ? '' : $english;
+        }
+        if ($english === '') {
+            return $native . ' (' . $locale . ')';
+        }
+        $base = (string) strtok($english, ' (');
+
+        return strcasecmp($base, $native) === 0 || strpos($native, $base) === 0 ? $english : $english . ', ' . $native;
     }
 
     /**
@@ -345,6 +382,7 @@ class Languages
         $chosen = array_slice(self::state()['languages'], 1);
         $known = self::known();
         $default = self::default_locale();
+        $default_name = $known[$default] ?? $default;
         unset($known[$default]);
         asort($known);
 ?>
@@ -362,16 +400,30 @@ class Languages
             <?php wp_nonce_field(self::FORM); ?>
             <p><label><input type="checkbox" name="on" value="1" <?php checked($state['on']); ?>> <?php esc_html_e('Languages on', 'anypress-client'); ?></label></p>
             <p>
-                <label for="anypress-languages"><?php
-                    /* translators: %s: the website's own language */
-                    echo esc_html(sprintf(__('Other languages (your website\'s own, %s, stays the main one):', 'anypress-client'), $default));
-                ?></label><br>
-                <select id="anypress-languages" name="languages[]" multiple size="8" style="min-width:20em">
-                    <?php foreach ($known as $locale => $name) : ?>
-                        <option value="<?php echo esc_attr($locale); ?>" <?php selected(in_array($locale, $chosen, true)); ?>><?php echo esc_html($name . ' (' . $locale . ')'); ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <strong><?php
+                    /* translators: 1: how many languages at most, 2: the website's own language */
+                    echo esc_html(sprintf(__('Other languages (up to %1$d; your website\'s own, %2$s, stays the main one):', 'anypress-client'), self::MAX, $default_name));
+                ?></strong>
+                <?php $common = array_values(array_filter(self::COMMON, fn ($locale) => isset($known[$locale]))); ?>
+                <?php $more = array_diff_key($known, array_flip($common)); ?>
             </p>
+            <div class="anypress-languages-list">
+                <?php foreach ($common as $locale) : ?>
+                    <label><input type="checkbox" name="languages[]" value="<?php echo esc_attr($locale); ?>" <?php checked(in_array($locale, $chosen, true)); ?>> <?php echo esc_html($known[$locale]); ?></label>
+                <?php endforeach; ?>
+            </div>
+            <details <?php echo array_intersect(array_keys($more), $chosen) ? 'open' : ''; ?>>
+                <summary><?php
+                    /* translators: %d: how many more languages */
+                    echo esc_html(sprintf(__('More languages and regional versions (%d)', 'anypress-client'), count($more)));
+                ?></summary>
+                <div class="anypress-languages-list">
+                    <?php foreach ($more as $locale => $name) : ?>
+                        <label><input type="checkbox" name="languages[]" value="<?php echo esc_attr($locale); ?>" <?php checked(in_array($locale, $chosen, true)); ?>> <?php echo esc_html($name); ?></label>
+                    <?php endforeach; ?>
+                </div>
+            </details>
+            <style>.anypress-languages-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(15em,1fr));gap:4px 16px;margin:8px 0 12px;max-width:60em}</style>
             <?php if ($state['on'] && !$state['ready']) : ?>
                 <p><em><?php esc_html_e('Setting up: reload this page in a moment.', 'anypress-client'); ?></em></p>
             <?php elseif ($state['ready']) : ?>
