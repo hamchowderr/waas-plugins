@@ -4,7 +4,7 @@ Tags: migration, fluentcrm, fluent forms, fluentcommunity, fluentbooking
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.4.0
+Stable tag: 1.5.0
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -50,6 +50,10 @@ This plugin connects to two outside services, each only when you run its switch:
 No other switch sends anything off your site. The Skool switch reads only the CSV file you upload, which is used for that run and never saved. The Shop switch links to FluentCart's own page for its free Migrator add-on but never downloads it; you install it yourself.
 
 == Changelog ==
+
+= 1.5.0 =
+* When a switch can move from more than one plugin and several are on this website (help desks, affiliate plugins, course plugins), the card lists them to pick from instead of asking you to type one.
+* The report table after Check and Switch uses plain words: "Completed lessons" instead of completed_lessons, and columns named "In the old plugin", "In the Fluent plugin now" and so on.
 
 = 1.4.0 =
 * Skool: upload the members CSV from a Skool group's Members tab (Export) and its members become WordPress users (no email is sent) in one FluentCommunity space or course, or a new private "Skool members" space. With FluentCRM on they are tagged "Skool member" and each answer to a membership question goes into a FluentCRM custom field. Rows without an email are listed and skipped, and Undo takes it all back out.
