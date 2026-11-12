@@ -155,8 +155,8 @@ class FluentCartCarePortal
         $subscription = $plan ? $this->store->find_subscription_for_order($order) : null;
         $website_id = $subscription ? (int) $subscription->id : 0;
         $packages = $this->care->packages();
-        if ($website_id <= 0 || !$packages || $this->care->care_of($website_id) > 0
-            || !in_array($website_id, array_map('intval', $this->adapter->get_customer_subscription_ids(get_current_user_id())), true)) {
+        $own = array_map('intval', $this->adapter->get_customer_subscription_ids(get_current_user_id()));
+        if ($website_id <= 0 || !$packages || $this->care->care_of($website_id) > 0 || !in_array($website_id, $own, true)) {
             return;
         }
 
