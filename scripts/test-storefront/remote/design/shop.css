@@ -208,3 +208,10 @@ body .anypress-docs .betterdocs-faq-main-content{background:transparent!importan
 /* Account, signed out: room between the note and its button. */
 .anypress-sign-in__new p:last-child{margin-top:1.25rem}
 .anypress-sign-in__new .wp-element-button{display:inline-block}
+/* The plan page: the picture stays in view beside the long buy column; the buy box's own parts sit closer together. */
+@media (min-width:782px){.anypress-gallery{position:sticky;top:8.5rem}}
+.anypress-buy .fct_buy_section>*,.anypress-buy .fct-product-tab-nav,.anypress-buy .fct-product-payment-type{margin:0}
+.anypress-buy .fct-product-item-price{margin:.25rem 0 0}
+.anypress-buy .fct-product-payment-type{font-size:clamp(1.4rem,2vw,1.75rem)}
+.anypress-sizes>p:empty{display:none}
+@media (max-width:1024px){.anypress-sizes a{padding:.6em .6em}.anypress-sizes a span{font-size:.72rem;white-space:nowrap}}

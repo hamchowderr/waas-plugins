@@ -41,7 +41,7 @@ $ap_brand = array_replace(
 		'trust'        => array( array( '<strong>7 days free to start</strong>', '<strong>30-day money-back guarantee</strong>' ), array( '<strong>Cancel any time</strong> from your account' ), array( '<strong>Set up for you</strong>, ready minutes after you pay' ) ),
 		'promises'     => array( 'Everything included, nothing else to buy', 'Pay yearly and get two months free', '30-day money-back guarantee', 'Cancel any time from your account', 'A free anypress.site address, or your own domain', 'Secure card checkout' ),
 		'examples'     => true,
-		'menu'         => array( array( 'Plans', 'plans' ), array( 'Compare sizes', 'sizes' ), array( 'Help', '/docs/' ), array( 'Sell websites', 'https://anypress.io/sell' ), array( 'Account', 'account' ) ),
+		'menu'         => array( array( 'Plans', 'plans' ), array( 'Compare sizes', 'sizes' ), array( 'Help', '/docs/' ), array( 'Sell websites', 'https://anypress.io/sell' ) ),
 		'footerHelp'   => array( array( 'Help pages', '/docs/' ), array( 'Refund policy', '/refund-policy/' ), array( 'Terms of service', '/terms/' ), array( 'Privacy policy', '/privacy/' ) ),
 		'footerMore'   => array( 'AnyPress', array( array( 'anypress.io', 'https://anypress.io' ), array( 'Sell websites', 'https://anypress.io/sell' ), array( 'Affiliates', '/affiliates/' ) ) ),
 		'copyright'    => '© AnyPress, by Otaku Solutions.',
@@ -842,7 +842,6 @@ $ap_header = ( $ap_announce ? $ap_announce . "\n\n" : '' ) . ap_group(
 		$ap_logo . "\n\n"
 		. ap_group(
 			'<!-- wp:navigation {"ref":' . (int) $ap_nav . ',"overlayMenu":"mobile","layout":{"type":"flex","justifyContent":"right"}} /-->' . "\n\n"
-			. ap_p( '<a href="' . esc_url( $ap_cart ) . '">Cart</a>', array( 'className' => 'anypress-cart-link' ) ) . "\n\n"
 			. ap_buttons( array( array( 'See the plans', $ap_plans_u ) ) ),
 			array( 'style' => array( 'spacing' => array( 'blockGap' => 'var:preset|spacing|medium' ) ), 'layout' => array( 'type' => 'flex', 'flexWrap' => 'nowrap', 'justifyContent' => 'right' ) )
 		),

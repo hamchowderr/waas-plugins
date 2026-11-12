@@ -105,7 +105,7 @@ add_shortcode(
 		if ( empty( $found['sizes'] ) ) {
 			return '';
 		}
-		$html = '<nav class="anypress-sizes" aria-label="' . esc_attr__( 'Sizes', 'anypress-shop' ) . '"><span class="anypress-sizes__label">' . esc_html__( 'Size', 'anypress-shop' ) . '</span><ul>';
+		$html = '<nav class="anypress-sizes" aria-label="' . esc_attr__( 'Sizes', 'anypress-shop' ) . '"><div class="anypress-sizes__label">' . esc_html__( 'Size', 'anypress-shop' ) . '</div><ul>';
 		foreach ( $found['sizes'] as $size ) {
 			$html .= '<li><a href="' . esc_url( $size['url'] ) . '"' . ( $size['current'] ? ' aria-current="page"' : '' ) . '><strong>' . esc_html( $size['label'] ) . '</strong><span>' . esc_html( $size['note'] ) . '</span></a></li>';
 		}
