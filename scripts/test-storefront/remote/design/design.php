@@ -908,7 +908,8 @@ ap_template(
 	. '<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->'
 );
 
-// A plan's page: the example site on the left; on the right the plan, its sizes, monthly or yearly, and buy.
+// A plan's page: the example site on the left; on the right the plan, its sizes, monthly or yearly, and buy. Under
+// both, full width, AnyPress Host's care packages ([anypress_care]).
 $ap_buy_column = ap_p( ap_e( 'Ready a few minutes after you pay' ), array( 'className' => 'is-style-hand' ) ) . "\n\n"
 	. '<!-- wp:post-title {"level":1,"fontSize":"x-large"} /-->' . "\n\n"
 	. '<!-- wp:fluent-cart/excerpt /-->' . "\n\n"
@@ -929,7 +930,8 @@ $ap_single     = '<!-- wp:template-part {"slug":"header","tagName":"header"} /--
 			),
 			array( 'style' => array( 'spacing' => array( 'blockGap' => array( 'left' => 'var:preset|spacing|x-large' ) ) ) )
 		)
-		. "</div>\n<!-- /wp:fluent-cart/product-info -->",
+		. "</div>\n<!-- /wp:fluent-cart/product-info -->\n\n"
+		. ap_shortcode( '[anypress_care]' ),
 		array(
 			'align' => 'full',
 			'style' => array( 'spacing' => array( 'padding' => ap_pad( 'medium', 'large', 'medium', 'medium' ) ) ),

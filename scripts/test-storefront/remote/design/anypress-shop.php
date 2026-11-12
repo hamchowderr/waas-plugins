@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AnyPress shop
  * Description: The shop's block styles (sketch panels, tick lists, size table) and two small shortcodes for the plan pages (the size switcher and the way back to the plans), and the AnyPress logo and support address in AnyPress Host's emails. Installed by the shop's `design` step.
- * Version: 1.2.0
+ * Version: 1.3.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -241,3 +241,43 @@ if ( empty( ( (array) get_option( 'anypress_shop_brand', array() ) )['whiteLabel
 	add_filter( 'anypress_email_support_address', static fn () => 'support@anypress.io' );
 	add_filter( 'anypress_email_accent', static fn () => 'linear-gradient(90deg,#ffc75a,#ff7a2a,#ee2f5e,#d21fa4)' );
 }
+
+/**
+ * AnyPress Host puts its care box ("Want us to look after it?") inside FluentCart's buy box. On this shop's plan pages
+ * it gets a full-width band of its own under the plan instead ([anypress_care] in the template), so the buy column
+ * stays short. The box itself, its prices and its styles are still Host's.
+ */
+function anypress_shop_care_portal() {
+	static $portal = false;
+	if ( false !== $portal ) {
+		return $portal;
+	}
+	$portal = null;
+	$hook   = $GLOBALS['wp_filter']['fluent_cart/product/single/after_actions_block'] ?? null;
+	foreach ( $hook ? $hook->callbacks : array() as $priority => $callbacks ) {
+		foreach ( $callbacks as $callback ) {
+			$fn = $callback['function'];
+			if ( is_array( $fn ) && $fn[0] instanceof \AnyPressHost\Commerce\FluentCart\FluentCartCarePortal && 'render_product_box' === $fn[1] ) {
+				remove_action( 'fluent_cart/product/single/after_actions_block', $fn, $priority );
+				$portal = $fn[0];
+			}
+		}
+	}
+	return $portal;
+}
+add_action( 'wp', 'anypress_shop_care_portal' );
+
+add_shortcode(
+	'anypress_care',
+	static function () {
+		$portal = anypress_shop_care_portal();
+		$post   = get_post();
+		if ( ! $portal || ! $post ) {
+			return '';
+		}
+		ob_start();
+		$portal->render_product_box( array( 'product' => $post ) );
+		$box = (string) ob_get_clean();
+		return '' === $box ? '' : '<div class="anypress-care-band">' . $box . '</div>';
+	}
+);

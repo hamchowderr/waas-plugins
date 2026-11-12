@@ -215,3 +215,29 @@ body .anypress-docs .betterdocs-faq-main-content{background:transparent!importan
 .anypress-buy .fct-product-payment-type{font-size:clamp(1.4rem,2vw,1.75rem)}
 .anypress-sizes>p:empty{display:none}
 @media (max-width:1024px){.anypress-sizes a{padding:.6em .6em}.anypress-sizes a span{font-size:.72rem;white-space:nowrap}}
+/* The care band under a plan: Host's care box at full width. Wide screens: what care is with the call beside it, the three
+   packages side by side, the one-time help in a row, and the two notes. */
+.anypress-care-band{margin-top:var(--wp--preset--spacing--x-large)}
+.anypress-care-band .anypress-care-box{margin:0;padding:clamp(1.25rem,3vw,2.25rem);gap:1rem 2.5rem;border:1.5px solid var(--wp--preset--color--main);border-radius:18px;box-shadow:8px 8px 0 var(--wp--preset--color--primary-alt);background:var(--wp--preset--color--base)}
+.anypress-care-band .anypress-care-title{font-size:clamp(1.5rem,2.2vw,1.9rem);font-weight:800;letter-spacing:-.02em;line-height:1.15}
+.anypress-care-band .anypress-care-intro{font-size:var(--wp--preset--font-size--base);opacity:1;color:var(--wp--preset--color--secondary)}
+.anypress-care-band .anypress-care-options{grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:.75rem}
+.anypress-care-band .anypress-care-option{grid-template-columns:1fr;align-content:start;gap:.6rem;padding:1rem 1.1rem;border:1.5px solid var(--wp--preset--color--border-light);border-radius:12px}
+.anypress-care-band .anypress-care-option strong{font-size:var(--wp--preset--font-size--medium)}
+.anypress-care-band .anypress-care-option b{font-size:var(--wp--preset--font-size--medium);font-weight:800}
+.anypress-care-band .anypress-care-btn{padding:.8em 1.4em;border-radius:10px;background:var(--wp--preset--color--main);color:var(--wp--preset--color--base)}
+@media (min-width:960px){
+.anypress-care-band .anypress-care-box{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+.anypress-care-band .anypress-care-box>*{grid-column:1/-1}
+.anypress-care-band .anypress-care-title{grid-column:1;grid-row:1}
+.anypress-care-band .anypress-care-intro{grid-column:1;grid-row:2}
+.anypress-care-band .anypress-care-call{grid-column:2;grid-row:1/3;justify-self:end;align-self:center}
+.anypress-care-band .anypress-care-options{grid-row:3;grid-template-columns:repeat(3,minmax(0,1fr))}
+.anypress-care-band .anypress-care-sub{grid-row:4;margin:.25rem 0 0}
+.anypress-care-band .anypress-care-services{grid-row:5;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}
+.anypress-care-band .anypress-care-services li,.anypress-care-band .anypress-care-services li:first-child{border:0;border-top:1.5px solid var(--wp--preset--color--border-light);padding-top:.6rem}
+.anypress-care-band .anypress-care-note{grid-column:1;grid-row:6}
+.anypress-care-band .anypress-care-note~.anypress-care-note{grid-column:2}
+}
+/* Up to tablet width the plan stacks: the picture, then the buy box at full width. */
+@media (max-width:1023px){.wp-block-columns:has(>.anypress-buy){flex-wrap:wrap!important}.wp-block-columns:has(>.anypress-buy)>.wp-block-column{flex-basis:100%!important}.anypress-gallery{position:static}}
