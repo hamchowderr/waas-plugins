@@ -187,9 +187,9 @@ body .anypress-docs .betterdocs-category-grid-inner-wrapper>.betterdocs-single-c
 /* Buy now and Add to cart side by side at the same height; Add to cart is the quieter one. */
 .anypress-buy .fct-product-buttons-wrap{display:flex;gap:.6rem;align-items:stretch}
 .anypress-buy .fct-product-buttons-wrap>*{flex:1 1 0}
-/* AnyPress Host's care box sits in the same row: give it a line of its own, so it doesn't stretch the buttons. */
+/* Anything else a plugin adds to the buttons row gets a line of its own, so it can't stretch Buy now. */
 .anypress-buy .fct-product-buttons-wrap{flex-wrap:wrap}
-.anypress-buy .fct-product-buttons-wrap>.anypress-care-box{flex:1 0 100%}
+.anypress-buy .fct-product-buttons-wrap>:not(a):not(button){flex:1 0 100%}
 .anypress-buy .fct-product-buttons-wrap a,.anypress-buy .fct-product-buttons-wrap button{text-transform:none}
 .anypress-buy .fct-product-buttons-wrap .fluent-cart-add-to-cart-button{flex:0 0 auto;display:flex;align-items:center;justify-content:center;white-space:nowrap;padding:.9em 1.4em;border-radius:10px;border:1.5px solid var(--wp--preset--color--main);background:var(--wp--preset--color--base);color:var(--wp--preset--color--main);font-weight:700;font-size:var(--wp--preset--font-size--base);line-height:1.2;max-height:none;box-shadow:none}
 
@@ -215,28 +215,5 @@ body .anypress-docs .betterdocs-faq-main-content{background:transparent!importan
 .anypress-buy .fct-product-payment-type{font-size:clamp(1.4rem,2vw,1.75rem)}
 .anypress-sizes>p:empty{display:none}
 @media (max-width:1024px){.anypress-sizes a{padding:.6em .6em}.anypress-sizes a span{font-size:.72rem;white-space:nowrap}}
-/* The care band under a plan: Host's care box at full width. Wide screens: what care is, the three packages side by side,
-   the one-time help in a row, then how to add care after buying. */
-.anypress-care-band{margin-top:var(--wp--preset--spacing--x-large)}
-.anypress-care-band .anypress-care-box{margin:0;padding:clamp(1.25rem,3vw,2.25rem);gap:1rem 2.5rem;border:0;border-radius:18px;background:var(--wp--preset--color--tertiary,color-mix(in srgb,var(--wp--preset--color--main) 4%,var(--wp--preset--color--base)))}
-.anypress-care-band .anypress-care-title{font-size:clamp(1.5rem,2.2vw,1.9rem);font-weight:800;letter-spacing:-.02em;line-height:1.15}
-.anypress-care-band .anypress-care-intro{font-size:var(--wp--preset--font-size--base);opacity:1;color:var(--wp--preset--color--secondary)}
-.anypress-care-band .anypress-care-options{grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:1rem 1.5rem}
-.anypress-care-band .anypress-care-option{grid-template-columns:1fr;align-content:start;gap:.4rem;padding:.9rem 0 0;border:0;border-top:2px solid var(--wp--preset--color--main);border-radius:0}
-.anypress-care-band .anypress-care-option strong{font-size:var(--wp--preset--font-size--medium)}
-.anypress-care-band .anypress-care-option b{font-size:var(--wp--preset--font-size--medium);font-weight:800}
-.anypress-care-band .anypress-care-later{font-weight:600;color:var(--wp--preset--color--main)}
-@media (min-width:960px){
-.anypress-care-band .anypress-care-box{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
-.anypress-care-band .anypress-care-box>*{grid-column:1/-1}
-.anypress-care-band .anypress-care-title{grid-column:1;grid-row:1}
-.anypress-care-band .anypress-care-intro{grid-column:1;grid-row:2}
-.anypress-care-band .anypress-care-options{grid-row:3;grid-template-columns:repeat(3,minmax(0,1fr))}
-.anypress-care-band .anypress-care-sub{grid-row:4;margin:.25rem 0 0}
-.anypress-care-band .anypress-care-services{grid-row:5;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}
-.anypress-care-band .anypress-care-services li,.anypress-care-band .anypress-care-services li:first-child{border:0;border-top:1.5px solid var(--wp--preset--color--border-light);padding-top:.6rem}
-.anypress-care-band .anypress-care-later{grid-column:1;grid-row:6}
-.anypress-care-band .anypress-care-note{grid-column:2;grid-row:6}
-}
 /* Up to tablet width the plan stacks: the picture, then the buy box at full width. */
 @media (max-width:1023px){.wp-block-columns:has(>.anypress-buy){flex-wrap:wrap!important}.wp-block-columns:has(>.anypress-buy)>.wp-block-column{flex-basis:100%!important}.anypress-gallery{position:static}}

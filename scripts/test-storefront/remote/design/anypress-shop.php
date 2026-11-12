@@ -243,48 +243,20 @@ if ( empty( ( (array) get_option( 'anypress_shop_brand', array() ) )['whiteLabel
 }
 
 /**
- * AnyPress Host puts its care box ("Want us to look after it?") inside FluentCart's buy box. On this shop's plan pages
- * it gets a full-width band of its own under the plan instead ([anypress_care] in the template), so the buy column
- * stays short. The box itself, its prices and its styles are still Host's.
+ * AnyPress Host puts its care box ("Want us to look after it?") inside FluentCart's buy box. This shop's plan pages
+ * keep Buy now as the only action, so the box comes off them; care is offered after buying instead.
  */
-function anypress_shop_care_portal() {
-	static $portal = false;
-	if ( false !== $portal ) {
-		return $portal;
-	}
-	$portal = null;
-	$hook   = $GLOBALS['wp_filter']['fluent_cart/product/single/after_actions_block'] ?? null;
-	foreach ( $hook ? $hook->callbacks : array() as $priority => $callbacks ) {
-		foreach ( $callbacks as $callback ) {
-			$fn = $callback['function'];
-			if ( is_array( $fn ) && $fn[0] instanceof \AnyPressHost\Commerce\FluentCart\FluentCartCarePortal && 'render_product_box' === $fn[1] ) {
-				remove_action( 'fluent_cart/product/single/after_actions_block', $fn, $priority );
-				$portal = $fn[0];
+add_action(
+	'wp',
+	static function () {
+		$hook = $GLOBALS['wp_filter']['fluent_cart/product/single/after_actions_block'] ?? null;
+		foreach ( $hook ? $hook->callbacks : array() as $priority => $callbacks ) {
+			foreach ( $callbacks as $callback ) {
+				$fn = $callback['function'];
+				if ( is_array( $fn ) && $fn[0] instanceof \AnyPressHost\Commerce\FluentCart\FluentCartCarePortal && 'render_product_box' === $fn[1] ) {
+					remove_action( 'fluent_cart/product/single/after_actions_block', $fn, $priority );
+				}
 			}
 		}
-	}
-	return $portal;
-}
-add_action( 'wp', 'anypress_shop_care_portal' );
-
-add_shortcode(
-	'anypress_care',
-	static function () {
-		$portal = anypress_shop_care_portal();
-		$post   = get_post();
-		if ( ! $portal || ! $post ) {
-			return '';
-		}
-		ob_start();
-		$portal->render_product_box( array( 'product' => $post ) );
-		$box = (string) ob_get_clean();
-		if ( '' === $box ) {
-			return '';
-		}
-		// One button on a plan's page: Buy now. Care starts with a call, booked from the website's Care section in the
-		// account after buying, so Host's "Book a call" and its note give way to a line that says so.
-		$later = '<p class="anypress-care-later">' . esc_html__( 'Add care any time after you buy: open your website in your account and choose Care. We start with a short call to pick what fits.', 'anypress-shop' ) . '</p>';
-		$box   = preg_replace( '#<p class="anypress-care-call">.*?</p><p class="anypress-care-note">.*?</p>#s', $later, $box, 1 );
-		return '<div class="anypress-care-band">' . $box . '</div>';
 	}
 );
