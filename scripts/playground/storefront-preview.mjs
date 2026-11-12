@@ -35,6 +35,7 @@ cpSync(resolve(TEMPLATES, 'seller-storefront/shop.php'), resolve(STAGE, 'shop.ph
 cpSync(resolve(TEMPLATES, 'anypress-store/mu-plugins/anypress-patterns.php'), resolve(STAGE, 'anypress-patterns.php'));
 cpSync(resolve(TEMPLATES, 'anypress-store/roles.json'), resolve(STAGE, 'roles.json'));
 cpSync(resolve(TEMPLATES, 'seller-storefront/audiences.json'), resolve(STAGE, 'audiences.json'));
+cpSync(resolve(TEMPLATES, 'seller-storefront/help.json'), resolve(STAGE, 'help.json'));
 writeFileSync(resolve(STAGE, 'pricing.json'), execFileSync('node', ['--input-type=module', '-e', "const { PRICE_LIST } = await import(process.argv[1]); console.log(JSON.stringify(PRICE_LIST));", resolve(API, 'src/pricing.ts')]));
 
 const literal = (file, name) => ({ resource: 'literal', name, contents: readFileSync(file) });
@@ -91,11 +92,12 @@ copy('/wordpress/wp-content/sf/anypress-store/crm/setup.php', '/wordpress/crm/se
 copy('/wordpress/wp-content/sf/seller-storefront/crm-emails.json', '/wordpress/crm/emails.json');
 require '/wordpress/sfbuild/presets.php';
 require '/wordpress/crm/setup.php';
+\\FluentCrm\\App\\Models\\Funnel::query()->update(['status' => 'published']);
 flush_rewrite_rules();
 echo "seeded front=", get_post(get_option('page_on_front'))->post_name, "\\n";
 ` });
 console.log(seeded.text, seeded.errors || '');
-// build.sh's "Shop" step: plans, legal pages and the shop design.
+// build.sh's "Shop" step: plans, packs, the shop design and the pages around it.
 const shop = await cli.playground.run({ code: "<?php require '/wordpress/wp-load.php'; wp_set_current_user(1); require '/wordpress/wp-content/sfshop/shop.php';" });
 console.log(shop.text, shop.errors || '');
 
@@ -107,7 +109,7 @@ if (!SHOTS) {
 const { chromium } = (await import('node:module')).createRequire(import.meta.url)('playwright');
 mkdirSync(SHOTS, { recursive: true });
 const browser = await chromium.launch();
-const pages = (process.env.PAGES ?? ',plans,item/website-small,who-we-help,who-we-help/shops,who-we-help/churches,about,questions,contact,terms,checkout,account').split(',').filter((p, i) => p || i === 0);
+const pages = (process.env.PAGES ?? ',plans,item/website-small,who-we-help,who-we-help/shops,who-we-help/churches,about,questions,contact,support,affiliates,book-a-call,docs,docs/use-your-own-domain,terms,checkout,account').split(',').filter((p, i) => p || i === 0);
 for (const [label, viewport] of [['desktop', { width: 1440, height: 900 }], ['phone', { width: 390, height: 844 }]]) {
     const ctx = await browser.newContext({ viewport });
     const page = await ctx.newPage();
