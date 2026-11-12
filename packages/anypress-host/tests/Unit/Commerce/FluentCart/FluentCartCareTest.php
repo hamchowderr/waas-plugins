@@ -185,6 +185,18 @@ class FluentCartCareTest extends TestCase
         $this->assertNotEmpty($this->order_meta[FluentCartCare::ORDER_DONE_META]);
     }
 
+    public function test_a_package_from_the_thank_you_page_goes_to_the_new_website_before_its_store_is_made(): void
+    {
+        $this->order_meta[FluentCartEmailPacks::ORDER_WEBSITE_META] = 902;
+        $this->store->allows('get_order_lines')->andReturn([['id' => 1, 'product_id' => self::CARE_PLUS, 'quantity' => 1]]);
+        $this->store->allows('find_subscription_for_order')->andReturn((object) ['id' => 951]);
+
+        $this->care->order_paid(['order' => $this->order]);
+
+        $this->assertSame(902, $this->meta[951][FluentCartCare::WEBSITE_META], '902 is being set up');
+        $this->assertSame([], $this->logs);
+    }
+
     public function test_a_package_bought_without_a_website_goes_to_the_only_one_without_care(): void
     {
         $this->store->allows('get_order_lines')->andReturn([['id' => 1, 'product_id' => self::CARE_PLUS, 'quantity' => 1]]);
