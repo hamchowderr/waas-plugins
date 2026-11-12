@@ -45,6 +45,12 @@ class ProvisioningApi
         update_option(self::CAN_REACH_API_OPTION_NAME, $is_reachable);
     }
 
+    /** The AnyPress price list (GET /pricing): each site type's monthly and yearly price per size, in dollars. */
+    public function get_price_list()
+    {
+        return $this->httpService->get('/pricing');
+    }
+
     public function test_reachability() {
         $response = $this->httpService->getraw('/v1/versions');
         if (is_wp_error($response)) {

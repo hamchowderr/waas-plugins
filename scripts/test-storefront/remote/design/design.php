@@ -16,6 +16,49 @@ if ( 'anypress' !== get_template() ) {
 $ap_dir  = __DIR__;
 $ap_data = json_decode( file_get_contents( "$ap_dir/shop.json" ), true );
 
+// The brand the design speaks for. Without brand.json it is AnyPress's own shop. A seller's ready-made storefront puts a
+// brand.json next to this file (waas-provisioning-api templates/seller-storefront): no AnyPress name or address, the site's
+// own logo and title in the header and footer, the contact page instead of an email address, and its own words where
+// the shop's promise AnyPress's trial and guarantee. Its "data" replaces the same keys of shop.json (included, faq).
+$ap_brand = array_replace(
+	array(
+		'whiteLabel'   => false,
+		'homeTitle'    => 'AnyPress: websites, ready in minutes',
+		'tagline'      => 'Real WordPress, set up and looked after for you.',
+		'contact'      => array( 'Email support@anypress.io', 'mailto:support@anypress.io' ),
+		'footerAsk'    => 'Questions? <a href="mailto:support@anypress.io">support@anypress.io</a>',
+		'help'         => array( 'Read the help pages', '/docs/' ),
+		'helpBand'     => array( 'Not sure which to pick?', 'Ask a person. We answer every email.', 'Tell us what your business does and we’ll tell you which plan and size fit. No sales call, just a reply.' ),
+		'announce'     => '7 days free to start · 30-day money-back guarantee · Cancel any time',
+		'hero'         => array( 'No tech skills needed', 'Pick a website. It’s <mark style="background-color:var(--wp--preset--color--primary-alt)" class="has-inline-color">ready in minutes.</mark>', 'Real WordPress, set up and looked after for you. Choose what you’re making, pick a size, and sign in to a working site a few minutes after you pay.' ),
+		'heroTicks'    => array( 'From {from} a month', '7 days free to start', '30-day money-back guarantee', 'Cancel any time from your account' ),
+		'steps'        => array(
+			array( 'pick', 'Pick a kind and a size', 'Choose what you’re making and how big it needs to be. Pay monthly, or yearly and get two months free.' ),
+			array( 'card', 'Pay securely', 'Checkout takes a minute. The first 7 days are free: add a card, and cancel before day 8 to pay nothing. After that, your first payment is covered by our 30-day money-back guarantee.' ),
+			array( 'open', 'Sign in to your new site', 'Your site is usually ready a few minutes later. We email you, and your account opens it with one click.' ),
+		),
+		'plansLead'    => 'Pick the kind of site you’re making, then a size. Pay monthly, or yearly and get two months free. Every plan starts with 7 days free (one free trial per person), and the first payment has a 30-day money-back guarantee.',
+		'trust'        => array( array( '<strong>7 days free to start</strong>', '<strong>30-day money-back guarantee</strong>' ), array( '<strong>Cancel any time</strong> from your account' ), array( '<strong>Ready in minutes</strong> after you pay' ) ),
+		'promises'     => array( 'Pay yearly and get two months free', '30-day money-back guarantee', 'Cancel any time from your account', 'A free anypress.site address, or your own domain', 'Secure card checkout' ),
+		'examples'     => true,
+		'menu'         => array( array( 'Plans', 'plans' ), array( 'Compare sizes', 'sizes' ), array( 'Help', '/docs/' ), array( 'Sell websites', 'https://anypress.io/sell' ), array( 'Account', 'account' ) ),
+		'footerHelp'   => array( array( 'Help pages', '/docs/' ), array( 'Refund policy', '/refund-policy/' ), array( 'Terms of service', '/terms/' ), array( 'Privacy policy', '/privacy/' ) ),
+		'footerMore'   => array( 'AnyPress', array( array( 'anypress.io', 'https://anypress.io' ), array( 'Sell websites', 'https://anypress.io/sell' ), array( 'Affiliates', '/affiliates/' ) ) ),
+		'copyright'    => '© AnyPress, by Otaku Solutions.',
+		'signInNew'    => 'New to AnyPress?',
+		'data'         => array(),
+	),
+	is_readable( "$ap_dir/brand.json" ) ? (array) json_decode( file_get_contents( "$ap_dir/brand.json" ), true ) : array()
+);
+$ap_data = array_replace( $ap_data, $ap_brand['data'] );
+// anypress-shop.php reads the buy box promises, the sign-in words and whether AnyPress's own email look applies.
+update_option( 'anypress_shop_brand', array_intersect_key( $ap_brand, array_flip( array( 'whiteLabel', 'promises', 'signInNew' ) ) ) );
+
+/** A menu or footer link: a site path ("/terms/"), a full address, or one of the shop's pages by name. */
+function ap_link( $to ) {
+	return preg_match( '#^(https?:|mailto:)#', $to ) ? $to : home_url( $to );
+}
+
 // ---------------------------------------------------------------------------------------------------------- files
 // Drawings and pictures go to uploads/anypress-shop, fonts to the Font Library's folder.
 $ap_up   = wp_upload_dir();
@@ -393,8 +436,8 @@ function ap_shortcode( $code ) {
 // ---------------------------------------------------------------------------------------------------------- shared sections
 $ap_type_by_id = array_column( $ap_data['types'], null, 'id' );
 $ap_from       = static fn( $type_id ) => $ap_plans[ $type_id ]['small']['monthly'] ?? 0;
-$ap_mailto     = 'mailto:support@anypress.io';
-define( 'ANYPRESS_SHOP_MAILTO', $ap_mailto );
+$ap_mailto     = ap_link( $ap_brand['contact'][1] );
+define( 'ANYPRESS_SHOP_BRAND', $ap_brand );
 
 /** "Every plan includes": six tiles with drawings. */
 function ap_included( $data, $section = 'tint' ) {
@@ -456,12 +499,13 @@ function ap_faq( $data, $items = null, $section = '' ) {
 }
 
 function ap_help_band() {
-	$ap_mailto = ANYPRESS_SHOP_MAILTO;
+	$brand            = ANYPRESS_SHOP_BRAND;
+	list( $note, $title, $lead ) = $brand['helpBand'];
 	return ap_band(
 		ap_columns(
 			array(
-				array( ap_p( ap_e( 'Not sure which to pick?' ), array( 'className' => 'is-style-hand' ) ) . "\n\n" . ap_h( ap_e( 'Ask a person. We answer every email.' ), 2, array( 'fontSize' => 'x-large' ) ) . "\n\n" . ap_p( ap_e( 'Tell us what your business does and we’ll tell you which plan and size fit. No sales call, just a reply.' ) ), '62%' ),
-				array( ap_buttons( array( array( 'Email support@anypress.io', $ap_mailto ), array( 'Read the help pages', home_url( '/docs/' ), 'outline' ) ) ), '38%', 'anypress-help-actions' ),
+				array( ap_p( ap_e( $note ), array( 'className' => 'is-style-hand' ) ) . "\n\n" . ap_h( ap_e( $title ), 2, array( 'fontSize' => 'x-large' ) ) . "\n\n" . ap_p( ap_e( $lead ) ), '62%' ),
+				array( ap_buttons( array( array( $brand['contact'][0], ap_link( $brand['contact'][1] ) ), array( $brand['help'][0], ap_link( $brand['help'][1] ), 'outline' ) ) ), '38%', 'anypress-help-actions' ),
 			),
 			array( 'verticalAlignment' => 'center' )
 		),
@@ -506,13 +550,8 @@ foreach ( $ap_data['types'] as $ap_type ) {
 	);
 }
 $ap_steps = array();
-foreach (
-	array(
-		array( 'pick', '1', 'Pick a kind and a size', 'Choose what you’re making and how big it needs to be. Pay monthly, or yearly and get two months free.' ),
-		array( 'card', '2', 'Pay securely', 'Checkout takes a minute. The first 7 days are free: add a card, and cancel before day 8 to pay nothing. After that, your first payment is covered by our 30-day money-back guarantee.' ),
-		array( 'open', '3', 'Sign in to your new site', 'Your site is usually ready a few minutes later. We email you, and your account opens it with one click.' ),
-	) as list( $ap_d, $ap_n, $ap_t, $ap_b )
-) {
+foreach ( $ap_brand['steps'] as $ap_i => list( $ap_d, $ap_t, $ap_b ) ) {
+	$ap_n = $ap_i + 1;
 	$ap_steps[] = ap_group(
 		ap_img( ap_asset( "$ap_d.svg" ), '', '120px' ) . "\n\n" . ap_p( ap_e( "Step $ap_n" ), array( 'className' => 'is-style-hand' ) ) . "\n\n" . ap_h( ap_e( $ap_t ), 3, array( 'fontSize' => 'medium' ) ) . "\n\n" . ap_p( ap_e( $ap_b ), array( 'textColor' => 'secondary' ) ),
 		array( 'className' => 'anypress-centered', 'style' => array( 'spacing' => array( 'blockGap' => 'var:preset|spacing|small' ) ), 'layout' => array( 'type' => 'flex', 'orientation' => 'vertical' ) )
@@ -522,14 +561,14 @@ $ap_home = ap_band(
 	ap_columns(
 		array(
 			array(
-				ap_p( ap_e( 'No tech skills needed' ), array( 'className' => 'is-style-hand' ) ) . "\n\n"
-				. ap_h( 'Pick a website. It’s <mark style="background-color:var(--wp--preset--color--primary-alt)" class="has-inline-color">ready in minutes.</mark>', 1, array( 'fontSize' => 'xx-large' ) ) . "\n\n"
-				. ap_p( ap_e( 'Real WordPress, set up and looked after for you. Choose what you’re making, pick a size, and sign in to a working site a few minutes after you pay.' ), array( 'textColor' => 'secondary', 'fontSize' => 'medium' ) ) . "\n\n"
+				ap_p( ap_e( $ap_brand['hero'][0] ), array( 'className' => 'is-style-hand' ) ) . "\n\n"
+				. ap_h( $ap_brand['hero'][1], 1, array( 'fontSize' => 'xx-large' ) ) . "\n\n"
+				. ap_p( ap_e( $ap_brand['hero'][2] ), array( 'textColor' => 'secondary', 'fontSize' => 'medium' ) ) . "\n\n"
 				. ap_buttons( array( array( 'See the plans', '#types' ), array( 'Compare sizes', '#sizes', 'outline' ) ) ) . "\n\n"
-				. ap_list( array( 'From ' . ap_money( $ap_from( 'website' ) ) . ' a month', '7 days free to start', '30-day money-back guarantee', 'Cancel any time from your account' ), 'is-style-ticks anypress-inline-ticks' ),
+				. ap_list( array_map( static fn( $t ) => str_replace( '{from}', ap_money( $ap_from( 'website' ) ), $t ), $ap_brand['heroTicks'] ), 'is-style-ticks anypress-inline-ticks' ),
 				'54%',
 			),
-			array( ap_img( ap_asset( 'website.jpg' ), 'An example website made with AnyPress: Juniper Street Bakery', '', 'is-style-sketch anypress-tilt' ), '46%' ),
+			array( ap_img( ap_asset( 'website.jpg' ), 'An example website: Juniper Street Bakery', '', 'is-style-sketch anypress-tilt' ), '46%' ),
 		),
 		array( 'verticalAlignment' => 'center', 'style' => array( 'spacing' => array( 'blockGap' => array( 'left' => 'var:preset|spacing|x-large' ) ) ) )
 	),
@@ -545,7 +584,7 @@ $ap_home = ap_band(
 . ap_faq( $ap_data, null, 'tint' ) . "\n\n"
 . ap_help_band();
 
-$ap_home_id = ap_page( 'home', 'AnyPress: websites, ready in minutes', $ap_home, 'page-no-title' );
+$ap_home_id = ap_page( 'home', $ap_brand['homeTitle'], $ap_home, 'page-no-title' );
 update_option( 'show_on_front', 'page' );
 update_option( 'page_on_front', $ap_home_id );
 
@@ -577,8 +616,8 @@ foreach ( $ap_data['types'] as $ap_i => $ap_type ) {
 					ap_img( ap_asset( $ap_type['drawing'] . '.svg' ), '', '120px' ) . "\n\n"
 					. ap_h( ap_e( $ap_type['name'] ), 2, array( 'anchor' => $ap_type['id'] ) ) . "\n\n"
 					. ap_p( ap_e( $ap_type['pitch'] ), array( 'fontSize' => 'medium' ) ) . "\n\n"
-					. ap_list( array_map( 'ap_e', $ap_type['inBox'] ) ) . "\n\n"
-					. ap_p( 'See one working: <a href="' . esc_url( $ap_type['example']['url'] ) . '">' . ap_e( $ap_type['example']['name'] ) . '</a>, ' . ap_e( lcfirst( $ap_type['example']['what'] ) ), array( 'textColor' => 'secondary', 'fontSize' => 'small' ) ),
+					. ap_list( array_map( 'ap_e', $ap_type['inBox'] ) )
+					. ( $ap_brand['examples'] ? "\n\n" . ap_p( 'See one working: <a href="' . esc_url( $ap_type['example']['url'] ) . '">' . ap_e( $ap_type['example']['name'] ) . '</a>, ' . ap_e( lcfirst( $ap_type['example']['what'] ) ), array( 'textColor' => 'secondary', 'fontSize' => 'small' ) ) : '' ),
 					'36%',
 				),
 				array( ap_grid( $ap_size_cards, '10rem', 'medium', 3, 'anypress-size-grid' ), '64%' ),
@@ -613,7 +652,7 @@ $ap_plans_content = ap_band(
 	ap_group(
 		ap_p( ap_e( 'Five kinds, three sizes' ), array( 'align' => 'center', 'className' => 'is-style-hand' ) ) . "\n\n"
 		. ap_h( ap_e( 'Plans and prices' ), 1, array( 'textAlign' => 'center', 'fontSize' => 'xx-large' ) ) . "\n\n"
-		. ap_p( ap_e( 'Pick the kind of site you’re making, then a size. Pay monthly, or yearly and get two months free. Every plan starts with 7 days free (one free trial per person), and the first payment has a 30-day money-back guarantee.' ), array( 'align' => 'center', 'textColor' => 'secondary', 'fontSize' => 'medium' ) ) . "\n\n"
+		. ap_p( ap_e( $ap_brand['plansLead'] ), array( 'align' => 'center', 'textColor' => 'secondary', 'fontSize' => 'medium' ) ) . "\n\n"
 		. ap_group(
 			implode(
 				"\n\n",
@@ -663,11 +702,7 @@ function ap_wrap_store_page( $id, $title, $lead, $after = '', $template = 'page-
 }
 $ap_trust = ap_band(
 	ap_grid(
-		array(
-			ap_list( array( '<strong>7 days free to start</strong>', '<strong>30-day money-back guarantee</strong>' ) ),
-			ap_list( array( '<strong>Cancel any time</strong> from your account' ) ),
-			ap_list( array( '<strong>Ready in minutes</strong> after you pay' ) ),
-		),
+		array_map( 'ap_list', $ap_brand['trust'] ),
 		'15rem',
 		'medium',
 		3,
@@ -698,7 +733,7 @@ foreach ( $ap_data['types'] as $ap_type ) {
 		}
 		$ap_content = ap_band(
 			ap_head( 'What you get', $ap_type['headline'], $ap_type['pitch'] ) . "\n\n" . ap_grid( $ap_features, '13rem', 'medium', 4, 'anypress-features' ) . "\n\n"
-			. ap_p( 'Made for ' . ap_e( implode( ', ', array_map( 'lcfirst', array_slice( $ap_type['idealFor'], 0, -1 ) ) ) . ' and ' . lcfirst( end( $ap_type['idealFor'] ) ) ) . '. See one working: <a href="' . esc_url( $ap_type['example']['url'] ) . '">' . ap_e( $ap_type['example']['name'] ) . '</a>.', array( 'align' => 'center', 'textColor' => 'secondary' ) ),
+			. ap_p( 'Made for ' . ap_e( implode( ', ', array_map( 'lcfirst', array_slice( $ap_type['idealFor'], 0, -1 ) ) ) . ' and ' . lcfirst( end( $ap_type['idealFor'] ) ) ) . '.' . ( $ap_brand['examples'] ? ' See one working: <a href="' . esc_url( $ap_type['example']['url'] ) . '">' . ap_e( $ap_type['example']['name'] ) . '</a>.' : '' ), array( 'align' => 'center', 'textColor' => 'secondary' ) ),
 			'',
 			'what'
 		) . "\n\n"
@@ -746,16 +781,13 @@ function ap_nav_link( $label, $url ) {
 $ap_account = get_permalink( (int) $ap_settings->get( 'customer_profile_page_id' ) );
 $ap_cart    = get_permalink( (int) $ap_settings->get( 'cart_page_id' ) );
 $ap_plans_u = get_permalink( $ap_plans_page );
-$ap_menu    = implode(
-	"\n",
-	array(
-		ap_nav_link( 'Plans', $ap_plans_u ),
-		ap_nav_link( 'Compare sizes', $ap_plans_u . '#sizes' ),
-		ap_nav_link( 'Help', home_url( '/docs/' ) ),
-		ap_nav_link( 'Sell websites', 'https://anypress.io/sell' ),
-		ap_nav_link( 'Account', $ap_account ),
-	)
+$ap_named   = array(
+	'plans'   => $ap_plans_u,
+	'sizes'   => $ap_plans_u . '#sizes',
+	'account' => $ap_account,
+	'cart'    => $ap_cart,
 );
+$ap_menu    = implode( "\n", array_map( static fn( $l ) => ap_nav_link( $l[0], $ap_named[ $l[1] ] ?? ap_link( $l[1] ) ), $ap_brand['menu'] ) );
 $ap_nav = get_posts( array( 'post_type' => 'wp_navigation', 'name' => 'anypress-shop-menu', 'numberposts' => 1, 'post_status' => 'any' ) );
 $ap_nav = $ap_nav ? wp_update_post( array( 'ID' => $ap_nav[0]->ID, 'post_content' => wp_slash( $ap_menu ) ) ) : wp_insert_post(
 	array(
@@ -788,10 +820,15 @@ function ap_template( $type, $slug, $title, $content, $area = '' ) {
 	return $id;
 }
 
-$ap_logo = '<!-- wp:image {"width":"132px","sizeSlug":"full","linkDestination":"custom","className":"anypress-logo"} -->' . "\n"
+// A seller's storefront shows its own Site Logo (when one is set) and Site Title, which the owner changes in Settings.
+$ap_site_name = static fn( $size = 'medium' ) => ap_group(
+	'<!-- wp:site-logo {"width":44,"className":"anypress-logo"} /-->' . "\n\n" . '<!-- wp:site-title {"level":0,"fontSize":"' . $size . '","style":{"typography":{"fontWeight":"800"}}} /-->',
+	array( 'style' => array( 'spacing' => array( 'blockGap' => 'var:preset|spacing|x-small' ) ), 'layout' => array( 'type' => 'flex', 'flexWrap' => 'nowrap' ) )
+);
+$ap_logo = $ap_brand['whiteLabel'] ? $ap_site_name() : '<!-- wp:image {"width":"132px","sizeSlug":"full","linkDestination":"custom","className":"anypress-logo"} -->' . "\n"
 	. '<figure class="wp-block-image size-full is-resized anypress-logo"><a href="' . esc_url( home_url( '/' ) ) . '"><img src="' . esc_url( ap_asset( 'logo.svg' ) ) . '" alt="AnyPress" style="width:132px;height:auto"/></a></figure>' . "\n<!-- /wp:image -->";
-$ap_announce = ap_group(
-	ap_p( '7 days free to start · 30-day money-back guarantee · Cancel any time', array( 'align' => 'center', 'fontSize' => 'x-small' ) ),
+$ap_announce = '' === (string) $ap_brand['announce'] ? '' : ap_group(
+	ap_p( ap_e( $ap_brand['announce'] ), array( 'align' => 'center', 'fontSize' => 'x-small' ) ),
 	array(
 		'align'           => 'full',
 		'className'       => 'anypress-announce',
@@ -800,7 +837,7 @@ $ap_announce = ap_group(
 		'style'           => array( 'spacing' => array( 'padding' => array( 'top' => '0.45rem', 'bottom' => '0.45rem' ) ) ),
 	)
 );
-$ap_header = $ap_announce . "\n\n" . ap_group(
+$ap_header = ( $ap_announce ? $ap_announce . "\n\n" : '' ) . ap_group(
 	ap_group(
 		$ap_logo . "\n\n"
 		. ap_group(
@@ -844,14 +881,14 @@ $ap_footer_col = static fn( $title, $links ) => ap_h( ap_e( $title ), 3, array( 
 $ap_footer     = ap_group(
 	ap_columns(
 		array(
-			array( ap_img( ap_asset( 'logo-dark.svg' ), 'AnyPress', '132px' ) . "\n\n" . ap_p( ap_e( 'Real WordPress, set up and looked after for you.' ), array( 'textColor' => 'main-accent' ) ) . "\n\n" . ap_p( 'Questions? <a href="' . esc_url( $ap_mailto ) . '">support@anypress.io</a>' ), '34%' ),
-			array( $ap_footer_col( 'Shop', array( array( 'Plans', $ap_plans_u ), array( 'Compare sizes', $ap_plans_u . '#sizes' ), array( 'Email packs', $ap_plans_u . '#email-packs' ), array( 'Your account', $ap_account ), array( 'Cart', $ap_cart ) ) ) ),
-			array( $ap_footer_col( 'Help', array( array( 'Help pages', home_url( '/docs/' ) ), array( 'Refund policy', home_url( '/refund-policy/' ) ), array( 'Terms of service', home_url( '/terms/' ) ), array( 'Privacy policy', home_url( '/privacy/' ) ) ) ) ),
-			array( $ap_footer_col( 'AnyPress', array( array( 'anypress.io', 'https://anypress.io' ), array( 'Sell websites', 'https://anypress.io/sell' ), array( 'Affiliates', home_url( '/affiliates/' ) ) ) ) ),
+			array( ( $ap_brand['whiteLabel'] ? $ap_site_name( 'large' ) : ap_img( ap_asset( 'logo-dark.svg' ), 'AnyPress', '132px' ) ) . "\n\n" . ap_p( ap_e( $ap_brand['tagline'] ), array( 'textColor' => 'main-accent' ) ) . "\n\n" . ap_p( $ap_brand['footerAsk'] ), '34%' ),
+			array( $ap_footer_col( 'Shop', array_values( array_filter( array( array( 'Plans', $ap_plans_u ), array( 'Compare sizes', $ap_plans_u . '#sizes' ), $ap_email_pack ? array( 'Email packs', $ap_plans_u . '#email-packs' ) : null, array( 'Your account', $ap_account ), array( 'Cart', $ap_cart ) ) ) ) ) ),
+			array( $ap_footer_col( 'Help', array_map( static fn( $l ) => array( $l[0], ap_link( $l[1] ) ), $ap_brand['footerHelp'] ) ) ),
+			array( $ap_footer_col( $ap_brand['footerMore'][0], array_map( static fn( $l ) => array( $l[0], ap_link( $l[1] ) ), $ap_brand['footerMore'][1] ) ) ),
 		),
 		array( 'style' => array( 'spacing' => array( 'blockGap' => array( 'left' => 'var:preset|spacing|large' ) ) ) )
 	) . "\n\n"
-	. ap_p( '© AnyPress, by Otaku Solutions.', array( 'textColor' => 'main-accent', 'fontSize' => 'x-small' ) ),
+	. ap_p( ap_e( $ap_brand['copyright'] ), array( 'textColor' => 'main-accent', 'fontSize' => 'x-small' ) ),
 	array(
 		'align'     => 'full',
 		'className' => 'is-style-section-dark anypress-footer',

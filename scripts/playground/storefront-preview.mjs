@@ -1,0 +1,142 @@
+// Builds the ready-made seller storefront (waas-provisioning-api templates/seller-storefront) on WordPress Playground the
+// way its build.sh does, and serves it or screenshots it.
+//
+//   node storefront-preview.mjs                # serve at http://127.0.0.1:9430 (admin / password)
+//   node storefront-preview.mjs --shots <dir>  # screenshot the pages and the seller's wp-admin, exit
+//
+// API=<waas-provisioning-api checkout> (default ../../../waas-provisioning-api), HOST_ZIP=<anypress-host.zip>.
+
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { execFileSync } from 'node:child_process';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { runCLI } from '@wp-playground/cli';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const API = resolve(process.env.API || resolve(HERE, '../../../waas-provisioning-api'));
+const TEMPLATES = resolve(API, 'templates');
+const ZIPS = resolve(HERE, 'preview-zips');
+const HOST_ZIP = resolve(process.env.HOST_ZIP || resolve(ZIPS, 'anypress-host.zip'));
+const SHOTS = process.argv.includes('--shots') ? resolve(process.argv[process.argv.indexOf('--shots') + 1]) : null;
+const PORT = Number(process.env.PLAYGROUND_PORT || 9430);
+
+// build.sh's PLUGINS list, read from the template so the preview uses the same pins.
+const build = readFileSync(resolve(TEMPLATES, 'seller-storefront/build.sh'), 'utf8');
+const pins = build.match(/^PLUGINS="\n([\s\S]*?)\n"/m)[1].trim().split('\n').map((l) => l.trim().split(/\s+/));
+
+// What build.sh puts next to shop.php: the shop design with this template's brand.json, the store template's site types
+// and the API's price list.
+const STAGE = mkdtempSync(resolve(tmpdir(), 'storefront-shop-'));
+const DESIGN = resolve(HERE, '../test-storefront/remote/design');
+cpSync(DESIGN, resolve(STAGE, 'design'), { recursive: true });
+cpSync(resolve(TEMPLATES, 'seller-storefront/brand.json'), resolve(STAGE, 'design/brand.json'));
+cpSync(resolve(TEMPLATES, 'seller-storefront/shop.php'), resolve(STAGE, 'shop.php'));
+cpSync(resolve(TEMPLATES, 'anypress-store/mu-plugins/anypress-patterns.php'), resolve(STAGE, 'anypress-patterns.php'));
+cpSync(resolve(TEMPLATES, 'anypress-store/roles.json'), resolve(STAGE, 'roles.json'));
+cpSync(resolve(TEMPLATES, 'seller-storefront/audiences.json'), resolve(STAGE, 'audiences.json'));
+writeFileSync(resolve(STAGE, 'pricing.json'), execFileSync('node', ['--input-type=module', '-e', "const { PRICE_LIST } = await import(process.argv[1]); console.log(JSON.stringify(PRICE_LIST));", resolve(API, 'src/pricing.ts')]));
+
+const literal = (file, name) => ({ resource: 'literal', name, contents: readFileSync(file) });
+const cli = await runCLI({
+    command: 'server',
+    wp: `https://wordpress.org/wordpress-${process.env.PLAYGROUND_WP || '7.1.4'}.zip`,
+    php: '8.3',
+    port: PORT,
+    blueprint: {
+        login: !SHOTS,
+        steps: [
+            // A ready-made storefront has its key in wp-config (src/storefronts.ts); the address answers nothing here.
+            { step: 'defineWpConfigConsts', consts: {
+                WP_DEBUG: true, WP_DEBUG_LOG: '/tmp/debug.log', WP_DEBUG_DISPLAY: false,
+                ANYPRESS_API_BASE_URL: 'http://127.0.0.1:9', ANYPRESS_API_KEY: 'preview', ANYPRESS_API_SECRET: 'preview',
+                ANYPRESS_HOST_KEY_ENCRYPTION_KEY: 'preview-preview-preview-preview-',
+            } },
+            { step: 'setSiteOptions', options: { blogname: 'Brightside Websites', permalink_structure: '/%postname%/' } },
+            { step: 'installTheme', themeData: literal(resolve(ZIPS, 'anypress.zip'), 'anypress.zip'), options: { activate: true } },
+            ...pins.map(([slug, version]) => ({ step: 'installPlugin', pluginData: { resource: 'url', url: `https://downloads.wordpress.org/plugin/${slug}.${version}.zip` }, options: { activate: true } })),
+            { step: 'installPlugin', pluginData: literal(resolve(ZIPS, 'fluent-toolkit.zip'), 'fluent-toolkit.zip'), options: { activate: true } },
+            { step: 'installPlugin', pluginData: literal(resolve(ZIPS, 'anypress-blocks.zip'), 'anypress-blocks.zip'), options: { activate: true } },
+            { step: 'installPlugin', pluginData: literal(HOST_ZIP, 'anypress-host.zip'), options: { activate: true } },
+            { step: 'mkdir', path: '/wordpress/wp-content/mu-plugins' },
+            { step: 'cp', fromPath: '/wordpress/wp-content/sf/seller-storefront/mu-plugins/seller-storefront.php', toPath: '/wordpress/wp-content/mu-plugins/seller-storefront.php' },
+            { step: 'cp', fromPath: '/wordpress/wp-content/sf/anypress-store/mu-plugins/anypress-crm-lifecycle.php', toPath: '/wordpress/wp-content/mu-plugins/anypress-crm-lifecycle.php' },
+            { step: 'cp', fromPath: '/wordpress/wp-content/sfshop/design/anypress-shop.php', toPath: '/wordpress/wp-content/mu-plugins/anypress-shop.php' },
+            { step: 'cp', fromPath: '/wordpress/wp-content/preview/sqlite-json.php', toPath: '/wordpress/wp-content/mu-plugins/0-sqlite-json.php' },
+        ],
+    },
+    mount: [
+        { hostPath: TEMPLATES, vfsPath: '/wordpress/wp-content/sf' },
+        { hostPath: STAGE, vfsPath: '/wordpress/wp-content/sfshop' },
+        { hostPath: resolve(HERE, 'shop-preview'), vfsPath: '/wordpress/wp-content/preview' },
+    ],
+    verbosity: 'quiet',
+});
+const base = cli.serverUrl.replace(/\/$/, '');
+
+// build.sh's "Install and configure" and "Presets" steps.
+const seeded = await cli.playground.run({ code: `<?php
+require '/wordpress/wp-load.php';
+wp_set_current_user(1);
+foreach (get_posts(['post_type' => ['post', 'page'], 'post_status' => 'any', 'numberposts' => -1]) as $p) { wp_delete_post($p->ID, true); }
+(new \\FluentCart\\App\\CPT\\Pages())->createPages();
+update_option('show_on_front', 'page');
+update_option('page_on_front', get_page_by_path('shop')->ID);
+update_option('default_comment_status', 'closed');
+update_option('blog_public', 0);
+@mkdir('/wordpress/sfbuild'); @mkdir('/wordpress/crm');
+copy('/wordpress/wp-content/sf/seller-storefront/presets.php', '/wordpress/sfbuild/presets.php');
+copy('/wordpress/wp-content/sf/anypress-store/mu-plugins/anypress-patterns.php', '/wordpress/sfbuild/anypress-patterns.php');
+copy('/wordpress/wp-content/sf/anypress-store/crm/setup.php', '/wordpress/crm/setup.php');
+copy('/wordpress/wp-content/sf/seller-storefront/crm-emails.json', '/wordpress/crm/emails.json');
+require '/wordpress/sfbuild/presets.php';
+require '/wordpress/crm/setup.php';
+flush_rewrite_rules();
+echo "seeded front=", get_post(get_option('page_on_front'))->post_name, "\\n";
+` });
+console.log(seeded.text, seeded.errors || '');
+// build.sh's "Shop" step: plans, legal pages and the shop design.
+const shop = await cli.playground.run({ code: "<?php require '/wordpress/wp-load.php'; wp_set_current_user(1); require '/wordpress/wp-content/sfshop/shop.php';" });
+console.log(shop.text, shop.errors || '');
+
+if (!SHOTS) {
+    console.log(`Storefront preview at ${base} (admin / password). Ctrl+C to stop.`);
+    await new Promise(() => {});
+}
+
+const { chromium } = (await import('node:module')).createRequire(import.meta.url)('playwright');
+mkdirSync(SHOTS, { recursive: true });
+const browser = await chromium.launch();
+const pages = (process.env.PAGES ?? ',plans,item/website-small,who-we-help,who-we-help/shops,who-we-help/churches,about,questions,contact,terms,checkout,account').split(',').filter((p, i) => p || i === 0);
+for (const [label, viewport] of [['desktop', { width: 1440, height: 900 }], ['phone', { width: 390, height: 844 }]]) {
+    const ctx = await browser.newContext({ viewport });
+    const page = await ctx.newPage();
+    for (const p of pages) {
+        await page.goto(`${base}/${p}${p ? '/' : ''}`, { waitUntil: 'networkidle' }).catch(() => {});
+        await page.screenshot({ path: `${SHOTS}/front-${p.replace(/\//g, '-') || 'home'}-${label}.png`, fullPage: true });
+    }
+    await ctx.close();
+}
+// The seller's wp-admin, signed in.
+const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await ctx.newPage();
+await page.goto(`${base}/wp-login.php`);
+await page.fill('#user_login', 'admin');
+await page.fill('#user_pass', 'password');
+await page.click('#wp-submit');
+await page.waitForLoadState('networkidle');
+const admin = ['index.php', 'admin.php?page=anypress-admin', 'admin.php?page=anypress-admin-settings', 'admin.php?page=anypress-admin-settings&tab=cancellations',
+    'admin.php?page=anypress-admin-settings&tab=discount', 'admin.php?page=anypress-admin-settings&tab=domains', 'admin.php?page=anypress-admin-settings&tab=emails',
+    'admin.php?page=anypress-care', 'admin.php?page=fluent-cart#/products', 'admin.php?page=fluent-cart#/settings', 'admin.php?page=fluentcrm-admin#/funnels', 'site-editor.php'];
+for (const a of admin) {
+    await page.goto(`${base}/wp-admin/${a}`, { waitUntil: 'networkidle', timeout: 60000 }).catch(() => {});
+    await page.waitForTimeout(2500);
+    await page.screenshot({ path: `${SHOTS}/admin-${a.replace(/[^a-z0-9]+/gi, '-')}.png`, fullPage: true });
+}
+const menu = await page.$$eval('#adminmenu > li > a', (as) => as.map((a) => a.innerText.trim().replace(/\s+/g, ' ')));
+console.log('admin menu:', menu.join(' | '));
+await browser.close();
+const log = await cli.playground.run({ code: "<?php echo @file_get_contents('/tmp/debug.log');" });
+console.log('debug.log tail:', log.text.split('\n').slice(-30).join('\n'));
+await cli[Symbol.asyncDispose]?.();
+process.exit(0);
