@@ -221,11 +221,10 @@ body .anypress-docs .betterdocs-faq-main-content{background:transparent!importan
 .anypress-care-band .anypress-care-box{margin:0;padding:clamp(1.25rem,3vw,2.25rem);gap:1rem 2.5rem;border:0;border-radius:18px;background:var(--wp--preset--color--tertiary,color-mix(in srgb,var(--wp--preset--color--main) 4%,var(--wp--preset--color--base)))}
 .anypress-care-band .anypress-care-title{font-size:clamp(1.5rem,2.2vw,1.9rem);font-weight:800;letter-spacing:-.02em;line-height:1.15}
 .anypress-care-band .anypress-care-intro{font-size:var(--wp--preset--font-size--base);opacity:1;color:var(--wp--preset--color--secondary)}
-.anypress-care-band .anypress-care-options{grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:.75rem}
-.anypress-care-band .anypress-care-option{grid-template-columns:1fr;align-content:start;gap:.6rem;padding:1rem 1.1rem;border:1.5px solid var(--wp--preset--color--border-light);border-radius:12px}
+.anypress-care-band .anypress-care-options{grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:1rem 1.5rem}
+.anypress-care-band .anypress-care-option{grid-template-columns:1fr;align-content:start;gap:.4rem;padding:.9rem 0 0;border:0;border-top:2px solid var(--wp--preset--color--main);border-radius:0}
 .anypress-care-band .anypress-care-option strong{font-size:var(--wp--preset--font-size--medium)}
 .anypress-care-band .anypress-care-option b{font-size:var(--wp--preset--font-size--medium);font-weight:800}
-.anypress-care-band .anypress-care-option{background:var(--wp--preset--color--base)}
 .anypress-care-band .anypress-care-later{font-weight:600;color:var(--wp--preset--color--main)}
 @media (min-width:960px){
 .anypress-care-band .anypress-care-box{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
