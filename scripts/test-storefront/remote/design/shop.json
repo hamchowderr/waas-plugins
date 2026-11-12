@@ -7,8 +7,8 @@
    "short": "Website",
    "drawing": "website",
    "image": "website.jpg",
-   "pitch": "Tell people who you are and help them find you.",
-   "headline": "A website that brings people to you.",
+   "pitch": "Arrives ready to show up on Google, take messages and grow your mailing list.",
+   "headline": "Get found on Google and hear from customers.",
    "inBox": [
     "Your website or blog",
     "Help getting found on Google",
@@ -53,8 +53,8 @@
    "short": "Bookings",
    "drawing": "bookings",
    "image": "bookings.jpg",
-   "pitch": "Let clients pick a time and pay when they book.",
-   "headline": "Get booked and paid while you work.",
+   "pitch": "Arrives with a booking calendar, payment when clients book and reminder emails, all switched on.",
+   "headline": "Get booked and get paid while you work.",
    "inBox": [
     "Your website",
     "An online booking calendar",
@@ -99,8 +99,8 @@
    "short": "Store",
    "drawing": "store",
    "image": "store.jpg",
-   "pitch": "Sell products, downloads and subscriptions, and keep every sale.",
-   "headline": "Sell anything, and keep every sale.",
+   "pitch": "Sell products, downloads and subscriptions, with card payments and no cut of your sales.",
+   "headline": "Sell online and keep every sale.",
    "inBox": [
     "Your shop",
     "Card payments",
@@ -145,8 +145,8 @@
    "short": "Community",
    "drawing": "courses",
    "image": "courses.jpg",
-   "pitch": "A members' area with courses, discussions and paid access.",
-   "headline": "Your members, your courses, your site.",
+   "pitch": "Arrives with courses, a members' area and paid access, all switched on.",
+   "headline": "Sell your courses and grow your members.",
    "inBox": [
     "Your website",
     "A members' area with discussions",
@@ -191,8 +191,8 @@
    "short": "Everything",
    "drawing": "everything",
    "image": "everything.jpg",
-   "pitch": "Shop, bookings, members, courses and a help desk on one site.",
-   "headline": "One site that runs the whole operation.",
+   "pitch": "A store, bookings, courses and a help desk, all working together on one site.",
+   "headline": "Sell, take bookings and teach, all on one site.",
    "inBox": [
     "Everything in the other four",
     "A help desk for customer questions",
@@ -263,7 +263,7 @@
  "included": [
   [
    "backup",
-   "Nightly backups",
+   "Backed up every night",
    "We save a copy of your site every night, and keep daily copies for 7 days and weekly copies for 4 weeks."
   ],
   [
@@ -273,18 +273,18 @@
   ],
   [
    "lock",
-   "Updates done for you",
-   "WordPress, its plugins and the server are kept up to date for you."
+   "Updates that don’t break your site",
+   "WordPress, its plugins and the server are kept up to date for you. Every update is tried on every kind of site before it reaches yours."
   ],
   [
    "email",
    "Emails that arrive",
-   "Order, account and booking emails always send. Newsletters come with a monthly allowance."
+   "Order, account and booking emails always send from your site. Newsletters come with a monthly allowance."
   ],
   [
    "lifebuoy",
-   "A person to ask",
-   "Email support@anypress.io and a person who knows your site writes back."
+   "Help when you need it",
+   "Email support@anypress.io with a question or a change, and we’ll help."
   ],
   [
    "thirty",

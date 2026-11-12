@@ -23,23 +23,23 @@ $ap_data = json_decode( file_get_contents( "$ap_dir/shop.json" ), true );
 $ap_brand = array_replace(
 	array(
 		'whiteLabel'   => false,
-		'homeTitle'    => 'AnyPress: websites, ready in minutes',
-		'tagline'      => 'Real WordPress, set up and looked after for you.',
+		'homeTitle'    => 'AnyPress: get found, get booked and get paid',
+		'tagline'      => 'A website that runs your business. We set it all up.',
 		'contact'      => array( 'Email support@anypress.io', 'mailto:support@anypress.io' ),
 		'footerAsk'    => 'Questions? <a href="mailto:support@anypress.io">support@anypress.io</a>',
 		'help'         => array( 'Read the help pages', '/docs/' ),
-		'helpBand'     => array( 'Not sure which to pick?', 'Ask a person. We answer every email.', 'Tell us what your business does and we’ll tell you which plan and size fit. No sales call, just a reply.' ),
-		'announce'     => '7 days free to start · 30-day money-back guarantee · Cancel any time',
-		'hero'         => array( 'No tech skills needed', 'Pick a website. It’s <mark style="background-color:var(--wp--preset--color--primary-alt)" class="has-inline-color">ready in minutes.</mark>', 'Real WordPress, set up and looked after for you. Choose what you’re making, pick a size, and sign in to a working site a few minutes after you pay.' ),
-		'heroTicks'    => array( 'From {from} a month', '7 days free to start', '30-day money-back guarantee', 'Cancel any time from your account' ),
+		'helpBand'     => array( 'Not sure which to pick?', 'Tell us what your business does. We’ll tell you which site fits.', 'Email us a line or two about what you need your website to do, and we’ll point you to the right kind and size. No sales call needed.' ),
+		'announce'     => '7 days free to start · Everything included · No cut of your sales · Cancel any time',
+		'hero'         => array( 'A website that runs your business, set up for you', 'Get found, get booked and get paid. <mark style="background-color:var(--wp--preset--color--primary-alt)" class="has-inline-color">We set it all up.</mark>', 'Your site arrives ready to show up on Google, take bookings and payments, keep track of every customer and send email from your business name. You add your words and photos.' ),
+		'heroTicks'    => array( 'From {from} a month, everything included', 'No cut of your sales', '7 days free to start', '30-day money-back guarantee' ),
 		'steps'        => array(
-			array( 'pick', 'Pick a kind and a size', 'Choose what you’re making and how big it needs to be. Pay monthly, or yearly and get two months free.' ),
-			array( 'card', 'Pay securely', 'Checkout takes a minute. The first 7 days are free: add a card, and cancel before day 8 to pay nothing. After that, your first payment is covered by our 30-day money-back guarantee.' ),
-			array( 'open', 'Sign in to your new site', 'Your site is usually ready a few minutes later. We email you, and your account opens it with one click.' ),
+			array( 'pick', 'Pick what your site needs to do', 'Choose the kind of website and a size. Pay monthly, or yearly and get two months free.' ),
+			array( 'card', 'Start free', 'Checkout takes a minute. The first 7 days are free: cancel before day 8 and you pay nothing. After that, your first payment is covered by our 30-day money-back guarantee.' ),
+			array( 'open', 'Sign in. It’s all set up', 'A few minutes later your site is ready, with its pages and tools already switched on. We email you, and your account opens it with one click.' ),
 		),
-		'plansLead'    => 'Pick the kind of site you’re making, then a size. Pay monthly, or yearly and get two months free. Every plan starts with 7 days free (one free trial per person), and the first payment has a 30-day money-back guarantee.',
-		'trust'        => array( array( '<strong>7 days free to start</strong>', '<strong>30-day money-back guarantee</strong>' ), array( '<strong>Cancel any time</strong> from your account' ), array( '<strong>Ready in minutes</strong> after you pay' ) ),
-		'promises'     => array( 'Pay yearly and get two months free', '30-day money-back guarantee', 'Cancel any time from your account', 'A free anypress.site address, or your own domain', 'Secure card checkout' ),
+		'plansLead'    => 'Pick what you need your website to do, then a size. Everything comes included: no add-ons to buy and no cut of your sales. Pay monthly, or yearly and get two months free. Every plan starts with 7 days free (one free trial per person), and the first payment has a 30-day money-back guarantee.',
+		'trust'        => array( array( '<strong>7 days free to start</strong>', '<strong>30-day money-back guarantee</strong>' ), array( '<strong>Cancel any time</strong> from your account' ), array( '<strong>Set up for you</strong>, ready minutes after you pay' ) ),
+		'promises'     => array( 'Everything included, nothing else to buy', 'Pay yearly and get two months free', '30-day money-back guarantee', 'Cancel any time from your account', 'A free anypress.site address, or your own domain', 'Secure card checkout' ),
 		'examples'     => true,
 		'menu'         => array( array( 'Plans', 'plans' ), array( 'Compare sizes', 'sizes' ), array( 'Help', '/docs/' ), array( 'Sell websites', 'https://anypress.io/sell' ), array( 'Account', 'account' ) ),
 		'footerHelp'   => array( array( 'Help pages', '/docs/' ), array( 'Refund policy', '/refund-policy/' ), array( 'Terms of service', '/terms/' ), array( 'Privacy policy', '/privacy/' ) ),
@@ -448,7 +448,7 @@ function ap_included( $data, $section = 'tint' ) {
 			array( 'className' => 'anypress-centered', 'style' => array( 'spacing' => array( 'blockGap' => 'var:preset|spacing|small' ) ), 'layout' => array( 'type' => 'flex', 'orientation' => 'vertical' ) )
 		);
 	}
-	return ap_band( ap_head( 'Looked after for you', 'Every plan includes', 'Whatever kind of site and size you pick, these come with it.' ) . "\n\n" . ap_grid( $tiles, '17rem', 'large', 3, 'anypress-included' ), $section, 'included' );
+	return ap_band( ap_head( 'everything included', 'Included on every site', 'Whatever you pick, it all comes set up. Nothing else to buy.' ) . "\n\n" . ap_grid( $tiles, '17rem', 'large', 3, 'anypress-included' ), $section, 'included' );
 }
 
 /** The sizes side by side. With $type_id, the price row and links are that kind's; the current size is marked. */
@@ -577,9 +577,9 @@ $ap_home = ap_band(
 	'x-large',
 	'xx-large'
 ) . "\n\n"
-. ap_band( ap_head( 'Start here', 'What are you making?', 'Five kinds of website, each set up with the tools it needs. Every one is real WordPress you can change later.', 'types' ) . "\n\n" . ap_grid( $ap_type_cards, '12rem', 'small', 5, 'anypress-type-grid' ), 'tint', 'types-band', 'xx-large', 'xx-large', array( 'layout' => array( 'type' => 'constrained', 'contentSize' => '80rem' ) ) ) . "\n\n"
+. ap_band( ap_head( 'Start here', 'What do you need your website to do?', 'Five kinds of website. Each one arrives ready to use, and it’s real WordPress you can change later.', 'types' ) . "\n\n" . ap_grid( $ap_type_cards, '12rem', 'small', 5, 'anypress-type-grid' ), 'tint', 'types-band', 'xx-large', 'xx-large', array( 'layout' => array( 'type' => 'constrained', 'contentSize' => '80rem' ) ) ) . "\n\n"
 . ap_band( ap_head( 'Three sizes', 'Every size, side by side', 'All sizes have the same features. Bigger sizes have more power, storage and newsletter emails for busier sites.', 'sizes' ) . "\n\n" . ap_sizes_table( $ap_data, $ap_plans ) . "\n\n" . ap_p( ap_e( 'Paying yearly? You get two months free on every size.' ), array( 'align' => 'center', 'textColor' => 'secondary' ) ) ) . "\n\n"
-. ap_band( ap_head( 'How it works', 'From checkout to your own site in minutes' ) . "\n\n" . ap_grid( $ap_steps, '16rem', 'large', 3, 'anypress-steps' ), 'brand-soft', 'how' ) . "\n\n"
+. ap_band( ap_head( 'How it works', 'You pick. We set it all up.' ) . "\n\n" . ap_grid( $ap_steps, '16rem', 'large', 3, 'anypress-steps' ), 'brand-soft', 'how' ) . "\n\n"
 . ap_included( $ap_data, '' ) . "\n\n"
 . ap_faq( $ap_data, null, 'tint' ) . "\n\n"
 . ap_help_band();
