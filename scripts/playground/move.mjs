@@ -31,7 +31,7 @@ const SERVE = process.argv.includes('--serve');
 const FLUENT_COMMUNITY = process.env.FLUENT_COMMUNITY || '2.12.0';
 const TUTOR = process.env.TUTOR || 'latest-stable';
 const USER_TOKEN = randomBytes(24).toString('hex');
-const SWITCHES = ['forms', 'shop', 'edd', 'crm', 'support', 'affiliate', 'community', 'course', 'circle', 'calendly', 'memberpress'];
+const SWITCHES = ['forms', 'shop', 'edd', 'crm', 'support', 'affiliate', 'community', 'course', 'circle', 'skool', 'calendly', 'memberpress'];
 
 for (const [path, fix] of [
     [resolve(MOVE, 'lib/Moving/CourseImport.php'), 'run scripts/build-move.sh'],
@@ -181,6 +181,7 @@ await check('Tools, Move to Fluent lists every switch with Check, Switch and Und
     for (const k of SWITCHES) expect(html.includes(`id="switch-${k}"`), `no ${k} card`);
     expect((html.match(/value="check"/g) || []).length === SWITCHES.length, 'a Check button per switch');
     expect(html.includes('type="password" id="circle-token"') && html.includes('type="password" id="calendly-token"'), 'the Circle and Calendly tokens are password fields');
+    expect(html.includes('type="file" accept=".csv,text/csv" id="skool-csv"') && html.includes('type="number" id="skool-space"') && html.includes('enctype="multipart/form-data"'), 'the Skool card takes the members CSV as a file upload and a space id');
     expect(!/ (onclick|style)=/.test(html), 'no inline script or style attributes (they are enqueued)');
 });
 

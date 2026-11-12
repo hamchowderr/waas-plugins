@@ -3,7 +3,7 @@
 namespace AnyPressClient\Moving;
 
 /**
- * Circle members as WordPress users, for the Circle switch: a member whose email the site already has is matched to
+ * Circle (and Skool) members as WordPress users, for the Circle and Skool switches: a member whose email the site already has is matched to
  * that user; anyone else gets a new subscriber with a random password (no email is sent: the switch holds email back,
  * and members set their own password with "Lost your password?"). The switch saves $made and $matched in its state
  * as it goes, so undo finds them even after a run that stopped half way.
@@ -21,6 +21,13 @@ class CirclePeople
     private array $by_email = [];
     /** @var string[] user id => Circle headline */
     private array $headlines = [];
+    /** The user meta that marks a user as met by this switch (undo deletes only marked users it made). */
+    private string $mark;
+
+    public function __construct(string $mark = CircleImport::MEMBER_META)
+    {
+        $this->mark = $mark;
+    }
 
     /** The user for a Circle member record (id, email, name, first_name, last_name, headline), or 0 without an email. */
     public function user(array $member): int
@@ -43,7 +50,7 @@ class CirclePeople
             }
             $this->made[] = $id;
         }
-        update_user_meta($id, CircleImport::MEMBER_META, (int) ($member['id'] ?? 0));
+        update_user_meta($id, $this->mark, (int) ($member['id'] ?? 0));
         $this->by_email[$email] = $id;
         $this->headlines[$id] = sanitize_text_field((string) ($member['headline'] ?? ''));
 

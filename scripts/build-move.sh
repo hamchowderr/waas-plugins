@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copies AnyPress Client's moving switches (forms, shop, CRM and the support, affiliate, community, course,
-# Circle, Calendly and MemberPress imports) into AnyPress Move's lib/ folder, in AnyPress Move's own namespace and text
+# Circle, Skool, Calendly and MemberPress imports) into AnyPress Move's lib/ folder, in AnyPress Move's own namespace and text
 # domain, so the two plugins never load each other's classes. lib/ is built, not kept in git: edit the
 # switches in packages/anypress-client and run this again.
 #
