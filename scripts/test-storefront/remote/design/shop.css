@@ -82,7 +82,7 @@ body{--fct-btn-bg-color:var(--wp--preset--color--main);--fct-btn-border-color:va
 .anypress-buy .fct-product-tab-nav-item{padding:.45em 1em;border-radius:999px;text-align:center;font-weight:700;cursor:pointer;color:var(--wp--preset--color--main)}
 .anypress-buy .fct-product-tab-nav-item.active{background:var(--wp--preset--color--main);color:var(--wp--preset--color--base)}
 .anypress-buy .fct-product-tab-content{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.anypress-buy .fct-product-payment-type{font-size:var(--wp--preset--font-size--large);font-weight:800;letter-spacing:-.02em;color:var(--wp--preset--color--main)}
+.anypress-buy .fct-product-payment-type{font-size:var(--wp--preset--font-size--large);font-weight:800;letter-spacing:-.02em;line-height:1.15;color:var(--wp--preset--color--main)}
 .anypress-buy .fct-product-buttons-wrap{display:flex}
 .anypress-buy a.fluent-cart-direct-checkout-button,.anypress-buy a.fluent-cart-direct-checkout-button:hover{display:flex;width:100%;max-height:none;padding:.9em 1.4em;border-radius:10px;background:var(--wp--preset--color--main);box-shadow:none;color:var(--wp--preset--color--base);font-weight:700;font-size:var(--wp--preset--font-size--base);line-height:1.2;border:1.5px solid var(--wp--preset--color--main);transition:transform .15s ease,box-shadow .15s ease}
 .anypress-buy a.fluent-cart-direct-checkout-button:hover{transform:translateY(-2px);box-shadow:0 4px 0 0 var(--wp--preset--color--amber,#ffb338)}
@@ -187,6 +187,9 @@ body .anypress-docs .betterdocs-category-grid-inner-wrapper>.betterdocs-single-c
 /* Buy now and Add to cart side by side at the same height; Add to cart is the quieter one. */
 .anypress-buy .fct-product-buttons-wrap{display:flex;gap:.6rem;align-items:stretch}
 .anypress-buy .fct-product-buttons-wrap>*{flex:1 1 0}
+/* AnyPress Host's care box sits in the same row: give it a line of its own, so it doesn't stretch the buttons. */
+.anypress-buy .fct-product-buttons-wrap{flex-wrap:wrap}
+.anypress-buy .fct-product-buttons-wrap>.anypress-care-box{flex:1 0 100%}
 .anypress-buy .fct-product-buttons-wrap a,.anypress-buy .fct-product-buttons-wrap button{text-transform:none}
 .anypress-buy .fct-product-buttons-wrap .fluent-cart-add-to-cart-button{flex:0 0 auto;display:flex;align-items:center;justify-content:center;white-space:nowrap;padding:.9em 1.4em;border-radius:10px;border:1.5px solid var(--wp--preset--color--main);background:var(--wp--preset--color--base);color:var(--wp--preset--color--main);font-weight:700;font-size:var(--wp--preset--font-size--base);line-height:1.2;max-height:none;box-shadow:none}
 
