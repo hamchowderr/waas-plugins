@@ -61,6 +61,7 @@ use AnyPressClient\Moving\CourseImport;
 use AnyPressClient\Moving\ImportAbilities;
 use AnyPressClient\Moving\ImportCommand;
 use AnyPressClient\Moving\MemberPressImport;
+use AnyPressClient\Moving\SkoolImport;
 use AnyPressClient\Moving\SupportImport;
 use AnyPressClient\Shop\ShopAbilities;
 use AnyPressClient\Shop\ShopCommand;
@@ -149,10 +150,10 @@ if (!wp_doing_ajax()) {
 
     // Help desk, affiliate and community data into Fluent Support, FluentAffiliate and FluentCommunity with their own
     // importers, LearnDash courses into FluentCommunity courses, and a Circle community into FluentCommunity through
-    // Circle's Admin API, and a Calendly account into FluentBooking through Calendly's API:
-    // `wp anypress support|affiliate|community|course|circle|calendly|memberpress switch` and the check-* and switch-*
+    // Circle's Admin API, a Skool group's members from its Members CSV, and a Calendly account into FluentBooking
+    // through Calendly's API: `wp anypress support|affiliate|community|course|circle|skool|calendly|memberpress switch` and the check-* and switch-*
     // abilities.
-    $imports = [new SupportImport(), new AffiliateImport(), new CommunityImport(), new CourseImport(), new CircleImport(), new CalendlyImport(), new MemberPressImport()];
+    $imports = [new SupportImport(), new AffiliateImport(), new CommunityImport(), new CourseImport(), new CircleImport(), new SkoolImport(), new CalendlyImport(), new MemberPressImport()];
     new ImportAbilities(...$imports);
     if (defined('WP_CLI') && WP_CLI) {
         foreach ($imports as $import) {
