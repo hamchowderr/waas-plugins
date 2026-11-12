@@ -24,6 +24,11 @@ class FluentCartStarterPlans
     public const ACTION = 'anypress_create_plans';
     /** Set once a ready-made storefront has had its plans made (or already had some), so it never runs again. */
     public const AUTO_DONE_OPTION = 'anypress_starter_plans_done';
+    /**
+     * The Small monthly price of each site type in cents, by role, from the AnyPress price list (GET /pricing on the API,
+     * its src/pricing.ts). Loaded with the roles; no plan is made for a role without a price.
+     */
+    public const PRICES_OPTION = 'anypress_price_list';
     /** Waits between tries while a ready-made storefront can't load its roles yet. */
     private const RETRY_TRANSIENT = 'anypress_starter_plans_retry';
 
@@ -49,26 +54,59 @@ class FluentCartStarterPlans
     }
 
     /**
-     * The plans made for each role, by role slug: name, monthly price of the Small size in cents, and a line for the
-     * product page. Filter: anypress_starter_plans. Only roles the storefront has loaded get products.
+     * The plans made for each role, by role slug: name, monthly price of the Small size in cents (from the price list,
+     * 0 until it is loaded), and a line for the product page. Filter: anypress_starter_plans. Only roles the storefront
+     * has loaded, with a price, get products.
      */
     public static function catalogue(): array
     {
+        $prices = (array) get_option(self::PRICES_OPTION, []);
+        $price = static fn (string $role): int => (int) ($prices[$role] ?? 0);
+
         return (array) apply_filters('anypress_starter_plans', [
-            'website' => [__('Website', 'anypress-host'), 1200, __('A website or blog with SEO, forms, email marketing and an affiliate program.', 'anypress-host')],
-            'bookings' => [__('Bookings', 'anypress-host'), 1900, __('A website that takes appointments and bookings, with a support desk.', 'anypress-host')],
-            'online-store' => [__('Online Store', 'anypress-host'), 2900, __('An online store with checkout, subscriptions, email marketing and affiliates.', 'anypress-host')],
-            'community' => [__('Community & Courses', 'anypress-host'), 3900, __('A members community with courses, plus a store and support desk.', 'anypress-host')],
-            'everything' => [__('Everything', 'anypress-host'), 7900, __('Every feature: store, bookings, community, courses, support, email marketing and affiliates.', 'anypress-host')],
+            'website' => [__('Website', 'anypress-host'), $price('website'), __('A website or blog with SEO, forms, email marketing and an affiliate program.', 'anypress-host')],
+            'bookings' => [__('Bookings', 'anypress-host'), $price('bookings'), __('A website that takes appointments and bookings, with a support desk.', 'anypress-host')],
+            'online-store' => [__('Online Store', 'anypress-host'), $price('online-store'), __('An online store with checkout, subscriptions, email marketing and affiliates.', 'anypress-host')],
+            'community' => [__('Community & Courses', 'anypress-host'), $price('community'), __('A members community with courses, plus a store and support desk.', 'anypress-host')],
+            'everything' => [__('Everything', 'anypress-host'), $price('everything'), __('Every feature: store, bookings, community, courses, support, email marketing and affiliates.', 'anypress-host')],
         ]);
     }
 
-    /** The catalogue's plans whose role this storefront has loaded, in catalogue order. */
+    /** The catalogue's plans whose role this storefront has loaded and that have a price, in catalogue order. */
     public static function available(): array
     {
         $roles = (array) get_option(PluginBootstrap::ROLES_WP_OPTION, []);
 
-        return array_intersect_key(self::catalogue(), $roles);
+        return array_filter(array_intersect_key(self::catalogue(), $roles), static fn ($plan) => (int) $plan[1] > 0);
+    }
+
+    /**
+     * Stores the price list's Small monthly price per site type, in cents. Throws when it can't be read.
+     */
+    public static function load_prices(ProvisioningApi $provisioning_api): void
+    {
+        $prices = [];
+        foreach ((array) ($provisioning_api->get_price_list()->siteTypes ?? []) as $type) {
+            $small = (float) ($type->monthly->small ?? 0);
+            if (!empty($type->key) && $small > 0) {
+                $prices[(string) $type->key] = (int) round($small * 100);
+            }
+        }
+        if (!$prices) {
+            throw new \Exception('The price list has no site types');
+        }
+        update_option(self::PRICES_OPTION, $prices, false);
+    }
+
+    /** Loads whatever the plans still need: the roles, and the prices. Throws when the API can't be read. */
+    private function load(): void
+    {
+        if (!get_option(PluginBootstrap::ROLES_WP_OPTION)) {
+            RolesController::load($this->provisioning_api);
+        }
+        if (!get_option(self::PRICES_OPTION)) {
+            self::load_prices($this->provisioning_api);
+        }
     }
 
     public static function url(): string
@@ -169,7 +207,7 @@ class FluentCartStarterPlans
 
         if (!self::available()) {
             try {
-                RolesController::load($this->provisioning_api);
+                $this->load();
             } catch (\Exception $e) {
                 // Shown below as "no plans made".
             }
@@ -199,7 +237,7 @@ class FluentCartStarterPlans
 
         if (!self::available()) {
             try {
-                RolesController::load($this->provisioning_api);
+                $this->load();
             } catch (\Exception $e) {
                 set_transient(self::RETRY_TRANSIENT, 1, 10 * MINUTE_IN_SECONDS);
                 return;
@@ -225,7 +263,7 @@ class FluentCartStarterPlans
             $items['create_woo_anypress_product']['label'] = __('Create your website plans', 'anypress-host');
             $items['create_woo_anypress_product']['description'] = sprintf(
                 /* translators: %d: number of products, such as 15 */
-                __('Makes %d ready-to-sell plans in FluentCart: each site type in Small, Medium and Large, monthly and yearly, at AnyPress\'s prices. Change any price or picture afterwards in FluentCart.', 'anypress-host'),
+                __('Makes %d ready-to-sell plans in FluentCart: each site type in Small, Medium and Large, monthly and yearly, at the AnyPress price list\'s prices. Change any price or picture afterwards in FluentCart.', 'anypress-host'),
                 $count
             );
             $items['create_woo_anypress_product']['action_label'] = __('Create my plans', 'anypress-host');

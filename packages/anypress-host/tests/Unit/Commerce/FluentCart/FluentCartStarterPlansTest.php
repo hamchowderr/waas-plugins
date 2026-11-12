@@ -15,12 +15,17 @@ class FluentCartStarterPlansTest extends TestCase
     private $store;
     private FluentCartStarterPlans $plans;
     private $roles = [];
+    private $prices = ['website' => 1200, 'bookings' => 1900, 'online-store' => 2900, 'community' => 4900, 'everything' => 7900];
 
     protected function setUp(): void
     {
         parent::setUp();
         Functions\stubTranslationFunctions();
-        Functions\when('get_option')->alias(fn ($name, $default = false) => $name === PluginBootstrap::ROLES_WP_OPTION ? $this->roles : $default);
+        Functions\when('get_option')->alias(fn ($name, $default = false) => match ($name) {
+            PluginBootstrap::ROLES_WP_OPTION => $this->roles,
+            FluentCartStarterPlans::PRICES_OPTION => $this->prices,
+            default => $default,
+        });
         Functions\when('admin_url')->alias(fn ($path = '') => 'https://shop.example/wp-admin/' . $path);
         Functions\when('wp_nonce_url')->alias(fn ($url) => $url . '&_wpnonce=n');
         $this->store = Mockery::mock(FluentCartStore::class);
@@ -76,10 +81,36 @@ class FluentCartStarterPlansTest extends TestCase
         $this->assertSame('Create my plans', $this->plans->plan_button(['Add a website plan', 'x'])[0]);
     }
 
-    public function test_prices_follow_the_shop_small_medium_large_and_ten_months_a_year(): void
+    public function test_prices_come_from_the_price_list_in_small_medium_large_and_ten_months_a_year(): void
     {
         $this->assertSame(['small' => 1, 'medium' => 2, 'large' => 4], FluentCartStarterPlans::SIZES);
         $this->assertSame(1200, FluentCartStarterPlans::catalogue()['website'][1]);
-        $this->assertSame(7900, FluentCartStarterPlans::catalogue()['everything'][1]);
+        $this->assertSame(4900, FluentCartStarterPlans::catalogue()['community'][1]);
+    }
+
+    public function test_a_role_without_a_price_list_price_gets_no_plan(): void
+    {
+        $this->roles = ['website' => [], 'community' => []];
+        $this->prices = ['website' => 1200];
+
+        $this->assertSame(['website'], array_keys(FluentCartStarterPlans::available()));
+    }
+
+    public function test_the_price_list_is_stored_as_small_monthly_cents_by_site_type(): void
+    {
+        $api = Mockery::mock(ProvisioningApi::class);
+        $api->allows('get_price_list')->andReturn(json_decode('{"siteTypes":[{"key":"website","monthly":{"small":12}},{"key":"community","monthly":{"small":49}}]}'));
+        Functions\expect('update_option')->once()->with(FluentCartStarterPlans::PRICES_OPTION, ['website' => 1200, 'community' => 4900], false);
+
+        FluentCartStarterPlans::load_prices($api);
+    }
+
+    public function test_an_empty_price_list_is_an_error(): void
+    {
+        $api = Mockery::mock(ProvisioningApi::class);
+        $api->allows('get_price_list')->andReturn(json_decode('{"siteTypes":[]}'));
+
+        $this->expectException(\Exception::class);
+        FluentCartStarterPlans::load_prices($api);
     }
 }
