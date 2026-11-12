@@ -731,6 +731,14 @@ ap_wrap_store_page( (int) $ap_settings->get( 'customer_profile_page_id' ), 'Your
 ap_wrap_store_page( (int) $ap_settings->get( 'receipt_page_id' ), 'Thank you', 'Your website is being set up. We’ll email you as soon as it’s ready, usually in a few minutes.' );
 
 // ---------------------------------------------------------------------------------------------------------- plan pages
+// The full list, as on the website's page for each kind of site: its groups, then what is looked after on every site.
+$ap_can = static function ( $type ) use ( $ap_data ) {
+	$cards = array();
+	foreach ( array_merge( $type['can'], array( $ap_data['lookedAfter'] ) ) as list( $title, $items ) ) {
+		$cards[] = ap_card( ap_h( ap_e( $title ), 3, array( 'fontSize' => 'medium' ) ) . "\n\n" . ap_list( array_map( 'ap_e', $items ) ), 'card-line', 'medium' );
+	}
+	return $cards;
+};
 // Each plan's words: what the kind of site does, this size against the others, what every plan includes, questions.
 foreach ( $ap_data['types'] as $ap_type ) {
 	foreach ( $ap_data['sizes'] as $ap_size ) {
@@ -750,9 +758,10 @@ foreach ( $ap_data['types'] as $ap_type ) {
 			'',
 			'what'
 		) . "\n\n"
-		. ap_band( ap_head( 'Pick your size', 'This size and the others', 'Every size has the same features. You can move to another size later: email us and it changes from your next renewal.', 'sizes' ) . "\n\n" . ap_sizes_table( $ap_data, $ap_plans, $ap_type['id'], $ap_size['id'] ), 'tint' ) . "\n\n"
-		. ap_included( $ap_data, '' ) . "\n\n"
-		. ap_faq( $ap_data, null, 'tint' );
+		. ap_band( ap_head( 'the full list', 'Everything you can do with it.', 'All of it is switched on when your site arrives. Nothing extra to buy.' ) . "\n\n" . ap_grid( $ap_can( $ap_type ), '17rem', 'medium', 3, 'anypress-can' ), 'tint', 'everything' ) . "\n\n"
+		. ap_band( ap_head( 'Pick your size', 'This size and the others', 'Every size has the same features. You can move to another size later: email us and it changes from your next renewal.', 'sizes' ) . "\n\n" . ap_sizes_table( $ap_data, $ap_plans, $ap_type['id'], $ap_size['id'] ) ) . "\n\n"
+		. ap_included( $ap_data ) . "\n\n"
+		. ap_faq( $ap_data );
 		wp_update_post(
 			array(
 				'ID'           => $ap_plan['id'],

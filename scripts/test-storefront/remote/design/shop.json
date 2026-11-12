@@ -44,7 +44,53 @@
     "name": "Juniper Street Bakery",
     "what": "A neighbourhood bakery with its menu, opening hours and cake orders.",
     "url": "https://t-c54f40af.stores.anypress.site/"
-   }
+   },
+   "can": [
+    [
+     "Pages, a blog, and it fits a phone",
+     [
+      "As many pages as you need",
+      "A blog with categories and tags",
+      "Ready-made page layouts to start from",
+      "Edit by dragging blocks, no code",
+      "Your own colours, fonts and logo",
+      "Looks right on phones and tablets"
+     ]
+    ],
+    [
+     "People find you and get in touch",
+     [
+      "Contact and quote forms with your own questions",
+      "Questions that show or hide based on earlier answers",
+      "Every message saved, searchable and downloadable",
+      "An email to you each time someone writes in",
+      "Titles, previews and a sitemap set up for Google",
+      "Redirects and a log of broken links"
+     ]
+    ],
+    [
+     "Yours from top to bottom",
+     [
+      "Your own domain",
+      "Emails sent from your own address",
+      "Connect Google Search Console and Analytics",
+      "Add your own code snippets safely",
+      "Connect your plugins so one action starts another",
+      "Bring your current WordPress site with a free plugin"
+     ]
+    ],
+    [
+     "Your newsletter and contacts",
+     [
+      "A contact list with notes and history for each person",
+      "Sort people with tags and lists",
+      "Send newsletters to everyone or one group",
+      "See who opened and clicked",
+      "Automatic emails when someone signs up or fills in a form",
+      "Sign-ups confirmed by email, and unsubscribes handled for you"
+     ]
+    ]
+   ]
   },
   {
    "id": "bookings",
@@ -90,7 +136,53 @@
     "name": "Still Water Yoga",
     "what": "A yoga studio where students pick a class and book a spot.",
     "url": "https://t-9687c2a7.stores.anypress.site/"
-   }
+   },
+   "can": [
+    [
+     "Clients book themselves",
+     [
+      "One-to-one appointments",
+      "Several lengths for one service, like 30 or 60 minutes",
+      "Meet in person, by phone or online",
+      "Booking forms with your own questions",
+      "A booking page, or a calendar inside any page",
+      "Clients can cancel or rebook from their email"
+     ]
+    ],
+    [
+     "Paid and confirmed on the spot",
+     [
+      "Take card payment when they book, by Stripe or PayPal",
+      "Free calls and paid sessions side by side",
+      "Confirmation emails to you and your client",
+      "Reminder emails before each booking",
+      "Cancellation and rebooking emails",
+      "Every client saved in your contact list"
+     ]
+    ],
+    [
+     "On your hours",
+     [
+      "Set your weekly hours and days off",
+      "Change one day without touching your week",
+      "Breaks before and after each booking",
+      "How far ahead people can book, and a daily limit",
+      "Times shown in each client's time zone",
+      "A report of booked, completed and cancelled sessions"
+     ]
+    ],
+    [
+     "Keep clients coming back",
+     [
+      "Each client's bookings and notes in one place",
+      "Newsletters and offers to past clients",
+      "Automatic follow-up emails after a booking",
+      "A help desk where clients can ask questions",
+      "A full website around your calendar, with contact forms",
+      "Titles, previews and a sitemap set up for Google"
+     ]
+    ]
+   ]
   },
   {
    "id": "store",
@@ -136,7 +228,54 @@
     "name": "Fern & Clay Ceramics",
     "what": "A pottery studio selling handmade mugs, bowls and vases.",
     "url": "https://t-34df1b8c.stores.anypress.site/"
-   }
+   },
+   "can": [
+    [
+     "Sell anything",
+     [
+      "Physical products with options like size and colour",
+      "Digital downloads, delivered securely",
+      "Subscriptions with free trials and setup fees",
+      "Categories, labels like \"New\" and photo galleries",
+      "Stock tracking that hides sold-out items",
+      "Star ratings and reviews from verified buyers"
+     ]
+    ],
+    [
+     "A checkout that brings them back",
+     [
+      "Card payments by Stripe, or PayPal",
+      "A quick checkout, or a pop-up one that stays on the page",
+      "Guest checkout or customer accounts",
+      "Discount codes with limits and product rules",
+      "Customers see their orders, downloads and subscriptions",
+      "Subscribers pause or cancel themselves, with a reminder before each renewal"
+     ]
+    ],
+    [
+     "Ship it and get found",
+     [
+      "Shipping zones, classes and your own rates",
+      "Tax rules, including EU tax",
+      "Order, receipt and shipping emails from your address",
+      "Refunds from the order screen",
+      "Product pages set up for Google",
+      "Sales reports: revenue, top products, refunds and subscriptions"
+     ]
+    ],
+    [
+     "Marketing and growth",
+     [
+      "Every buyer in your contact list",
+      "Automatic emails after a purchase",
+      "Newsletters to all customers or one group",
+      "An affiliate program: partners get a link and earn commission",
+      "Affiliate sign-ups, approvals and payout records",
+      "A help desk where customers ask about their orders",
+      "A store summary in your inbox"
+     ]
+    ]
+   ]
   },
   {
    "id": "community",
@@ -182,7 +321,54 @@
     "name": "Brightside Guitar School",
     "what": "Online guitar courses with a members' practice room.",
     "url": "https://t-de81a042.stores.anypress.site/"
-   }
+   },
+   "can": [
+    [
+     "A place to talk",
+     [
+      "A members' feed with posts, comments and reactions",
+      "Spaces for different topics or cohorts",
+      "Member profiles and a member directory",
+      "Polls, mentions and hashtags",
+      "Notifications and an email digest",
+      "Approve new members, filter bad words and review reports"
+     ]
+    ],
+    [
+     "Courses with progress",
+     [
+      "Courses made of lessons, written in the block editor",
+      "Progress tracking for every student",
+      "Lessons that open on a schedule",
+      "Free preview lessons",
+      "A discussion under every lesson",
+      "Videos, images and files in lessons and posts"
+     ]
+    ],
+    [
+     "Memberships that pay",
+     [
+      "Free and paid spaces and courses",
+      "One-off or monthly payments by card",
+      "Several price options for one course",
+      "Paying members go straight in",
+      "Your own name, colours and logo",
+      "Light and dark mode"
+     ]
+    ],
+    [
+     "Keep members coming back",
+     [
+      "A welcome message for new members",
+      "Every member in your contact list",
+      "Newsletters and announcements by email",
+      "Automatic emails when someone signs up or buys",
+      "Works in any browser, on any phone",
+      "All on your own domain",
+      "Titles, previews and a sitemap set up for Google"
+     ]
+    ]
+   ]
   },
   {
    "id": "everything",
@@ -228,7 +414,51 @@
     "name": "Riverbend Business Alliance",
     "what": "A local business group with memberships, events and a members' forum.",
     "url": "https://t-d6478888.stores.anypress.site/"
-   }
+   },
+   "can": [
+    [
+     "Sell and take bookings",
+     [
+      "A shop with products, downloads and subscriptions",
+      "Discount codes, reviews, shipping and tax",
+      "One-to-one bookings with card payment",
+      "Forms for anything, with your own questions",
+      "Sales and booking reports"
+     ]
+    ],
+    [
+     "Teach and help",
+     [
+      "A members' feed, spaces and profiles",
+      "Courses with lessons, progress and scheduled lessons",
+      "Free and paid memberships",
+      "A help desk with tickets, priorities and private notes",
+      "Customers see their past tickets when they sign in"
+     ]
+    ],
+    [
+     "One record for every customer",
+     [
+      "Each customer's orders and support tickets in one place",
+      "Tags and lists to sort everyone",
+      "Newsletters to everyone or one group",
+      "Automatic emails after a purchase, booking or sign-up",
+      "An affiliate program for partners",
+      "Logins for your team"
+     ]
+    ],
+    [
+     "Your website too",
+     [
+      "As many pages as you need, and a blog",
+      "Ready-made page layouts to start from",
+      "Titles, previews and a sitemap set up for Google",
+      "Redirects and a log of broken links",
+      "Your own domain and emails from your own address",
+      "Bring your current WordPress site with a free plugin"
+     ]
+    ]
+   ]
   }
  ],
  "sizes": [
@@ -316,6 +546,17 @@
   [
    "How do I cancel or get a refund?",
    "Cancel from your account: your site stays online until the end of the period you've paid for. The first 7 days are free, so cancelling before day 8 costs nothing. After that, your first payment for a new plan is covered by our 30-day money-back guarantee; email support@anypress.io to ask for it."
+  ]
+ ],
+ "lookedAfter": [
+  "Looked after for you",
+  [
+   "Security fixes applied for you",
+   "A copy saved every night",
+   "The padlock (https) on your own domain",
+   "Two-step sign-in and limits on login attempts",
+   "Spam protection on every form",
+   "Logins for your team, each with their own access"
   ]
  ]
 }
