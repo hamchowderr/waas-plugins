@@ -405,7 +405,7 @@ function ap_columns( $cols, $attrs = array() ) {
 		}
 		$out[] = '<!-- wp:column' . ap_attrs( $ca ) . " -->\n<div class=\"wp-block-column" . ( ! empty( $c[2] ) ? ' ' . $c[2] : '' ) . "\"$style>" . $c[0] . "</div>\n<!-- /wp:column -->";
 	}
-	$classes = 'wp-block-columns' . ( isset( $attrs['verticalAlignment'] ) ? ' are-vertically-aligned-' . $attrs['verticalAlignment'] : '' ) . ( isset( $attrs['align'] ) ? ' align' . $attrs['align'] : '' );
+	$classes = 'wp-block-columns' . ( isset( $attrs['className'] ) ? ' ' . $attrs['className'] : '' ) . ( isset( $attrs['verticalAlignment'] ) ? ' are-vertically-aligned-' . $attrs['verticalAlignment'] : '' ) . ( isset( $attrs['align'] ) ? ' align' . $attrs['align'] : '' );
 	return '<!-- wp:columns' . ap_attrs( $attrs ) . " -->\n<div class=\"$classes\">" . implode( "\n\n", $out ) . "</div>\n<!-- /wp:columns -->";
 }
 /** A grid of items that wraps by itself, at least $min wide each. */
@@ -733,11 +733,17 @@ ap_wrap_store_page( (int) $ap_settings->get( 'receipt_page_id' ), 'Thank you', '
 // ---------------------------------------------------------------------------------------------------------- plan pages
 // The full list, as on the website's page for each kind of site: its groups, then what is looked after on every site.
 $ap_can = static function ( $type ) use ( $ap_data ) {
-	$cards = array();
-	foreach ( array_merge( $type['can'], array( $ap_data['lookedAfter'] ) ) as list( $title, $items ) ) {
-		$cards[] = ap_card( ap_h( ap_e( $title ), 3, array( 'fontSize' => 'medium' ) ) . "\n\n" . ap_list( array_map( 'ap_e', $items ) ), 'card-line', 'medium' );
+	$rows = array();
+	foreach ( array_merge( $type['can'], array( $ap_data['lookedAfter'] ) ) as list( $title, $items, $drawing ) ) {
+		$rows[] = ap_columns(
+			array(
+				array( ap_img( ap_asset( "$drawing.svg" ), '', '56px' ) . "\n\n" . ap_h( ap_e( $title ), 3, array( 'fontSize' => 'medium' ) ), '30%', 'anypress-can__title' ),
+				array( ap_list( array_map( 'ap_e', $items ) ), '', 'anypress-can__items' ),
+			),
+			array( 'className' => 'anypress-can__row' )
+		);
 	}
-	return $cards;
+	return ap_card( implode( "\n\n", $rows ), 'card-line', 'large', 'anypress-can' );
 };
 // Each plan's words: what the kind of site does, this size against the others, what every plan includes, questions.
 foreach ( $ap_data['types'] as $ap_type ) {
@@ -747,8 +753,8 @@ foreach ( $ap_data['types'] as $ap_type ) {
 			continue;
 		}
 		$ap_features = array();
-		foreach ( $ap_type['features'] as list( $ap_t, $ap_b ) ) {
-			$ap_features[] = ap_card( ap_h( ap_e( $ap_t ), 3, array( 'fontSize' => 'medium' ) ) . "\n\n" . ap_p( ap_e( $ap_b ), array( 'textColor' => 'secondary' ) ), 'card-line', 'medium', 'anypress-centered' );
+		foreach ( $ap_type['features'] as list( $ap_t, $ap_b, $ap_drawing ) ) {
+			$ap_features[] = ap_card( ap_img( ap_asset( "$ap_drawing.svg" ), '', '72px' ) . "\n\n" . ap_h( ap_e( $ap_t ), 3, array( 'fontSize' => 'medium' ) ) . "\n\n" . ap_p( ap_e( $ap_b ), array( 'textColor' => 'secondary' ) ), 'card-line', 'medium', 'anypress-centered' );
 		}
 		// Right under Buy now: what happens after buying.
 		$ap_content = ap_band( ap_head( 'What happens next', 'Buy now, and we set it all up.' ) . "\n\n" . ap_grid( $ap_after_buy, '16rem', 'large', 3, 'anypress-steps' ), 'brand-soft', 'next' ) . "\n\n"
@@ -758,7 +764,7 @@ foreach ( $ap_data['types'] as $ap_type ) {
 			'',
 			'what'
 		) . "\n\n"
-		. ap_band( ap_head( 'the full list', 'Everything you can do with it.', 'All of it is switched on when your site arrives. Nothing extra to buy.' ) . "\n\n" . ap_grid( $ap_can( $ap_type ), '17rem', 'medium', 3, 'anypress-can' ), 'tint', 'everything' ) . "\n\n"
+		. ap_band( ap_head( 'the full list', 'Everything you can do with it.', 'All of it is switched on when your site arrives. Nothing extra to buy.' ) . "\n\n" . $ap_can( $ap_type ), 'tint', 'everything' ) . "\n\n"
 		. ap_band( ap_head( 'Pick your size', 'This size and the others', 'Every size has the same features. You can move to another size later: email us and it changes from your next renewal.', 'sizes' ) . "\n\n" . ap_sizes_table( $ap_data, $ap_plans, $ap_type['id'], $ap_size['id'] ) ) . "\n\n"
 		. ap_included( $ap_data ) . "\n\n"
 		. ap_faq( $ap_data );

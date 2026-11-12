@@ -18,19 +18,23 @@
    "features": [
     [
      "Found on Google",
-     "Your pages are set up so search engines can find them, without you touching a setting."
+     "Your pages are set up so search engines can find them, without you touching a setting.",
+     "domain"
     ],
     [
      "Forms that reach you",
-     "Contact and quote forms land in your inbox, and add people to your list."
+     "Contact and quote forms land in your inbox, and add people to your list.",
+     "mailbox"
     ],
     [
      "Your own newsletter list",
-     "Collect email addresses on your own site and send updates, without paying a mailing app per contact."
+     "Collect email addresses on your own site and send updates, without paying a mailing app per contact.",
+     "email"
     ],
     [
      "Easy to edit",
-     "Write and lay out pages in WordPress, opened with one click from your account."
+     "Write and lay out pages in WordPress, opened with one click from your account.",
+     "paint"
     ]
    ],
    "idealFor": [
@@ -55,7 +59,8 @@
       "Edit by dragging blocks, no code",
       "Your own colours, fonts and logo",
       "Looks right on phones and tablets"
-     ]
+     ],
+     "website"
     ],
     [
      "People find you and get in touch",
@@ -66,7 +71,8 @@
       "An email to you each time someone writes in",
       "Titles, previews and a sitemap set up for Google",
       "Redirects and a log of broken links"
-     ]
+     ],
+     "mailbox"
     ],
     [
      "Yours from top to bottom",
@@ -77,7 +83,8 @@
       "Add your own code snippets safely",
       "Connect your plugins so one action starts another",
       "Bring your current WordPress site with a free plugin"
-     ]
+     ],
+     "paint"
     ],
     [
      "Your newsletter and contacts",
@@ -88,7 +95,8 @@
       "See who opened and clicked",
       "Automatic emails when someone signs up or fills in a form",
       "Sign-ups confirmed by email, and unsubscribes handled for you"
-     ]
+     ],
+     "email"
     ]
    ]
   },
@@ -110,19 +118,23 @@
    "features": [
     [
      "Your calendar, online",
-     "Clients see the times you're free and pick one. No more emailing back and forth."
+     "Clients see the times you're free and pick one. No more emailing back and forth.",
+     "bookings"
     ],
     [
      "Paid up front",
-     "Take payment when they book, so a no-show doesn't cost you."
+     "Take payment when they book, so a no-show doesn't cost you.",
+     "card"
     ],
     [
      "Reminders send themselves",
-     "Confirmation and reminder emails go out from your own address."
+     "Confirmation and reminder emails go out from your own address.",
+     "email"
     ],
     [
      "Every client remembered",
-     "Each booking keeps the client's details, ready for follow-ups and offers."
+     "Each booking keeps the client's details, ready for follow-ups and offers.",
+     "note"
     ]
    ],
    "idealFor": [
@@ -147,7 +159,8 @@
       "Booking forms with your own questions",
       "A booking page, or a calendar inside any page",
       "Clients can cancel or rebook from their email"
-     ]
+     ],
+     "bookings"
     ],
     [
      "Paid and confirmed on the spot",
@@ -158,7 +171,8 @@
       "Reminder emails before each booking",
       "Cancellation and rebooking emails",
       "Every client saved in your contact list"
-     ]
+     ],
+     "card"
     ],
     [
      "On your hours",
@@ -169,7 +183,8 @@
       "How far ahead people can book, and a daily limit",
       "Times shown in each client's time zone",
       "A report of booked, completed and cancelled sessions"
-     ]
+     ],
+     "note"
     ],
     [
      "Keep clients coming back",
@@ -180,7 +195,8 @@
       "A help desk where clients can ask questions",
       "A full website around your calendar, with contact forms",
       "Titles, previews and a sitemap set up for Google"
-     ]
+     ],
+     "email"
     ]
    ]
   },
@@ -202,19 +218,23 @@
    "features": [
     [
      "Take card payments",
-     "Sell products, downloads, subscriptions and gift codes, with card payments built in."
+     "Sell products, downloads, subscriptions and gift codes, with card payments built in.",
+     "card"
     ],
     [
      "No cut of your sales",
-     "One monthly price for the site. The card company's fee is the only one on an order."
+     "One monthly price for the site. The card company's fee is the only one on an order.",
+     "piggy"
     ],
     [
      "Know your customers",
-     "Every buyer lands in your customer list, ready for emails, offers and a newsletter."
+     "Every buyer lands in your customer list, ready for emails, offers and a newsletter.",
+     "note"
     ],
     [
      "Partners who sell for you",
-     "Let others earn money for sending you sales, when you're ready."
+     "Let others earn money for sending you sales, when you're ready.",
+     "sell"
     ]
    ],
    "idealFor": [
@@ -239,7 +259,8 @@
       "Categories, labels like \"New\" and photo galleries",
       "Stock tracking that hides sold-out items",
       "Star ratings and reviews from verified buyers"
-     ]
+     ],
+     "store"
     ],
     [
      "A checkout that brings them back",
@@ -250,7 +271,8 @@
       "Discount codes with limits and product rules",
       "Customers see their orders, downloads and subscriptions",
       "Subscribers pause or cancel themselves, with a reminder before each renewal"
-     ]
+     ],
+     "card"
     ],
     [
      "Ship it and get found",
@@ -261,7 +283,8 @@
       "Refunds from the order screen",
       "Product pages set up for Google",
       "Sales reports: revenue, top products, refunds and subscriptions"
-     ]
+     ],
+     "domain"
     ],
     [
      "Marketing and growth",
@@ -273,7 +296,8 @@
       "Affiliate sign-ups, approvals and payout records",
       "A help desk where customers ask about their orders",
       "A store summary in your inbox"
-     ]
+     ],
+     "email"
     ]
    ]
   },
@@ -295,19 +319,23 @@
    "features": [
     [
      "A space of your own",
-     "Members get a feed, groups and profiles on your domain, not someone else's app."
+     "Members get a feed, groups and profiles on your domain, not someone else's app.",
+     "open"
     ],
     [
      "Courses built in",
-     "Lessons and progress tracking, in the same place your members already talk."
+     "Lessons and progress tracking, in the same place your members already talk.",
+     "courses"
     ],
     [
      "Paid access",
-     "Sell memberships and courses, as a one-off or every month."
+     "Sell memberships and courses, as a one-off or every month.",
+     "key"
     ],
     [
      "Keep in touch",
-     "Welcome emails and announcements reach every member."
+     "Welcome emails and announcements reach every member.",
+     "email"
     ]
    ],
    "idealFor": [
@@ -332,7 +360,8 @@
       "Polls, mentions and hashtags",
       "Notifications and an email digest",
       "Approve new members, filter bad words and review reports"
-     ]
+     ],
+     "question"
     ],
     [
      "Courses with progress",
@@ -343,7 +372,8 @@
       "Free preview lessons",
       "A discussion under every lesson",
       "Videos, images and files in lessons and posts"
-     ]
+     ],
+     "courses"
     ],
     [
      "Memberships that pay",
@@ -354,7 +384,8 @@
       "Paying members go straight in",
       "Your own name, colours and logo",
       "Light and dark mode"
-     ]
+     ],
+     "key"
     ],
     [
      "Keep members coming back",
@@ -366,7 +397,8 @@
       "Works in any browser, on any phone",
       "All on your own domain",
       "Titles, previews and a sitemap set up for Google"
-     ]
+     ],
+     "email"
     ]
    ]
   },
@@ -388,19 +420,23 @@
    "features": [
     [
      "Every tool, one place",
-     "Shop, bookings, members, courses and a help desk, all on one site with one login."
+     "Shop, bookings, members, courses and a help desk, all on one site with one login.",
+     "tools"
     ],
     [
      "One record per customer",
-     "Someone who buys, books a call and joins your community is one customer, not three."
+     "Someone who buys, books a call and joins your community is one customer, not three.",
+     "note"
     ],
     [
      "Answer questions in one place",
-     "Customers get a help page, and you get one inbox for every question."
+     "Customers get a help page, and you get one inbox for every question.",
+     "question"
     ],
     [
      "Grows with you",
-     "Start selling, add memberships later, open bookings next month. It's already there."
+     "Start selling, add memberships later, open bookings next month. It's already there.",
+     "sizes"
     ]
    ],
    "idealFor": [
@@ -424,7 +460,8 @@
       "One-to-one bookings with card payment",
       "Forms for anything, with your own questions",
       "Sales and booking reports"
-     ]
+     ],
+     "store"
     ],
     [
      "Teach and help",
@@ -434,7 +471,8 @@
       "Free and paid memberships",
       "A help desk with tickets, priorities and private notes",
       "Customers see their past tickets when they sign in"
-     ]
+     ],
+     "courses"
     ],
     [
      "One record for every customer",
@@ -445,7 +483,8 @@
       "Automatic emails after a purchase, booking or sign-up",
       "An affiliate program for partners",
       "Logins for your team"
-     ]
+     ],
+     "note"
     ],
     [
      "Your website too",
@@ -456,7 +495,8 @@
       "Redirects and a log of broken links",
       "Your own domain and emails from your own address",
       "Bring your current WordPress site with a free plugin"
-     ]
+     ],
+     "website"
     ]
    ]
   }
@@ -557,6 +597,7 @@
    "Two-step sign-in and limits on login attempts",
    "Spam protection on every form",
    "Logins for your team, each with their own access"
-  ]
+  ],
+  "lock"
  ]
 }

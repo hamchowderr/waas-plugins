@@ -153,7 +153,7 @@ body .betterdocs-search-form-wrapper,body .betterdocs-searchbox-wrapper,body [cl
 .anypress-type-grid>.anypress-type-card{grid-row:span 6}
 .anypress-steps>.wp-block-group{grid-row:span 4;row-gap:var(--wp--preset--spacing--small)}
 .anypress-included>.wp-block-group{grid-row:span 3;row-gap:var(--wp--preset--spacing--small)}
-.anypress-features>.wp-block-group{grid-row:span 2}
+.anypress-features>.wp-block-group{grid-row:span 3}
 .anypress-size-grid>.wp-block-group{grid-row:span 5}
 .anypress-steps>*>.wp-block-image,.anypress-included>*>.wp-block-image,.anypress-type-grid>*>.wp-block-image{align-self:end}
 .anypress-type-grid>.anypress-type-card,.anypress-steps>.wp-block-group,.anypress-included>.wp-block-group,.anypress-features>.wp-block-group,.anypress-size-grid>.wp-block-group{align-items:start}
@@ -217,3 +217,17 @@ body .anypress-docs .betterdocs-faq-main-content{background:transparent!importan
 @media (max-width:1024px){.anypress-sizes a{padding:.6em .6em}.anypress-sizes a span{font-size:.72rem;white-space:nowrap}}
 /* Up to tablet width the plan stacks: the picture, then the buy box at full width. */
 @media (max-width:1023px){.wp-block-columns:has(>.anypress-buy){flex-wrap:wrap!important}.wp-block-columns:has(>.anypress-buy)>.wp-block-column{flex-basis:100%!important}.anypress-gallery{position:static}}
+/* Plan pages' full list: one row per group, its drawing and name on the left, its items in two columns. */
+.anypress-can{max-width:64rem;margin-inline:auto!important;background:var(--wp--preset--color--base)}
+.anypress-can .anypress-can__row{margin:0;gap:var(--wp--preset--spacing--large)}
+.anypress-can .anypress-can__row+.anypress-can__row{border-top:1px solid var(--wp--preset--color--border-light);padding-top:var(--wp--preset--spacing--large);margin-top:var(--wp--preset--spacing--large)}
+.anypress-can.wp-block-group{gap:0}
+.anypress-can__title{display:flex;align-items:center;align-self:flex-start!important;gap:var(--wp--preset--spacing--small)}
+.anypress-can__title>*{margin:0!important}
+.anypress-can__title .wp-block-image{flex:0 0 56px}
+.anypress-can__items>.wp-block-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem var(--wp--preset--spacing--large);margin:0}
+.anypress-can__items li{margin:0!important}
+@media (max-width:781px){.anypress-can__items>.wp-block-list{grid-template-columns:minmax(0,1fr)}.anypress-can .anypress-can__row{gap:var(--wp--preset--spacing--small)}}
+.anypress-features>*>.wp-block-image{align-self:end}
+/* Tablets: even rows (two by two, three steps across) and the full list's group name above its items. */
+@media (min-width:600px) and (max-width:1023px){.anypress-features{grid-template-columns:repeat(2,minmax(0,1fr))!important}.anypress-steps{grid-template-columns:repeat(3,minmax(0,1fr))!important}.anypress-can .anypress-can__row{flex-wrap:wrap!important;gap:var(--wp--preset--spacing--small)}.anypress-can .anypress-can__row>.wp-block-column{flex-basis:100%!important}}
