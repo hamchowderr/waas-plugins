@@ -22,6 +22,7 @@
     "domains": "node domains.mjs",
     "care": "node care.mjs",
     "storage-packs": "node storage-packs.mjs",
+    "trial": "node trial.mjs",
     "admin-audit": "node admin-audit.mjs",
     "support": "node support.mjs",
     "products": "node products.mjs",
