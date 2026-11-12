@@ -509,7 +509,7 @@ $ap_steps = array();
 foreach (
 	array(
 		array( 'pick', '1', 'Pick a kind and a size', 'Choose what you’re making and how big it needs to be. Pay monthly, or yearly and get two months free.' ),
-		array( 'card', '2', 'Pay securely', 'Checkout takes a minute. Your first payment is covered by our 30-day money-back guarantee.' ),
+		array( 'card', '2', 'Pay securely', 'Checkout takes a minute. The first 7 days are free: add a card, and cancel before day 8 to pay nothing. After that, your first payment is covered by our 30-day money-back guarantee.' ),
 		array( 'open', '3', 'Sign in to your new site', 'Your site is usually ready a few minutes later. We email you, and your account opens it with one click.' ),
 	) as list( $ap_d, $ap_n, $ap_t, $ap_b )
 ) {
@@ -526,7 +526,7 @@ $ap_home = ap_band(
 				. ap_h( 'Pick a website. It’s <mark style="background-color:var(--wp--preset--color--primary-alt)" class="has-inline-color">ready in minutes.</mark>', 1, array( 'fontSize' => 'xx-large' ) ) . "\n\n"
 				. ap_p( ap_e( 'Real WordPress, set up and looked after for you. Choose what you’re making, pick a size, and sign in to a working site a few minutes after you pay.' ), array( 'textColor' => 'secondary', 'fontSize' => 'medium' ) ) . "\n\n"
 				. ap_buttons( array( array( 'See the plans', '#types' ), array( 'Compare sizes', '#sizes', 'outline' ) ) ) . "\n\n"
-				. ap_list( array( 'From ' . ap_money( $ap_from( 'website' ) ) . ' a month', '30-day money-back guarantee', 'Cancel any time from your account' ), 'is-style-ticks anypress-inline-ticks' ),
+				. ap_list( array( 'From ' . ap_money( $ap_from( 'website' ) ) . ' a month', '7 days free to start', '30-day money-back guarantee', 'Cancel any time from your account' ), 'is-style-ticks anypress-inline-ticks' ),
 				'54%',
 			),
 			array( ap_img( ap_asset( 'website.jpg' ), 'An example website made with AnyPress: Juniper Street Bakery', '', 'is-style-sketch anypress-tilt' ), '46%' ),
@@ -613,7 +613,7 @@ $ap_plans_content = ap_band(
 	ap_group(
 		ap_p( ap_e( 'Five kinds, three sizes' ), array( 'align' => 'center', 'className' => 'is-style-hand' ) ) . "\n\n"
 		. ap_h( ap_e( 'Plans and prices' ), 1, array( 'textAlign' => 'center', 'fontSize' => 'xx-large' ) ) . "\n\n"
-		. ap_p( ap_e( 'Pick the kind of site you’re making, then a size. Pay monthly, or yearly and get two months free. Every plan has a 30-day money-back guarantee.' ), array( 'align' => 'center', 'textColor' => 'secondary', 'fontSize' => 'medium' ) ) . "\n\n"
+		. ap_p( ap_e( 'Pick the kind of site you’re making, then a size. Pay monthly, or yearly and get two months free. Every plan starts with 7 days free (one free trial per person), and the first payment has a 30-day money-back guarantee.' ), array( 'align' => 'center', 'textColor' => 'secondary', 'fontSize' => 'medium' ) ) . "\n\n"
 		. ap_group(
 			implode(
 				"\n\n",
@@ -664,7 +664,7 @@ function ap_wrap_store_page( $id, $title, $lead, $after = '', $template = 'page-
 $ap_trust = ap_band(
 	ap_grid(
 		array(
-			ap_list( array( '<strong>30-day money-back guarantee</strong>' ) ),
+			ap_list( array( '<strong>7 days free to start</strong>', '<strong>30-day money-back guarantee</strong>' ) ),
 			ap_list( array( '<strong>Cancel any time</strong> from your account' ) ),
 			ap_list( array( '<strong>Ready in minutes</strong> after you pay' ) ),
 		),
@@ -791,7 +791,7 @@ function ap_template( $type, $slug, $title, $content, $area = '' ) {
 $ap_logo = '<!-- wp:image {"width":"132px","sizeSlug":"full","linkDestination":"custom","className":"anypress-logo"} -->' . "\n"
 	. '<figure class="wp-block-image size-full is-resized anypress-logo"><a href="' . esc_url( home_url( '/' ) ) . '"><img src="' . esc_url( ap_asset( 'logo.svg' ) ) . '" alt="AnyPress" style="width:132px;height:auto"/></a></figure>' . "\n<!-- /wp:image -->";
 $ap_announce = ap_group(
-	ap_p( '30-day money-back guarantee · Ready in minutes · Cancel any time', array( 'align' => 'center', 'fontSize' => 'x-small' ) ),
+	ap_p( '7 days free to start · 30-day money-back guarantee · Cancel any time', array( 'align' => 'center', 'fontSize' => 'x-small' ) ),
 	array(
 		'align'           => 'full',
 		'className'       => 'anypress-announce',

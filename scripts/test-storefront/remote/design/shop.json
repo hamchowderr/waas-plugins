@@ -221,7 +221,7 @@
     "Chambers and associations",
     "Franchises and multi-location brands",
     "Education businesses",
-    "Agencies' biggest clients",
+    "Web designers' biggest clients",
     "Anyone outgrowing five apps"
    ],
    "example": {
@@ -237,7 +237,7 @@
    "name": "Small",
    "cpu": "1 CPU",
    "memory": "512 MB",
-   "storage": "5 GB",
+   "storage": "10 GB",
    "emails": "5,000",
    "for": "Starting out"
   },
@@ -246,7 +246,7 @@
    "name": "Medium",
    "cpu": "2 CPUs",
    "memory": "512 MB",
-   "storage": "10 GB",
+   "storage": "20 GB",
    "emails": "20,000",
    "for": "Growing traffic and sales"
   },
@@ -255,7 +255,7 @@
    "name": "Large",
    "cpu": "4 CPUs",
    "memory": "768 MB",
-   "storage": "25 GB",
+   "storage": "30 GB",
    "emails": "50,000",
    "for": "Busy sites and big lists"
   }
@@ -315,7 +315,7 @@
   ],
   [
    "How do I cancel or get a refund?",
-   "Cancel from your account: your site stays online until the end of the period you've paid for. Your first payment for a new plan is covered by our 30-day money-back guarantee; email support@anypress.io to ask for it."
+   "Cancel from your account: your site stays online until the end of the period you've paid for. The first 7 days are free, so cancelling before day 8 costs nothing. After that, your first payment for a new plan is covered by our 30-day money-back guarantee; email support@anypress.io to ask for it."
   ]
  ]
 }
