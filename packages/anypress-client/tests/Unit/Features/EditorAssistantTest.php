@@ -95,4 +95,32 @@ class EditorAssistantTest extends TestCase
         putenv(SignedRequest::KEY_ENV);
         $this->assertFalse(EditorAssistant::is_available());
     }
+
+    /**
+     * A demo on anypress.io/try: no site key, the demo sign-in anypress.io put in it, and the demos' own chat.
+     *
+     * @runInSeparateProcess
+     * @preserveGlobalState disabled
+     */
+    public function test_a_demo_opens_the_demo_chat_with_its_own_sign_in(): void
+    {
+        putenv(SignedRequest::KEY_ENV);
+        $token = 'apdemo_' . str_repeat('a', 43);
+        define('ANYPRESS_DEMO_ASSISTANT', $token);
+        Functions\when('current_user_can')->justReturn(true);
+
+        $this->assertTrue(EditorAssistant::is_available());
+        $this->assertSame('https://demo.anypress.site/.assistant', EditorAssistant::assistant_url());
+        $this->assertSame(['url' => 'https://demo.anypress.site/.assistant/from-demo?demo=' . $token], (new EditorAssistant())->handoff());
+        $this->assertSame([], $this->sent);
+    }
+
+    public function test_no_panel_without_a_site_key_or_a_demo_sign_in(): void
+    {
+        putenv(SignedRequest::KEY_ENV);
+        Functions\when('current_user_can')->justReturn(true);
+
+        $this->assertFalse(EditorAssistant::is_available());
+        $this->assertSame('', EditorAssistant::demo_token());
+    }
 }
