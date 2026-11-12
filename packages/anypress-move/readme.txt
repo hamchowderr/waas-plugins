@@ -23,6 +23,7 @@ Each switch copies one plugin's data into the Fluent plugin that replaces it, us
 * Community: BuddyPress or BuddyBoss into FluentCommunity.
 * Courses: LearnDash, Tutor LMS or LifterLMS into FluentCommunity courses, with students and their progress.
 * Circle: a Circle community into FluentCommunity, through Circle's Admin API.
+* Skool: a Skool group's members into FluentCommunity, from the members CSV you export from the group's Members tab, with their answers to the membership questions in FluentCRM. Nothing signs in to Skool. Skool has no export for the classroom or posts, so those are rebuilt in FluentCommunity.
 * Calendly: a Calendly account into FluentBooking, through Calendly's API: availability schedules, event types and upcoming bookings.
 * MemberPress: active members into FluentCommunity spaces and courses, with FluentCRM tags. Tick billing and active Stripe subscriptions move to FluentCart, where they keep renewing in Stripe; PayPal and other gateways stay in MemberPress.
 
@@ -46,13 +47,16 @@ This plugin connects to two outside services, each only when you run its switch:
 
 * **Calendly** (calendly.com), through Calendly's API at `https://api.calendly.com/`. It is used to read your Calendly account (your user, availability schedules, event types, upcoming scheduled events and their invitees) so the switch can copy them into FluentBooking. Requests are sent only when an administrator runs Check or Switch for Calendly, and they carry the personal access token the administrator types in, which is used for that run only and never saved. Nothing is sent to Calendly beyond those read requests. Calendly's terms: https://calendly.com/legal/customer-terms-conditions , privacy notice: https://calendly.com/legal/privacy-notice
 
-No other switch sends anything off your site. The Shop switch links to FluentCart's own page for its free Migrator add-on but never downloads it; you install it yourself.
+No other switch sends anything off your site. The Skool switch reads only the CSV file you upload, which is used for that run and never saved. The Shop switch links to FluentCart's own page for its free Migrator add-on but never downloads it; you install it yourself.
 
 == Changelog ==
 
 = 1.5.0 =
 * When a switch can move from more than one plugin and several are on this website (help desks, affiliate plugins, course plugins), the card lists them to pick from instead of asking you to type one.
 * The report table after Check and Switch uses plain words: "Completed lessons" instead of completed_lessons, and columns named "In the old plugin", "In the Fluent plugin now" and so on.
+
+= 1.4.0 =
+* Skool: upload the members CSV from a Skool group's Members tab (Export) and its members become WordPress users (no email is sent) in one FluentCommunity space or course, or a new private "Skool members" space. With FluentCRM on they are tagged "Skool member" and each answer to a membership question goes into a FluentCRM custom field. Rows without an email are listed and skipped, and Undo takes it all back out.
 
 = 1.3.0 =
 * Calendly: a Calendly account moves to FluentBooking through Calendly's API with a personal access token: availability schedules with their weekly and dated hours, event types as booking types (length, description, locations, seats for group events, inactive ones as drafts), and upcoming bookings with each invitee's name, email, time zone, answers and meeting link. No booking email is sent for what comes across, and Undo takes it all back out.

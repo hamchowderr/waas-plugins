@@ -78,6 +78,7 @@ class MovePage
             'community' => [__('Community', 'anypress-move'), __('A BuddyPress or BuddyBoss community into an empty FluentCommunity: groups as spaces with members, posts, comments and reactions.', 'anypress-move')],
             'course' => [__('Courses', 'anypress-move'), __('LearnDash, Tutor LMS or LifterLMS courses into FluentCommunity courses, with sections, lessons, students and their progress.', 'anypress-move')],
             'circle' => [__('Circle', 'anypress-move'), __('A Circle community into an empty FluentCommunity through Circle\'s Admin API: spaces, members, posts, comments and courses.', 'anypress-move')],
+            'skool' => [__('Skool', 'anypress-move'), __('A Skool group\'s members into FluentCommunity, from the members CSV you export from the group\'s Members tab: WordPress users in one space or course, tagged in FluentCRM with their answers to the membership questions. Skool has no export for the classroom or posts, so those are rebuilt.', 'anypress-move')],
             'calendly' => [__('Calendly', 'anypress-move'), __('A Calendly account into FluentBooking through Calendly\'s API: availability schedules, event types as booking types, and upcoming bookings.', 'anypress-move')],
             'memberpress' => [__('MemberPress', 'anypress-move'), __('Everyone with an active MemberPress membership into the FluentCommunity space or course it opens, with a FluentCRM tag. Payments stay in MemberPress.', 'anypress-move')],
         ];
@@ -102,14 +103,46 @@ class MovePage
         }
         $input = ['from' => sanitize_key(wp_unslash($_POST['from'] ?? ''))];
         foreach ($this->fields($key) as $name => $schema) {
+            if ($name === 'csv') {
+                $input[$name] = self::upload();
+                continue;
+            }
             $value = trim(sanitize_text_field(wp_unslash($_POST[$name] ?? '')));
             $type = $schema['type'] ?? '';
-            $input[$name] = $type === 'object' ? self::pairs($value) : ($type === 'boolean' ? $value === '1' : $value);
+            $input[$name] = $type === 'object' ? self::pairs($value) : ($type === 'boolean' ? $value === '1' : ($type === 'integer' ? absint($value) : $value));
         }
         $result = $this->act($key, $act, $input);
         set_transient(self::RESULT . get_current_user_id(), ['switch' => $key, 'act' => $act, 'result' => $result], HOUR_IN_SECONDS);
         wp_safe_redirect(add_query_arg(['page' => self::SLUG], admin_url('tools.php')) . '#switch-' . $key);
         exit;
+    }
+
+    /**
+     * The CSV file sent with the form (the nonce was checked in handle()), read straight from PHP's upload folder and
+     * never saved; '' without one, or when it isn't a .csv file.
+     */
+    private static function upload(): string
+    {
+        // phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- the nonce is checked in handle(); a temporary file path is not text to sanitize.
+        $file = isset($_FILES['csv']) && is_array($_FILES['csv']) ? $_FILES['csv'] : [];
+        $tmp = isset($file['tmp_name']) ? (string) $file['tmp_name'] : '';
+        $name = isset($file['name']) ? sanitize_file_name((string) $file['name']) : '';
+        // phpcs:enable
+        if ($tmp === '' || !is_uploaded_file($tmp) || (int) ($file['error'] ?? 1) !== UPLOAD_ERR_OK) {
+            return '';
+        }
+        $type = wp_check_filetype($name, ['csv' => 'text/csv', 'txt' => 'text/plain']);
+        if (!$type['ext']) {
+            return '';
+        }
+        global $wp_filesystem;
+        if (!function_exists('WP_Filesystem')) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+        }
+        WP_Filesystem();
+        $contents = $wp_filesystem ? $wp_filesystem->get_contents($tmp) : false;
+
+        return is_string($contents) ? $contents : '';
     }
 
     /** "12:40, 13:41" into [12 => 40, 13 => 41]. */
@@ -172,7 +205,7 @@ class MovePage
     private function card(string $key, string $title, string $what, ?array $last): void
     {
         echo '<div class="card anypress-move-card" id="switch-' . esc_attr($key) . '"><h2 class="title">' . esc_html($title) . '</h2><p>' . esc_html($what) . '</p>';
-        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+        echo '<form method="post" enctype="multipart/form-data" action="' . esc_url(admin_url('admin-post.php')) . '">';
         wp_nonce_field(self::ACTION);
         echo '<input type="hidden" name="action" value="' . esc_attr(self::ACTION) . '"><input type="hidden" name="switch" value="' . esc_attr($key) . '">';
         $choices = isset($this->imports[$key]) ? $this->imports[$key]->source_choices() : [];
@@ -187,6 +220,14 @@ class MovePage
         foreach ($this->fields($key) as $name => $schema) {
             if (($schema['type'] ?? '') === 'boolean') {
                 echo '<p><label><input type="checkbox" name="' . esc_attr($name) . '" value="1"> ' . esc_html__('Also move active Stripe subscriptions to FluentCart, where they keep renewing in Stripe (FluentCart must be active). PayPal and other gateways stay in MemberPress.', 'anypress-move') . '</label></p>';
+                continue;
+            }
+            if ($name === 'csv') {
+                echo '<p><label for="' . esc_attr($key . '-csv') . '">' . esc_html__('Members CSV (Skool: the group\'s Members tab, Export). Read for this run only, never saved.', 'anypress-move') . '</label><br><input type="file" accept=".csv,text/csv" id="' . esc_attr($key . '-csv') . '" name="csv"></p>';
+                continue;
+            }
+            if (($schema['type'] ?? '') === 'integer') {
+                $this->field($key . '-' . $name, $name, __('FluentCommunity space or course id the members join. Leave empty for a new private space called "Skool members".', 'anypress-move'), 'number');
                 continue;
             }
             $object = ($schema['type'] ?? '') === 'object';
