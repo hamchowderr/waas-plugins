@@ -19,7 +19,6 @@ use WP_Error;
  */
 class MovePage
 {
-
     private const SLUG = 'anypress-move';
     private const ACTION = 'anypress_move';
     private const RESULT = 'anypress_move_result_';
