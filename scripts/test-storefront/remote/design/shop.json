@@ -506,7 +506,7 @@
    "id": "small",
    "name": "Small",
    "cpu": "1 CPU",
-   "memory": "512 MB",
+   "memory": "768 MB",
    "storage": "10 GB",
    "emails": "5,000",
    "for": "Starting out"
@@ -515,7 +515,7 @@
    "id": "medium",
    "name": "Medium",
    "cpu": "2 CPUs",
-   "memory": "512 MB",
+   "memory": "1.25 GB",
    "storage": "20 GB",
    "emails": "20,000",
    "for": "Growing traffic and sales"
@@ -524,7 +524,7 @@
    "id": "large",
    "name": "Large",
    "cpu": "4 CPUs",
-   "memory": "768 MB",
+   "memory": "2 GB",
    "storage": "30 GB",
    "emails": "50,000",
    "for": "Busy sites and big lists"

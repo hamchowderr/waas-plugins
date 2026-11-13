@@ -11,7 +11,8 @@ if (!defined('ABSPATH')) {
 
 /**
  * Tells the API a website's care (PUT /v1/tenants/care), so the dashboard shows the package and this month's time:
- * when care starts, time is logged, extra time is bought, and when the care subscription changes status. Each send
+ * when care starts, when the website's store is made (care bought before it), time is logged, extra time is bought,
+ * and when the care subscription changes status. Each send
  * replaces the one before, so sending again is always safe. A failed send is tried once more a quarter of an hour
  * later; the shop and the store keep working either way.
  */
@@ -33,6 +34,7 @@ class FluentCartCareSync
     public function register(): void
     {
         add_action('anypress_care_added', [$this, 'care_added'], 20, 2);
+        add_action('anypress_tenant_linked_to_subscription', [$this, 'sync'], 20, 1);
         add_action('anypress_care_time_logged', [$this, 'sync'], 20, 1);
         add_action('anypress_care_extra_added', [$this, 'sync'], 20, 1);
         add_action(self::RETRY_HOOK, [$this, 'retry'], 10, 1);

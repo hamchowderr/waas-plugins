@@ -1,8 +1,7 @@
 // Care packages on the shop (AnyPress Host, FluentCartCare) on WordPress Playground with FluentCart and Fluent Support:
-// "Create the care products" makes drafts; a plan's product page and the website's Care section on the account show
-// the packages with "Book a call" and no checkout; after the call AnyPress > Care makes a pay link, which opens
-// FluentCart's checkout for that package (checkout turns care away without one); once paid the package belongs to the
-// website, "Ask for a change" files a Fluent Support ticket, the ticket's sidebar shows the package and time left, and
+// "Create the care products" makes drafts; the thank-you page after a plan and the website's Care section on the account
+// show the packages, each with an "Add" button that opens FluentCart's checkout for it with the website chosen (no call
+// needed); AnyPress > Care makes the same link to email a customer; once paid the package belongs to the website, "Ask for a change" files a Fluent Support ticket, the ticket's sidebar shows the package and time left, and
 // logged time comes off the month. This is the storefront (shop.anypress.io), not a customer store.
 //
 //   npm run care        # screenshots in shots/care/
@@ -66,13 +65,24 @@ const products = JSON.parse(await php(`${boot} echo wp_json_encode(array_map(fn 
 console.log('care products:', JSON.stringify(products));
 check(products.length === 7 && products[1][0] === 'Care Plus' && products[1][1].join() === '19900,199000' && products[6][0] === 'Extra hour for care customers' && products[6][1].join() === '10000', 'the button makes 3 packages (monthly + yearly at 10x) and 4 services, the extra hour at $100 for care customers');
 
+// The plan's first order, as checkout makes it, so its thank-you page can be opened.
+const receipt = JSON.parse(await php(`${boot}
+    $plan = get_page_by_path('community-small', OBJECT, 'fluent-products');
+    $variation = \\FluentCart\\App\\Models\\ProductVariation::query()->where('post_id', $plan->ID)->first();
+    $sub = \\FluentCart\\App\\Models\\Subscription::query()->find($website);
+    $order = \\FluentCart\\App\\Models\\Order::query()->create(['customer_id' => $sub->customer_id, 'status' => 'completed', 'payment_status' => 'paid', 'type' => 'subscription', 'total_amount' => 4900, 'currency' => 'USD']);
+    \\FluentCart\\App\\Models\\OrderItem::query()->create(['order_id' => $order->id, 'post_id' => $plan->ID, 'object_id' => $variation->id, 'quantity' => 1, 'unit_price' => 4900, 'line_total' => 4900, 'payment_type' => 'subscription', 'post_title' => $plan->post_title, 'title' => 'Monthly']);
+    $sub->parent_order_id = $order->id; $sub->product_id = $plan->ID; $sub->variation_id = $variation->id; $sub->save();
+    $order = \\FluentCart\\App\\Models\\Order::query()->find($order->id);
+    echo wp_json_encode(['url' => add_query_arg('order_hash', $order->uuid, (new \\FluentCart\\Api\\StoreSettings())->getReceiptPage()), 'website' => $website]);
+`));
+const receiptUrl = receipt.url;
+const websiteId = receipt.website;
+
 const { chromium } = createRequire(import.meta.url)('playwright');
 const browser = await chromium.launch();
 let carePlusMonthly = 0;
-const booking = `${base}/care-call/`;
-await php(`update_option('anypress_care_call_url', '${booking}');`);
-
-// 1. AnyPress > Care after the call: the booking link is set, and "Make a pay link" makes one for Care Plus.
+// 1. AnyPress > Care: "Make a link" makes a checkout link for Care Plus on the customer's website.
 let payLink = '';
 {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -84,16 +94,15 @@ let payLink = '';
     await page.waitForLoadState('networkidle');
     await page.goto(`${base}/wp-admin/admin.php?page=anypress-care`, { waitUntil: 'networkidle' });
     const card = page.locator('.ap-care-call');
-    check((await card.count()) === 1, 'AnyPress > Care has "Calls and pay links"');
-    check((await card.locator('input[name="url"]').inputValue()) === booking, 'it shows the booking link');
+    check((await card.count()) === 1, 'AnyPress > Care has "Checkout links"');
     const offer = card.locator('select[name="pay_offer"]');
-    check(!(await offer.innerText()).includes('Extra hour'), 'the extra hour at the care price needs no pay link');
+    check(!(await offer.innerText()).includes('Extra hour'), 'the extra hour at the care price is not offered as a link');
     carePlusMonthly = Number(await offer.locator('option', { hasText: 'Care Plus · $199 a month' }).getAttribute('value'));
     await offer.selectOption(String(carePlusMonthly));
-    await card.locator('button', { hasText: 'Make a pay link' }).click();
+    await card.locator('button', { hasText: 'Make a link' }).click();
     await page.waitForLoadState('networkidle');
     payLink = await page.locator('.ap-care-paylink').inputValue();
-    check(payLink.includes('anypress_website=') && payLink.includes('anypress_care_pay='), 'it makes a pay link for the website', payLink);
+    check(payLink.includes('anypress_website=') && payLink.includes('instant_checkout'), 'it makes a checkout link for the website', payLink);
     await page.screenshot({ path: resolve(OUT, 'desktop-1-pay-link.png'), fullPage: true });
     await context.close();
 }
@@ -107,26 +116,26 @@ for (const [label, width, height] of SIZES) {
     await page.click('#wp-submit');
     await page.waitForLoadState('networkidle');
 
-    // 2. The plan's product page: the packages with their prices, and "Book a call".
-    const productUrl = (await php(`echo get_permalink(get_page_by_path('community-small', OBJECT, 'fluent-products'));`)).trim();
-    await page.goto(productUrl, { waitUntil: 'networkidle' });
-    const box = page.locator('.anypress-care-box');
-    check((await box.count()) === 1, `${label}: the plan page has the care box`);
-    if (!(await box.count())) { console.log((await page.innerText('body')).slice(0, 1200)); continue; }
-    check((await box.innerText()).includes('$199 a month'), `${label}: Care Plus shows $199 a month`);
-    check((await box.locator(`a[href="${booking}"]`, { hasText: 'Book a call' }).count()) === 1, `${label}: the box's button books a call`);
-    await box.scrollIntoViewIfNeeded();
-    await page.screenshot({ path: resolve(OUT, `${label}-2-product-page.png`), fullPage: true });
+    // 2. The thank-you page after the plan: each package with "Add", for the website just bought.
+    await page.goto(receiptUrl, { waitUntil: 'networkidle' });
+    const offer = page.locator('.anypress-care-offer');
+    check((await offer.count()) === 1, `${label}: the thank-you page offers care`);
+    if (!(await offer.count())) { console.log((await page.innerText('body')).slice(0, 1200)); continue; }
+    check((await offer.innerText()).replace(/\s+/g, ' ').includes('$199 a month'), `${label}: Care Plus shows $199 a month`);
+    check((await offer.locator(`a[href*="anypress_website=${websiteId}"]`, { hasText: 'Add Care Plus' }).count()) === 1, `${label}: "Add Care Plus" opens its checkout for the new website`);
+    check(!(await page.innerText('body')).includes('Book a call'), `${label}: no call needed`);
+    await offer.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: resolve(OUT, `${label}-2-thank-you.png`), fullPage: true });
 
-    // 3. The account's website card, before care: the packages, "Book a call", and no checkout.
+    // 3. The account's website card, before care: the packages, each with its checkout.
     const portal = (await php("echo \\FluentCart\\App\\Services\\URL::getCustomerDashboardUrl('website');")).trim();
     await page.goto(portal, { waitUntil: 'networkidle' });
     const section = page.locator('details.anypress-acct-care');
     check((await section.count()) === 1, `${label}: the website card has a Care section`);
     await section.locator('summary').click();
     check((await section.locator('.anypress-acct-care-tier').count()) === 3, `${label}: three packages`);
-    check((await section.locator(`a[href="${booking}"]`, { hasText: 'Book a call' }).count()) === 1, `${label}: the card's button books a call`);
-    check((await section.locator('a[href*="instant_checkout"]').count()) === 0, `${label}: no checkout before the call`);
+    check((await section.locator('.is-monthly a[href*="instant_checkout"]', { hasText: 'Add Care Plus' }).count()) === 1, `${label}: "Add Care Plus" on the card`);
+    check(!(await section.innerText()).includes('Book a call'), `${label}: no call needed`);
     const tier = section.locator('.anypress-acct-care-tier', { hasText: 'Care Plus' });
     await section.locator('.anypress-acct-care-period label', { hasText: 'Yearly' }).click();
     check((await tier.locator('.is-yearly').innerText()).includes('$1,990'), `${label}: Yearly shows the yearly price`);
@@ -134,15 +143,15 @@ for (const [label, width, height] of SIZES) {
     await section.locator('.anypress-acct-care-period label', { hasText: 'Monthly' }).click();
     await page.screenshot({ path: resolve(OUT, `${label}-3-account-offer.png`), fullPage: true });
 
-    // 4. The pay link sent after the call: FluentCart's checkout for Care Plus.
+    // 4. The link from AnyPress > Care: FluentCart's checkout for Care Plus.
     await page.goto(payLink, { waitUntil: 'networkidle' });
-    check((await page.innerText('body')).includes('Care Plus'), `${label}: the pay link opens checkout for Care Plus`, page.url());
+    check((await page.innerText('body')).includes('Care Plus'), `${label}: the link opens checkout for Care Plus`, page.url());
     await page.screenshot({ path: resolve(OUT, `${label}-4-checkout.png`), fullPage: true });
 
     await context.close();
 }
 
-// 4a. Care stays out of the shop's product list, and checkout takes it only from a pay link.
+// 4a. Care stays out of the shop's product list, and checkout takes it without a call.
 const shopUrl = (await php(`echo get_permalink(wp_insert_post(['post_type' => 'page', 'post_status' => 'publish', 'post_title' => 'All products', 'post_content' => '[fluent_cart_products]']));`)).trim();
 {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -155,16 +164,9 @@ const shopUrl = (await php(`echo get_permalink(wp_insert_post(['post_type' => 'p
 }
 const gate = JSON.parse(await php(`${boot}
     $cart = \\FluentCart\\App\\Models\\Cart::query()->where('cart_group', 'instant')->orderBy('created_at', 'desc')->first();
-    $ask = fn () => apply_filters('fluent_cart/checkout/validate_data', [], ['data' => ['billing_email' => 'shopper@example.com'], 'cart' => $cart]);
-    $linked = $ask();
-    $link = $store->get_cart_checkout_value($cart, 'anypress_care_pay');
-    $store->set_cart_checkout_value($cart, 'anypress_care_pay', null);
-    $bare = $ask();
-    $store->set_cart_checkout_value($cart, 'anypress_care_pay', $link);
-    echo wp_json_encode(['linked' => $linked, 'bare' => $bare]);
+    echo wp_json_encode(apply_filters('fluent_cart/checkout/validate_data', [], ['data' => ['billing_email' => 'shopper@example.com'], 'cart' => $cart]));
 `));
-check(Array.isArray(gate.linked) ? gate.linked.length === 0 : Object.keys(gate.linked).length === 0, 'checkout takes care from the pay link', JSON.stringify(gate));
-check(Boolean(gate.bare?.anypress_care?.call_first), 'checkout turns away care without a pay link, pointing to the call', JSON.stringify(gate));
+check(Array.isArray(gate) ? gate.length === 0 : Object.keys(gate).length === 0, 'checkout takes care with no call first', JSON.stringify(gate));
 
 // 4. Paying for the package: FluentCart's offline payment can't take subscriptions, and card payments need a payment
 // account, so the order and subscription are made here and go through the Host plugin's own handlers.
@@ -188,9 +190,9 @@ check(Number(after.chosen) === after.website, 'checkout kept the website on the 
 check(after.summary?.package === 'Care Plus' && after.summary.left === 120, 'once paid, Care Plus belongs to the website with 2 h this month');
 check((after.mails ?? []).filter((m) => m[0] === 'shopper@example.com' && m[1] === 'Care Plus is on for your website').length === 1, 'the owner gets the "Care is on" email', JSON.stringify(after.mails));
 
-// 4b. A one-time service bought for real, from a pay link: FluentCart's checkout with "Pay later", then the shop's "Mark as paid" in
+// 4b. A one-time service bought for real, from a checkout link: FluentCart's checkout with "Pay later", then the shop's "Mark as paid" in
 // FluentCart, which runs the Host plugin's order_paid_done handlers as any payment does.
-const hourUrl = (await php(`${boot} $hour = array_values(array_filter($care->services(), fn ($s) => $s['title'] === 'One hour of changes'))[0]; echo ${NS}FluentCartCareCall::pay_link($hour['variations'][0]['checkout_url'], $website, (int) $hour['product_id'], time() + 3600);`)).trim();
+const hourUrl = (await php(`${boot} $hour = array_values(array_filter($care->services(), fn ($s) => $s['title'] === 'One hour of changes'))[0]; echo ${NS}FluentCartCareCall::pay_link($hour['variations'][0]['checkout_url'], $website);`)).trim();
 {
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
@@ -357,6 +359,6 @@ writeFileSync(resolve(OUT, 'report-email.html'), report.mails?.[0]?.[1] ?? '');
 
 await browser.close();
 if (failed) console.error(await php("echo @file_get_contents('/tmp/debug.log');"));
-console.log(failed ? 'FAILED' : 'OK: care products, product page, account, checkout, ticket and time');
+console.log(failed ? 'FAILED' : 'OK: care products, thank-you page, account, checkout, ticket and time');
 await cli[Symbol.asyncDispose]?.();
 process.exit(failed ? 1 : 0);
