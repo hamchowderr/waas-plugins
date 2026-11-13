@@ -5,6 +5,8 @@
 //   node storefront-preview.mjs --shots <dir>  # screenshot the pages and the seller's wp-admin, exit
 //   SETUP='{"siteTypes":["online-store"],"audiences":["shops"]}' node storefront-preview.mjs ...  # as a seller's
 //     application left it: the storefront's first visit narrows the shop to those site types and customers
+//   BRAND='{"name":"…","color":"#2dd4bf","supportEmail":"…","logoFile":"logo.png","iconFile":"icon.png"}' node storefront-preview.mjs ...
+//     with the seller's dashboard Branding applied: title, logo, icon, accent colour and Support mailbox
 //
 // API=<waas-provisioning-api checkout> (default ../../../waas-provisioning-api), HOST_ZIP=<anypress-host.zip>.
 
@@ -132,6 +134,28 @@ echo 'who we help: ', $hub ? $hub->post_status . ' ' . implode(', ', array_map(f
 echo 'who we help pages: ', $hub ? implode(', ', array_map(fn ($p) => $p->post_name . '=' . $p->post_status, get_children(['post_parent' => $hub->ID, 'post_type' => 'page', 'post_status' => 'any']))) : '', "\\n";
 echo 'kit log: ', implode(' | ', preg_grep('/Seller storefront|Fatal/', @file('/tmp/debug.log') ?: [])), "\\n";` });
     console.log(after.text, after.errors || '');
+}
+
+if (process.env.BRAND) {
+    // What the API sends when the seller saves the dashboard's Branding page (src/branding.ts). Images given as files
+    // are served by this Playground, as the API serves them.
+    const brand = JSON.parse(process.env.BRAND);
+    for (const kind of ['logo', 'icon']) {
+        const file = brand[`${kind}File`];
+        delete brand[`${kind}File`];
+        if (!file) continue;
+        await cli.playground.writeFile(`/wordpress/brand-${kind}.png`, new Uint8Array(readFileSync(file)));
+        brand[`${kind}Url`] = `${base}/brand-${kind}.png?v=1`;
+    }
+    await cli.playground.run({ code: `<?php require '/wordpress/wp-load.php'; update_option('anypress_storefront_brand', ${JSON.stringify(JSON.stringify(brand))});` });
+    await (await fetch(`${base}/`)).text();
+    const applied = await cli.playground.run({ code: `<?php require '/wordpress/wp-load.php';
+$styles = json_decode(WP_Theme_JSON_Resolver::get_user_data_from_wp_global_styles(wp_get_theme())['post_content'] ?? '{}', true);
+$primary = array_values(array_filter($styles['settings']['color']['palette']['theme'] ?? [], fn ($c) => $c['slug'] === 'primary'))[0]['color'] ?? '';
+$box = class_exists('\\FluentSupport\\App\\Models\\MailBox') ? \\FluentSupport\\App\\Models\\MailBox::where('is_default', 'yes')->first() : null;
+echo 'branding: title=', get_option('blogname'), ' logo=', wp_get_attachment_url((int) get_option('site_logo')) ?: '-', ' icon=', get_site_icon_url() ?: '-', ' primary=', $primary, ' mailbox=', $box ? $box->email : '-', "\\n";
+echo 'branding log: ', implode(' | ', preg_grep('/branding/', @file('/tmp/debug.log') ?: [])), "\\n";` });
+    console.log(applied.text, applied.errors || '');
 }
 
 if (!SHOTS) {
