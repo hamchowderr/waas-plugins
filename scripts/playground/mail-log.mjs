@@ -24,7 +24,7 @@ const WP = process.env.PLAYGROUND_WP || '7.1.4';
 const PHP = process.env.PLAYGROUND_PHP || '8.3';
 const PORT = Number(process.env.PLAYGROUND_PORT || 9411);
 // The store template's versions (waas-provisioning-api templates/anypress-store/build.sh).
-const PLUGINS = ['fluent-community.2.13.0.zip', 'fluent-smtp.2.4.5.zip'];
+const PLUGINS = ['fluent-community.2.14.0.zip', 'fluent-smtp.2.4.5.zip'];
 
 for (const [path, fix] of [[resolve(CLIENT, 'vendor/autoload.php'), 'run composer install in packages/anypress-client'], [resolve(API, 'templates/anypress-store/roles.json'), 'set ANYPRESS_API_DIR to a waas-provisioning-api checkout']]) {
     if (!existsSync(path)) {

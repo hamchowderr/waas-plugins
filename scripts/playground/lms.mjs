@@ -35,7 +35,7 @@ const PORT = Number(process.env.PLAYGROUND_PORT || 9406);
 const SERVE = process.argv.includes('--serve');
 const SITE_TYPE = 'community';
 // The version the store template installs (templates/anypress-store/build.sh).
-const FLUENT_COMMUNITY = process.env.FLUENT_COMMUNITY || '2.13.0';
+const FLUENT_COMMUNITY = process.env.FLUENT_COMMUNITY || '2.14.0';
 // Newest releases on wordpress.org unless set (checked 2026-11-11: Tutor LMS 4.2.1, LifterLMS 11.0.1).
 const TUTOR = process.env.TUTOR || 'latest-stable';
 const LIFTERLMS = process.env.LIFTERLMS || 'latest-stable';

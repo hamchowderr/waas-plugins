@@ -33,7 +33,7 @@ const PHP = process.env.PLAYGROUND_PHP || '8.3';
 const PORT = Number(process.env.PLAYGROUND_PORT || 9405);
 const SERVE = process.argv.includes('--serve');
 const SITE_TYPE = 'community';
-const FLUENT_COMMUNITY = process.env.FLUENT_COMMUNITY || '2.13.0';
+const FLUENT_COMMUNITY = process.env.FLUENT_COMMUNITY || '2.14.0';
 const TOKEN = 'circle-test-token';
 const USER_TOKEN = randomBytes(24).toString('hex');
 

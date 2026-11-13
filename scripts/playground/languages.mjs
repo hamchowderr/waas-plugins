@@ -37,7 +37,7 @@ const SITE_KEY = randomBytes(24).toString('hex');
 const POLYLANG = 'polylang.3.9.2.zip';
 const FLUENT = {
     'online-store': { zip: 'fluent-cart.2.3.1.zip', slug: 'fluent-cart' },
-    community: { zip: 'fluent-community.2.13.0.zip', slug: 'fluent-community' },
+    community: { zip: 'fluent-community.2.14.0.zip', slug: 'fluent-community' },
 }[SITE_TYPE];
 
 if (!FLUENT) {
