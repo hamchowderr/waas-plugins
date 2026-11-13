@@ -47,4 +47,10 @@ class PrivateUsersTest extends TestCase
         $this->assertFalse(PrivateUsers::sitemap('provider', 'users'));
         $this->assertSame('provider', PrivateUsers::sitemap('provider', 'posts'));
     }
+
+    public function test_generator_tag_is_left_out(): void
+    {
+        PrivateUsers::init();
+        $this->assertNotFalse(has_filter('the_generator', '__return_empty_string'));
+    }
 }
