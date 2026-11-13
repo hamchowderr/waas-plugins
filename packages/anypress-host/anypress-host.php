@@ -37,14 +37,14 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 /**
  * @package AnyPressHost
- * @version 2.20.0
+ * @version 2.20.1
  */
 /*
 Plugin Name: AnyPress Host
 Plugin URI: https://anypress.io
 Description: Sells AnyPress websites from your storefront: creates, suspends and restores each customer's website through the AnyPress API, with FluentCart or WooCommerce (and WooCommerce Subscriptions) for billing.
 Author: Otaku Solutions
-Version: 2.20.0
+Version: 2.20.1
 Author URI: https://otakusolutions.io
 Update URI: anypress-host
 Requires at least: 6.4
@@ -57,7 +57,7 @@ Text Domain: anypress-host
 define( 'ANYPRESS_HOST_SLUG', 'anypress-host' );
 define( 'ANYPRESS_HOST_BASENAME', plugin_basename( __FILE__ ) );
 define( 'ANYPRESS_HOST_UPDATE_URI', 'anypress-host' );
-define( 'ANYPRESS_HOST_VERSION', '2.20.0' );
+define( 'ANYPRESS_HOST_VERSION', '2.20.1' );
 define( 'ANYPRESS_HOST_TEXTDOMAIN', 'anypress-host' );
 
 // Settings and data saved before the AnyPress names (2.11.0) move to them before anything reads them
@@ -107,6 +107,8 @@ AdminNotices::init();
 new AdminHome($configService);
 // The storefront's own logo and name on the login page and wp-admin tab titles, not WordPress's.
 AnyPressHost\Features\SiteBrand::init();
+// Visitors can't list the storefront's account names (REST users list, users sitemap, ?author= lookups).
+AnyPressHost\Features\PrivateUsers::init();
 new AdminSettings($provisioningApi, $configService);
 new Webhooks($provisioningApi, $configService);
 AnyPressHost\Assets\Module::init();
