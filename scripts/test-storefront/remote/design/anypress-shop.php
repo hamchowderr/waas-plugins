@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AnyPress shop
  * Description: The shop's block styles (sketch panels, tick lists, size table) and two small shortcodes for the plan pages (the size switcher and the way back to the plans), and the AnyPress logo and support address in AnyPress Host's emails. Installed by the shop's `design` step.
- * Version: 1.3.0
+ * Version: 1.4.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -243,20 +243,35 @@ if ( empty( ( (array) get_option( 'anypress_shop_brand', array() ) )['whiteLabel
 }
 
 /**
- * AnyPress Host puts its care box ("Want us to look after it?") inside FluentCart's buy box. This shop's plan pages
- * keep Buy now as the only action, so the box comes off them; care is offered after buying instead.
+ * AnyPress's own shop keeps one copy of each page: the legal pages live on anypress.io, and help pages that were folded
+ * into another one send people, and search engines, to the section that has them now. Seller storefronts built from
+ * this design keep their own legal pages, so this only runs on shop.anypress.io.
  */
 add_action(
-	'wp',
+	'template_redirect',
 	static function () {
-		$hook = $GLOBALS['wp_filter']['fluent_cart/product/single/after_actions_block'] ?? null;
-		foreach ( $hook ? $hook->callbacks : array() as $priority => $callbacks ) {
-			foreach ( $callbacks as $callback ) {
-				$fn = $callback['function'];
-				if ( is_array( $fn ) && $fn[0] instanceof \AnyPressHost\Commerce\FluentCart\FluentCartCarePortal && 'render_product_box' === $fn[1] ) {
-					remove_action( 'fluent_cart/product/single/after_actions_block', $fn, $priority );
-				}
-			}
+		if ( 'shop.anypress.io' !== wp_parse_url( home_url(), PHP_URL_HOST ) ) {
+			return;
 		}
-	}
+		$moved = array(
+			'terms'                                        => 'https://anypress.io/terms',
+			'privacy'                                      => 'https://anypress.io/privacy',
+			'refund-policy'                                => 'https://anypress.io/refund-policy',
+			'docs/refunds'                                 => 'https://anypress.io/refund-policy',
+			'docs/create-a-site-from-a-form-with-n8n'      => '/docs/use-anypress-in-n8n/#create-a-site-from-a-form',
+			'docs/create-a-site-from-a-payment-with-zapier' => '/docs/use-anypress-in-zapier/#create-a-site-when-a-client-pays',
+			'docs/create-a-site-from-a-crm-step-with-make' => '/docs/use-anypress-in-make/#create-a-site-when-a-deal-is-won',
+		);
+		$path  = trim( (string) wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '', PHP_URL_PATH ), '/' );
+		if ( isset( $moved[ $path ] ) ) {
+			$to = $moved[ $path ];
+			wp_redirect( str_starts_with( $to, '/' ) ? home_url( $to ) : $to, 301, 'AnyPress shop' ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- fixed addresses, anypress.io among them.
+			exit;
+		}
+	},
+	0
+);
+add_filter(
+	'privacy_policy_url',
+	static fn ( $url ) => 'shop.anypress.io' === wp_parse_url( home_url(), PHP_URL_HOST ) ? 'https://anypress.io/privacy' : $url
 );

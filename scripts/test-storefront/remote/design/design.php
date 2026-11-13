@@ -48,7 +48,7 @@ $ap_brand = array_replace(
 		'promises'     => array( 'Everything included, nothing else to buy', 'Pay yearly and get two months free', '30-day money-back guarantee', 'Cancel any time from your account', 'A free anypress.site address, or your own domain', 'Secure card checkout' ),
 		'examples'     => true,
 		'menu'         => array( array( 'Plans', 'plans' ), array( 'Compare sizes', 'sizes' ), array( 'Help', '/docs/' ), array( 'Sell websites', 'https://anypress.io/sell' ) ),
-		'footerHelp'   => array( array( 'Help pages', '/docs/' ), array( 'Refund policy', '/refund-policy/' ), array( 'Terms of service', '/terms/' ), array( 'Privacy policy', '/privacy/' ) ),
+		'footerHelp'   => array( array( 'Help pages', '/docs/' ), array( 'Refund policy', 'https://anypress.io/refund-policy' ), array( 'Terms of service', 'https://anypress.io/terms' ), array( 'Privacy policy', 'https://anypress.io/privacy' ) ),
 		'footerMore'   => array( 'AnyPress', array( array( 'anypress.io', 'https://anypress.io' ), array( 'Sell websites', 'https://anypress.io/sell' ), array( 'Affiliates', '/affiliates/' ) ) ),
 		'copyright'    => '© AnyPress, by Otaku Solutions.',
 		'signInNew'    => 'New to AnyPress?',
@@ -63,6 +63,20 @@ update_option( 'anypress_shop_brand', array_intersect_key( $ap_brand, array_flip
 /** A menu or footer link: a site path ("/terms/"), a full address, or one of the shop's pages by name. */
 function ap_link( $to ) {
 	return preg_match( '#^(https?:|mailto:)#', $to ) ? $to : home_url( $to );
+}
+
+// The checkout's "I agree" box links to the same legal pages as the footer.
+if ( function_exists( 'fluent_cart_get_option' ) ) {
+	$ap_legal = array_column( $ap_brand['footerHelp'], 1, 0 );
+	if ( isset( $ap_legal['Terms of service'], $ap_legal['Refund policy'], $ap_legal['Privacy policy'] ) ) {
+		$ap_a      = static fn( $label, $text ) => '<a href="' . esc_url( ap_link( $ap_legal[ $label ] ) ) . '" target="_blank">' . $text . '</a>';
+		$ap_fields = (array) fluent_cart_get_option( '_fc_checkout_fields', array() );
+		$ap_fields['agree_terms'] = array_merge(
+			(array) ( $ap_fields['agree_terms'] ?? array() ),
+			array( 'text' => 'I agree to the ' . $ap_a( 'Terms of service', 'Terms of Service' ) . ' and ' . $ap_a( 'Refund policy', 'Refund Policy' ) . ', and I have read the ' . $ap_a( 'Privacy policy', 'Privacy Policy' ) . '.' )
+		);
+		fluent_cart_update_option( '_fc_checkout_fields', $ap_fields );
+	}
 }
 
 // ---------------------------------------------------------------------------------------------------------- files
