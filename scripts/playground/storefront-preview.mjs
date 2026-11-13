@@ -66,6 +66,7 @@ const cli = await runCLI({
             { step: 'installPlugin', pluginData: literal(HOST_ZIP, 'anypress-host.zip'), options: { activate: true } },
             { step: 'mkdir', path: '/wordpress/wp-content/mu-plugins' },
             { step: 'cp', fromPath: '/wordpress/wp-content/sf/seller-storefront/mu-plugins/seller-storefront.php', toPath: '/wordpress/wp-content/mu-plugins/seller-storefront.php' },
+            { step: 'cp', fromPath: '/wordpress/wp-content/sf/seller-storefront/mu-plugins/seller-storefront-admin.php', toPath: '/wordpress/wp-content/mu-plugins/seller-storefront-admin.php' },
             { step: 'cp', fromPath: '/wordpress/wp-content/sf/anypress-store/mu-plugins/anypress-crm-lifecycle.php', toPath: '/wordpress/wp-content/mu-plugins/anypress-crm-lifecycle.php' },
             { step: 'cp', fromPath: '/wordpress/wp-content/sfshop/design/anypress-shop.php', toPath: '/wordpress/wp-content/mu-plugins/anypress-shop.php' },
             { step: 'cp', fromPath: '/wordpress/wp-content/preview/sqlite-json.php', toPath: '/wordpress/wp-content/mu-plugins/0-sqlite-json.php' },
@@ -186,7 +187,7 @@ await page.click('#wp-submit');
 await page.waitForLoadState('networkidle');
 const admin = ['index.php', 'admin.php?page=anypress-admin', 'admin.php?page=anypress-admin-settings', 'admin.php?page=anypress-admin-settings&tab=cancellations',
     'admin.php?page=anypress-admin-settings&tab=discount', 'admin.php?page=anypress-admin-settings&tab=domains', 'admin.php?page=anypress-admin-settings&tab=emails',
-    'admin.php?page=anypress-care', 'admin.php?page=fluent-cart#/products', 'admin.php?page=fluent-cart#/settings', 'admin.php?page=fluentcrm-admin#/funnels', 'site-editor.php'];
+    'admin.php?page=anypress-care', 'admin.php?page=fluent-cart#/products', 'admin.php?page=fluent-cart#/settings', 'admin.php?page=fluentcrm-admin#/funnels', 'site-editor.php', 'plugins.php'];
 for (const a of admin) {
     await page.goto(`${base}/wp-admin/${a}`, { waitUntil: 'networkidle', timeout: 60000 }).catch(() => {});
     await page.waitForTimeout(2500);
@@ -194,6 +195,12 @@ for (const a of admin) {
 }
 const menu = await page.$$eval('#adminmenu > li > a', (as) => as.map((a) => a.innerText.trim().replace(/\s+/g, ' ')));
 console.log('admin menu:', menu.join(' | '));
+const submenus = await page.$$eval('#adminmenu .wp-submenu a', (as) => as.map((a) => a.innerText.trim().replace(/\s+/g, ' ')));
+console.log('admin submenus:', submenus.join(' | '));
+await page.goto(`${base}/wp-admin/plugins.php`, { waitUntil: 'networkidle' }).catch(() => {});
+const rows = await page.$$eval('#the-list tr[data-plugin]', (trs) => trs.map((tr) => tr.dataset.plugin.split('/')[0] + ': ' + [...tr.querySelectorAll('.row-actions a, .plugin-version-author-uri a')].map((a) => a.innerText.trim()).join(', ')));
+console.log('plugin links:\n  ' + rows.join('\n  '));
+console.log('host deactivate warns:', await page.$eval('tr[data-plugin^="anypress-host/"] .deactivate a', (a) => a.getAttribute('onclick') || 'no').catch(() => 'no row'));
 await browser.close();
 const log = await cli.playground.run({ code: "<?php echo @file_get_contents('/tmp/debug.log');" });
 console.log('debug.log tail:', log.text.split('\n').slice(-30).join('\n'));

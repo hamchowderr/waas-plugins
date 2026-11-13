@@ -8,7 +8,7 @@ use AnyPressHost\Features\AdminHome;
 /**
  * The team's side of care (FluentCartCare): the customer's care on every Fluent Support ticket (a "Care" card in the
  * ticket's customer sidebar, through Fluent Support's customer_extra_widgets filter), and AnyPress > Care in wp-admin,
- * which holds the booking link and makes pay links after a call (FluentCartCareCall), lists the websites with care and
+ * which makes checkout links to email customers (FluentCartCareCall), lists the websites with care and
  * logs the time each request took.
  */
 class FluentCartCareDesk
