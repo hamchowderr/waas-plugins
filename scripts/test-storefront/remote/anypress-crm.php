@@ -22,7 +22,7 @@ final class AnyPress_CRM
     const UPGRADE_DAYS = 60;
     /** Plan offerings, matched against product names; the most specific word first. */
     const PLANS = ['Everything', 'Community', 'Bookings', 'Store', 'Website'];
-    const OTHER_OFFERINGS = ['Seller', 'Reseller', 'Affiliate'];
+    const OTHER_OFFERINGS = ['Seller', 'Reseller', 'Affiliate', 'Care'];
     const STAGES = ['Interested', 'Active', 'Past'];
     /** customer_group field values (the seven customer groups, plus churches). */
     const GROUPS = ['shops', 'regulated', 'courses', 'chambers', 'churches', 'franchises', 'agencies', 'developers'];
@@ -248,12 +248,31 @@ final class AnyPress_CRM
         return '';
     }
 
+    /** True for a care package (Care, Care Plus, Care Pro), matched by name like the plans. */
+    public static function is_care_product($product_id)
+    {
+        return (bool) preg_match('/^care\b/i', trim((string) get_the_title((int) $product_id)));
+    }
+
+    /** The offering a subscription product is tagged under: its website plan, Care, or '' for anything else. */
+    public static function offering_for_product($product_id)
+    {
+        return self::plan_for_product($product_id) ?: (self::is_care_product($product_id) ? 'Care' : '');
+    }
+
     public static function on_subscription_active($data)
     {
         $sub = $data['subscription'] ?? null;
-        if (!$sub || !($plan = self::plan_for_product($sub->product_id))) {
+        if (!$sub || !($offering = self::offering_for_product($sub->product_id))) {
             return;
         }
+        if ($offering === 'Care') {
+            $contact = self::contact_from_customer($data['customer'] ?? $sub->customer);
+            self::add($contact, 'Care', 'Active');
+            self::stop_automation('Email: Care ended', $contact);
+            return;
+        }
+        $plan = $offering;
         $contact = self::contact_from_customer($data['customer'] ?? $sub->customer);
         self::add($contact, $plan, 'Active');
         self::set_fields($contact, ['refunded' => '']);
@@ -274,7 +293,7 @@ final class AnyPress_CRM
     public static function on_subscription_end($data)
     {
         $sub = $data['subscription'] ?? null;
-        if (!$sub || !($plan = self::plan_for_product($sub->product_id))) {
+        if (!$sub || !($plan = self::offering_for_product($sub->product_id))) {
             return;
         }
         $customer = $data['customer'] ?? $sub->customer;
@@ -288,12 +307,17 @@ final class AnyPress_CRM
             ->whereIn('status', ['active', 'trialing', 'paused', 'failing', 'expiring', 'past_due'])
             ->get();
         foreach ($others as $other) {
-            if (self::plan_for_product($other->product_id) === $plan) {
+            if (self::offering_for_product($other->product_id) === $plan) {
                 return;
             }
         }
-        if (self::has($contact, $plan, 'Active') || !self::has($contact, $plan, 'Past')) {
+        $was_active = self::has($contact, $plan, 'Active');
+        if ($was_active || !self::has($contact, $plan, 'Past')) {
             self::add($contact, $plan, 'Past');
+        }
+        // Care ended but the website stays: ask what would help, once.
+        if ($plan === 'Care' && $was_active && self::has_live_plan($sub->customer_id, $sub->id)) {
+            self::start_automation('Email: Care ended', $contact);
         }
     }
 
@@ -306,7 +330,7 @@ final class AnyPress_CRM
             return;
         }
         foreach ($order->order_items as $item) {
-            $plan = self::plan_for_product($item->post_id);
+            $plan = self::offering_for_product($item->post_id);
             if (!$plan) {
                 continue;
             }
@@ -318,6 +342,7 @@ final class AnyPress_CRM
             // welcome is forgotten, not cancelled, so a later real purchase starts it again.
             self::stop_automation('Email: Website owner welcome', $contact, true);
             self::stop_automation('Email: Win-back', $contact);
+            self::stop_automation('Email: Care ended', $contact);
         }
     }
 
