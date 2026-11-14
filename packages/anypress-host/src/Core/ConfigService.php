@@ -51,7 +51,7 @@ class ConfigService
     public const ASSISTANT_ON_WEBSITE = 'website';
     /** The old shared address. A saved value of it now means ASSISTANT_ON_WEBSITE. */
     private const OLD_ANYPRESS_ASSISTANT_URL = 'https://assistant.anypress.io';
-    private const ANYPRESS_API_HOSTS = ['api.anypress.io', 'waas-api.otakusolutions.io'];
+    private const ANYPRESS_API_HOSTS = ['api.anypress.io'];
 
     /**
      * The website assistant (ANYPRESS_ASSISTANT_URL or the setting): ASSISTANT_ON_WEBSITE for the assistant on
