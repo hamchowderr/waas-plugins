@@ -13,7 +13,7 @@
     }
   },
   "require": {
-    "php": ">=8.1",
+    "php": ">=8.3",
     "getbrevo/brevo-php": "^6.0",
     "mailerlite/mailerlite-php": "^1.1",
     "nyholm/psr7": "^1.8"

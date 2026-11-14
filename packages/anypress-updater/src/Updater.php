@@ -24,7 +24,7 @@ if (!defined('ABSPATH'))
  * Stores don't use this: anypress-client comes with the template version and is updated by moving
  * the store to a newer one.
  *
- * Works on PHP 7.4 (anypress-payments' minimum). One copy per plugin, each in that plugin's
+ * Works on PHP 8.3, the minimum of the plugins that carry it. One copy per plugin, each in that plugin's
  * namespace, made by scripts/sync-updater.sh; this file in packages/anypress-updater is the source.
  */
 final class Updater
