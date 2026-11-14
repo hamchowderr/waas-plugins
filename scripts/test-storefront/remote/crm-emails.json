@@ -1,6 +1,6 @@
 [
  {
-  "title": "Email: Website owner welcome",
+  "title": "Email: Website Owner Welcome",
   "trigger": "fluent_cart/subscription_activated",
   "settings": {
    "subscription_status": "transactional"
@@ -38,7 +38,7 @@
   ]
  },
  {
-  "title": "Email: Win-back",
+  "title": "Email: Win-Back",
   "trigger": "fluent_cart/subscription_canceled",
   "settings": {
    "subscription_status": "transactional"
@@ -58,7 +58,7 @@
   ]
  },
  {
-  "title": "Email: Affiliate welcome",
+  "title": "Email: Affiliate Welcome",
   "trigger": "manual",
   "note": "Started by the CRM plugin when a contact gets Affiliate: Active (affiliate approved).",
   "emails": [
@@ -77,9 +77,9 @@
   ]
  },
  {
-  "title": "Email: Seller welcome",
+  "title": "Email: Seller Welcome",
   "trigger": "manual",
-  "note": "Started by the CRM plugin when a contact gets Seller: Active (application approved). No day-0 email: the AnyPress API's approval email is the welcome.",
+  "note": "Started by the CRM plugin when a contact gets Seller: Active (application approved). No day-0 email: the AnyPress API's approval email is the Welcome.",
   "emails": [
    {
     "day": 3,
@@ -96,9 +96,9 @@
   ]
  },
  {
-  "title": "Email: Nurture shops",
+  "title": "Email: Nurture Online Shops and Niche Sellers",
   "trigger": "manual",
-  "note": "Nurture for online shops. Started by the CRM plugin when a lead from anypress.io with customer_group=shops confirms their email.",
+  "note": "Nurture for online shops. Started by the CRM plugin when a lead from anypress.io with Customer Group \"Online Shops and Niche Sellers\" confirms their email.",
   "emails": [
    {
     "day": 0,
@@ -127,9 +127,9 @@
   ]
  },
  {
-  "title": "Email: Nurture regulated",
+  "title": "Email: Nurture Supplements, CBD and Regulated Products",
   "trigger": "manual",
-  "note": "Nurture for supplement and wellness brands. Started by the CRM plugin when a lead from anypress.io with customer_group=regulated confirms their email.",
+  "note": "Nurture for supplement and wellness brands. Started by the CRM plugin when a lead from anypress.io with Customer Group \"Supplements, CBD and Regulated Products\" confirms their email.",
   "emails": [
    {
     "day": 0,
@@ -158,9 +158,9 @@
   ]
  },
  {
-  "title": "Email: Nurture courses",
+  "title": "Email: Nurture Course Creators and Educators",
   "trigger": "manual",
-  "note": "Nurture for course creators. Started by the CRM plugin when a lead from anypress.io with customer_group=courses confirms their email.",
+  "note": "Nurture for course creators. Started by the CRM plugin when a lead from anypress.io with Customer Group \"Course Creators and Educators\" confirms their email.",
   "emails": [
    {
     "day": 0,
@@ -189,9 +189,9 @@
   ]
  },
  {
-  "title": "Email: Nurture chambers",
+  "title": "Email: Nurture Chambers and Associations",
   "trigger": "manual",
-  "note": "Nurture for chambers and associations. Started by the CRM plugin when a lead from anypress.io with customer_group=chambers confirms their email.",
+  "note": "Nurture for chambers and associations. Started by the CRM plugin when a lead from anypress.io with Customer Group \"Chambers and Associations\" confirms their email.",
   "emails": [
    {
     "day": 0,
@@ -220,9 +220,9 @@
   ]
  },
  {
-  "title": "Email: Nurture churches",
+  "title": "Email: Nurture Churches and Ministries",
   "trigger": "manual",
-  "note": "Nurture for churches. Started by the CRM plugin when a lead from anypress.io with customer_group=churches confirms their email.",
+  "note": "Nurture for churches. Started by the CRM plugin when a lead from anypress.io with Customer Group \"Churches and Ministries\" confirms their email.",
   "emails": [
    {
     "day": 0,
@@ -251,9 +251,9 @@
   ]
  },
  {
-  "title": "Email: Nurture franchises",
+  "title": "Email: Nurture Franchises and Multi-Location Brands",
   "trigger": "manual",
-  "note": "Nurture for multi-location businesses. Started by the CRM plugin when a lead from anypress.io with customer_group=franchises confirms their email.",
+  "note": "Nurture for multi-location businesses. Started by the CRM plugin when a lead from anypress.io with Customer Group \"Franchises and Multi-Location Brands\" confirms their email.",
   "emails": [
    {
     "day": 0,
@@ -282,9 +282,9 @@
   ]
  },
  {
-  "title": "Email: Nurture agencies",
+  "title": "Email: Nurture Web Designers and Freelancers",
   "trigger": "manual",
-  "note": "Nurture for agencies and freelancers. Started by the CRM plugin when a lead from anypress.io with customer_group=agencies confirms their email.",
+  "note": "Nurture for agencies and freelancers. Started by the CRM plugin when a lead from anypress.io with Customer Group \"Web Designers and Freelancers\" confirms their email.",
   "emails": [
    {
     "day": 0,
@@ -313,9 +313,9 @@
   ]
  },
  {
-  "title": "Email: Nurture developers",
+  "title": "Email: Nurture SaaS and Software Teams",
   "trigger": "manual",
-  "note": "Nurture for software teams. Started by the CRM plugin when a lead from anypress.io with customer_group=developers confirms their email.",
+  "note": "Nurture for software teams. Started by the CRM plugin when a lead from anypress.io with Customer Group \"SaaS and Software Teams\" confirms their email.",
   "emails": [
    {
     "day": 0,
@@ -344,7 +344,7 @@
   ]
  },
  {
-  "title": "Email: Monthly newsletter template",
+  "title": "Email: Monthly Newsletter Template",
   "trigger": "manual",
   "note": "Template only. Copy it into a campaign each month and send to the Newsletter list.",
   "emails": [
@@ -357,7 +357,7 @@
   ]
  },
  {
-  "title": "Email: Abandoned checkout",
+  "title": "Email: Abandoned Checkout",
   "trigger": "fc_ab_cart_simulation_fluent_cart",
   "settings": {
    "priority": 10
@@ -392,7 +392,7 @@
   ]
  },
  {
-  "title": "Email: Website upgrade",
+  "title": "Email: Website Upgrade",
   "trigger": "manual",
   "note": "Started by the CRM plugin's daily job for subscribed contacts who have had only Website: Active for about 60 days.",
   "emails": [
@@ -405,7 +405,7 @@
   ]
  },
  {
-  "title": "Email: Care ended",
+  "title": "Email: Care Ended",
   "trigger": "manual",
   "note": "Started by the CRM plugin when a care package ends (Care: Past) and the customer still has a live website plan. Stops if they start care again.",
   "emails": [
@@ -414,6 +414,180 @@
     "subject": "Your website is still in good hands",
     "preheader": "Care has ended, but help is still a reply away.",
     "body": "<p>Hi {{contact.first_name|there}},</p><p>Your care package has ended. Your website stays exactly as it is, with its nightly backups and updates still looked after by us.</p><p>If you need a change later, you don't have to sign up again. You can buy a single hour of changes whenever something comes up, and we'll take care of it.</p><p>And if care stopped working for you, we'd like to know why. Just reply and tell us. We read every answer.</p><p><a href=\"https://anypress.io/care\"><strong>See the care options</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Care Welcome",
+  "trigger": "manual",
+  "note": "Started by the CRM plugin when a contact gets Care: Active. AnyPress Host's own \"Care is on\" email covers the day they buy, so this starts later.",
+  "emails": [
+   {
+    "day": 10,
+    "subject": "What to ask us for",
+    "preheader": "Your care time, used well.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Your care package has been on for a little while, so here are the kinds of things people ask us for: a new page, changing prices or opening hours, adding a booking type, fixing something that looks off on a phone, or a new form.</p><p>Send each one as its own request, in plain words. We reply in the time your package promises and tell you how much of your time it used.</p><p><a href=\"https://anypress.io/care\"><strong>See what each package covers</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 35,
+    "subject": "Know someone who needs this?",
+    "preheader": "A small thank-you for passing it on.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>If care has saved you some evenings, a friend running a business might like it too.</p><p>As an AnyPress affiliate you get 30% of the first payment of anyone who buys through your link. It takes two minutes to sign up.</p><p><a href=\"https://anypress.io/affiliates\"><strong>Become an affiliate</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Nurture Point of Sale Companies",
+  "trigger": "manual",
+  "note": "Nurture for point of sale companies. Started by the CRM plugin when a contact with Customer Group \"Point of Sale Companies\" subscribes. Prospects from research never get it: FluentCRM skips anyone tagged Prospect who has not subscribed.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "A website that takes orders, for every merchant",
+    "preheader": "Your merchants ask for this.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Your merchants already take payments with you in the shop. Many of them still need a website where customers can browse, order and pay online.</p><p>AnyPress sets that website up for them: a store on WordPress with FluentCart, hosted, updated and backed up by us.</p><p><a href=\"https://anypress.io/sites/store\"><strong>See the store plan</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 4,
+    "subject": "Earn on every merchant you send",
+    "preheader": "30% of the first payment.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>As an AnyPress affiliate you earn 30% of the first payment of each merchant who buys through your link. You keep your merchants; we build and run their website.</p><p><a href=\"https://anypress.io/affiliates\"><strong>How the affiliate programme works</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 10,
+    "subject": "What a merchant gets",
+    "preheader": "A real shop, not a page.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Products with photos and stock, online checkout, gift cards, coupons, customer accounts and order emails. The merchant changes it all in WordPress, and we keep it fast and safe.</p><p><a href=\"https://anypress.io/try\"><strong>Try a store demo</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 18,
+    "subject": "Join as an affiliate",
+    "preheader": "Two minutes to sign up.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>If this would help your merchants, sign up as an affiliate and you get your link straight away. Questions first? Just reply.</p><p><a href=\"https://anypress.io/affiliates\"><strong>Become an affiliate</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Nurture Booking Software Companies",
+  "trigger": "manual",
+  "note": "Nurture for booking software companies. Started by the CRM plugin when a contact with Customer Group \"Booking Software Companies\" subscribes. Prospects from research never get it.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "A website for each of your customers",
+    "preheader": "Where their bookings start.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Your customers take bookings with you. Many still need a proper website for people to find them first.</p><p>AnyPress sets that website up for them on WordPress, hosted, updated and backed up by us.</p><p><a href=\"https://anypress.io/sites/bookings\"><strong>See the bookings plan</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 4,
+    "subject": "Earn on every customer you send",
+    "preheader": "30% of the first payment.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>As an AnyPress affiliate you earn 30% of the first payment of each business that buys through your link. You keep your customer; we look after their website.</p><p><a href=\"https://anypress.io/affiliates\"><strong>How the affiliate programme works</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 10,
+    "subject": "What a salon or studio gets",
+    "preheader": "Pages, forms and online booking.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>A website with their services, prices, photos, contact forms and email list, plus FluentBooking for businesses that want booking built in. They change it all in WordPress.</p><p><a href=\"https://anypress.io/try\"><strong>Try a bookings demo</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 18,
+    "subject": "Join as an affiliate",
+    "preheader": "Two minutes to sign up.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>If this would help your customers, sign up as an affiliate and you get your link straight away. Questions first? Just reply.</p><p><a href=\"https://anypress.io/affiliates\"><strong>Become an affiliate</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Nurture Template and Theme Makers",
+  "trigger": "manual",
+  "note": "Nurture for template and theme makers. Started by the CRM plugin when a contact with Customer Group \"Template and Theme Makers\" subscribes. Prospects from research never get it.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "You design it, AnyPress runs it",
+    "preheader": "Sell finished websites, not just files.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Your buyers love the design, then get stuck on hosting, plugins and updates. As an AnyPress seller you can sell the finished website instead, built on your own design, while we run the servers, updates and backups.</p><p><a href=\"https://anypress.io/sellers\"><strong>How selling works</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 4,
+    "subject": "Your own theme on every site",
+    "preheader": "No lock-in.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Sites on AnyPress can run any theme, including yours. Your design stays yours, and your buyers get a website that is ready on day one.</p><p><a href=\"https://anypress.io/sellers\"><strong>Read more</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 10,
+    "subject": "Your own storefront",
+    "preheader": "Your brand, your prices.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Sellers get a storefront where buyers pick a plan and pay you. Each website is built for them automatically. You set the prices and keep the difference.</p><p><a href=\"https://anypress.io/sellers/setup\"><strong>See the storefront</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 18,
+    "subject": "Apply to become a seller",
+    "preheader": "Apply, then a short call.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>It takes two minutes to apply. Then we book a short call to get you set up. Questions first? Just reply.</p><p><a href=\"https://anypress.io/sell\"><strong>Apply to sell</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Nurture WordPress Educators and Communities",
+  "trigger": "manual",
+  "note": "Nurture for WordPress educators and communities. Started by the CRM plugin when a contact with Customer Group \"WordPress Educators and Communities\" subscribes. Prospects from research never get it.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "A ready website for every student",
+    "preheader": "Teach WordPress, skip the setup.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Half of a beginner class goes on hosting, plugins and settings. With AnyPress, each student starts on a website that is already set up with the Fluent plugins, so the lesson can be about building the business.</p><p><a href=\"https://anypress.io/try\"><strong>Try a demo site</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 4,
+    "subject": "Teach with a live store",
+    "preheader": "Real sites, real tools.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Every AnyPress site is real WordPress with FluentCRM, FluentCart, FluentBooking and FluentCommunity, depending on the site type. Your students learn the same tools they would use for clients.</p><p><a href=\"https://anypress.io/pricing\"><strong>See the site types</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 10,
+    "subject": "Earn when your members buy",
+    "preheader": "30% of the first payment.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>As an affiliate you earn 30% of the first payment of each member who buys through your link. Members who build sites for clients can also become sellers with their own storefront.</p><p><a href=\"https://anypress.io/affiliates\"><strong>How the affiliate programme works</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 18,
+    "subject": "Let’s talk",
+    "preheader": "Reply and we’ll set it up.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>If you run a course, a community or a channel, reply to this email and tell us about it. We can set you up as an affiliate and talk about what would help your members.</p><p><a href=\"https://anypress.io/affiliates\"><strong>Become an affiliate</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
+ },
+ {
+  "title": "Email: Nurture WordPress Hosts",
+  "trigger": "manual",
+  "note": "Nurture for small WordPress hosts. Started by the CRM plugin when a contact with Customer Group \"WordPress Hosts\" subscribes. Prospects from research never get it.",
+  "emails": [
+   {
+    "day": 0,
+    "subject": "Fluent websites without the setup",
+    "preheader": "For customers who want it done for them.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Some of your customers want the server. Others just want a finished website. AnyPress builds and runs finished WordPress sites with the Fluent plugins already set up.</p><p><a href=\"https://anypress.io/hosting\"><strong>How AnyPress hosting works</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 4,
+    "subject": "Send the ones who want it done for them",
+    "preheader": "30% of the first payment.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>As an affiliate you earn 30% of the first payment of each customer who buys through your link, for the customers your plans aren’t meant for.</p><p><a href=\"https://anypress.io/affiliates\"><strong>How the affiliate programme works</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 10,
+    "subject": "Sell it under your own name",
+    "preheader": "A storefront for hosts.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Want to offer finished websites yourself? As a seller you get your own storefront, set your own prices, and we build and run each website.</p><p><a href=\"https://anypress.io/sellers\"><strong>How selling works</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   },
+   {
+    "day": 18,
+    "subject": "Join as an affiliate",
+    "preheader": "Two minutes to sign up.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>If this fits your customers, sign up as an affiliate and you get your link straight away. Questions first? Just reply.</p><p><a href=\"https://anypress.io/affiliates\"><strong>Become an affiliate</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
  }

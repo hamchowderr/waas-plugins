@@ -22,26 +22,70 @@ use FluentCrm\App\Models\Lists;
 // Lists are consent: who asked for which kind of email.
 $lists = [
     'newsletter' => ['Newsletter', 'Tips and news, about once a month. Sign-ups from anypress.io join this list.'],
-    'product-updates' => ['Product updates', 'New features and changes to AnyPress.'],
+    'product-updates' => ['Product Updates', 'New features and changes to AnyPress.'],
 ];
 foreach ($lists as $slug => [$title, $description]) {
     $list = Lists::where('slug', $slug)->first();
     if (!$list) {
         $list = Lists::create(['title' => $title, 'slug' => $slug, 'description' => $description]);
+    } elseif ($list->title !== $title) {
+        $list->title = $title; // Title Case names
+        $list->save();
     }
     echo "List: $title is #{$list->id}\n";
 }
 
-// Contact fields: where they came from, which customer group they're in, and whether a full refund ended a plan.
+// Contact fields: where they came from, which customer group they're in, whether a full refund ended a plan, and for
+// researched businesses the person's job title and the programme they're pitched. Labels and dropdown options are kept
+// in step with this list; a field's values are never touched.
 $fields = fluentcrm_get_option('contact_custom_fields', []);
-$have = array_column($fields, 'slug');
-foreach (['source' => 'Source', 'customer_group' => 'Customer group', 'refunded' => 'Refunded'] as $slug => $label) {
-    if (!in_array($slug, $have, true)) {
-        $fields[] = ['field_key' => 'text', 'type' => 'text', 'label' => $label, 'slug' => $slug, 'group' => 'AnyPress'];
+$wanted = [
+    'source' => ['Source', 'text', []],
+    'customer_group' => ['Customer Group', 'select-one', array_values(AnyPress_CRM::GROUPS)],
+    'refunded' => ['Refunded', 'text', []],
+    'job_title' => ['Job Title', 'text', []],
+    'outreach_route' => ['Outreach Route', 'select-one', AnyPress_CRM::ROUTES],
+];
+foreach ($wanted as $slug => [$label, $type, $options]) {
+    $def = ['field_key' => $type === 'text' ? 'text' : 'select-one', 'type' => $type, 'label' => $label, 'slug' => $slug, 'group' => 'AnyPress'];
+    if ($options) {
+        $def['options'] = $options;
+    }
+    $at = array_search($slug, array_column($fields, 'slug'), true);
+    if ($at === false) {
+        $fields[] = $def;
+    } else {
+        $fields[$at] = array_merge($fields[$at], $def);
     }
 }
 (new \FluentCrm\App\Models\CustomContactField())->saveGlobalFields($fields);
 echo 'Fields: ' . implode(', ', array_column($fields, 'slug')) . "\n";
+
+// Automations named before Title Case keep their emails, stats and contacts; only the title changes.
+$renamed = [
+    'Email: Website owner welcome' => 'Email: Website Owner Welcome',
+    'Email: Win-back' => 'Email: Win-Back',
+    'Email: Affiliate welcome' => 'Email: Affiliate Welcome',
+    'Email: Seller welcome' => 'Email: Seller Welcome',
+    'Email: Reseller welcome' => 'Email: Reseller Welcome',
+    'Email: Affiliate first referral' => 'Email: Affiliate First Referral',
+    'Email: Monthly newsletter template' => 'Email: Monthly Newsletter Template',
+    'Email: Abandoned checkout' => 'Email: Abandoned Checkout',
+    'Email: Website upgrade' => 'Email: Website Upgrade',
+    'Email: Care ended' => 'Email: Care Ended',
+];
+$was = ['shops', 'regulated', 'courses', 'chambers', 'churches', 'franchises', 'agencies', 'developers'];
+foreach ($was as $key) {
+    $renamed['Email: Nurture ' . $key] = 'Email: Nurture ' . AnyPress_CRM::GROUPS[$key];
+}
+foreach ($renamed as $old => $new) {
+    $funnel = Funnel::where('title', $old)->first();
+    if ($funnel && !Funnel::where('title', $new)->exists()) {
+        $funnel->title = $new;
+        $funnel->save();
+        echo "Automation: $old renamed $new\n";
+    }
+}
 
 // The automations, each a straight line: wait, email, wait, email.
 $automations = json_decode(file_get_contents(__DIR__ . '/crm-emails.json'), true);
@@ -125,9 +169,9 @@ foreach ($automations as $a) {
 // purchase, AnyPress Host's "stays online until" email asks why they cancelled, the AnyPress API's approval email welcomes
 // sellers and resellers, and FluentAffiliate's own sale email covers the first referral.
 $retiredEmails = [
-    'Email: Website owner welcome' => 'Your website is on its way',
-    'Email: Win-back' => 'Can we ask one quick question?',
-    'Email: Seller welcome' => 'Welcome, you can now sell websites',
+    'Email: Website Owner Welcome' => 'Your website is on its way',
+    'Email: Win-Back' => 'Can we ask one quick question?',
+    'Email: Seller Welcome' => 'Welcome, you can now sell websites',
 ];
 foreach ($retiredEmails as $title => $subject) {
     $funnel = Funnel::where('title', $title)->first();
@@ -139,7 +183,7 @@ foreach ($retiredEmails as $title => $subject) {
     $step->delete();
     echo "Retired: \"$subject\" taken out of $title\n";
 }
-foreach (['Email: Reseller welcome', 'Email: Affiliate first referral'] as $title) {
+foreach (['Email: Reseller Welcome', 'Email: Affiliate First Referral'] as $title) {
     $funnel = Funnel::where('title', $title)->where('status', 'published')->first();
     if ($funnel) {
         $funnel->status = 'draft';
@@ -178,6 +222,17 @@ foreach (['tags' => ['Customer', 'Lead', 'Subscriber'], 'lists' => ['Customers']
         $item->delete();
         echo "Old $type: $title removed\n";
     }
+}
+
+// FluentCRM's Companies feature (free, under Settings > Experimental): a researched business is a company, and the
+// person who reads its inbox is a contact linked to it (AnyPress Host's prospects route). Switched on through FluentCRM's
+// own settings route, which also makes the companies tables; the other switches are kept. Last, because saving the
+// abandoned cart settings above writes back the switches FluentCRM read before this.
+if (!\FluentCrm\App\Services\Helper::isCompanyEnabled()) {
+    $save = new WP_REST_Request('POST', '/fluent-crm/v2/setting/experiments');
+    $save->set_body_params(['company_module' => 'yes']);
+    $saved = rest_do_request($save);
+    echo $saved->is_error() ? 'Companies: FAILED ' . wp_json_encode($saved->get_data()) . "\n" : "Companies: on\n";
 }
 
 echo "Done: $made automations added. Publish each in FluentCRM > Automations once its emails are approved.\n";

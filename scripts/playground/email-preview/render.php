@@ -45,7 +45,7 @@ foreach ( \FluentCart\App\Services\Email\EmailNotifications::getNotifications() 
 $contact = \FluentCrm\App\Models\Subscriber::where( 'email', 'pat@example.com' )->first()
 	?: \FluentCrm\App\Models\Subscriber::create( array( 'email' => 'pat@example.com', 'first_name' => 'Pat', 'status' => 'subscribed' ) );
 $all     = json_decode( file_get_contents( '/wordpress/wp-content/anypress-remote/crm-emails.json' ), true );
-foreach ( array( array( 'Email: Website owner welcome', 0 ), array( 'Email: Seller welcome', 0 ) ) as list( $title, $i ) ) {
+foreach ( array( array( 'Email: Website Owner Welcome', 0 ), array( 'Email: Seller Welcome', 0 ) ) as list( $title, $i ) ) {
 	foreach ( $all as $a ) {
 		if ( $a['title'] !== $title ) {
 			continue;
