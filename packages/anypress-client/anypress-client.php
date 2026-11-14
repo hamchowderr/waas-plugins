@@ -12,7 +12,7 @@ Plugin Name: AnyPress Client
 Plugin URI: https://anypress.io
 Description: Runs on each AnyPress website: one-click login from the storefront, turns plugins on or off to match the store's plan (roles), and lets the AnyPress connector edit the site's design and content.
 Author: Otaku Solutions
-Version: 2.34.0
+Version: 2.40.0
 Author URI: https://otakusolutions.io
 Update URI: anypress-client
 Requires at least: 6.9
@@ -25,7 +25,7 @@ Text Domain: anypress-client
 define( 'ANYPRESS_CLIENT_SLUG', 'anypress-client' );
 define( 'ANYPRESS_CLIENT_BASENAME', plugin_basename( __FILE__ ) );
 define( 'ANYPRESS_CLIENT_UPDATE_URI', 'anypress-client' );
-define( 'ANYPRESS_CLIENT_VERSION', '2.34.0' );
+define( 'ANYPRESS_CLIENT_VERSION', '2.40.0' );
 define( 'ANYPRESS_CLIENT_TEXTDOMAIN', 'anypress-client' );
 
 use AnyPressClient\Api\AdminLogin;
@@ -54,17 +54,20 @@ use AnyPressClient\Forms\FormsAbilities;
 use AnyPressClient\Forms\FormsCommand;
 use AnyPressClient\Forms\FormsSwitch;
 use AnyPressClient\Moving\AffiliateImport;
+use AnyPressClient\Moving\CalendlyImport;
 use AnyPressClient\Moving\CircleImport;
 use AnyPressClient\Moving\CommunityImport;
 use AnyPressClient\Moving\CourseImport;
 use AnyPressClient\Moving\ImportAbilities;
 use AnyPressClient\Moving\ImportCommand;
 use AnyPressClient\Moving\MemberPressImport;
+use AnyPressClient\Moving\SkoolImport;
 use AnyPressClient\Moving\SupportImport;
 use AnyPressClient\Shop\ShopAbilities;
 use AnyPressClient\Shop\ShopCommand;
 use AnyPressClient\Shop\ShopSwitch;
 use AnyPressClient\Crm\HighLevelLink;
+use AnyPressClient\Crm\Importers\CrmImporters;
 
 // A converted form's conditional confirmations while Fluent Forms Pro is off. Forms are sent through admin-ajax,
 // so this is set up on every request; it only does any work when a converted form is sent.
@@ -121,7 +124,7 @@ if (!wp_doing_ajax()) {
     // The website assistant beside the page editor and the Site Editor, opened from the admin bar too.
     new EditorAssistant();
 
-    // Moving a site's forms to Fluent Forms (Contact Form 7, WPForms, Ninja Forms): `wp anypress forms switch` and
+    // Moving a site's forms to Fluent Forms (Contact Form 7, WPForms, Ninja Forms, Gravity Forms): `wp anypress forms switch` and
     // the check-forms and switch-forms abilities.
     new FormsAbilities(new FormsSwitch());
     if (defined('WP_CLI') && WP_CLI) {
@@ -142,11 +145,15 @@ if (!wp_doing_ajax()) {
         \WP_CLI::add_command('anypress crm', CrmCommand::class);
     }
 
+    // Brevo and MailerLite (accounts since 2022) in FluentCRM's own Import screen, through their official SDKs.
+    CrmImporters::register();
+
     // Help desk, affiliate and community data into Fluent Support, FluentAffiliate and FluentCommunity with their own
     // importers, LearnDash courses into FluentCommunity courses, and a Circle community into FluentCommunity through
-    // Circle's Admin API: `wp anypress support|affiliate|community|course|circle switch` and the check-* and switch-*
+    // Circle's Admin API, a Skool group's members from its Members CSV, and a Calendly account into FluentBooking
+    // through Calendly's API: `wp anypress support|affiliate|community|course|circle|skool|calendly|memberpress switch` and the check-* and switch-*
     // abilities.
-    $imports = [new SupportImport(), new AffiliateImport(), new CommunityImport(), new CourseImport(), new CircleImport(), new MemberPressImport()];
+    $imports = [new SupportImport(), new AffiliateImport(), new CommunityImport(), new CourseImport(), new CircleImport(), new SkoolImport(), new CalendlyImport(), new MemberPressImport()];
     new ImportAbilities(...$imports);
     if (defined('WP_CLI') && WP_CLI) {
         foreach ($imports as $import) {
@@ -170,5 +177,7 @@ if (!wp_doing_ajax()) {
         new \AnyPressClient\Features\CleanAdminBar();
         // Tools > Download my site: a copy of the whole website to take to any WordPress host.
         new \AnyPressClient\Features\DownloadSite();
+        // The editor without WordPress's welcome guides, and only this website's kit in the new-page pattern window.
+        new \AnyPressClient\Features\StoreEditor();
     }
 }

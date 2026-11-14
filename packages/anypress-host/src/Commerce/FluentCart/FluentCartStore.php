@@ -227,6 +227,44 @@ class FluentCartStore
             ->toArray());
     }
 
+    /** Subscription statuses of a plan that was taken: started, whether still running or not. */
+    private const TAKEN_STATUSES = ['trialing', 'active', 'paused', 'past_due', 'failing', 'expiring', 'expired', 'canceled', 'completed'];
+
+    /** Whether the FluentCart customer with this user id or email has ever had a website plan subscription. */
+    public function has_had_plan(int $user_id, string $email): bool
+    {
+        if ($user_id <= 0 && $email === '') {
+            return false;
+        }
+        $customer_ids = Customer::query()
+            ->where(function ($query) use ($user_id, $email) {
+                if ($user_id > 0) {
+                    $query->orWhere('user_id', $user_id);
+                }
+                if ($email !== '') {
+                    $query->orWhere('email', $email);
+                }
+            })
+            ->pluck('id')
+            ->toArray();
+        if (!$customer_ids) {
+            return false;
+        }
+
+        $product_ids = Subscription::query()
+            ->whereIn('customer_id', $customer_ids)
+            ->whereIn('status', self::TAKEN_STATUSES)
+            ->pluck('product_id')
+            ->toArray();
+        foreach (array_unique(array_map('intval', $product_ids)) as $product_id) {
+            if ($this->get_plan_feed($product_id) !== null) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** @return int[] subscription ids of one FluentCart customer */
     public function find_customer_subscription_ids(int $customer_id): array
     {

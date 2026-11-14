@@ -258,18 +258,6 @@ class FluentCartCare
         return $this->orders->can_buy_emails($subscription_id) && $this->adapter->is_subscription_active($subscription_id);
     }
 
-    /** True when one of the user's websites is live. */
-    public function has_live_website(int $user_id): bool
-    {
-        foreach ($this->adapter->get_customer_subscription_ids($user_id) as $id) {
-            if ($this->is_live_website((int) $id)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     /** True when one of the user's live websites has an active care package. */
     public function has_care_package(int $user_id): bool
     {
@@ -424,8 +412,12 @@ class FluentCartCare
      */
     private function website_for($order, bool $package): int
     {
-        if ((int) $this->store->get_order_meta($order, FluentCartEmailPacks::ORDER_WEBSITE_META) > 0) {
+        $chosen_id = (int) $this->store->get_order_meta($order, FluentCartEmailPacks::ORDER_WEBSITE_META);
+        if ($chosen_id > 0) {
             $chosen = $this->orders->resolve_website($order);
+            if (is_string($chosen) && $package && $this->is_new_website($order, $chosen_id)) {
+                return $chosen_id;
+            }
             if (is_string($chosen)) {
                 $order->addLog(__('Website not used', 'anypress-host'), $chosen, 'error', 'AnyPress');
                 return 0;
@@ -439,6 +431,18 @@ class FluentCartCare
         ));
 
         return count($candidates) === 1 ? (int) $candidates[0] : 0;
+    }
+
+    /**
+     * Care bought from the thank-you page can be paid before the new website's store is made: the customer's own plan,
+     * active or in its free days, with no care yet, still takes it.
+     */
+    private function is_new_website($order, int $website_id): bool
+    {
+        return in_array($website_id, $this->orders->customer_subscription_ids($order), true)
+            && $this->adapter->is_subscription_active($website_id)
+            && $this->adapter->get_subscription_meta($website_id, Tenant::TENANT_STATE) !== Tenant::DELETED
+            && $this->care_of($website_id) === 0;
     }
 
     /** anypress_subscription_expired: a website's plan ended, so its care stops too. */

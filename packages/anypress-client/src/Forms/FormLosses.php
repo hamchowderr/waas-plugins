@@ -87,8 +87,38 @@ final class FormLosses
                 $notes[] = __('Fluent Forms runs conditional confirmations (such as a redirect for one answer) only with Pro; AnyPress Client runs them for this form while Pro is off.', 'anypress-client');
             }
         }
+        if ($type === 'gravityform') {
+            [$lost, $notes] = self::gravity($item, $lost, $notes);
+        }
         if ($dropped) {
             $notes[] = __('Entries keep the values of dropped fields, but the form no longer asks for them.', 'anypress-client');
+        }
+
+        return [$lost, $notes];
+    }
+
+    /** What a Gravity Forms form loses: show/hide rules on fields, and the add-on feeds (Mailchimp, Stripe...). */
+    private static function gravity($item, array $lost, array $notes): array
+    {
+        $rules = GravityFixes::conditional_fields((array) $item);
+        if ($rules) {
+            $lost[] = sprintf(
+                /* translators: %s: field labels */
+                __('Show/hide rules on these fields aren\'t carried over, so they always show: %s', 'anypress-client'),
+                implode(', ', $rules)
+            );
+        }
+        $feeds = class_exists('GFAPI') ? \GFAPI::get_feeds(null, (int) ($item['id'] ?? 0)) : [];
+        $addons = is_array($feeds) ? array_values(array_unique(array_filter(array_map(fn ($feed) => (string) ($feed['addon_slug'] ?? ''), $feeds)))) : [];
+        if ($addons) {
+            $lost[] = sprintf(
+                /* translators: %s: Gravity Forms add-on slugs such as gravityformsmailchimp */
+                __('Gravity Forms add-on feeds aren\'t carried over; set the same up under the Fluent Forms form\'s Integrations: %s', 'anypress-client'),
+                implode(', ', $addons)
+            );
+        }
+        if (!empty($item['enableHoneypot'])) {
+            $notes[] = __('Gravity Forms\' anti-spam honeypot was on; Fluent Forms has its own honeypot under Global Settings.', 'anypress-client');
         }
 
         return [$lost, $notes];
@@ -124,6 +154,9 @@ final class FormLosses
                     'layout' => in_array($field_type, ['divider', 'html', 'pagebreak', 'content', 'layout', 'entry-preview'], true),
                 ];
             }
+        }
+        if ($type === 'gravityform') {
+            $fields = GravityFixes::source_fields((array) $item);
         }
         if ($type === 'ninja_forms') {
             foreach ((array) ($item['fields'] ?? []) as $field) {

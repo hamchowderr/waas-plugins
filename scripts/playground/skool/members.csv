@@ -1,0 +1,9 @@
+FirstName,LastName,Email,Invited By,JoinedDate,Question1,Answer1,Question2,Answer2,Question3,Answer3,Tier,LTV
+Ada,Lovelace,ada@anypress.example,,2025-03-01,What brings you here?,Learning to build things,Where did you hear about us?,A friend,What is your website?,ada.anypress.example,Premium,240
+Grace,Hopper,Grace@AnyPress.example,Ada Lovelace,2025-03-04,What brings you here?,"Two lines:
+ships and code",Where did you hear about us?,YouTube,What is your website?,,Standard,120
+Alan,Turing,alan@anypress.example,,2025-04-10,What brings you here?,Puzzles,Where did you hear about us?,,What is your website?,,Standard,60
+No,Email,,,2025-05-01,What brings you here?,Hidden email,Where did you hear about us?,Search,What is your website?,,Free,0
+Katherine,Johnson,katherine@anypress.example,,2025-05-12,What brings you here?,"Maths, ""orbits"" and more",Where did you hear about us?,Podcast,What is your website?,,Premium,480
+Not,AnEmail,not-an-email,,2025-06-01,What brings you here?,x,Where did you hear about us?,,What is your website?,,Free,0
+Ada,Again,ADA@anypress.example,,2025-06-02,What brings you here?,dup,Where did you hear about us?,,What is your website?,,Free,0

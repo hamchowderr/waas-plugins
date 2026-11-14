@@ -12,7 +12,7 @@ jobs:
     name: Pins
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: hamchowderr/waas-provisioning-api/.github/pins@main
   coding-standards:
     # WordPress Coding Standards (security, database, translation, best practice), PSR-12 layout and
@@ -24,7 +24,7 @@ jobs:
         working-directory: tools/qa
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -48,7 +48,7 @@ jobs:
         working-directory: tools/qa
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -59,6 +59,9 @@ jobs:
         run: composer install --no-interaction --no-progress
       - name: Build AnyPress Move's copy of the switches
         run: ../../scripts/build-move.sh
+      - name: AnyPress Client's libraries (the SDKs it calls)
+        working-directory: packages/anypress-client
+        run: composer install --no-dev --no-interaction --no-progress
       - name: PHPStan
         run: composer stan -- --no-progress --error-format=github
 
@@ -74,7 +77,7 @@ jobs:
         package: [anypress-host, anypress-client, anypress-payments, anypress-export]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -113,7 +116,7 @@ jobs:
         package: [anypress-move]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:

@@ -31,7 +31,7 @@ const SERVE = process.argv.includes('--serve');
 const FLUENT_COMMUNITY = process.env.FLUENT_COMMUNITY || '2.12.0';
 const TUTOR = process.env.TUTOR || 'latest-stable';
 const USER_TOKEN = randomBytes(24).toString('hex');
-const SWITCHES = ['forms', 'shop', 'crm', 'support', 'affiliate', 'community', 'course', 'circle', 'memberpress'];
+const SWITCHES = ['forms', 'shop', 'edd', 'crm', 'support', 'affiliate', 'community', 'course', 'circle', 'skool', 'calendly', 'memberpress'];
 
 for (const [path, fix] of [
     [resolve(MOVE, 'lib/Moving/CourseImport.php'), 'run scripts/build-move.sh'],
@@ -167,10 +167,12 @@ const before = await tutorData();
 await check('every switch is there as abilities and WP-CLI commands, without AnyPress Client', async () => {
     const state = await php(`$names = array_keys(wp_get_abilities()); echo json_encode(['client' => defined('ANYPRESS_CLIENT_VERSION'), 'move' => class_exists('AnyPressMove\\\\Plugin', false), 'names' => $names]);`);
     expect(!state.client && state.move, short(state));
-    const missing = SWITCHES.flatMap((k) => [`anypress/check-${k}`, `anypress/switch-${k}`]).filter((n) => !state.names.includes(n));
+    // The EDD switch is the shop switch's --from=edd: it has no abilities or command of its own.
+    const OWN = SWITCHES.filter((k) => k !== 'edd');
+    const missing = OWN.flatMap((k) => [`anypress/check-${k}`, `anypress/switch-${k}`]).filter((n) => !state.names.includes(n));
     expect(!missing.length, `missing abilities: ${missing.join(', ')}`);
     const help = await wp('wp anypress --help');
-    for (const k of SWITCHES) expect(help.includes(k), `no wp anypress ${k}: ${help.slice(0, 600)}`);
+    for (const k of OWN) expect(help.includes(k), `no wp anypress ${k}: ${help.slice(0, 600)}`);
 });
 
 await check('Tools, Move to Fluent lists every switch with Check, Switch and Undo', async () => {
@@ -178,7 +180,8 @@ await check('Tools, Move to Fluent lists every switch with Check, Switch and Und
     expect(hook && html.includes('Move to Fluent'), short({ hook, html: html?.slice(0, 300) }));
     for (const k of SWITCHES) expect(html.includes(`id="switch-${k}"`), `no ${k} card`);
     expect((html.match(/value="check"/g) || []).length === SWITCHES.length, 'a Check button per switch');
-    expect(html.includes('type="password" id="circle-token"'), 'the Circle token is a password field');
+    expect(html.includes('type="password" id="circle-token"') && html.includes('type="password" id="calendly-token"'), 'the Circle and Calendly tokens are password fields');
+    expect(html.includes('type="file" accept=".csv,text/csv" id="skool-csv"') && html.includes('type="number" id="skool-space"') && html.includes('enctype="multipart/form-data"'), 'the Skool card takes the members CSV as a file upload and a space id');
     expect(!/ (onclick|style)=/.test(html), 'no inline script or style attributes (they are enqueued)');
 });
 

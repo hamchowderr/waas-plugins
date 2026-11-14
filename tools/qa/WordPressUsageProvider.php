@@ -83,6 +83,12 @@ final class WordPressUsageProvider extends ReflectionBasedMemberUsageProvider
                 return true;
             }
         }
+        // An interface of a library (PSR-18's ClientInterface, say) that the library's own code calls.
+        foreach ($class->getInterfaceNames() as $interface) {
+            if (!str_starts_with($interface, 'AnyPress')) {
+                return true;
+            }
+        }
 
         return false;
     }

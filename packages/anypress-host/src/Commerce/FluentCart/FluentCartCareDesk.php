@@ -8,7 +8,8 @@ use AnyPressHost\Features\AdminHome;
 /**
  * The team's side of care (FluentCartCare): the customer's care on every Fluent Support ticket (a "Care" card in the
  * ticket's customer sidebar, through Fluent Support's customer_extra_widgets filter), and AnyPress > Care in wp-admin,
- * which lists the websites with care and logs the time each request took.
+ * which makes checkout links to email customers (FluentCartCareCall), lists the websites with care and
+ * logs the time each request took.
  */
 class FluentCartCareDesk
 {
@@ -19,12 +20,14 @@ class FluentCartCareDesk
     private FluentCartAdapter $adapter;
     private FluentCartStore $store;
     private FluentCartCare $care;
+    private FluentCartCareCall $call;
 
-    public function __construct(FluentCartAdapter $adapter, FluentCartStore $store, FluentCartCare $care)
+    public function __construct(FluentCartAdapter $adapter, FluentCartStore $store, FluentCartCare $care, FluentCartCareCall $call)
     {
         $this->adapter = $adapter;
         $this->store = $store;
         $this->care = $care;
+        $this->call = $call;
     }
 
     public function register(): void
@@ -229,6 +232,9 @@ class FluentCartCareDesk
         echo '<hr class="wp-header-end">';
         $this->render_logged();
         $this->render_products_step();
+        if (FluentCartCareProducts::exist()) {
+            $this->call->render_card(self::PAGE);
+        }
         if ($rows) {
             $this->render_tiles($rows, count($late));
         }

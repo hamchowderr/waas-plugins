@@ -26,7 +26,7 @@ class FormsAbilities
 
         wp_register_ability(SiteAbilities::CATEGORY . '/check-forms', [
             'label' => __('Check the forms switch', 'anypress-client'),
-            'description' => __('Lists this website\'s Contact Form 7, WPForms and Ninja Forms forms and what switching them to Fluent Forms would do: the fields and settings that would be dropped, the entries that would come across, and the pages, templates and widgets whose form would be swapped. Changes nothing.', 'anypress-client'),
+            'description' => __('Lists this website\'s Contact Form 7, WPForms, Ninja Forms and Gravity Forms forms and what switching them to Fluent Forms would do: the fields and settings that would be dropped, the entries that would come across, and the pages, templates and widgets whose form would be swapped. Changes nothing.', 'anypress-client'),
             'category' => SiteAbilities::CATEGORY,
             'output_schema' => $output,
             'execute_callback' => fn () => $this->switch->run(true),
@@ -40,7 +40,7 @@ class FormsAbilities
 
         wp_register_ability(SiteAbilities::CATEGORY . '/switch-forms', [
             'label' => __('Switch the forms to Fluent Forms', 'anypress-client'),
-            'description' => __('Converts the Contact Form 7, WPForms and Ninja Forms forms and their entries to Fluent Forms, fixes what Fluent Forms\' importer gets wrong, and swaps the forms on pages, templates and widgets. Each changed page keeps a revision. Running it again changes nothing already done. With undo, puts the old shortcodes and blocks back (the Fluent Forms forms stay). The old plugins are never changed. Run check-forms first.', 'anypress-client'),
+            'description' => __('Converts the Contact Form 7, WPForms, Ninja Forms and Gravity Forms forms and their entries to Fluent Forms, fixes what Fluent Forms\' importer gets wrong, and swaps the forms on pages, templates and widgets. Each changed page keeps a revision. Running it again changes nothing already done. With undo, puts the old shortcodes and blocks back (the Fluent Forms forms stay). The old plugins are never changed. Run check-forms first.', 'anypress-client'),
             'category' => SiteAbilities::CATEGORY,
             'input_schema' => [
                 'type' => 'object',

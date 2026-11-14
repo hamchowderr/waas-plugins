@@ -7,19 +7,16 @@ use AnyPressHost\Core\Tenant;
 use AnyPressHost\Features\AccountStyles;
 
 /**
- * Where customers see and buy care (FluentCartCare): a "Want us to look after it?" box under the buttons of each website
- * plan's product page, and a Care section on each live website's card on the account's Website page.
+ * Where customers see and buy care (FluentCartCare): on the thank-you page after a website plan, and in a Care section
+ * on each live website's card on the account's Website page. Both show the packages with an "Add" button each, which
+ * opens checkout for that package with the website already chosen. FluentCart can't put two subscriptions in one
+ * cart, so care is its own short checkout rather than a line in the plan's.
  *
- * FluentCart's checkout holds one subscription at a time, and its order bump (an add-on in the checkout) is a
- * FluentCart Pro feature, so care is its own checkout. On the product page the customer picks a package; the pick is
- * kept in a cookie, and once the website is up its card leads with that package, one click from checkout. On the card,
- * a website with care shows its package, this month's time left and an "Ask for a change" form, which files a ticket in
- * the shop's Fluent Support.
+ * On the card, a website with care shows its package, this month's time left and an "Ask for a change" form, which
+ * files a ticket in the shop's Fluent Support, and the extra hour at the care price stays one click from checkout.
  */
 class FluentCartCarePortal
 {
-    /** Cookie: the care variation picked on a product page. */
-    public const PICK_COOKIE = 'anypress_care_pick';
     public const REQUEST_ACTION = 'anypress_care_request';
     public const ATTACH_ACTION = 'anypress_care_attach';
     /** Query args after a request or attach: the website, and how it went. */
@@ -41,7 +38,7 @@ class FluentCartCarePortal
 
     public function register(): void
     {
-        add_action('fluent_cart/product/single/after_actions_block', [$this, 'render_product_box'], 20, 1);
+        add_action('fluent_cart/receipt/thank_you/after_body', [$this, 'render_receipt_offer'], 20, 1);
         add_action('admin_post_' . self::REQUEST_ACTION, [$this, 'handle_request']);
         add_action('admin_post_' . self::ATTACH_ACTION, [$this, 'handle_attach']);
         add_filter('fluent_cart/shop_query', [$this, 'hide_from_shop'], 10, 1);
@@ -64,7 +61,7 @@ class FluentCartCarePortal
     }
 
     /**
-     * fluent_cart/shop_query: care is bought for a website, from its plan's product page or the account, so it stays
+     * fluent_cart/shop_query: care is bought for a website, after its plan or from the account, so it stays
      * out of the shop's product lists (the shop page, product blocks and shortcodes).
      *
      * @param mixed $query FluentCart's product query builder
@@ -78,9 +75,9 @@ class FluentCartCarePortal
     }
 
     /**
-     * fluent_cart/checkout/validate_data: care and services need a website. A cart with one is turned away unless it
-     * also holds a website plan or the buyer (signed in, or by their checkout email) has a live website. A care-only
-     * service (the extra hour at the care price) needs a live website with a care package.
+     * fluent_cart/checkout/validate_data: anyone can buy a care package or one-time help, but a care-only service (the
+     * extra hour at the care price) needs a live website with a care package (the buyer signed in, or found by their
+     * checkout email).
      *
      * @param array $errors
      * @param array $args data, cart
@@ -88,11 +85,8 @@ class FluentCartCarePortal
     public function validate_checkout($errors, $args)
     {
         $cart = $args['cart'] ?? null;
-        if (!$cart) {
-            return $errors;
-        }
-        $in_cart = array_map('intval', $this->store->get_cart_product_ids($cart));
-        if (!array_intersect($in_cart, $this->care_product_ids())) {
+        $care_only = array_map(fn ($product) => (int) $product['product_id'], $this->services(true));
+        if (!$cart || !$care_only || !array_intersect(array_map('intval', $this->store->get_cart_product_ids($cart)), $care_only)) {
             return $errors;
         }
         $user_id = get_current_user_id();
@@ -101,27 +95,11 @@ class FluentCartCarePortal
             $user = $email !== '' ? get_user_by('email', $email) : false;
             $user_id = $user ? (int) $user->ID : 0;
         }
-        $care_only = array_map(fn ($product) => (int) $product['product_id'], $this->services(true));
-        if (array_intersect($in_cart, $care_only)) {
-            if ($user_id > 0 && $this->care->has_care_package($user_id)) {
-                return $errors;
-            }
-            $errors = is_array($errors) ? $errors : [];
-            $errors['anypress_care']['care_only'] = __('This price is for websites with a care package. Please sign in to the account that has care, or choose "One hour of changes".', 'anypress-host');
-
+        if ($user_id > 0 && $this->care->has_care_package($user_id)) {
             return $errors;
         }
-        foreach ($in_cart as $product_id) {
-            if ($this->adapter->is_plan_product($product_id)) {
-                return $errors;
-            }
-        }
-        if ($user_id > 0 && $this->care->has_live_website($user_id)) {
-            return $errors;
-        }
-
         $errors = is_array($errors) ? $errors : [];
-        $errors['anypress_care']['no_website'] = __('Care is added to one of your websites. Please sign in to the account that has your website, or get a website plan first.', 'anypress-host');
+        $errors['anypress_care']['care_only'] = __('This price is for websites with a care package. Please sign in to the account that has care.', 'anypress-host');
 
         return $errors;
     }
@@ -146,73 +124,56 @@ class FluentCartCarePortal
         }
     }
 
-    /** The package's line under its name: its time and answer time. */
-    private static function package_line(array $package): string
+    /** "Add Care Plus": checkout for one package price, with the website already chosen. */
+    private static function add_button(array $package, array $variation, int $website_id, string $class): string
     {
-        $minutes = AnyPressProvisioningIntegration::minutes($package['settings'], 'care_minutes');
-        $answer = sanitize_text_field((string) ($package['settings']['care_answer'] ?? ''));
-        $parts = [];
-        if ($minutes > 0) {
-            /* translators: %s: time, e.g. 2 h */
-            $parts[] = sprintf(__('%s of changes a month', 'anypress-host'), FluentCartCare::format_minutes($minutes));
-        }
-        if ($answer !== '') {
-            /* translators: %s: e.g. 1 business day */
-            $parts[] = sprintf(__('answered within %s', 'anypress-host'), $answer);
-        }
-
-        return implode(', ', $parts);
+        return '<a class="' . esc_attr($class) . '" href="' . esc_url(FluentCartCareCall::pay_link($variation['checkout_url'], $website_id)) . '">' . esc_html(sprintf(
+            /* translators: %s: package, e.g. Care Plus */
+            __('Add %s', 'anypress-host'),
+            $package['title']
+        )) . '</a>';
     }
 
-    /** The variation picked on a product page, 0 when none. */
-    private static function picked(): int
-    {
-        return isset($_COOKIE[self::PICK_COOKIE]) ? absint(wp_unslash($_COOKIE[self::PICK_COOKIE])) : 0;
-    }
-
-    // ---- Product page ----
+    // ---- Thank-you page ----
 
     /**
-     * fluent_cart/product/single/after_actions_block: on a website plan's page, the care packages and one-time
-     * services, to pick now and add once the website is up.
+     * fluent_cart/receipt/thank_you/after_body: after a website plan, the care packages with an "Add" button each for
+     * the website just bought.
      *
-     * @param array $context product, variant, scope
+     * @param array $config order, ...
      */
-    public function render_product_box($context): void
+    public function render_receipt_offer($config): void
     {
-        $product = is_array($context) ? ($context['product'] ?? null) : null;
-        $product_id = is_object($product) ? (int) ($product->ID ?? 0) : 0;
-        if ($product_id <= 0 || $this->store->get_plan_feed($product_id) === null) {
+        $order = is_array($config) ? ($config['order'] ?? null) : null;
+        if (!$order || !is_user_logged_in()) {
             return;
         }
+        $plan = false;
+        foreach ($this->store->get_order_lines($order) as $line) {
+            $plan = $plan || $this->store->get_plan_feed($line['product_id']) !== null;
+        }
+        $subscription = $plan ? $this->store->find_subscription_for_order($order) : null;
+        $website_id = $subscription ? (int) $subscription->id : 0;
         $packages = $this->care->packages();
-        if (!$packages) {
+        $own = array_map('intval', $this->adapter->get_customer_subscription_ids(get_current_user_id()));
+        if ($website_id <= 0 || !$packages || $this->care->care_of($website_id) > 0 || !in_array($website_id, $own, true)) {
             return;
         }
 
-        $picked = self::picked();
-        echo '<div class="anypress-care-box"><fieldset><legend>' . esc_html__('Want us to look after it?', 'anypress-host') . '</legend>';
-        echo '<p class="anypress-care-intro">' . esc_html__('Pick a care package and we make the changes for you each month. It is ready to add on your account once your website is up.', 'anypress-host') . '</p>';
+        echo '<section class="anypress-care-offer"><h2>' . esc_html__('Add care to your new website', 'anypress-host') . '</h2>'
+            . '<p class="anypress-care-intro">' . esc_html__('Every month we make the changes you ask for, so your site stays up to date without you doing it.', 'anypress-host') . '</p><div class="anypress-care-tiers">';
         foreach ($packages as $package) {
             $monthly = self::first_variation($package, 'monthly');
-            echo '<label class="anypress-care-option"><input type="radio" name="anypress_care_pick" value="' . esc_attr((string) $monthly['id']) . '"' . checked($picked, $monthly['id'], false) . '> <span><strong>'
-                . esc_html($package['title']) . '</strong> <small>' . esc_html(self::package_line($package)) . '</small></span> <b>' . esc_html(self::price_label($monthly)) . '</b></label>';
-        }
-        echo '<label class="anypress-care-option is-none"><input type="radio" name="anypress_care_pick" value="0"' . checked($picked, 0, false) . '> <span><strong>'
-            . esc_html__('No thanks', 'anypress-host') . '</strong> <small>' . esc_html__('You can add care later from your account.', 'anypress-host') . '</small></span></label>';
-        echo '</fieldset>';
-
-        $services = $this->services();
-        if ($services) {
-            echo '<p class="anypress-care-sub">' . esc_html__('One-time help', 'anypress-host') . '</p><ul class="anypress-care-services">';
-            foreach ($services as $service) {
-                echo '<li><span>' . esc_html($service['title']) . '</span> <b>' . esc_html(self::price_label($service['variations'][0])) . '</b></li>';
+            echo '<div class="anypress-care-tier"><p><strong>' . esc_html($package['title']) . '</strong></p><p class="anypress-care-price"><b>' . esc_html(self::money($monthly['price'])) . '</b> <span>'
+                . esc_html__('a month', 'anypress-host') . '</span></p><ul>';
+            foreach (self::package_points($package) as $point) {
+                echo '<li>' . esc_html($point) . '</li>';
             }
-            echo '</ul>';
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- add_button() escapes.
+            echo '</ul>' . self::add_button($package, $monthly, $website_id, 'anypress-care-btn') . '</div>';
         }
-        echo '<p class="anypress-care-note">' . esc_html__('Care is its own small subscription, separate from the plan, so either can be cancelled alone. One-time help is on your account too.', 'anypress-host') . '</p>';
-        echo '</div>';
-        $this->print_product_assets();
+        echo '</div><p class="anypress-care-note">' . esc_html__('Care is billed monthly on its own and can be cancelled any time. You can also add it later from your account.', 'anypress-host') . '</p></section>';
+        $this->print_receipt_styles();
     }
 
     /** A package's first variation with this interval, else its first. */
@@ -227,31 +188,22 @@ class FluentCartCarePortal
         return $package['variations'][0];
     }
 
-    private function print_product_assets(): void
+    private function print_receipt_styles(): void
     {
         $version = defined('ANYPRESS_HOST_VERSION') ? ANYPRESS_HOST_VERSION : null;
-        wp_register_style('anypress-care-box', false, [], $version);
-        wp_add_inline_style('anypress-care-box', '.anypress-care-box{grid-column:1/-1;flex:1 0 100%;width:100%;box-sizing:border-box;border:1px solid color-mix(in srgb,currentColor 18%,transparent);border-radius:14px;padding:18px;margin:20px 0 0;display:grid;gap:12px;min-width:0}'
-            . '.anypress-care-box *{box-sizing:border-box}.anypress-care-box fieldset{border:0;margin:0;padding:0;display:grid;gap:8px;min-width:0}'
-            . '.anypress-care-box legend{font-weight:700;font-size:1.1em;padding:0;margin:0 0 2px}'
-            . '.anypress-care-intro{margin:0 0 4px;font-size:.92em;opacity:.75}'
-            . '.anypress-care-option{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:12px 14px;border:1px solid color-mix(in srgb,currentColor 16%,transparent);border-radius:10px;cursor:pointer;transition:border-color .15s,background .15s}'
-            . '.anypress-care-option:hover{border-color:color-mix(in srgb,currentColor 40%,transparent)}'
-            . '.anypress-care-option:has(input:checked){border-color:currentColor;box-shadow:inset 0 0 0 1px currentColor;background:color-mix(in srgb,currentColor 4%,transparent)}'
-            . '.anypress-care-option input{margin:0;width:18px;height:18px;accent-color:currentColor}'
-            . '.anypress-care-option span{display:grid;gap:1px;min-width:0}.anypress-care-option small{font-size:.86em;opacity:.7}.anypress-care-option b{white-space:nowrap;font-variant-numeric:tabular-nums}'
-            . '.anypress-care-option.is-none{padding:9px 14px}.anypress-care-option.is-none strong{font-weight:600}'
-            . '.anypress-care-sub{margin:6px 0 0;font-size:.78em;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.6}'
-            . '.anypress-care-services{list-style:none;margin:0;padding:0;display:grid}'
-            . '.anypress-care-services li{display:flex;justify-content:space-between;gap:12px;padding:7px 0;margin:0;border-top:1px solid color-mix(in srgb,currentColor 10%,transparent);font-size:.94em}'
-            . '.anypress-care-services li:first-child{border-top:0}.anypress-care-services b{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}'
-            . '.anypress-care-note{margin:0;font-size:.86em;opacity:.65}'
-            . '@media (max-width:480px){.anypress-care-box{padding:14px}.anypress-care-option{grid-template-columns:auto minmax(0,1fr)}.anypress-care-option b{grid-column:2}}');
-        wp_print_styles('anypress-care-box');
-
-        wp_register_script('anypress-care-box', false, [], $version, true);
-        wp_add_inline_script('anypress-care-box', 'document.addEventListener("change",function(e){var t=e.target;if(t&&t.name==="anypress_care_pick"){document.cookie="' . self::PICK_COOKIE . '="+encodeURIComponent(t.value)+";path=/;max-age=2592000;SameSite=Lax"+(location.protocol==="https:"?";Secure":"");}});');
-        wp_enqueue_script('anypress-care-box');
+        wp_register_style('anypress-care-offer', false, [], $version);
+        wp_add_inline_style('anypress-care-offer', '.anypress-care-offer{margin:32px 0 0;padding:24px;border:1px solid color-mix(in srgb,currentColor 18%,transparent);border-radius:16px;display:grid;gap:14px}'
+            . '.anypress-care-offer *{box-sizing:border-box}.anypress-care-offer h2{margin:0;font-size:1.35em}.anypress-care-offer p{margin:0}'
+            . '.anypress-care-intro,.anypress-care-note{opacity:.75}.anypress-care-note{font-size:.88em}'
+            . '.anypress-care-tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}'
+            . '.anypress-care-tier{display:flex;flex-direction:column;gap:10px;padding:16px;border:1px solid color-mix(in srgb,currentColor 16%,transparent);border-radius:12px;min-width:0}'
+            . '.anypress-care-price b{font-size:1.6em;font-weight:800;font-variant-numeric:tabular-nums}.anypress-care-price span{opacity:.7;font-size:.92em}'
+            . '.anypress-care-tier ul{list-style:none;margin:0;padding:10px 0 0;border-top:1px solid color-mix(in srgb,currentColor 10%,transparent);display:grid;gap:5px;font-size:.9em;flex:1}'
+            . '.anypress-care-tier li{margin:0;padding-left:20px;position:relative}'
+            . '.anypress-care-tier li::before{content:"";position:absolute;left:2px;top:.45em;width:9px;height:5px;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);opacity:.7}'
+            . '.anypress-care-btn{display:block;text-align:center;padding:10px 14px;border-radius:10px;font-weight:700;text-decoration:none;background:var(--wp--preset--color--main,var(--wp--preset--color--contrast,#1d2327));color:var(--wp--preset--color--base,#fff)}'
+            . '.anypress-care-btn:hover,.anypress-care-btn:focus{opacity:.88;color:var(--wp--preset--color--base,#fff)}');
+        wp_print_styles('anypress-care-offer');
     }
 
     // ---- Account: a website's Care section ----
@@ -385,7 +337,7 @@ class FluentCartCarePortal
         }
     }
 
-    /** A website without a package: a waiting package to use here, or the packages and services to buy for it. */
+    /** A website without a package: a waiting package to use here, or the packages and services, each with its checkout. */
     private function render_offer(int $website_id): void
     {
         $waiting = $this->care->waiting_for_user(get_current_user_id());
@@ -399,14 +351,11 @@ class FluentCartCarePortal
             return;
         }
 
-        $picked = self::picked();
         $packages = $this->care->packages();
-        $yearly_picked = false;
         $has_yearly = false;
         foreach ($packages as $package) {
             foreach ($package['variations'] as $variation) {
                 $has_yearly = $has_yearly || $variation['interval'] === 'yearly';
-                $yearly_picked = $yearly_picked || ($variation['interval'] === 'yearly' && $variation['id'] === $picked);
             }
         }
 
@@ -415,8 +364,8 @@ class FluentCartCarePortal
             $name = 'anypress_care_period_' . $website_id;
             $free = self::months_free($packages);
             echo '<div class="anypress-acct-care-period" role="radiogroup" aria-label="' . esc_attr__('Billing', 'anypress-host') . '">'
-                . '<label><input type="radio" name="' . esc_attr($name) . '" value="monthly"' . checked(!$yearly_picked, true, false) . '><span>' . esc_html__('Monthly', 'anypress-host') . '</span></label>'
-                . '<label><input type="radio" name="' . esc_attr($name) . '" value="yearly"' . checked($yearly_picked, true, false) . '><span>' . esc_html__('Yearly', 'anypress-host') . ($free > 0 ? ' <small>' . esc_html(sprintf(
+                . '<label><input type="radio" name="' . esc_attr($name) . '" value="monthly" checked><span>' . esc_html__('Monthly', 'anypress-host') . '</span></label>'
+                . '<label><input type="radio" name="' . esc_attr($name) . '" value="yearly"><span>' . esc_html__('Yearly', 'anypress-host') . ($free > 0 ? ' <small>' . esc_html(sprintf(
                     /* translators: %d: months */
                     _n('%d month free', '%d months free', $free, 'anypress-host'),
                     $free
@@ -425,24 +374,15 @@ class FluentCartCarePortal
 
         echo '<div class="anypress-acct-care-tiers">';
         foreach ($packages as $package) {
-            $ids = array_column($package['variations'], 'id');
-            $is_picked = in_array($picked, $ids, true);
-            echo '<div class="anypress-acct-care-tier' . ($is_picked ? ' is-picked' : '') . '"><p class="anypress-acct-care-name"><strong>' . esc_html($package['title']) . '</strong>'
-                . ($is_picked ? ' <em>' . esc_html__('Your pick', 'anypress-host') . '</em>' : '') . '</p>';
+            echo '<div class="anypress-acct-care-tier"><p class="anypress-acct-care-name"><strong>' . esc_html($package['title']) . '</strong></p>';
             foreach (['monthly', 'yearly'] as $interval) {
                 foreach ($package['variations'] as $variation) {
-                    if ($variation['interval'] !== $interval) {
-                        continue;
+                    if ($variation['interval'] === $interval) {
+                        echo '<div class="anypress-acct-care-price is-' . esc_attr($interval) . '"><p><b>' . esc_html(self::money($variation['price'])) . '</b> <span>'
+                            . esc_html($interval === 'yearly' ? __('a year', 'anypress-host') : __('a month', 'anypress-host')) . '</span></p>'
+                            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- add_button() escapes.
+                            . self::add_button($package, $variation, $website_id, 'anypress-acct-btn is-primary') . '</div>';
                     }
-                    $url = add_query_arg(FluentCartEmailPacks::QUERY_ARG, $website_id, $variation['checkout_url']);
-                    echo '<div class="anypress-acct-care-price is-' . esc_attr($interval) . '"><p><b>' . esc_html(self::money($variation['price'])) . '</b> <span>'
-                        . esc_html($interval === 'yearly' ? __('a year', 'anypress-host') : __('a month', 'anypress-host')) . '</span></p>'
-                        . '<a class="anypress-acct-btn anypress-acct-care-offer' . ($is_picked ? ' is-primary' : '') . '" href="' . esc_url($url) . '">'
-                        . esc_html(sprintf(
-                            /* translators: %s: care package */
-                            __('Add %s', 'anypress-host'),
-                            $package['title']
-                        )) . ($interval === 'yearly' ? ' <span class="screen-reader-text">' . esc_html__('yearly', 'anypress-host') . '</span>' : '') . '</a></div>';
                 }
             }
             echo '<ul>';
@@ -451,20 +391,19 @@ class FluentCartCarePortal
             }
             echo '</ul></div>';
         }
-        echo '</div><p class="anypress-acct-note">' . esc_html__('Unused time doesn\'t carry over. Care renews on its own and can be cancelled any time; it ends with the website\'s plan.', 'anypress-host') . '</p>';
+        echo '</div>';
 
         $services = $this->services();
         if ($services) {
             echo '<p class="anypress-acct-care-sub">' . esc_html__('One-time help', 'anypress-host') . '</p><ul class="anypress-acct-care-services">';
             foreach ($services as $service) {
-                $variation = $service['variations'][0];
-                $url = add_query_arg(FluentCartEmailPacks::QUERY_ARG, $website_id, $variation['checkout_url']);
                 echo '<li><div><strong>' . esc_html($service['title']) . '</strong><small>' . esc_html(wp_strip_all_tags($service['excerpt'])) . '</small></div>'
-                    . '<b>' . esc_html(self::price_label($variation)) . '</b><a class="anypress-acct-btn" href="' . esc_url($url) . '">' . esc_html__('Buy', 'anypress-host')
-                    . ' <span class="screen-reader-text">' . esc_html($service['title']) . '</span></a></li>';
+                    . '<b>' . esc_html(self::price_label($service['variations'][0])) . '</b><a class="anypress-acct-btn" href="' . esc_url(FluentCartCareCall::pay_link($service['variations'][0]['checkout_url'], $website_id)) . '">'
+                    . esc_html__('Buy', 'anypress-host') . '</a></li>';
             }
             echo '</ul>';
         }
+        echo '<p class="anypress-acct-note">' . esc_html__('Unused time doesn\'t carry over. Care renews on its own and can be cancelled any time; it ends with the website\'s plan.', 'anypress-host') . '</p>';
     }
 
     /** The months a year of every package saves over paying monthly (2 when yearly is 10 months' price), else 0. */

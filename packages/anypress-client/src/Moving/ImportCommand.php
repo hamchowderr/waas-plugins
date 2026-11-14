@@ -6,7 +6,8 @@ use WP_CLI;
 
 /**
  * `wp anypress support switch`, `wp anypress affiliate switch`, `wp anypress community switch`,
- * `wp anypress course switch` and `wp anypress circle switch`: one command per switch (see NativeImport).
+ * `wp anypress course switch`, `wp anypress circle switch` and `wp anypress skool switch`: one command per switch
+ * (see NativeImport).
  */
 class ImportCommand
 {
@@ -29,7 +30,11 @@ class ImportCommand
      * courses (--from=learndash, tutor or lifterlms when more than one is here).
      * circle: a Circle community through Circle's Admin API: discussion spaces with their members and moderators,
      * space groups, topics, posts, comments and replies, course spaces as courses with their sections, lessons and
-     * students, members as WordPress users (into an empty FluentCommunity). memberpress: everyone with an active
+     * students, members as WordPress users (into an empty FluentCommunity). skool: a Skool group's members from the
+     * members CSV its admin exports from Skool's Members tab, as WordPress users in one FluentCommunity space or course,
+     * tagged in FluentCRM with their answers to the membership questions (rows without an email are skipped). calendly: a Calendly account through
+     * Calendly's API: availability schedules, event types as FluentBooking booking types and upcoming bookings.
+     * memberpress: everyone with an active
      * MemberPress membership into the FluentCommunity space or course for it, tagged in FluentCRM; with --billing, active Stripe
      * subscriptions move to FluentCart and keep renewing in Stripe; other payments stay.
      *
@@ -42,8 +47,16 @@ class ImportCommand
      * : The source plugin, when more than one is active (see the dry run for the names).
      *
      * [--token=<token>]
-     * : circle only: the Circle community's Admin V2 API token. Or set CIRCLE_API_TOKEN, which keeps it out of the
-     * shell history. Used for this run only, never saved.
+     * : circle and calendly only: the Circle community's Admin V2 API token, or a Calendly personal access token. Or
+     * set CIRCLE_API_TOKEN or CALENDLY_API_TOKEN, which keeps it out of the shell history. Used for this run only,
+     * never saved.
+     *
+     * [--file=<path>]
+     * : skool only: the members CSV from the Skool group's Members tab (Export). Read for this run only, never saved.
+     *
+     * [--space=<id>]
+     * : skool only: the FluentCommunity space or course the members join. Left out, a new private space called
+     * "Skool members" is made.
      *
      * [--map=<pairs>]
      * : memberpress only: which FluentCommunity space or course each membership opens, as
@@ -75,6 +88,9 @@ class ImportCommand
      *     wp anypress course switch --user=admin --dry-run
      *     wp anypress course switch --user=admin --from=tutor
      *     CIRCLE_API_TOKEN=... wp anypress circle switch --user=admin --dry-run
+     *     CALENDLY_API_TOKEN=... wp anypress calendly switch --user=admin
+     *     wp anypress skool switch --user=admin --file=members.csv --dry-run
+     *     wp anypress skool switch --user=admin --file=members.csv --space=12
      *     wp anypress memberpress switch --user=admin --map=12:5,14:9
      *     wp anypress memberpress switch --user=admin --billing --dry-run
      *
@@ -89,15 +105,22 @@ class ImportCommand
         $undo = (bool) WP_CLI\Utils\get_flag_value($assoc_args, 'undo', false);
         $format = WP_CLI\Utils\get_flag_value($assoc_args, 'format', 'table') === 'json' ? 'json' : 'table';
         $from = (string) WP_CLI\Utils\get_flag_value($assoc_args, 'from', '');
+        $choices = $this->import->source_choices();
+        if ($from === '' && !$undo && count($choices) > 1 && $format === 'table') {
+            $named = array_map(fn ($slug, $name) => $name . ' (--from=' . $slug . ')', array_keys($choices), $choices);
+            WP_CLI::line('More than one source is here: ' . implode(', ', $named) . '.');
+        }
 
-        $token = (string) WP_CLI\Utils\get_flag_value($assoc_args, 'token', (string) getenv('CIRCLE_API_TOKEN'));
+        $token = (string) WP_CLI\Utils\get_flag_value($assoc_args, 'token', (string) getenv($this->import->key() === 'calendly' ? 'CALENDLY_API_TOKEN' : 'CIRCLE_API_TOKEN'));
         $map = [];
         foreach (array_filter(explode(',', (string) WP_CLI\Utils\get_flag_value($assoc_args, 'map', ''))) as $pair) {
             [$membership, $space] = array_pad(explode(':', $pair, 2), 2, 0);
             $map[(int) $membership] = (int) $space;
         }
         $billing = (bool) WP_CLI\Utils\get_flag_value($assoc_args, 'billing', false);
-        $this->import->configure(array_intersect_key(['token' => $token, 'map' => $map, 'billing' => $billing], $this->import->inputs()));
+        $csv = self::csv((string) WP_CLI\Utils\get_flag_value($assoc_args, 'file', ''));
+        $space = (int) WP_CLI\Utils\get_flag_value($assoc_args, 'space', 0);
+        $this->import->configure(array_intersect_key(['token' => $token, 'map' => $map, 'billing' => $billing, 'csv' => $csv, 'space' => $space], $this->import->inputs()));
         $report = $undo ? $this->import->undo($dry_run) : $this->import->run($dry_run, $from);
         if (is_wp_error($report)) {
             $data = $report->get_error_data();
@@ -137,6 +160,25 @@ class ImportCommand
             WP_CLI::line(self::plain($note));
         }
         WP_CLI::success($dry_run ? 'Dry run: nothing was changed.' : 'Brought across into ' . $report['preflight']['target'] . '.');
+    }
+
+    /** The file given with --file, read through WordPress's filesystem API, or '' without one. */
+    private static function csv(string $path): string
+    {
+        if ($path === '') {
+            return '';
+        }
+        global $wp_filesystem;
+        if (!function_exists('WP_Filesystem')) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+        }
+        WP_Filesystem();
+        $contents = $wp_filesystem && $wp_filesystem->is_readable($path) ? $wp_filesystem->get_contents($path) : false;
+        if (!is_string($contents)) {
+            WP_CLI::error(sprintf('Can\'t read %s.', $path));
+        }
+
+        return $contents;
     }
 
     private static function plain($text): string

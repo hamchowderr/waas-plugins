@@ -4,14 +4,16 @@ Moves a WordPress site's forms, shop, contacts, help desk, affiliates, community
 
 | Switch | From | Into |
 |---|---|---|
-| Forms | Contact Form 7, WPForms, Ninja Forms | Fluent Forms |
+| Forms | Contact Form 7, WPForms, Ninja Forms, Gravity Forms | Fluent Forms |
 | Shop | WooCommerce | FluentCart (with the FluentCart Migrator add-on) |
+| Digital shop | Easy Digital Downloads 3 | FluentCart (with the FluentCart Migrator add-on) |
 | Contacts | WooCommerce buyers, MailPoet, Newsletter | FluentCRM |
 | Help desk | Awesome Support, SupportCandy, JS Help Desk | Fluent Support |
 | Affiliates | AffiliateWP, Affiliates Manager, Solid Affiliate, SliceWP, Ultimate Affiliate Pro | FluentAffiliate |
 | Community | BuddyPress, BuddyBoss | FluentCommunity |
 | Courses | LearnDash, Tutor LMS, LifterLMS | FluentCommunity courses |
 | Circle | Circle (Admin API token) | FluentCommunity |
+| Calendly | Calendly (personal access token) | FluentBooking |
 | MemberPress | MemberPress memberships (and, with billing, Stripe subscriptions) | FluentCommunity spaces and courses, FluentCRM tags, FluentCart subscriptions |
 
 Each one has **Check** (says what would come across and changes nothing), **Switch** and **Undo** (takes out only what the switch added). The source plugin is never changed, and email is held while a switch runs. The same switches run as `wp anypress <switch> switch` and as WordPress abilities (`anypress/check-<switch>`, `anypress/switch-<switch>`). With AnyPress Client active, AnyPress Move does nothing.

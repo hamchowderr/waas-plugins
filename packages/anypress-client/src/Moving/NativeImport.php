@@ -70,6 +70,15 @@ abstract class NativeImport
         return [];
     }
 
+    /**
+     * When this switch can import from more than one plugin, the ones on this website now (slug => name), so a page
+     * can offer a choice when there are several. Cheap: no counting. Empty for a switch with one source.
+     */
+    public function source_choices(): array
+    {
+        return [];
+    }
+
     /** Input this switch takes besides "from" (name => JSON schema), such as the source's API token. */
     public function inputs(): array
     {

@@ -25,6 +25,9 @@ final class FormEntries
                 ? (int) wpforms()->entry->get_entries(['form_id' => (int) $id], true)
                 : 0;
         }
+        if ($type === 'gravityform' && class_exists('GFAPI')) {
+            return (int) \GFAPI::count_entries((int) $id);
+        }
         if ($type === 'ninja_forms' && function_exists('Ninja_Forms')) {
             $subs = Ninja_Forms()->form((int) $id)->get_subs();
             return is_array($subs) ? count($subs) : 0;
@@ -56,8 +59,8 @@ final class FormEntries
             $entries['note'] = wp_strip_all_tags((string) ($answer['message'] ?? $answer['data']['message'] ?? ''));
             return $entries;
         }
-        if ($type === 'contactform7') {
-            self::restore_cf7_details($fluent_id, $migrator->entryDetails);
+        if ($type === 'contactform7' || $type === 'gravityform') {
+            self::restore_details($fluent_id, $migrator->entryDetails);
         }
         $entries['note'] = self::note($type, $item, $found, $entries['imported']);
 
@@ -105,11 +108,18 @@ final class FormEntries
                 : __('Entries keep the date each was sent, its IP address and page.', 'anypress-client');
         }
 
+        if ($type === 'gravityform') {
+            return __('Entries keep the date each was sent, their order, and the visitor\'s IP address, browser and page.', 'anypress-client');
+        }
+
         return __('Entries keep the date each was sent and their order. The visitor\'s IP address and browser aren\'t carried over.', 'anypress-client');
     }
 
-    /** The IP, browser and page each CF7 message was sent from (Flamingo keeps them; the importer leaves them empty). */
-    private static function restore_cf7_details(int $fluent_id, array $details): void
+    /**
+     * The IP, browser and page each entry was sent from (Flamingo and Gravity Forms keep them; the importer leaves
+     * them empty).
+     */
+    private static function restore_details(int $fluent_id, array $details): void
     {
         $ids = \FluentForm\App\Models\Submission::where('form_id', $fluent_id)->orderBy('id', 'ASC')->pluck('id')->all();
         if (count($ids) !== count($details)) {

@@ -7,6 +7,7 @@ use Mockery;
 use Tests\Unit\TestCase;
 use AnyPressHost\Commerce\FluentCart\FluentCartAdapter;
 use AnyPressHost\Commerce\FluentCart\FluentCartCare;
+use AnyPressHost\Commerce\FluentCart\FluentCartCareCall;
 use AnyPressHost\Commerce\FluentCart\FluentCartCareDesk;
 use AnyPressHost\Commerce\FluentCart\FluentCartEmailPacks;
 use AnyPressHost\Commerce\FluentCart\FluentCartStore;
@@ -184,6 +185,18 @@ class FluentCartCareTest extends TestCase
         $this->assertNotEmpty($this->order_meta[FluentCartCare::ORDER_DONE_META]);
     }
 
+    public function test_a_package_from_the_thank_you_page_goes_to_the_new_website_before_its_store_is_made(): void
+    {
+        $this->order_meta[FluentCartEmailPacks::ORDER_WEBSITE_META] = 902;
+        $this->store->allows('get_order_lines')->andReturn([['id' => 1, 'product_id' => self::CARE_PLUS, 'quantity' => 1]]);
+        $this->store->allows('find_subscription_for_order')->andReturn((object) ['id' => 951]);
+
+        $this->care->order_paid(['order' => $this->order]);
+
+        $this->assertSame(902, $this->meta[951][FluentCartCare::WEBSITE_META], '902 is being set up');
+        $this->assertSame([], $this->logs);
+    }
+
     public function test_a_package_bought_without_a_website_goes_to_the_only_one_without_care(): void
     {
         $this->store->allows('get_order_lines')->andReturn([['id' => 1, 'product_id' => self::CARE_PLUS, 'quantity' => 1]]);
@@ -255,7 +268,7 @@ class FluentCartCareTest extends TestCase
 
     public function test_each_ticket_shows_the_customers_care(): void
     {
-        $desk = new FluentCartCareDesk(new FluentCartAdapter($this->store), $this->store, $this->care);
+        $desk = new FluentCartCareDesk(new FluentCartAdapter($this->store), $this->store, $this->care, Mockery::mock(FluentCartCareCall::class));
 
         $widgets = $desk->ticket_widget([], (object) ['user_id' => self::OWNER_ID, 'email' => 'owner@apexresearch.example']);
 
@@ -284,7 +297,7 @@ class FluentCartCareTest extends TestCase
     public function test_the_care_page_lists_websites_with_care_or_extra_time(): void
     {
         $this->meta[901][FluentCartCare::EXTRA_META] = 60;
-        $desk = new FluentCartCareDesk(new FluentCartAdapter($this->store), $this->store, $this->care);
+        $desk = new FluentCartCareDesk(new FluentCartAdapter($this->store), $this->store, $this->care, Mockery::mock(FluentCartCareCall::class));
 
         $this->assertSame([900, 901], $desk->websites());
     }

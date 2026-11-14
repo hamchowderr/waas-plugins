@@ -44,4 +44,19 @@ namespace FluentForm\App\Services\Migrator\Classes {
     class ContactForm7Migrator extends BaseMigratorStub {}
     class NinjaFormsMigrator extends BaseMigratorStub {}
     class WpFormsMigrator extends BaseMigratorStub {}
+    class GravityFormsMigrator extends BaseMigratorStub {}
+}
+
+namespace FluentCrm\App\Services\CrmMigrator {
+    abstract class BaseMigrator
+    {
+        public function __construct(...$args) {}
+        public function getInfoIcon() {}
+        public function getFillables() {}
+        public function mapTags($tags = []) {}
+        public function getMergedData($data, $maps) {}
+        public function __call($name, $arguments) {}
+        public function __get($name) {}
+        public static function __callStatic($name, $arguments) {}
+    }
 }

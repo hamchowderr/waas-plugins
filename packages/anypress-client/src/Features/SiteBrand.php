@@ -9,7 +9,8 @@ if (!defined('ABSPATH')) {
 /**
  * The site's own name and logo where WordPress shows its own: the login page shows the site's logo (Site Logo, else
  * Site Icon, else its name as text) linked to its home page instead of the WordPress logo linked to wordpress.org, and
- * the login and wp-admin tab titles end with the site's name instead of "WordPress".
+ * the login and wp-admin tab titles end with the site's name instead of "WordPress", and pages and feeds leave out
+ * WordPress's generator tag, which names the WordPress version.
  */
 final class SiteBrand
 {
@@ -21,6 +22,7 @@ final class SiteBrand
         add_filter('login_title', [self::class, 'title']);
         add_filter('admin_title', [self::class, 'title']);
         add_action('login_footer', [self::class, 'powered_by']);
+        add_filter('the_generator', '__return_empty_string');
     }
 
     /**

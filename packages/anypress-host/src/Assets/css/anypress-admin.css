@@ -240,6 +240,11 @@
 .ap-care-form label { display: grid; gap: 4px; }
 .ap-care-form label span { font-size: 12.5px; font-weight: 600; color: var(--ap-ink-soft); }
 .ap-admin .ap-care-form input { width: 100%; min-height: 38px; }
+.ap-care-call { display: grid; gap: 12px; margin-bottom: 18px; }
+.ap-care-call .ap-care-form { grid-template-columns: minmax(0, 1fr) auto; }
+.ap-care-call .ap-care-form:has(select) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+.ap-admin .ap-care-call select { width: 100%; max-width: none; min-height: 38px; }
+.ap-admin .ap-care-paylink { width: 100%; min-height: 38px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; }
 .ap-care-history { margin-top: 0; font-size: 13px; }
 .ap-care-history td { padding: 7px 10px 7px 0; }
 .ap-care-history td:first-child { color: var(--ap-ink-soft); white-space: nowrap; width: 1%; padding-right: 16px; }
@@ -301,6 +306,7 @@
     .ap-care-history td:first-child { grid-column: 1 / -1; width: auto; font-size: 12px; }
     .ap-care-form { grid-template-columns: 96px minmax(0, 1fr); }
     .ap-care-form .ap-btn { grid-column: 1 / -1; justify-content: center; }
+    .ap-care-call .ap-care-form, .ap-care-call .ap-care-form:has(select) { grid-template-columns: minmax(0, 1fr); }
     .ap-email { grid-template-columns: 52px minmax(0, 1fr); align-items: start; }
     .ap-email .ap-btn { grid-column: 2; justify-self: start; }
     .ap-setcard .form-table th { width: auto; padding: 14px 0 4px; }

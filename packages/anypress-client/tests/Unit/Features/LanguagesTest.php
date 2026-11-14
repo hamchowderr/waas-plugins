@@ -47,4 +47,12 @@ class LanguagesTest extends TestCase
         $this->assertFalse(Languages::is_ready());
         $this->assertSame(['on' => false, 'languages' => [], 'ready' => false], Languages::state());
     }
+
+    public function test_languages_are_named_so_people_can_tell_them_apart(): void
+    {
+        $this->assertSame('Spanish (Mexico), Español', Languages::label('es_MX', 'Español'));
+        $this->assertSame('Spanish (Spain), Español', Languages::label('es_ES', 'Español'));
+        $this->assertSame('English (United Kingdom)', Languages::label('en_GB', 'English (UK)'));
+        $this->assertStringContainsString('Deutsch', Languages::label('de_CH', 'Deutsch'));
+    }
 }

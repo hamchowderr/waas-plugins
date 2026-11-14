@@ -20,7 +20,7 @@ jobs:
         working-directory: packages/${{ matrix.package }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -59,9 +59,9 @@ jobs:
         working-directory: packages/anypress-payments
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Run checkout script tests
@@ -78,7 +78,7 @@ jobs:
         working-directory: packages/anypress-host
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -97,7 +97,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -108,7 +108,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -127,7 +127,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -138,7 +138,7 @@ jobs:
         working-directory: packages/anypress-export
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -157,7 +157,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -168,7 +168,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -180,15 +180,14 @@ jobs:
         working-directory: scripts/playground
         run: npm run forms
 
-  playground-shop-switch:
-    # The shop switch (wp anypress shop switch and its abilities) on a WordPress Playground site with WooCommerce,
-    # FluentCart and the FluentCart Migrator add-on (downloaded from FluentCart's add-ons CDN): checks, switches,
-    # runs again, undoes, and compares the two shops, with HPOS off and then on.
-    name: anypress-client shop switch on WordPress Playground
+  playground-gravity-forms:
+    # The forms switch's Gravity Forms source on WordPress Playground, against a stand-in for Gravity Forms' PHP API
+    # (Gravity Forms is paid): converts with the importer's mistakes fixed, entries, pages, runs again, undoes.
+    name: anypress-client forms switch from Gravity Forms on WordPress Playground
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -199,7 +198,107 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: Gravity Forms switch test
+        working-directory: scripts/playground
+        run: npm run gravity-forms
+
+  playground-edd:
+    # The shop switch's Easy Digital Downloads source on WordPress Playground: the FluentCart Migrator add-on copies the
+    # EDD shop, EDD's shortcodes and blocks on pages become FluentCart's, runs again, undoes.
+    name: anypress-client shop switch from Easy Digital Downloads on WordPress Playground
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/anypress-client
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: EDD shop switch test
+        working-directory: scripts/playground
+        run: npm run edd
+
+  playground-crm-import:
+    # AnyPress Client's Brevo and MailerLite importers in FluentCRM's Import screen on WordPress Playground, through
+    # the official SDKs against fake Brevo and MailerLite APIs.
+    name: anypress-client Brevo and MailerLite importers on WordPress Playground
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Checkout the store template (roles.json)
+        uses: actions/checkout@v7
+        with:
+          repository: hamchowderr/waas-provisioning-api
+          path: waas-provisioning-api
+          sparse-checkout: templates/anypress-store/roles.json
+          sparse-checkout-cone-mode: false
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/anypress-client
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: CRM importers test
+        working-directory: scripts/playground
+        env:
+          ANYPRESS_API_DIR: ${{ github.workspace }}/waas-provisioning-api
+        run: npm run crm-import
+
+  playground-shop-switch:
+    # The shop switch (wp anypress shop switch and its abilities) on a WordPress Playground site with WooCommerce,
+    # FluentCart and the FluentCart Migrator add-on (downloaded from FluentCart's add-ons CDN): checks, switches,
+    # runs again, undoes, and compares the two shops, with HPOS off and then on.
+    name: anypress-client shop switch on WordPress Playground
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/anypress-client
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -219,7 +318,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -230,7 +329,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -249,7 +348,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -260,7 +359,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -279,7 +378,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -290,7 +389,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -310,7 +409,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -321,7 +420,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -341,9 +440,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Checkout the store template and the store agent's page cache
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: hamchowderr/waas-provisioning-api
           path: waas-provisioning-api
@@ -363,7 +462,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -397,9 +496,9 @@ jobs:
         fluent-community: ["2.12.0", "2.13.0"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Checkout the store template's site types
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: hamchowderr/waas-provisioning-api
           path: waas-provisioning-api
@@ -415,7 +514,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -441,9 +540,9 @@ jobs:
         fluent-community: ["2.12.0", "2.13.0"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Checkout the store template's site types
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: hamchowderr/waas-provisioning-api
           path: waas-provisioning-api
@@ -459,7 +558,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -482,7 +581,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -495,7 +594,7 @@ jobs:
           (cd packages/anypress-move && composer install --no-dev --no-interaction --no-progress)
           (cd packages/anypress-client && composer install --no-dev --no-interaction --no-progress)
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -518,9 +617,9 @@ jobs:
         fluent-community: ["2.12.0", "2.13.0"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Checkout the store template's site types
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: hamchowderr/waas-provisioning-api
           path: waas-provisioning-api
@@ -536,7 +635,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -563,9 +662,9 @@ jobs:
         fluent-community: ["2.12.0", "2.13.0"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Checkout the store template's site types
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: hamchowderr/waas-provisioning-api
           path: waas-provisioning-api
@@ -581,7 +680,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -596,19 +695,21 @@ jobs:
           FLUENT_COMMUNITY: ${{ matrix.fluent-community }}
         run: npm run circle
 
-  playground-languages:
-    # The Languages switch on a Playground store of the online-store and community site types: Polylang set up once
-    # when turned on, a page's Spanish copy at /es/, the menu's language switcher and links, and turning it off.
-    name: anypress-client Languages on WordPress Playground (${{ matrix.site-type }})
+  playground-skool:
+    # The Skool switch (wp anypress skool switch --file and its abilities): a Skool group's Members tab CSV into
+    # FluentCommunity and FluentCRM, on a Playground store of the community site type, with the store's FluentCommunity
+    # and the newest one: checks with no file, a file without emails and the sample file, switches, runs again, undoes,
+    # redoes into an existing space, and checks the file is saved nowhere and no email goes out.
+    name: anypress-client Skool switch on WordPress Playground (FluentCommunity ${{ matrix.fluent-community }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        site-type: ["online-store", "community"]
+        fluent-community: ["2.12.0", "2.13.0"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Checkout the store template's site types
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: hamchowderr/waas-provisioning-api
           path: waas-provisioning-api
@@ -624,7 +725,91 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: Skool switch test
+        working-directory: scripts/playground
+        env:
+          ANYPRESS_API_DIR: ${{ github.workspace }}/waas-provisioning-api
+          FLUENT_COMMUNITY: ${{ matrix.fluent-community }}
+        run: npm run skool
+
+  playground-calendly:
+    # The Calendly switch (wp anypress calendly switch and its abilities): a Calendly account into FluentBooking through
+    # a fake Calendly API, on a Playground store of the bookings site type with the store's FluentBooking: checks with
+    # no, a wrong and the right token, switches (schedules, booking types, upcoming bookings over two pages), runs
+    # again, undoes, redoes, and checks the token is saved nowhere and no email goes out.
+    name: anypress-client Calendly switch on WordPress Playground
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Checkout the store template's site types
+        uses: actions/checkout@v7
+        with:
+          repository: hamchowderr/waas-provisioning-api
+          path: waas-provisioning-api
+          sparse-checkout: templates/anypress-store/roles.json
+          sparse-checkout-cone-mode: false
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/anypress-client
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground
+        working-directory: scripts/playground
+        run: npm ci
+      - name: Calendly switch test
+        working-directory: scripts/playground
+        env:
+          ANYPRESS_API_DIR: ${{ github.workspace }}/waas-provisioning-api
+        run: npm run calendly
+
+  playground-languages:
+    # The Languages switch on a Playground store of the online-store and community site types: Polylang set up once
+    # when turned on, a page's Spanish copy at /es/, the menu's language switcher and links, and turning it off.
+    name: anypress-client Languages on WordPress Playground (${{ matrix.site-type }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        site-type: ["online-store", "community"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Checkout the store template's site types
+        uses: actions/checkout@v7
+        with:
+          repository: hamchowderr/waas-provisioning-api
+          path: waas-provisioning-api
+          sparse-checkout: templates/anypress-store/roles.json
+          sparse-checkout-cone-mode: false
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/anypress-client
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -650,7 +835,7 @@ jobs:
         fluent-support: ["2.4.7", "2.5.0"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -661,7 +846,7 @@ jobs:
         working-directory: packages/anypress-host
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm

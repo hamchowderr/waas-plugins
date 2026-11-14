@@ -17,7 +17,7 @@ class FormsCommand
     }
 
     /**
-     * Converts Contact Form 7, WPForms (Lite) and Ninja Forms forms to Fluent Forms and switches the pages over.
+     * Converts Contact Form 7, WPForms (Lite), Ninja Forms and Gravity Forms forms to Fluent Forms and switches the pages over.
      *
      * Converts each form and its entries with Fluent Forms' own importer and fixes its known mistakes, reports every
      * field and setting that didn't come across, then swaps the old shortcodes and blocks in pages, posts, templates,
