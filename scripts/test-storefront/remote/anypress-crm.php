@@ -331,9 +331,31 @@ final class AnyPress_CRM
         }
         $refunded = (string) (((array) $contact->custom_fields())['refunded'] ?? '');
         $plan = self::plan_for_product($sub->product_id);
-        if ($refunded === current_time('Y-m-d') || ($plan && isset(self::$refunding[$contact->id . ':' . $plan]))) {
+        if (
+            $refunded === current_time('Y-m-d')
+            || ($plan && isset(self::$refunding[$contact->id . ':' . $plan]))
+            // Not a website plan (a care package, a storage pack): their website is still there, so no come-back email.
+            || !$plan
+            // Another website plan is still live: they haven't left.
+            || self::has_live_plan($sub->customer_id, $sub->id)
+        ) {
             self::stop_automation('Email: Win-back', $contact);
         }
+    }
+
+    /** True when the customer has a live subscription to any website plan other than $except_id. */
+    private static function has_live_plan($customer_id, $except_id)
+    {
+        $others = \FluentCart\App\Models\Subscription::where('customer_id', $customer_id)
+            ->where('id', '!=', $except_id)
+            ->whereIn('status', ['active', 'trialing', 'paused', 'failing', 'expiring', 'past_due'])
+            ->get();
+        foreach ($others as $other) {
+            if (self::plan_for_product($other->product_id) !== '') {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Adds the why-did-you-leave question (once the win-back's own day-0 email) above the sign-off. */
