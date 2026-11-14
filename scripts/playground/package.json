@@ -41,7 +41,8 @@
     "gravity-forms": "node gravity-forms.mjs",
     "edd": "node edd.mjs",
     "crm-import": "node crm-import.mjs",
-    "skool": "node skool.mjs"
+    "skool": "node skool.mjs",
+    "prospects": "node prospects.mjs"
   },
   "dependencies": {
     "@wp-playground/cli": "3.1.64"

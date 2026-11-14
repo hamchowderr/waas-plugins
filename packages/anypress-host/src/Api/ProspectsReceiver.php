@@ -13,9 +13,14 @@ use WP_REST_Response;
  *
  * Signed like the API's webhooks (Standard Webhooks, with the secret Webhooks registered), so only the API this
  * storefront is connected to can call it, and each signed request works once. Contacts go in through FluentCRM's own
- * PHP API, tagged "Prospect" and "Prospect: <group>", with a note of what the finder found. A new contact is
+ * PHP API, tagged "Prospect" (plus any tags the API sends), with a note of what the finder found. A new contact is
  * "transactional", so no newsletter or campaign reaches a business that never signed up; an existing contact keeps its
  * status and the fields it already has.
+ *
+ * The contact is named after the person who reads the inbox when the API knows them, otherwise after the business. The
+ * customer group, job title and outreach route go into the contact fields with those slugs (customer_group, job_title,
+ * outreach_route) when the CRM has them; a dropdown only takes one of its own options. With FluentCRM's Companies
+ * feature on, the business becomes a company with its website, phone and address, and the contact is linked to it.
  *
  * FluentCRM never emails a prospect from here either: a contact tagged "Prospect" who has not subscribed is skipped by
  * FluentCRM's sending (automations and single emails included). The seller writes to prospects from their own mailbox.
@@ -23,7 +28,10 @@ use WP_REST_Response;
  *
  * Body: {"contacts": [{"id", "name", "email", "phone"?, "address"?, "type"?, "website"?, "contactPage"?, "mapsUrl"?,
  * "rating"?, "reviews"?, "hours"?: string[], "socials"?: [{"network", "url"}], "demoUrl"?, "websiteScore"?,
- * "websitePlatform"?, "tags": string[]}]}.
+ * "websitePlatform"?, "person"?, "jobTitle"?, "customerGroup"?, "route"?, "tags": string[]}]}.
+ *
+ * A "Prospect" tag comes off by itself once the contact gets a lifecycle tag ("<Offering>: Interested", "Active" or
+ * "Past"): they applied, bought or joined, so FluentCRM's own emails to them (receipts aside, welcomes) must reach them.
  * Answer: {"added", "updated", "failed": {<id>: <why>}}.
  */
 class ProspectsReceiver
@@ -40,6 +48,7 @@ class ProspectsReceiver
     {
         add_action('rest_api_init', [$this, 'register_routes']);
         add_filter('fluent_crm/is_simulated_mail', [__CLASS__, 'skip_prospect_mail'], 10, 2);
+        add_action('fluent_crm/contact_added_to_tags', [__CLASS__, 'clear_prospect_tag'], 10, 2);
     }
 
     public function register_routes(): void
@@ -123,28 +132,36 @@ class ProspectsReceiver
         )));
         $api = FluentCrmApi('contacts');
         $existing = $api->getContact($email);
-        $fields = [
+        $business = mb_substr(sanitize_text_field((string) ($c['name'] ?? '')), 0, 190);
+        $fields = array_merge([
             'email' => $email,
-            'first_name' => mb_substr(sanitize_text_field((string) ($c['name'] ?? '')), 0, 190),
             'phone' => mb_substr(sanitize_text_field((string) ($c['phone'] ?? '')), 0, 50),
             'address_line_1' => mb_substr(sanitize_text_field((string) ($c['address'] ?? '')), 0, 190),
-            'source' => 'Prospect finder',
+            'source' => 'Prospect Finder',
             'contact_type' => 'lead',
             'tags' => array_map(static fn ($t) => self::tag_id($t, $tag_ids), array_unique($tags)),
-        ];
+        ], self::names($c, $existing ? ['first_name' => (string) $existing->first_name, 'last_name' => (string) $existing->last_name] : null));
         if (!$existing) {
             $fields['status'] = 'transactional';
         } else {
             // Fields a contact already has are kept: the seller may have corrected them.
-            foreach (['first_name', 'phone', 'address_line_1', 'source', 'contact_type'] as $key) {
+            foreach (['phone', 'address_line_1', 'source', 'contact_type'] as $key) {
                 if ((string) $existing->{$key} !== '') {
                     unset($fields[$key]);
                 }
             }
         }
+        $fields = array_merge($fields, self::custom_values(
+            $c,
+            (array) fluentcrm_get_option('contact_custom_fields', []),
+            $existing ? (array) $existing->custom_fields() : []
+        ));
         $saved = $api->createOrUpdate(array_filter($fields, static fn ($v) => $v !== '' && $v !== []));
         if (!$saved) {
             throw new \RuntimeException('FluentCRM did not take the contact');
+        }
+        if ($business !== '') {
+            self::link_company($saved, $business, $c);
         }
         \FluentCrm\App\Models\SubscriberNote::create([
             'subscriber_id' => $saved->id,
@@ -155,6 +172,123 @@ class ProspectsReceiver
             'created_at' => current_time('mysql'),
         ]);
         return (bool) $existing;
+    }
+
+    /**
+     * The contact's name: the person who reads the inbox when the API knows them, otherwise the business. An existing
+     * contact keeps a name someone typed; only the business name the finder put there gives way to the person's.
+     *
+     * @param array<string, mixed>       $c
+     * @param array<string, string>|null $existing first_name and last_name of the contact already there.
+     * @return array<string, string>
+     */
+    public static function names(array $c, ?array $existing): array
+    {
+        $business = mb_substr(sanitize_text_field((string) ($c['name'] ?? '')), 0, 190);
+        $person = trim((string) preg_replace('/\s+/', ' ', sanitize_text_field((string) ($c['person'] ?? ''))));
+        if ($person !== '') {
+            $parts = explode(' ', $person, 2);
+            $name = ['first_name' => mb_substr($parts[0], 0, 190), 'last_name' => mb_substr($parts[1] ?? '', 0, 190)];
+        } else {
+            $name = ['first_name' => $business, 'last_name' => ''];
+        }
+        if ($existing === null) {
+            return $name;
+        }
+        $had = trim($existing['first_name'] . ' ' . $existing['last_name']);
+        if ($had === '' || ($person !== '' && $had === $business)) {
+            return $name;
+        }
+        return [];
+    }
+
+    /**
+     * The customer group, job title and outreach route, for the contact fields of those slugs that this CRM has. A
+     * dropdown takes only one of its options; a field that already has a value keeps it.
+     *
+     * @param array<string, mixed>              $c
+     * @param array<int, array<string, mixed>>  $defs     FluentCRM's contact_custom_fields option.
+     * @param array<string, mixed>              $existing The contact's current custom field values.
+     * @return array<string, string>
+     */
+    public static function custom_values(array $c, array $defs, array $existing): array
+    {
+        $wanted = ['customer_group' => 'customerGroup', 'job_title' => 'jobTitle', 'outreach_route' => 'route'];
+        $out = [];
+        foreach ($defs as $def) {
+            $slug = is_array($def) ? (string) ($def['slug'] ?? '') : '';
+            if (!isset($wanted[$slug]) || (string) ($existing[$slug] ?? '') !== '') {
+                continue;
+            }
+            $value = mb_substr(sanitize_text_field((string) ($c[$wanted[$slug]] ?? '')), 0, 190);
+            if ($value === '') {
+                continue;
+            }
+            $options = isset($def['options']) && is_array($def['options']) ? array_map('strval', $def['options']) : [];
+            if (in_array((string) ($def['type'] ?? ''), ['select-one', 'radio'], true) && !in_array($value, $options, true)) {
+                continue;
+            }
+            $out[$slug] = $value;
+        }
+        return $out;
+    }
+
+    /**
+     * Links the contact to the business as a FluentCRM company, made the first time, when the Companies feature is on.
+     *
+     * @param object               $contact
+     * @param array<string, mixed> $c
+     */
+    private static function link_company($contact, string $business, array $c): void
+    {
+        if (!class_exists('\FluentCrm\App\Services\Helper') || !\FluentCrm\App\Services\Helper::isCompanyEnabled()) {
+            return;
+        }
+        $api = FluentCrmApi('companies');
+        $company = \FluentCrm\App\Models\Company::where('name', $business)->first();
+        if (!$company) {
+            $website = (string) ($c['website'] ?? '');
+            $company = $api->createOrUpdate(array_filter([
+                'name' => $business,
+                'website' => preg_match('#^https?://#', $website) ? esc_url_raw($website) : '',
+                'phone' => mb_substr(sanitize_text_field((string) ($c['phone'] ?? '')), 0, 50),
+                'address_line_1' => mb_substr(sanitize_text_field((string) ($c['address'] ?? '')), 0, 190),
+                'industry' => mb_substr(sanitize_text_field((string) ($c['type'] ?? '')), 0, 190),
+            ]));
+        }
+        if ($company) {
+            $api->attachContactsByIds([(int) $contact->id], [(int) $company->id]);
+        }
+    }
+
+    /**
+     * Whether a tag title is a lifecycle tag ("<Offering>: Interested", "Active" or "Past").
+     */
+    public static function is_lifecycle_tag(string $title): bool
+    {
+        return (bool) preg_match('/^.+: (Interested|Active|Past)$/', $title);
+    }
+
+    /**
+     * FluentCRM's "tags added" hook: a contact who gets a lifecycle tag is no longer just a prospect, so the "Prospect"
+     * tag (and with it the email guard below) comes off.
+     *
+     * @param mixed $contact
+     * @param mixed $tag_ids
+     */
+    public static function clear_prospect_tag($contact, $tag_ids): void
+    {
+        if (!is_object($contact) || !class_exists('\FluentCrm\App\Models\Tag')) {
+            return;
+        }
+        $titles = \FluentCrm\App\Models\Tag::whereIn('id', array_map('intval', (array) $tag_ids))->pluck('title')->toArray();
+        if (!array_filter(array_map('strval', $titles), [__CLASS__, 'is_lifecycle_tag'])) {
+            return;
+        }
+        $prospect = \FluentCrm\App\Models\Tag::where('title', self::TAG)->first();
+        if ($prospect && $contact->hasAnyTagId([(int) $prospect->id])) {
+            $contact->detachTags([(int) $prospect->id]);
+        }
     }
 
     /** @param array<string, int> $tag_ids */

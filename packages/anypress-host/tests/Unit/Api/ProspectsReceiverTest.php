@@ -105,4 +105,38 @@ class ProspectsReceiverTest extends TestCase
         $this->assertFalse(ProspectsReceiver::skip_prospect_mail(false, ['to' => ['email' => 'owner@bakery.example']]));
         $this->assertTrue(ProspectsReceiver::skip_prospect_mail(true, ['to' => ['email' => 'owner@bakery.example']]));
     }
+
+    public function test_a_known_person_names_the_contact_and_a_shared_inbox_keeps_the_business_name(): void
+    {
+        $this->assertSame(['first_name' => 'Dana', 'last_name' => 'Rivera Cole'], ProspectsReceiver::names(['name' => 'Bakery Co', 'person' => ' Dana  Rivera Cole '], null));
+        $this->assertSame(['first_name' => 'Bakery Co', 'last_name' => ''], ProspectsReceiver::names(['name' => 'Bakery Co'], null));
+    }
+
+    public function test_an_existing_contact_keeps_a_typed_name_but_the_finders_business_name_gives_way_to_the_person(): void
+    {
+        $this->assertSame(['first_name' => 'Dana', 'last_name' => 'Rivera'], ProspectsReceiver::names(['name' => 'Bakery Co', 'person' => 'Dana Rivera'], ['first_name' => 'Bakery Co', 'last_name' => '']));
+        $this->assertSame([], ProspectsReceiver::names(['name' => 'Bakery Co', 'person' => 'Dana Rivera'], ['first_name' => 'Sam', 'last_name' => 'Lee']));
+        $this->assertSame([], ProspectsReceiver::names(['name' => 'Bakery Co'], ['first_name' => 'Bakery Co', 'last_name' => '']));
+    }
+
+    public function test_custom_values_fill_only_fields_the_crm_has_and_dropdowns_take_only_their_options(): void
+    {
+        $defs = [
+            ['slug' => 'customer_group', 'type' => 'select-one', 'options' => ['Point of Sale Companies', 'Churches and Ministries']],
+            ['slug' => 'job_title', 'type' => 'text'],
+            ['slug' => 'outreach_route', 'type' => 'select-one', 'options' => ['Affiliate', 'Seller']],
+        ];
+        $c = ['customerGroup' => 'Point of Sale Companies', 'jobTitle' => 'Owner', 'route' => 'Reseller'];
+        $this->assertSame(['customer_group' => 'Point of Sale Companies', 'job_title' => 'Owner'], ProspectsReceiver::custom_values($c, $defs, []));
+        $this->assertSame(['job_title' => 'Owner'], ProspectsReceiver::custom_values($c, $defs, ['customer_group' => 'Churches and Ministries']));
+        $this->assertSame([], ProspectsReceiver::custom_values($c, [['slug' => 'other', 'type' => 'text']], []));
+    }
+
+    public function test_only_offering_stage_tags_count_as_lifecycle_tags(): void
+    {
+        $this->assertTrue(ProspectsReceiver::is_lifecycle_tag('Seller: Interested'));
+        $this->assertTrue(ProspectsReceiver::is_lifecycle_tag('Website: Past'));
+        $this->assertFalse(ProspectsReceiver::is_lifecycle_tag('Prospect'));
+        $this->assertFalse(ProspectsReceiver::is_lifecycle_tag('Prospect: Point of sale'));
+    }
 }

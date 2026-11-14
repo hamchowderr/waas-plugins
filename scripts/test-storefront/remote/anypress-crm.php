@@ -24,16 +24,37 @@ final class AnyPress_CRM
     const PLANS = ['Everything', 'Community', 'Bookings', 'Store', 'Website'];
     const OTHER_OFFERINGS = ['Seller', 'Reseller', 'Affiliate', 'Care'];
     const STAGES = ['Interested', 'Active', 'Past'];
-    /** customer_group field values (the seven customer groups, plus churches). */
-    const GROUPS = ['shops', 'regulated', 'courses', 'chambers', 'churches', 'franchises', 'agencies', 'developers'];
+    /**
+     * Customer Group field values, by the code word anypress.io's lead form sends: the eight groups on anypress.io,
+     * named as the site names them, then the partner groups that only come from AnyPress's own prospect research. Each
+     * has its own nurture automation, "Email: Nurture <group>", which starts once a contact in it subscribes.
+     */
+    const GROUPS = [
+        'shops'      => 'Online Shops and Niche Sellers',
+        'regulated'  => 'Supplements, CBD and Regulated Products',
+        'courses'    => 'Course Creators and Educators',
+        'chambers'   => 'Chambers and Associations',
+        'churches'   => 'Churches and Ministries',
+        'franchises' => 'Franchises and Multi-Location Brands',
+        'agencies'   => 'Web Designers and Freelancers',
+        'developers' => 'SaaS and Software Teams',
+        'pos'        => 'Point of Sale Companies',
+        'booking'    => 'Booking Software Companies',
+        'templates'  => 'Template and Theme Makers',
+        'educators'  => 'WordPress Educators and Communities',
+        'hosts'      => 'WordPress Hosts',
+    ];
+    /** Outreach Route field values: the AnyPress programme a researched business is pitched. */
+    const ROUTES = ['Affiliate', 'Seller', 'Reseller', 'Website Owner'];
+    /** "How did you hear about us?" answers; the Source field holds the Title Case name. */
     const SOURCES = [
         'search'    => 'Search (Google, Bing)',
-        'social'    => 'Social media',
-        'friend'    => 'A friend or colleague',
-        'event'     => 'An event or workshop',
-        'video'     => 'YouTube or a podcast',
-        'community' => 'An online community or forum',
-        'other'     => 'Somewhere else',
+        'social'    => 'Social Media',
+        'friend'    => 'A Friend or Colleague',
+        'event'     => 'An Event or Workshop',
+        'video'     => 'YouTube or a Podcast',
+        'community' => 'An Online Community or Forum',
+        'other'     => 'Somewhere Else',
     ];
     const CHECKOUT_FIELD = 'anypress_source';
     /** Set while a full refund is handled, so the cancellation it causes doesn't record Past. */
@@ -158,7 +179,10 @@ final class AnyPress_CRM
             }
             self::remove($contact, $m[1], $m[2] === 'Past' ? ['Interested', 'Active'] : ['Interested']);
             if ($m[2] === 'Active') {
-                self::start_automation('Email: ' . $m[1] . ' welcome', $contact);
+                self::start_automation('Email: ' . $m[1] . ' Welcome', $contact);
+                if (in_array($m[1], self::PLANS, true)) {
+                    self::remove($contact, 'Beta', ['Interested']); // on a plan now, so off the beta waitlist
+                }
             }
         }
     }
@@ -269,7 +293,7 @@ final class AnyPress_CRM
         if ($offering === 'Care') {
             $contact = self::contact_from_customer($data['customer'] ?? $sub->customer);
             self::add($contact, 'Care', 'Active');
-            self::stop_automation('Email: Care ended', $contact);
+            self::stop_automation('Email: Care Ended', $contact);
             return;
         }
         $plan = $offering;
@@ -277,7 +301,7 @@ final class AnyPress_CRM
         self::add($contact, $plan, 'Active');
         self::set_fields($contact, ['refunded' => '']);
         // Back again: the come-back offer would arrive after they have already come back.
-        self::stop_automation('Email: Win-back', $contact);
+        self::stop_automation('Email: Win-Back', $contact);
     }
 
     public static function on_subscription_status($data)
@@ -317,7 +341,7 @@ final class AnyPress_CRM
         }
         // Care ended but the website stays: ask what would help, once.
         if ($plan === 'Care' && $was_active && self::has_live_plan($sub->customer_id, $sub->id)) {
-            self::start_automation('Email: Care ended', $contact);
+            self::start_automation('Email: Care Ended', $contact);
         }
     }
 
@@ -340,9 +364,9 @@ final class AnyPress_CRM
             self::set_fields($contact, ['refunded' => current_time('Y-m-d')]);
             // No setup tips, referral ask or come-back offer for someone who just asked for their money back. The
             // welcome is forgotten, not cancelled, so a later real purchase starts it again.
-            self::stop_automation('Email: Website owner welcome', $contact, true);
-            self::stop_automation('Email: Win-back', $contact);
-            self::stop_automation('Email: Care ended', $contact);
+            self::stop_automation('Email: Website Owner Welcome', $contact, true);
+            self::stop_automation('Email: Win-Back', $contact);
+            self::stop_automation('Email: Care Ended', $contact);
         }
     }
 
@@ -364,7 +388,7 @@ final class AnyPress_CRM
             // Another website plan is still live: they haven't left.
             || self::has_live_plan($sub->customer_id, $sub->id)
         ) {
-            self::stop_automation('Email: Win-back', $contact);
+            self::stop_automation('Email: Win-Back', $contact);
         }
     }
 
@@ -436,7 +460,7 @@ final class AnyPress_CRM
         $source = $order ? (string) $order->getMeta(self::CHECKOUT_FIELD, '') : '';
         $contact = $source ? self::contact_from_customer($data['customer'] ?? $order->customer) : null;
         if ($contact && empty(((array) $contact->custom_fields())['source'])) {
-            self::set_fields($contact, ['source' => $source]); // first touch wins
+            self::set_fields($contact, ['source' => self::SOURCES[$source] ?? '']); // first touch wins
         }
     }
 
@@ -521,7 +545,7 @@ final class AnyPress_CRM
                 return $plan !== 'Website' && self::has($contact, $plan, 'Active');
             });
             if (!$other) {
-                self::start_automation('Email: Website upgrade', $contact);
+                self::start_automation('Email: Website Upgrade', $contact);
             }
         }
     }
@@ -607,7 +631,7 @@ final class AnyPress_CRM
     public static function start_nurture($contact)
     {
         $group = $contact ? (string) (((array) $contact->custom_fields())['customer_group'] ?? '') : '';
-        if ($group && in_array($group, self::GROUPS, true)) {
+        if ($group && in_array($group, self::GROUPS, true)) { // the Title Case name
             self::start_automation('Email: Nurture ' . $group, $contact);
         }
     }
@@ -687,7 +711,7 @@ final class AnyPress_CRM
             $interest = '';
         }
         $group = sanitize_key((string) ($body['group'] ?? ''));
-        $group = in_array($group, self::GROUPS, true) ? $group : '';
+        $group = self::GROUPS[$group] ?? '';
         $source = sanitize_key((string) ($body['source'] ?? ''));
         $campaign = substr(sanitize_text_field((string) ($body['campaign'] ?? '')), 0, 100);
         $name = trim(substr(sanitize_text_field((string) ($body['name'] ?? '')), 0, 100));
@@ -708,7 +732,7 @@ final class AnyPress_CRM
         $fields = ['customer_group' => $group];
         $old = $existing ? (array) $existing->custom_fields() : [];
         if (empty($old['source'])) {
-            $fields['source'] = isset(self::SOURCES[$source]) ? $source : ($campaign ? 'campaign:' . $campaign : '');
+            $fields['source'] = self::SOURCES[$source] ?? ($campaign ? 'Campaign: ' . $campaign : '');
         }
         self::set_fields($contact, $fields);
         if ($interest && !self::has($contact, $interest, 'Active') && !self::has($contact, $interest, 'Past')) {
