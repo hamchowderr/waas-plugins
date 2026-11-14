@@ -34,19 +34,21 @@ jobs:
         run: composer test -- --exclude-group mock
 
   older-php:
-    # Each plugin still loads on the oldest PHP its header promises. PHPUnit 12 needs PHP 8.3, so this
-    # runs PHP's own syntax check on every file and checks the shipped libraries' PHP requirements.
-    name: ${{ matrix.package }} loads on PHP ${{ matrix.php }}
+    # Each plugin still loads on the oldest PHP its header promises: PHP's own syntax check on every
+    # file, and the shipped libraries' PHP requirements.
+    name: ${{ matrix.package }} loads on its minimum PHP
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { package: anypress-host, php: "8.1" }
-          - { package: anypress-client, php: "8.1" }
+          # Host, Client, Payments and the updater only run on our servers (PHP 8.3). Export and Move go
+          # on other people's sites before they move, so they keep a low minimum.
+          - { package: anypress-host, php: "8.3" }
+          - { package: anypress-client, php: "8.3" }
+          - { package: anypress-payments, php: "8.3" }
+          - { package: anypress-updater, php: "8.3" }
           - { package: anypress-move, php: "8.1" }
-          - { package: anypress-payments, php: "7.4" }
-          - { package: anypress-updater, php: "7.4" }
           - { package: anypress-export, php: "7.4" }
     defaults:
       run:

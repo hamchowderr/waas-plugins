@@ -44,11 +44,11 @@ Plugin Name: AnyPress Host
 Plugin URI: https://anypress.io
 Description: Sells AnyPress websites from your storefront: creates, suspends and restores each customer's website through the AnyPress API, with FluentCart or WooCommerce (and WooCommerce Subscriptions) for billing.
 Author: Otaku Solutions
-Version: 2.21.2
+Version: 2.22.0
 Author URI: https://otakusolutions.io
 Update URI: anypress-host
 Requires at least: 6.4
-Requires PHP: 8.1
+Requires PHP: 8.3
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Text Domain: anypress-host
@@ -57,7 +57,7 @@ Text Domain: anypress-host
 define( 'ANYPRESS_HOST_SLUG', 'anypress-host' );
 define( 'ANYPRESS_HOST_BASENAME', plugin_basename( __FILE__ ) );
 define( 'ANYPRESS_HOST_UPDATE_URI', 'anypress-host' );
-define( 'ANYPRESS_HOST_VERSION', '2.21.2' );
+define( 'ANYPRESS_HOST_VERSION', '2.22.0' );
 define( 'ANYPRESS_HOST_TEXTDOMAIN', 'anypress-host' );
 
 // Settings and data saved before the AnyPress names (2.11.0) move to them before anything reads them
