@@ -16,7 +16,7 @@ services:
       ANYPRESS_MAIL_B64: ${ANYPRESS_MAIL_B64:-}
       SITE_URL: https://shop.anypress.io
       SITE_TITLE: AnyPress
-      ANYPRESS_API_URL: https://waas-api.otakusolutions.io
+      ANYPRESS_API_URL: https://api.anypress.io
       # The AnyPress store template's plugins (waas-provisioning-api templates/anypress-store), plus FluentAuth.
       SHOP_PLUGINS: fluent-crm fluentform fluent-booking fluent-support fluent-affiliate easy-code-manager seo-by-rank-math wp-fusion-lite automatorwp fluent-security
       PLAN_TITLE: Website plan
