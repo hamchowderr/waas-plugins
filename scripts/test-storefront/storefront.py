@@ -2,25 +2,23 @@
 """Builds and drives the AnyPress storefronts on Coolify: the two test storefronts and AnyPress's own storefront
 (--cart shop). Maintainers' runbooks for these are kept outside this repository.
 
-    storefront.py [--cart woo] create            # project, service, variables (password generated, never printed)
-    storefront.py [--cart woo] push              # build the plugins and copy them into the service
-    storefront.py [--cart woo] setup [steps]     # bootstrap, install, plugins, configure, pages, product, payments, cron
+    storefront.py [--cart shop] create            # project, service, variables (password generated, never printed)
+    storefront.py [--cart shop] push              # build the plugins and copy them into the service
+    storefront.py [--cart shop] setup [steps]     # bootstrap, install, plugins, configure, pages, product, payments, cron
     storefront.py --cart shop setup design       # the shop's look: AnyPress theme, pages and templates (remote/design)
     storefront.py setup payments --mode gateway  # FluentCart's subscription mode: store (default) or gateway
-    storefront.py [--cart woo] run '<command>'   # one shell command in the wordpress container, as root
-    storefront.py [--cart woo] remove            # delete the service with its volumes, then the project if empty
+    storefront.py [--cart shop] run '<command>'   # one shell command in the wordpress container, as root
+    storefront.py [--cart shop] remove            # delete the service with its volumes, then the project if empty
 
---cart picks the storefront: fluentcart (the default; service storefront-test), woo (WooCommerce with WP Swings'
-Subscriptions for WooCommerce; service storefront-woo-test), both in the project "AnyPress Storefront (test)", or shop
-(AnyPress's storefront at shop.anypress.io, FluentCart with Stripe, in the project "AnyPress Storefront"). The shop's
+--cart picks the storefront: fluentcart (the default; service storefront-test, in the project
+"AnyPress Storefront (test)") or shop (AnyPress's storefront at shop.anypress.io, FluentCart with Stripe, in the project "AnyPress Storefront"). The shop's
 API key isn't read from the session: the provisioning API writes it into the service (see `create`).
 
 Talks to the Coolify API at COOLIFY_URL (default https://coolify.otakusolutions.io) with
 COOLIFY_TOKEN, or with none where a proxy injects credentials. `create` reads the provisioning
 API key and secret from ANYPRESS_TEST_KEY and ANYPRESS_TEST_SECRET, and the Card gateway's
 Authorize.Net sandbox credentials, when present, from AUTHNET_SANDBOX_LOGIN_ID and
-AUTHNET_SANDBOX_TRANSACTION_KEY (and AUTHNET_SANDBOX_SIGNATURE_KEY for its webhook). For --cart woo it reads Stripe test keys, when present, from
-STRIPE_TEST_PUBLISHABLE_KEY and STRIPE_TEST_SECRET_KEY.
+AUTHNET_SANDBOX_TRANSACTION_KEY (and AUTHNET_SANDBOX_SIGNATURE_KEY for its webhook).
 """
 import base64
 import json
@@ -55,13 +53,6 @@ CARTS = {
         'compose': 'compose-shop.yml', 'remote': ['remote'], 'packages': ['anypress-host'],
         'secrets': {}, 'description': 'AnyPress storefront (shop.anypress.io)', 'session_key': False,
         'steps': ['bootstrap', 'install', 'plugins', 'configure', 'pages', 'product', 'design', 'cron'],
-    },
-    'woo': {
-        'service': 'storefront-woo-test', 'domain': 'storefront-woo-test.191.101.15.236.sslip.io',
-        # The wp wrapper and check.php are shared; remote-woo/ adds the WooCommerce steps.
-        'compose': 'compose-woo.yml', 'remote': ['remote/wp', 'remote/check.php', 'remote-woo'], 'packages': ['anypress-host'],
-        'secrets': {'STRIPE_TEST_PUBLISHABLE_KEY': 'STRIPE_TEST_PUBLISHABLE_KEY', 'STRIPE_TEST_SECRET_KEY': 'STRIPE_TEST_SECRET_KEY'},
-        'description': 'AnyPress WooCommerce test storefront',
     },
 }
 CART = CARTS['fluentcart']

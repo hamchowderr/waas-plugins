@@ -50,7 +50,7 @@ case "${1:-}" in
     $WP plugin list ;;
   configure)
     [ -n "${ANYPRESS_API_KEY:-}" ] && [ -n "${ANYPRESS_API_SECRET:-}" ] || { echo ANYPRESS_API_KEY/SECRET missing; exit 1; }
-    $WP option update anypress_api_base_url "${ANYPRESS_API_URL:-https://waas-api.otakusolutions.io}"
+    $WP option update anypress_api_base_url "${ANYPRESS_API_URL:-https://api.anypress.io}"
     $WP option update anypress_api_key "$ANYPRESS_API_KEY" >/dev/null
     $WP option update anypress_api_secret "$ANYPRESS_API_SECRET" >/dev/null
     echo api key and secret set
