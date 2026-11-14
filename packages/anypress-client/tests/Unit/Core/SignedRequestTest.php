@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Core;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use Brain\Monkey\Functions;
 use Tests\Unit\TestCase;
 use AnyPressClient\Core\SignedRequest;
@@ -32,9 +33,7 @@ class SignedRequestTest extends TestCase
         $this->assertFalse(SignedRequest::verify(self::KEY, $header, 'POST', self::ROUTE, '{"title":"About"}'), 'replayed');
     }
 
-    /**
-     * @dataProvider tampered
-     */
+    #[DataProvider('tampered')]
     public function test_anything_changed_after_signing_fails(string $method, string $route, string $body, string $key): void
     {
         $header = $this->sign('POST', '{"title":"About"}');
@@ -42,7 +41,7 @@ class SignedRequestTest extends TestCase
         $this->assertFalse(SignedRequest::verify($key, $header, $method, $route, $body));
     }
 
-    public function tampered(): array
+    public static function tampered(): array
     {
         return [
             'method' => ['DELETE', self::ROUTE, '{"title":"About"}', self::KEY],

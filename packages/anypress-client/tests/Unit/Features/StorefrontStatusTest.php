@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Features;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use Brain\Monkey\Functions;
 use Tests\Unit\TestCase;
 use AnyPressClient\Core\HttpService;
@@ -35,7 +36,7 @@ class StorefrontStatusTest extends TestCase
         }
     }
 
-    /** @dataProvider pings */
+    #[DataProvider('pings')]
     public function test_ping_result_is_reported(int $code, string $body, string $type, string $phrase): void
     {
         $this->storefrontAnswers($code, $body);
@@ -48,7 +49,7 @@ class StorefrontStatusTest extends TestCase
         $this->assertSame($outcome, $this->saved[StorefrontStatus::PING_OPTION]);
     }
 
-    public function pings(): array
+    public static function pings(): array
     {
         return [
             'reloaded' => [200, 'true', 'success', 'reloaded'],

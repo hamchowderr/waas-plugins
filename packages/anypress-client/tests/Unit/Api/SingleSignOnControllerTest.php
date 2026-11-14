@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Api;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use Brain\Monkey\Functions;
 use Mockery;
 use Tests\Unit\TestCase;
@@ -89,9 +90,7 @@ class SingleSignOnControllerTest extends TestCase
         $this->assertArrayHasKey(SingleSignOnController::USED_TOKEN_TRANSIENT_PREFIX . $claims['jti'], $this->transients);
     }
 
-    /**
-     * @dataProvider invalid_claims
-     */
+    #[DataProvider('invalid_claims')]
     public function test_invalid_claims_are_rejected(array $overrides): void
     {
         Functions\expect('wp_set_auth_cookie')->never();
@@ -99,7 +98,7 @@ class SingleSignOnControllerTest extends TestCase
         $this->assertRejected($this->controller->verify_single_login($this->request($this->claims($overrides))));
     }
 
-    public function invalid_claims(): array
+    public static function invalid_claims(): array
     {
         $now = time();
 

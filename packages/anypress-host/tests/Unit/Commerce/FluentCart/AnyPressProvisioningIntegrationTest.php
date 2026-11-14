@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Commerce\FluentCart;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use Brain\Monkey\Actions;
 use Brain\Monkey\Functions;
 use Mockery;
@@ -79,7 +80,7 @@ class AnyPressProvisioningIntegrationTest extends TestCase
         $this->run_feed('order_paid_done', ['event_data' => []]);
     }
 
-    /** @dataProvider removal_events */
+    #[DataProvider('removal_events')]
     public function test_cancel_end_of_term_and_revoke_remove_the_store(string $trigger, string $is_revoke): void
     {
         $this->has_store(true);
@@ -89,7 +90,7 @@ class AnyPressProvisioningIntegrationTest extends TestCase
         $this->run_feed($trigger, ['is_revoke_hook' => $is_revoke]);
     }
 
-    public function removal_events(): array
+    public static function removal_events(): array
     {
         return [
             'canceled' => ['subscription_canceled', 'no'],
@@ -116,7 +117,7 @@ class AnyPressProvisioningIntegrationTest extends TestCase
         $this->assertStringContainsString(gmdate('Y-m-d H:i', $until), $this->logs[0][1]);
     }
 
-    /** @dataProvider immediate_removals_despite_a_paid_period */
+    #[DataProvider('immediate_removals_despite_a_paid_period')]
     public function test_refund_end_of_term_and_expired_access_stay_immediate(string $trigger, string $is_revoke): void
     {
         $this->has_store(true);
@@ -127,7 +128,7 @@ class AnyPressProvisioningIntegrationTest extends TestCase
         $this->run_feed($trigger, ['is_revoke_hook' => $is_revoke]);
     }
 
-    public function immediate_removals_despite_a_paid_period(): array
+    public static function immediate_removals_despite_a_paid_period(): array
     {
         return [
             'refunded' => ['order_fully_refunded', 'yes'],
@@ -212,13 +213,13 @@ class AnyPressProvisioningIntegrationTest extends TestCase
         $this->assertSame(0, AnyPressProvisioningIntegration::emails_per_pack($legacy));
     }
 
-    /** @dataProvider emails_per_pack_values */
+    #[DataProvider('emails_per_pack_values')]
     public function test_emails_per_pack_is_read_from_the_feed($value, int $expected): void
     {
         $this->assertSame($expected, AnyPressProvisioningIntegration::emails_per_pack(['product_type' => 'email_pack', 'emails_per_pack' => $value]));
     }
 
-    public function emails_per_pack_values(): array
+    public static function emails_per_pack_values(): array
     {
         return [
             'number' => [5000, 5000],
@@ -241,7 +242,7 @@ class AnyPressProvisioningIntegrationTest extends TestCase
         $this->assertSame(0, AnyPressProvisioningIntegration::emails_per_pack(['product_type' => 'plan', 'emails_per_pack' => 5000]));
     }
 
-    /** @dataProvider all_triggers */
+    #[DataProvider('all_triggers')]
     public function test_an_email_pack_feed_never_creates_or_removes_a_website(string $trigger, string $is_revoke): void
     {
         $this->has_store(true);
@@ -255,7 +256,7 @@ class AnyPressProvisioningIntegrationTest extends TestCase
         $this->assertSame([], $this->logs);
     }
 
-    public function all_triggers(): array
+    public static function all_triggers(): array
     {
         return [
             'activated' => ['subscription_activated', 'no'],
@@ -289,7 +290,7 @@ class AnyPressProvisioningIntegrationTest extends TestCase
         $this->run_feed('subscription_canceled');
     }
 
-    /** @dataProvider stale_removal_events */
+    #[DataProvider('stale_removal_events')]
     public function test_a_cancel_handled_after_the_subscription_became_active_again_is_ignored_but_a_refund_counts(string $trigger, bool $waiting): void
     {
         // Canceled, then reactivated; FluentCart runs the feeds in the background and the reactivation ran first.
@@ -303,7 +304,7 @@ class AnyPressProvisioningIntegrationTest extends TestCase
         $this->run_feed('order_fully_refunded', ['is_revoke_hook' => 'yes']);
     }
 
-    public function stale_removal_events(): array
+    public static function stale_removal_events(): array
     {
         return [
             'canceled, store' => ['subscription_canceled', false],
@@ -319,7 +320,7 @@ class AnyPressProvisioningIntegrationTest extends TestCase
         $this->run_feed('subscription_reactivated');
     }
 
-    /** @dataProvider renewal_order_revokes */
+    #[DataProvider('renewal_order_revokes')]
     public function test_a_renewal_order_refunded_or_cancelled_while_the_subscription_stays_active_keeps_the_store(string $trigger, string $status): void
     {
         $this->order->type = 'renewal';
@@ -333,7 +334,7 @@ class AnyPressProvisioningIntegrationTest extends TestCase
         $this->assertStringContainsString('renewal order', $this->logs[0][1]);
     }
 
-    public function renewal_order_revokes(): array
+    public static function renewal_order_revokes(): array
     {
         return [
             'refunded, active' => ['order_fully_refunded', 'active'],

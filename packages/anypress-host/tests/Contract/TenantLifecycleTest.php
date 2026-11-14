@@ -2,6 +2,7 @@
 
 namespace Tests\Contract;
 
+use PHPUnit\Framework\Attributes\Group;
 use Brain\Monkey\Actions;
 use Brain\Monkey\Functions;
 use Mockery;
@@ -22,8 +23,8 @@ use AnyPressHost\Features\TenantStatusService;
  * Store creation, polling, suspension, resumption and removal through a fake cart, against the provisioning API (see MockApi).
  * Proves the shared code needs no WooCommerce.
  *
- * @group mock
  */
+#[Group('mock')]
 class TenantLifecycleTest extends TestCase
 {
     use MockApi;
