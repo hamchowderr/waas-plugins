@@ -532,7 +532,7 @@ jobs:
         run: npm run offers
       - name: Keep the screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: offers
           path: scripts/playground/shots/offers/
