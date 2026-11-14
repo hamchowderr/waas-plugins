@@ -119,7 +119,7 @@ jobs:
           cat dist/manifest.json
 
       - name: Keep the build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.tag.outputs.slug }}-${{ steps.tag.outputs.version }}${{ env.DRY_RUN == 'true' && '-dry-run' || '' }}
           path: dist/
