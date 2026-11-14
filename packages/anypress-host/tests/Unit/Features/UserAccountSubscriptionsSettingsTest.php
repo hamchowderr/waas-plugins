@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Features;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use Brain\Monkey\Functions;
 use Mockery;
 use Tests\FakeCommerceAdapter;
@@ -126,15 +127,13 @@ class UserAccountSubscriptionsSettingsTest extends TestCase
         $this->settings->handle_update_subscription_domain(self::SUBSCRIPTION_ID);
     }
 
-    /**
-     * @dataProvider hostnames
-     */
+    #[DataProvider('hostnames')]
     public function test_is_valid_hostname(string $domain, bool $valid): void
     {
         $this->assertSame($valid, UserAccountSubscriptionsSettings::is_valid_hostname($domain));
     }
 
-    public function hostnames(): array
+    public static function hostnames(): array
     {
         return [
             'apex' => ['example.com', true],

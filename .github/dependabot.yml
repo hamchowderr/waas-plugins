@@ -14,7 +14,7 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
-    # New PHPUnit majors need a newer PHP than the 8.1 and 8.3 the tests run on.
+    # PHPUnit 13 needs PHP 8.4; the tests also run on 8.3, what the stores run. Drop this when they move up.
     ignore:
       - dependency-name: phpunit/phpunit
         update-types: ["version-update:semver-major"]

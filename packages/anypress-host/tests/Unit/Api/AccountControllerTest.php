@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Api;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use Brain\Monkey\Filters;
 use Brain\Monkey\Functions;
 use Mockery;
@@ -114,7 +115,7 @@ class AccountControllerTest extends TestCase
     }
 
     /** Every route of the API, with the parameters a valid call needs. */
-    public function routes(): array
+    public static function routes(): array
     {
         return [
             'who is signed in' => ['GET', '/me', []],
@@ -130,9 +131,9 @@ class AccountControllerTest extends TestCase
     }
 
     /** The routes for one website. */
-    public function website_routes(): array
+    public static function website_routes(): array
     {
-        return array_filter($this->routes(), fn ($route) => strpos($route[1], '(?P<id>') !== false);
+        return array_filter(self::routes(), fn ($route) => strpos($route[1], '(?P<id>') !== false);
     }
 
     public function test_all_routes_are_registered_and_none_is_public(): void
@@ -146,7 +147,7 @@ class AccountControllerTest extends TestCase
         }
     }
 
-    /** @dataProvider website_routes */
+    #[DataProvider('website_routes')]
     public function test_another_customers_website_is_refused(string $method, string $path, array $params): void
     {
         $this->api->shouldNotReceive('add_tenant_domain', 'get_mail_domain', 'set_mail_domain', 'remove_mail_domain', 'domain_connect');
@@ -155,7 +156,7 @@ class AccountControllerTest extends TestCase
         $this->assertError(403, $this->call($method, $path, self::OTHERS_WEBSITE, $params));
     }
 
-    /** @dataProvider website_routes */
+    #[DataProvider('website_routes')]
     public function test_a_subscription_that_does_not_exist_is_refused_like_someone_elses(string $method, string $path, array $params): void
     {
         $this->cart->owners[404] = 0;
@@ -163,7 +164,7 @@ class AccountControllerTest extends TestCase
         $this->assertError(403, $this->call($method, $path, 404, $params));
     }
 
-    /** @dataProvider routes */
+    #[DataProvider('routes')]
     public function test_signed_out_visitors_are_refused(string $method, string $path, array $params): void
     {
         $this->current_user = 0;
@@ -171,7 +172,7 @@ class AccountControllerTest extends TestCase
         $this->assertError(401, $this->call($method, $path, self::WEBSITE, $params));
     }
 
-    /** @dataProvider routes */
+    #[DataProvider('routes')]
     public function test_an_access_token_signs_in_on_every_route(string $method, string $path, array $params): void
     {
         $this->current_user = 0;

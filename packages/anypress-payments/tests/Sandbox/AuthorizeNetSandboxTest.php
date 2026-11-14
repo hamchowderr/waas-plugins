@@ -2,6 +2,7 @@
 
 namespace Tests\Sandbox;
 
+use PHPUnit\Framework\Attributes\Group;
 use Brain\Monkey\Functions;
 use Tests\Unit\TestCase;
 use AnyPressPayments\Driver\AuthorizeNet\AuthorizeNetClient;
@@ -20,8 +21,8 @@ use AnyPressPayments\Driver\SavePaymentMethodRequest;
  * be reachable. Set AUTHORIZENET_PRINT_RESPONSES=1 to print the raw bodies, to refresh
  * tests/fixtures/authorizenet.
  *
- * @group sandbox
  */
+#[Group('sandbox')]
 class AuthorizeNetSandboxTest extends TestCase
 {
     private string $loginId;

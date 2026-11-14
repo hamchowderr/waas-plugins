@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Commerce\WooCommerce;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use Brain\Monkey\Actions;
 use Brain\Monkey\Functions;
 use Mockery;
@@ -81,9 +82,7 @@ class SubscriptionEventsTest extends TestCase
         SubscriptionEvents::suspended(901);
     }
 
-    /**
-     * @dataProvider woocommerce_subscriptions_statuses
-     */
+    #[DataProvider('woocommerce_subscriptions_statuses')]
     public function test_woocommerce_subscriptions_status_mapping(string $status, ?string $event): void
     {
         $this->with_store(900);
@@ -99,7 +98,7 @@ class SubscriptionEventsTest extends TestCase
         (new WooCommerceSubscriptions())->on_status_updated($subscription, $status, 'whatever');
     }
 
-    public function woocommerce_subscriptions_statuses(): array
+    public static function woocommerce_subscriptions_statuses(): array
     {
         return [
             'active after hold' => ['active', 'anypress_subscription_reactivated'],
@@ -120,9 +119,7 @@ class SubscriptionEventsTest extends TestCase
         (new WooCommerceSubscriptions())->on_status_updated($subscription, 'active', 'pending');
     }
 
-    /**
-     * @dataProvider wp_swings_statuses
-     */
+    #[DataProvider('wp_swings_statuses')]
     public function test_wp_swings_status_meta_mapping(string $status, ?string $event): void
     {
         $this->with_store(900);
@@ -135,7 +132,7 @@ class SubscriptionEventsTest extends TestCase
         (new WpSwingsSubscriptions())->on_post_meta_written(1, 900, WpSwingsSubscriptions::STATUS_META, $status);
     }
 
-    public function wp_swings_statuses(): array
+    public static function wp_swings_statuses(): array
     {
         return [
             'active after hold' => ['active', 'anypress_subscription_reactivated'],
@@ -303,9 +300,7 @@ class SubscriptionEventsTest extends TestCase
         (new WpSwingsSubscriptions())->on_cancelled(900, 'Cancel');
     }
 
-    /**
-     * @dataProvider wp_swings_cancels_that_end_now
-     */
+    #[DataProvider('wp_swings_cancels_that_end_now')]
     public function test_wp_swings_cancel_without_paid_time_left_ends_the_store_now($next_payment, string $status): void
     {
         $this->with_store(900);
@@ -317,7 +312,7 @@ class SubscriptionEventsTest extends TestCase
         (new WpSwingsSubscriptions())->on_cancelled(900, $status);
     }
 
-    public function wp_swings_cancels_that_end_now(): array
+    public static function wp_swings_cancels_that_end_now(): array
     {
         return [
             'next payment date passed' => [(string) (time() - 60), 'Cancel'],

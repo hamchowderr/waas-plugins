@@ -2,15 +2,17 @@
 
 namespace Tests\Unit\Features;
 
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Brain\Monkey;
 use PHPUnit\Framework\TestCase;
 use AnyPressClient\Features\PluginBootstrap;
 
 /**
  * The store flag (an environment variable the API sets) and the wp-config constants a store is given.
- * @runTestsInSeparateProcesses
- * @preserveGlobalState disabled
  */
+#[RunTestsInSeparateProcesses]
+#[PreserveGlobalState(false)]
 class PluginBootstrapTest extends TestCase
 {
     protected function setUp(): void

@@ -14,7 +14,8 @@ jobs:
       fail-fast: false
       matrix:
         package: [anypress-host, anypress-client, anypress-payments, anypress-updater, anypress-export]
-        php: ["8.1", "8.3"]
+        # 8.3 is what stores and the shop run; 8.4 is next. Older PHP is checked by the job below.
+        php: ["8.3", "8.4"]
     defaults:
       run:
         working-directory: packages/${{ matrix.package }}
@@ -31,6 +32,47 @@ jobs:
         run: composer install --no-interaction --no-progress
       - name: Run unit tests
         run: composer test -- --exclude-group mock
+
+  older-php:
+    # Each plugin still loads on the oldest PHP its header promises. PHPUnit 12 needs PHP 8.3, so this
+    # runs PHP's own syntax check on every file and checks the shipped libraries' PHP requirements.
+    name: ${{ matrix.package }} loads on PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { package: anypress-host, php: "8.1" }
+          - { package: anypress-client, php: "8.1" }
+          - { package: anypress-move, php: "8.1" }
+          - { package: anypress-payments, php: "7.4" }
+          - { package: anypress-updater, php: "7.4" }
+          - { package: anypress-export, php: "7.4" }
+    defaults:
+      run:
+        working-directory: packages/${{ matrix.package }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer:v2
+      - name: The header promises this PHP
+        run: |
+          f=${{ matrix.package }}.php
+          [ ! -f "$f" ] || grep -Eq "Requires PHP: *${{ matrix.php }}$" "$f"
+      - name: Every file parses
+        run: |
+          set -o pipefail
+          find . -name '*.php' -not -path './vendor/*' -not -path './tests/*' -print0 \
+            | xargs -0 -n1 -P4 php -l -d display_errors=1 | { grep -v '^No syntax errors detected' || true; }
+      - name: Shipped libraries run on this PHP
+        run: |
+          composer install --no-dev --no-interaction --no-progress --ignore-platform-req=php
+          composer check-platform-reqs --no-dev
 
   release-scripts:
     # Builds, stamps, signs and verifies all three plugins with a throwaway key, and runs publish and

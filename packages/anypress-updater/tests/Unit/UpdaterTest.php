@@ -2,6 +2,9 @@
 
 namespace Tests\Unit;
 
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use Brain\Monkey\Filters;
 use Brain\Monkey\Functions;
 use AnyPressUpdater\Updater;
@@ -150,10 +153,8 @@ class UpdaterTest extends TestCase
         $this->assertNotFalse(has_filter('upgrader_pre_download'));
     }
 
-    /**
-     * @runInSeparateProcess
-     * @preserveGlobalState disabled
-     */
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
     public function test_channel_off_registers_nothing(): void
     {
         define('ANYPRESS_UPDATE_CHANNEL', 'off');
@@ -161,10 +162,8 @@ class UpdaterTest extends TestCase
         $this->assertFalse($this->updater()->register());
     }
 
-    /**
-     * @runInSeparateProcess
-     * @preserveGlobalState disabled
-     */
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
     public function test_the_beta_channel_is_asked_for_when_set(): void
     {
         define('ANYPRESS_UPDATE_CHANNEL', 'beta');
@@ -232,7 +231,7 @@ class UpdaterTest extends TestCase
         $this->assertCount(1, $this->requests);
     }
 
-    /** @dataProvider bad_answers */
+    #[DataProvider('bad_answers')]
     public function test_errors_and_invalid_answers_offer_nothing(int $code, $body): void
     {
         $this->answers($code, $body);
@@ -240,7 +239,7 @@ class UpdaterTest extends TestCase
         $this->assertArrayHasKey('error', $this->transients['anypress_update_anypress-host_stable'][0]);
     }
 
-    public function bad_answers(): array
+    public static function bad_answers(): array
     {
         $ok = [
             'slug' => self::SLUG, 'version' => '2.3.0', 'package' => 'https://r2.example.test/x.zip',
@@ -322,7 +321,7 @@ class UpdaterTest extends TestCase
         $this->assertFileDoesNotExist($zip);
     }
 
-    /** @dataProvider bad_signatures */
+    #[DataProvider('bad_signatures')]
     public function test_a_download_without_a_trusted_signature_is_refused_and_deleted(callable $signature): void
     {
         $zip = $this->zip();
@@ -337,7 +336,7 @@ class UpdaterTest extends TestCase
         $this->assertFileDoesNotExist($zip);
     }
 
-    public function bad_signatures(): array
+    public static function bad_signatures(): array
     {
         return [
             'another key' => [function ($t, $sha) { return $t->sign('2.3.0', $sha, sodium_crypto_sign_secretkey(sodium_crypto_sign_keypair())); }],
@@ -414,10 +413,8 @@ class UpdaterTest extends TestCase
         $this->assertTrue($this->updater()->auto_update(true, (object) ['plugin' => 'akismet/akismet.php']));
     }
 
-    /**
-     * @runInSeparateProcess
-     * @preserveGlobalState disabled
-     */
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
     public function test_with_auto_update_patch_only_patch_releases_install_themselves(): void
     {
         define('ANYPRESS_AUTO_UPDATE', 'patch');

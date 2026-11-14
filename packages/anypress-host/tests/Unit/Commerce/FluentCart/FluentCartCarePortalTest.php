@@ -90,7 +90,7 @@ class FluentCartCarePortalTest extends TestCase
         parent::tearDown();
     }
 
-    private function output(callable $render): string
+    private function rendered(callable $render): string
     {
         ob_start();
         $render();
@@ -111,7 +111,7 @@ class FluentCartCarePortalTest extends TestCase
     {
         $this->care->allows('care_of')->with(900)->andReturn(0);
 
-        $html = $this->output(fn () => $this->portal->render_receipt_offer(['order' => $this->order(self::PLAN, 900)]));
+        $html = $this->rendered(fn () => $this->portal->render_receipt_offer(['order' => $this->order(self::PLAN, 900)]));
 
         $this->assertStringContainsString('Add care to your new website', $html);
         $this->assertStringContainsString('<strong>Care Plus</strong></p><p class="anypress-care-price"><b>$199</b> <span>a month</span></p>', $html);
@@ -124,16 +124,16 @@ class FluentCartCarePortalTest extends TestCase
     {
         $this->care->allows('care_of')->andReturn(0);
 
-        $this->assertSame('', $this->output(fn () => $this->portal->render_receipt_offer(['order' => $this->order(401, 950)])), 'not a plan');
-        $this->assertSame('', $this->output(fn () => $this->portal->render_receipt_offer(['order' => $this->order(self::PLAN, 901)])), 'not this customer\'s website');
-        $this->assertSame('', $this->output(fn () => $this->portal->render_receipt_offer([])));
+        $this->assertSame('', $this->rendered(fn () => $this->portal->render_receipt_offer(['order' => $this->order(401, 950)])), 'not a plan');
+        $this->assertSame('', $this->rendered(fn () => $this->portal->render_receipt_offer(['order' => $this->order(self::PLAN, 901)])), 'not this customer\'s website');
+        $this->assertSame('', $this->rendered(fn () => $this->portal->render_receipt_offer([])));
     }
 
     public function test_a_website_without_care_shows_the_packages_each_with_its_checkout(): void
     {
         $this->care->allows('summary')->andReturn(null);
 
-        $html = $this->output(fn () => $this->portal->render_section(900));
+        $html = $this->rendered(fn () => $this->portal->render_section(900));
 
         $this->assertStringContainsString('class="anypress-acct-panel anypress-acct-care"', $html);
         $this->assertStringContainsString('<div class="anypress-acct-care-tier"><p class="anypress-acct-care-name"><strong>Care Plus</strong>', $html);
@@ -152,7 +152,7 @@ class FluentCartCarePortalTest extends TestCase
         $_GET[FluentCartCarePortal::SITE_ARG] = '900';
         $_GET[FluentCartCarePortal::RESULT_ARG] = 'sent';
 
-        $html = $this->output(fn () => $this->portal->render_section(900));
+        $html = $this->rendered(fn () => $this->portal->render_section(900));
 
         $this->assertStringContainsString('Care Plus <small>1 h 20 min of 2 h left this month, answered within 1 business day</small>', $html);
         $this->assertStringContainsString('width:67%', $html);

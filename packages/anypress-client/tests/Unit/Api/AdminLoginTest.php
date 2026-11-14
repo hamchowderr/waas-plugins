@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Api;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use Brain\Monkey\Functions;
 use Tests\Unit\TestCase;
 use AnyPressClient\Api\AdminLogin;
@@ -40,15 +41,13 @@ class AdminLoginTest extends TestCase
         $this->assertFalse(AdminLogin::link_is_valid(self::KEY, self::TIME, self::NONCE, self::SIGNATURE, (int) self::TIME + 301));
     }
 
-    /**
-     * @dataProvider tampered
-     */
+    #[DataProvider('tampered')]
     public function test_a_changed_or_missing_part_fails(string $key, $time, $nonce, $signature): void
     {
         $this->assertFalse(AdminLogin::link_is_valid($key, $time, $nonce, $signature, (int) self::TIME));
     }
 
-    public function tampered(): array
+    public static function tampered(): array
     {
         return [
             'another store\'s key' => ['an0ther-an0ther-an0ther-an0ther-an0ther', self::TIME, self::NONCE, self::SIGNATURE],

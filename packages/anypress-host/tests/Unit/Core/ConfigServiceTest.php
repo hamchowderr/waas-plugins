@@ -2,6 +2,8 @@
 
 namespace Tests\Unit\Core;
 
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use Brain\Monkey\Filters;
 use Brain\Monkey\Functions;
 use Mockery;
@@ -93,10 +95,8 @@ class ConfigServiceTest extends TestCase
         $this->assertFalse((new ConfigService())->check_credentials());
     }
 
-    /**
-     * @runInSeparateProcess
-     * @preserveGlobalState disabled
-     */
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
     public function test_constant_wins_over_setting(): void
     {
         define('ANYPRESS_API_BASE_URL', 'https://api.from-constant.example');
@@ -148,10 +148,8 @@ class ConfigServiceTest extends TestCase
         $this->assertSame('203.0.113.10, 203.0.113.11', ConfigService::sanitize_ip_list("203.0.113.10\n bad, 203.0.113.11"));
     }
 
-    /**
-     * @runInSeparateProcess
-     * @preserveGlobalState disabled
-     */
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
     public function test_dns_constants_win_over_settings(): void
     {
         define('ANYPRESS_DNS_A_RECORDS', ['198.51.100.1', '198.51.100.2']);

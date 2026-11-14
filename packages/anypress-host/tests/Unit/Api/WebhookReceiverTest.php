@@ -307,7 +307,7 @@ class WebhookReceiverTest extends TestCase
         $failure = $this->cart->meta[900][Webhooks::TENANT_FAILURE_META];
         $this->assertSame('create', $failure['action']);
         $this->assertSame(Tenant::LINKING_DOMAIN, $this->cart->meta[900][Tenant::TENANT_STATE], 'the state is left to the poll');
-        $this->assertStringContainsString('"create" failed for the website of subscription 900', (string) file_get_contents($this->log));
+        $this->assertStringContainsString('"create" failed for the website of subscription 900', (string) file_get_contents((string) ini_get('error_log')));
 
         Webhooks::clear_tenant_failure(900);
         $this->assertSame('', $this->cart->meta[900][Webhooks::TENANT_FAILURE_META]);

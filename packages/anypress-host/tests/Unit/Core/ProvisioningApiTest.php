@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Core;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use Brain\Monkey\Functions;
 use Mockery;
 use AnyPressHost\Core\Exceptions\InvalidDomainException;
@@ -260,7 +261,7 @@ class ProvisioningApiTest extends TestCase
         $this->service->domain_available('apex.stores.example');
     }
 
-    /** @dataProvider broken_answers */
+    #[DataProvider('broken_answers')]
     public function test_domain_available_treats_any_other_answer_as_an_error_not_as_taken(int $code, string $body): void
     {
         // Regression for M6: these used to read ->available off the error body (null: "taken", plus a warning).
@@ -271,7 +272,7 @@ class ProvisioningApiTest extends TestCase
         $this->service->domain_available('apex.stores.example');
     }
 
-    public function broken_answers(): array
+    public static function broken_answers(): array
     {
         return [
             'bad credentials' => [403, ''],
