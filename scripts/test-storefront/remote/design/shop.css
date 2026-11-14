@@ -107,6 +107,8 @@ body{--fct-btn-bg-color:var(--wp--preset--color--main);--fct-btn-border-color:va
 @media (max-width:781px){.anypress-sign-in{grid-template-columns:1fr}}
 
 /* Checkout and cart: FluentCart's form in the shop's type, fields with the soft line, the summary as a sketch panel. */
+/* FluentCart's checkout wrapper is width:100% plus 20px side padding (content-box), 40px wider than the page, so on a phone the form and the card box sat off to the right. The page already has its gutters. */
+.fluent-cart-checkout-page{box-sizing:border-box;padding-left:0;padding-right:0}
 .fct_checkout,.fct_checkout *,.fct-cart-page,.fct-cart-page *,.fct-customer-root-container,.fct-customer-root-container *{font-family:inherit}
 .fct_checkout input,.fct_checkout select,.fct_checkout textarea{font-size:var(--wp--preset--font-size--small)}
 .fct_checkout .fct_checkout_input_group{border-radius:12px;border-color:var(--wp--preset--color--border-light)}
