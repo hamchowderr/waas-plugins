@@ -2,6 +2,8 @@
 
 namespace Tests\Unit\Features;
 
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use Brain\Monkey\Functions;
 use Tests\Unit\TestCase;
 use AnyPressClient\Core\SignedRequest;
@@ -99,9 +101,9 @@ class EditorAssistantTest extends TestCase
     /**
      * A demo on anypress.io/try: no site key, the demo sign-in anypress.io put in it, and the demos' own chat.
      *
-     * @runInSeparateProcess
-     * @preserveGlobalState disabled
      */
+    #[RunInSeparateProcess]
+    #[PreserveGlobalState(false)]
     public function test_a_demo_opens_the_demo_chat_with_its_own_sign_in(): void
     {
         putenv(SignedRequest::KEY_ENV);

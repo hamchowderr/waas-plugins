@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Features;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use Brain\Monkey\Filters;
 use Brain\Monkey\Functions;
 use Tests\Unit\TestCase;
@@ -29,7 +30,7 @@ class VolumeDiscountTest extends TestCase
         $this->assertTrue(VolumeDiscount::is_enabled());
     }
 
-    /** @dataProvider owner_tiers */
+    #[DataProvider('owner_tiers')]
     public function test_owner_tiers(int $sites, ?int $percent): void
     {
         $tier = VolumeDiscount::tier_for($sites);
@@ -37,7 +38,7 @@ class VolumeDiscountTest extends TestCase
         $this->assertSame($percent, $tier === null ? null : (int) $tier['percent']);
     }
 
-    public function owner_tiers(): array
+    public static function owner_tiers(): array
     {
         return [
             'one site' => [1, null],

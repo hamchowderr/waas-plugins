@@ -2,6 +2,7 @@
 
 namespace Tests\Contract;
 
+use PHPUnit\Framework\Attributes\Group;
 use Tests\Unit\TestCase;
 use AnyPressHost\Core\ConfigService;
 use AnyPressHost\Core\Exceptions\InvalidApiKeyException;
@@ -12,8 +13,8 @@ use AnyPressHost\Core\ProvisioningApi;
 /**
  * Runs the plugin's real API client against the provisioning API (see MockApi).
  *
- * @group mock
  */
+#[Group('mock')]
 class ProvisioningApiContractTest extends TestCase
 {
     use MockApi;

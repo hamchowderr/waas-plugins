@@ -2,6 +2,7 @@
 
 namespace Tests\Contract;
 
+use PHPUnit\Framework\Attributes\Group;
 use Brain\Monkey\Actions;
 use Brain\Monkey\Functions;
 use Mockery;
@@ -22,8 +23,8 @@ use AnyPressHost\Features\TenantsSubscriptionManager;
  * A FluentCart subscription from feed run to store creation, suspension, resumption and removal, against the
  * provisioning API (see MockApi). FluentCart's tables are an in-memory store mock.
  *
- * @group mock
  */
+#[Group('mock')]
 class FluentCartLifecycleTest extends TestCase
 {
     use MockApi;

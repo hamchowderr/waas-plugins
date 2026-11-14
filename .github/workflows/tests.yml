@@ -14,13 +14,14 @@ jobs:
       fail-fast: false
       matrix:
         package: [anypress-host, anypress-client, anypress-payments, anypress-updater, anypress-export]
-        php: ["8.1", "8.3"]
+        # 8.3 is what stores and the shop run; 8.4 is next. Older PHP is checked by the job below.
+        php: ["8.3", "8.4"]
     defaults:
       run:
         working-directory: packages/${{ matrix.package }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -32,6 +33,47 @@ jobs:
       - name: Run unit tests
         run: composer test -- --exclude-group mock
 
+  older-php:
+    # Each plugin still loads on the oldest PHP its header promises. PHPUnit 12 needs PHP 8.3, so this
+    # runs PHP's own syntax check on every file and checks the shipped libraries' PHP requirements.
+    name: ${{ matrix.package }} loads on PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { package: anypress-host, php: "8.1" }
+          - { package: anypress-client, php: "8.1" }
+          - { package: anypress-move, php: "8.1" }
+          - { package: anypress-payments, php: "7.4" }
+          - { package: anypress-updater, php: "7.4" }
+          - { package: anypress-export, php: "7.4" }
+    defaults:
+      run:
+        working-directory: packages/${{ matrix.package }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer:v2
+      - name: The header promises this PHP
+        run: |
+          f=${{ matrix.package }}.php
+          [ ! -f "$f" ] || grep -Eq "Requires PHP: *${{ matrix.php }}$" "$f"
+      - name: Every file parses
+        run: |
+          set -o pipefail
+          find . -name '*.php' -not -path './vendor/*' -not -path './tests/*' -print0 \
+            | xargs -0 -n1 -P4 php -l -d display_errors=1 | { grep -v '^No syntax errors detected' || true; }
+      - name: Shipped libraries run on this PHP
+        run: |
+          composer install --no-dev --no-interaction --no-progress --ignore-platform-req=php
+          composer check-platform-reqs --no-dev
+
   release-scripts:
     # Builds, stamps, signs and verifies all three plugins with a throwaway key, and runs publish and
     # promote against a fake bucket. Nothing is uploaded.
@@ -39,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -59,9 +101,9 @@ jobs:
         working-directory: packages/anypress-payments
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Run checkout script tests
@@ -78,7 +120,7 @@ jobs:
         working-directory: packages/anypress-host
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -97,7 +139,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -108,7 +150,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -127,7 +169,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -138,7 +180,7 @@ jobs:
         working-directory: packages/anypress-export
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -157,7 +199,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -168,7 +210,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -187,7 +229,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -198,7 +240,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -217,7 +259,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -228,7 +270,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -247,9 +289,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Checkout the store template (roles.json)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: hamchowderr/waas-provisioning-api
           path: waas-provisioning-api
@@ -265,7 +307,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -287,7 +329,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -298,7 +340,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -318,7 +360,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -329,7 +371,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -348,7 +390,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -359,7 +401,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -378,7 +420,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -389,7 +431,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -409,7 +451,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -420,7 +462,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -440,9 +482,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Checkout the store template and the store agent's page cache
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: hamchowderr/waas-provisioning-api
           path: waas-provisioning-api
@@ -451,6 +493,58 @@ jobs:
             templates/anypress-store/build.sh
             templates/anypress-store/plugins/fluent-cart-migrator-*.zip
             src/provisioner/coolify/agent.php
+          sparse-checkout-cone-mode: false
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+          tools: composer:v2
+      - name: Composer install
+        working-directory: packages/anypress-client
+        run: composer install --no-dev --no-interaction --no-progress
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: scripts/playground/package-lock.json
+      - name: Install Playground and Playwright
+        working-directory: scripts/playground
+        run: |
+          npm ci
+          npm install --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: Cache around cart and checkout test
+        working-directory: scripts/playground
+        env:
+          ANYPRESS_API_DIR: ${{ github.workspace }}/waas-provisioning-api
+        run: npm run cache-checkout
+      - name: Keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cache-checkout
+          path: scripts/playground/shots/cache-checkout/
+
+  playground-offers:
+    # AnyPress Client's FluentCart > Offers on a Playground store of the online-store site type: an offer page made
+    # from the Offers screen, a real browser order sent to it, "No Thanks" keeping the receipt, and FluentCart's own
+    # receipt page for products without a rule.
+    name: anypress-client FluentCart Offers on WordPress Playground (online-store)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Checkout the store template
+        uses: actions/checkout@v4
+        with:
+          repository: hamchowderr/waas-provisioning-api
+          path: waas-provisioning-api
+          sparse-checkout: |
+            templates/anypress-store/roles.json
+            templates/anypress-store/build.sh
+            templates/anypress-store/plugins/fluent-cart-migrator-*.zip
           sparse-checkout-cone-mode: false
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -473,17 +567,17 @@ jobs:
           npm ci
           npm install --no-save playwright@1.63.0
           npx playwright install --with-deps chromium
-      - name: Cache around cart and checkout test
+      - name: Offers test
         working-directory: scripts/playground
         env:
           ANYPRESS_API_DIR: ${{ github.workspace }}/waas-provisioning-api
-        run: npm run cache-checkout
+        run: npm run offers
       - name: Keep the screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cache-checkout
-          path: scripts/playground/shots/cache-checkout/
+          name: offers
+          path: scripts/playground/shots/offers/
 
   playground-courses:
     # The course switch (wp anypress course switch and its abilities): LearnDash courses, students and progress into
@@ -496,9 +590,9 @@ jobs:
         fluent-community: ["2.12.0", "2.13.0"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Checkout the store template's site types
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: hamchowderr/waas-provisioning-api
           path: waas-provisioning-api
@@ -514,7 +608,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -540,9 +634,9 @@ jobs:
         fluent-community: ["2.12.0", "2.13.0"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Checkout the store template's site types
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: hamchowderr/waas-provisioning-api
           path: waas-provisioning-api
@@ -558,7 +652,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -581,7 +675,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -594,7 +688,7 @@ jobs:
           (cd packages/anypress-move && composer install --no-dev --no-interaction --no-progress)
           (cd packages/anypress-client && composer install --no-dev --no-interaction --no-progress)
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -617,9 +711,9 @@ jobs:
         fluent-community: ["2.12.0", "2.13.0"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Checkout the store template's site types
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: hamchowderr/waas-provisioning-api
           path: waas-provisioning-api
@@ -635,7 +729,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -662,9 +756,9 @@ jobs:
         fluent-community: ["2.12.0", "2.13.0"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Checkout the store template's site types
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: hamchowderr/waas-provisioning-api
           path: waas-provisioning-api
@@ -680,7 +774,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -707,9 +801,9 @@ jobs:
         fluent-community: ["2.12.0", "2.13.0"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Checkout the store template's site types
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: hamchowderr/waas-provisioning-api
           path: waas-provisioning-api
@@ -725,7 +819,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -749,9 +843,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Checkout the store template's site types
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: hamchowderr/waas-provisioning-api
           path: waas-provisioning-api
@@ -767,7 +861,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -791,9 +885,9 @@ jobs:
         site-type: ["online-store", "community"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Checkout the store template's site types
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: hamchowderr/waas-provisioning-api
           path: waas-provisioning-api
@@ -809,7 +903,7 @@ jobs:
         working-directory: packages/anypress-client
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -835,7 +929,7 @@ jobs:
         fluent-support: ["2.4.7", "2.5.0"]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -846,7 +940,7 @@ jobs:
         working-directory: packages/anypress-host
         run: composer install --no-dev --no-interaction --no-progress
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm

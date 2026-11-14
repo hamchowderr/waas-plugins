@@ -14,6 +14,10 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    # PHPUnit 13 needs PHP 8.4; the tests also run on 8.3, what the stores run. Drop this when they move up.
+    ignore:
+      - dependency-name: phpunit/phpunit
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: npm
     directories:
       - "/scripts/playground"

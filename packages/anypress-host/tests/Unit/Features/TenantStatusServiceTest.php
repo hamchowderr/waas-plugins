@@ -52,7 +52,7 @@ class TenantStatusServiceTest extends TestCase
 
         (new TenantStatusService($api))->poll_tenant_status();
 
-        $this->assertSame('', (string) file_get_contents($this->log), 'nothing logged every five seconds');
+        $this->assertSame('', (string) file_get_contents((string) ini_get('error_log')), 'nothing logged every five seconds');
         $this->assertSame('', $this->cart->meta[901][Tenant::TENANT_STATE]);
     }
 
@@ -191,6 +191,6 @@ class TenantStatusServiceTest extends TestCase
         $this->assertSame(Tenant::SUSPENDED, $service->process_subscription(3), 'not on its way to Ready: nothing to do');
 
         $this->assertSame(Tenant::LINKING_DOMAIN, $this->cart->meta[2][Tenant::TENANT_STATE]);
-        $this->assertSame('', (string) file_get_contents($this->log));
+        $this->assertSame('', (string) file_get_contents((string) ini_get('error_log')));
     }
 }

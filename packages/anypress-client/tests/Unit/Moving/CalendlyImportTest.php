@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Moving;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use AnyPressClient\Moving\CalendlyApi;
 use AnyPressClient\Moving\CalendlyImport;
 use Brain\Monkey;
@@ -53,7 +54,7 @@ class CalendlyImportTest extends TestCase
         $this->assertSame(['2030-01-02' => [['start' => '10:00', 'end' => '11:00']]], $dates);
     }
 
-    /** @dataProvider locations */
+    #[DataProvider('locations')]
     public function test_locations(array $calendly, ?array $fluent): void
     {
         $this->assertSame($fluent, CalendlyImport::location($calendly));

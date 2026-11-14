@@ -364,7 +364,7 @@ class FluentCartEmailPacksTest extends TestCase
         [$timestamp, $hook, $args, $group] = $this->scheduled[0];
         $this->assertEqualsWithDelta(time() + StoreJobs::RETRY_DELAYS[0], $timestamp, 5);
         $this->assertSame([FluentCartEmailPacks::RETRY_HOOK, [500], StoreJobs::GROUP], [$hook, $args, $group]);
-        $this->assertStringContainsString('adding email packs for order 500', (string) file_get_contents($this->error_log));
+        $this->assertStringContainsString('adding email packs for order 500', (string) file_get_contents((string) ini_get('error_log')));
     }
 
     public function test_the_retry_sends_the_same_reference(): void

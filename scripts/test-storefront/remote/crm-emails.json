@@ -403,5 +403,18 @@
     "body": "<p>Hi {{contact.first_name|there}},</p><p>Your AnyPress website has been live for a couple of months. If your business has grown into it, it can take on more:</p><p><strong>Bookings</strong> lets customers book and pay for appointments on your own site, with reminders sent for you.</p><p><strong>Store</strong> adds a shop with products, checkout and your own payment account.</p><p>Want one of these on the site you already have? Reply to this email and tell us which, and we'll help you move to the plan that fits.</p><p><a href=\"https://anypress.io/pricing\"><strong>Compare the plans</strong></a></p><p>Happy where you are? That's great too. You don't need to do anything.</p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
    }
   ]
+ },
+ {
+  "title": "Email: Care ended",
+  "trigger": "manual",
+  "note": "Started by the CRM plugin when a care package ends (Care: Past) and the customer still has a live website plan. Stops if they start care again.",
+  "emails": [
+   {
+    "day": 1,
+    "subject": "Your website is still in good hands",
+    "preheader": "Care has ended, but help is still a reply away.",
+    "body": "<p>Hi {{contact.first_name|there}},</p><p>Your care package has ended. Your website stays exactly as it is, with its nightly backups and updates still looked after by us.</p><p>If you need a change later, you don't have to sign up again. You can buy a single hour of changes whenever something comes up, and we'll take care of it.</p><p>And if care stopped working for you, we'd like to know why. Just reply and tell us. We read every answer.</p><p><a href=\"https://anypress.io/care\"><strong>See the care options</strong></a></p><p>The AnyPress team<br>Questions? Just reply, or write to <a href=\"mailto:support@anypress.io\">support@anypress.io</a>.</p>"
+   }
+  ]
  }
 ]

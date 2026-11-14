@@ -12,6 +12,7 @@ namespace FluentCrm\App\Services\CrmMigrator {
 namespace Tests\Unit\Crm {
 
     use AnyPressClient\Crm\Importers\BrevoMigrator;
+use PHPUnit\Framework\Attributes\DataProvider;
     use AnyPressClient\Crm\Importers\CrmImporters;
     use AnyPressClient\Crm\Importers\MailerLiteMigrator;
     use Brain\Monkey;
@@ -47,7 +48,7 @@ namespace Tests\Unit\Crm {
             $this->assertArrayNotHasKey('created_at', $data);
         }
 
-        /** @dataProvider mailerlite_statuses */
+        #[DataProvider('mailerlite_statuses')]
         public function test_mailerlite_status_maps_to_fluentcrm(string $remote, string $local): void
         {
             $data = MailerLiteMigrator::contact('x@anypress.example', ['status' => $remote, 'fields' => ['name' => 'X']], []);

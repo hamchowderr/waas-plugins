@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Features;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use Brain\Monkey\Actions;
 use Brain\Monkey\Functions;
 use Mockery;
@@ -166,7 +167,7 @@ class NameConflictsTest extends StoreJobsTestCase
         $this->assertSame(Tenant::NEEDS_NEW_NAME, $this->meta(Tenant::TENANT_STATE));
     }
 
-    /** @dataProvider external_id_refusals */
+    #[DataProvider('external_id_refusals')]
     public function test_a_create_refused_for_its_own_external_id_adopts_that_store_instead_of_waiting_for_a_name(string $refusal): void
     {
         // An admin's retry starts at attempt 0, so the create is sent again although the first one got through.
