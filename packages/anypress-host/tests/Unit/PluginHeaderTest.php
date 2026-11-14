@@ -11,7 +11,7 @@ class PluginHeaderTest extends TestCase
         preg_match('#/\*\s*\nPlugin Name:(.*?)\*/#s', $index, $header);
         $this->assertNotEmpty($header);
 
-        $this->assertMatchesRegularExpression('/^Requires PHP: 8\.1$/m', $header[0]);
+        $this->assertMatchesRegularExpression('/^Requires PHP: 8\.3$/m', $header[0]);
         $this->assertMatchesRegularExpression('/^Requires at least: \d+\.\d+$/m', $header[0]);
         $this->assertMatchesRegularExpression('/^License: GPL-3\.0-or-later$/m', $header[0]);
 
