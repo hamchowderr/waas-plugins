@@ -12,6 +12,7 @@ use AnyPressHost\Api\RolesController;
 use AnyPressHost\Api\AssistantSignIn;
 use AnyPressHost\Api\AdminLogin;
 use AnyPressHost\Api\SingleLogin;
+use AnyPressHost\Api\ProspectsReceiver;
 use AnyPressHost\Api\SupportDesk;
 use AnyPressHost\Api\WebhookReceiver;
 use AnyPressHost\Commerce\Commerce;
@@ -37,14 +38,14 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 /**
  * @package AnyPressHost
- * @version 2.22.1
+ * @version 2.23.0
  */
 /*
 Plugin Name: AnyPress Host
 Plugin URI: https://anypress.io
 Description: Sells AnyPress websites from your storefront: creates, suspends and restores each customer's website through the AnyPress API, with FluentCart or WooCommerce (and WooCommerce Subscriptions) for billing.
 Author: Otaku Solutions
-Version: 2.22.1
+Version: 2.23.0
 Author URI: https://otakusolutions.io
 Update URI: anypress-host
 Requires at least: 6.4
@@ -57,7 +58,7 @@ Text Domain: anypress-host
 define( 'ANYPRESS_HOST_SLUG', 'anypress-host' );
 define( 'ANYPRESS_HOST_BASENAME', plugin_basename( __FILE__ ) );
 define( 'ANYPRESS_HOST_UPDATE_URI', 'anypress-host' );
-define( 'ANYPRESS_HOST_VERSION', '2.22.1' );
+define( 'ANYPRESS_HOST_VERSION', '2.23.0' );
 define( 'ANYPRESS_HOST_TEXTDOMAIN', 'anypress-host' );
 
 // Settings and data saved before the AnyPress names (2.11.0) move to them before anything reads them
@@ -96,6 +97,8 @@ $tenantStatusService = new TenantStatusService($provisioningApi);
 new WebhookReceiver($tenantStatusService);
 // Support tickets the API files in Fluent Support for the people it signs in (anypress-host/v1/support), and the Support page
 new SupportDesk();
+// Sales Kit prospects the API adds to this storefront's FluentCRM (anypress-host/v1/prospects), never emailed by FluentCRM
+new ProspectsReceiver();
 // The customer's websites as a REST API (anypress-host/v1/account), with token sign-in for front ends on other domains
 $accountTokens = new AccountTokens();
 new AccountController(new WebsiteSettings($provisioningApi), $nameConflicts, $configService, $accountTokens);
