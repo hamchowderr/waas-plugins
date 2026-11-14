@@ -12,11 +12,11 @@ Plugin Name: AnyPress Client
 Plugin URI: https://anypress.io
 Description: Runs on each AnyPress website: one-click login from the storefront, turns plugins on or off to match the store's plan (roles), and lets the AnyPress connector edit the site's design and content.
 Author: Otaku Solutions
-Version: 2.41.0
+Version: 2.42.0
 Author URI: https://otakusolutions.io
 Update URI: anypress-client
 Requires at least: 6.9
-Requires PHP: 8.1
+Requires PHP: 8.3
 License: GPL-3.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 Text Domain: anypress-client
@@ -25,7 +25,7 @@ Text Domain: anypress-client
 define( 'ANYPRESS_CLIENT_SLUG', 'anypress-client' );
 define( 'ANYPRESS_CLIENT_BASENAME', plugin_basename( __FILE__ ) );
 define( 'ANYPRESS_CLIENT_UPDATE_URI', 'anypress-client' );
-define( 'ANYPRESS_CLIENT_VERSION', '2.41.0' );
+define( 'ANYPRESS_CLIENT_VERSION', '2.42.0' );
 define( 'ANYPRESS_CLIENT_TEXTDOMAIN', 'anypress-client' );
 
 use AnyPressClient\Api\AdminLogin;

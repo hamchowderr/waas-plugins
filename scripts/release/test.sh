@@ -102,7 +102,7 @@ ok "signatures verify only with the right key, version and trusted keys"
 
 # Manifest.
 m="$work/dist-0.2.0/manifest.json"
-[ "$(jq -r '.slug + " " + .version + " " + .zip + " " + .requiresPhp + " " + .changelog' "$m")" = "anypress-payments 0.2.0 releases/anypress-payments/0.2.0/anypress-payments.zip 7.4 * Release 0.2.0" ] || fail "manifest: $(cat "$m")"
+[ "$(jq -r '.slug + " " + .version + " " + .zip + " " + .requiresPhp + " " + .changelog' "$m")" = "anypress-payments 0.2.0 releases/anypress-payments/0.2.0/anypress-payments.zip 8.3 * Release 0.2.0" ] || fail "manifest: $(cat "$m")"
 [ "$(jq -r .sha256 "$m")" = "$(sha256sum "$zip" | cut -d' ' -f1)" ] || fail "manifest checksum"
 ok "the manifest has what the API reads"
 

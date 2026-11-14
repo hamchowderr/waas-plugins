@@ -3,12 +3,12 @@
  * Plugin Name: AnyPress Payments
  * Plugin URI: https://anypress.io
  * Description: Card payments for FluentCart through the store's payment gateway, including subscriptions charged automatically on renewal (FluentCart store-managed subscriptions). First gateway: Authorize.Net.
- * Version: 0.2.0-beta.6
+ * Version: 0.2.0-beta.7
  * Author: Otaku Solutions
  * Author URI: https://otakusolutions.io
  * Update URI: anypress-payments
  * Requires at least: 6.0
- * Requires PHP: 7.4
+ * Requires PHP: 8.3
  * Requires Plugins: fluent-cart
  * Text Domain: anypress-payments
  * License: GPL-3.0-or-later
@@ -17,7 +17,7 @@
 
 defined('ABSPATH') || exit;
 
-define('ANYPRESS_PAYMENTS_VERSION', '0.2.0-beta.6');
+define('ANYPRESS_PAYMENTS_VERSION', '0.2.0-beta.7');
 define('ANYPRESS_PAYMENTS_URL', plugin_dir_url(__FILE__));
 define('ANYPRESS_PAYMENTS_BASENAME', plugin_basename(__FILE__));
 
