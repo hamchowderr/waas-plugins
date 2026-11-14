@@ -147,7 +147,7 @@ class Offers
     public static function move_query(string $from, string $to): string
     {
         $query = [];
-        parse_str((string) parse_url($from, PHP_URL_QUERY), $query);
+        parse_str((string) wp_parse_url($from, PHP_URL_QUERY), $query);
         if ($query === []) {
             return $to;
         }
@@ -155,7 +155,7 @@ class Offers
         $fragment = $hash === false ? '' : substr($to, $hash);
         $base = $hash === false ? $to : substr($to, 0, $hash);
         $existing = [];
-        parse_str((string) parse_url($base, PHP_URL_QUERY), $existing);
+        parse_str((string) wp_parse_url($base, PHP_URL_QUERY), $existing);
         $add = array_diff_key($query, $existing);
         if ($add === []) {
             return $to;
@@ -195,7 +195,7 @@ class Offers
 
         return (string) preg_replace_callback('/(<a\b[^>]*\bhref=")([^"]*)(")/i', static function ($m) use ($hash, $host) {
             $href = html_entity_decode($m[2], ENT_QUOTES);
-            $href_host = parse_url($href, PHP_URL_HOST);
+            $href_host = wp_parse_url($href, PHP_URL_HOST);
             $internal = $href_host === null ? strpos($href, '/') === 0 : strcasecmp((string) $href_host, $host) === 0;
             if (!$internal || stripos($href, 'fluent-cart=') !== false || stripos($href, self::HASH . '=') !== false) {
                 return $m[0];
@@ -222,39 +222,39 @@ class Offers
         $receipt = esc_html__('Your Order', 'anypress-client');
         $decline = esc_url($decline_url);
 
-        return <<<HTML
-<!-- wp:group {"layout":{"type":"constrained"}} -->
-<div class="wp-block-group"><!-- wp:heading {"textAlign":"center"} -->
-<h2 class="wp-block-heading has-text-align-center">{$heading}</h2>
-<!-- /wp:heading -->
-
-<!-- wp:paragraph {"align":"center"} -->
-<p class="has-text-align-center">{$pitch}</p>
-<!-- /wp:paragraph -->
-
-<!-- wp:shortcode -->
-{$yes}
-<!-- /wp:shortcode -->
-
-<!-- wp:buttons {"layout":{"type":"flex","justifyContent":"center"}} -->
-<div class="wp-block-buttons"><!-- wp:button {"className":"is-style-outline"} -->
-<div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="{$decline}">{$no}</a></div>
-<!-- /wp:button --></div>
-<!-- /wp:buttons -->
-
-<!-- wp:separator -->
-<hr class="wp-block-separator has-alpha-channel-opacity"/>
-<!-- /wp:separator -->
-
-<!-- wp:heading {"level":3} -->
-<h3 class="wp-block-heading">{$receipt}</h3>
-<!-- /wp:heading -->
-
-<!-- wp:shortcode -->
-[fluent_cart_receipt]
-<!-- /wp:shortcode --></div>
-<!-- /wp:group -->
-HTML;
+        return implode("\n", [
+            '<!-- wp:group {"layout":{"type":"constrained"}} -->',
+            '<div class="wp-block-group"><!-- wp:heading {"textAlign":"center"} -->',
+            '<h2 class="wp-block-heading has-text-align-center">' . $heading . '</h2>',
+            '<!-- /wp:heading -->',
+            '',
+            '<!-- wp:paragraph {"align":"center"} -->',
+            '<p class="has-text-align-center">' . $pitch . '</p>',
+            '<!-- /wp:paragraph -->',
+            '',
+            '<!-- wp:shortcode -->',
+            $yes,
+            '<!-- /wp:shortcode -->',
+            '',
+            '<!-- wp:buttons {"layout":{"type":"flex","justifyContent":"center"}} -->',
+            '<div class="wp-block-buttons"><!-- wp:button {"className":"is-style-outline"} -->',
+            '<div class="wp-block-button is-style-outline"><a class="wp-block-button__link wp-element-button" href="' . $decline . '">' . $no . '</a></div>',
+            '<!-- /wp:button --></div>',
+            '<!-- /wp:buttons -->',
+            '',
+            '<!-- wp:separator -->',
+            '<hr class="wp-block-separator has-alpha-channel-opacity"/>',
+            '<!-- /wp:separator -->',
+            '',
+            '<!-- wp:heading {"level":3} -->',
+            '<h3 class="wp-block-heading">' . $receipt . '</h3>',
+            '<!-- /wp:heading -->',
+            '',
+            '<!-- wp:shortcode -->',
+            '[fluent_cart_receipt]',
+            '<!-- /wp:shortcode --></div>',
+            '<!-- /wp:group -->',
+        ]);
     }
 
     /** Whether a page shows FluentCart's receipt (its shortcode). */

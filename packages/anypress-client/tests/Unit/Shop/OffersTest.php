@@ -7,6 +7,12 @@ use Tests\Unit\TestCase;
 
 class OffersTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        \Brain\Monkey\Functions\when('wp_parse_url')->alias('parse_url');
+    }
+
     public function test_clean_rules_keeps_whole_rules_and_each_product_once(): void
     {
         $rules = Offers::clean_rules([
