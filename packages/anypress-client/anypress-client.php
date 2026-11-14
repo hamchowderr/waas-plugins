@@ -12,7 +12,7 @@ Plugin Name: AnyPress Client
 Plugin URI: https://anypress.io
 Description: Runs on each AnyPress website: one-click login from the storefront, turns plugins on or off to match the store's plan (roles), and lets the AnyPress connector edit the site's design and content.
 Author: Otaku Solutions
-Version: 2.40.0
+Version: 2.41.0
 Author URI: https://otakusolutions.io
 Update URI: anypress-client
 Requires at least: 6.9
@@ -25,7 +25,7 @@ Text Domain: anypress-client
 define( 'ANYPRESS_CLIENT_SLUG', 'anypress-client' );
 define( 'ANYPRESS_CLIENT_BASENAME', plugin_basename( __FILE__ ) );
 define( 'ANYPRESS_CLIENT_UPDATE_URI', 'anypress-client' );
-define( 'ANYPRESS_CLIENT_VERSION', '2.40.0' );
+define( 'ANYPRESS_CLIENT_VERSION', '2.41.0' );
 define( 'ANYPRESS_CLIENT_TEXTDOMAIN', 'anypress-client' );
 
 use AnyPressClient\Api\AdminLogin;
@@ -80,6 +80,10 @@ new HighLevelLink();
 // FluentCommunity: the community as the home page (Settings > Reading) and FluentAuth's sign-in redirects on the
 // community's own sign-in. On every request, since FluentCommunity builds its links on admin-ajax and REST too.
 new \AnyPressClient\Features\CommunityPortal();
+
+// FluentCart > Offers: the page each product's buyers go to after paying (an offer, a cheaper offer, a thank-you page).
+// On every request, since FluentCart makes the after-payment link on REST and admin-ajax too.
+new \AnyPressClient\Shop\Offers();
 
 if (!wp_doing_ajax()) {
     define("ANYPRESS_PLUGIN_DIR_URI", plugin_dir_url(__FILE__));

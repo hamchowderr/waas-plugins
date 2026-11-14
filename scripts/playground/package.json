@@ -37,6 +37,7 @@
     "download-site": "node download-site.mjs",
     "community-portal": "node community-portal.mjs",
     "cache-checkout": "node cache-checkout.mjs",
+    "offers": "node offers.mjs",
     "gravity-forms": "node gravity-forms.mjs",
     "edd": "node edd.mjs",
     "crm-import": "node crm-import.mjs",
