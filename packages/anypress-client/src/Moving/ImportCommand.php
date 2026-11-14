@@ -105,6 +105,11 @@ class ImportCommand
         $undo = (bool) WP_CLI\Utils\get_flag_value($assoc_args, 'undo', false);
         $format = WP_CLI\Utils\get_flag_value($assoc_args, 'format', 'table') === 'json' ? 'json' : 'table';
         $from = (string) WP_CLI\Utils\get_flag_value($assoc_args, 'from', '');
+        $choices = $this->import->source_choices();
+        if ($from === '' && !$undo && count($choices) > 1 && $format === 'table') {
+            $named = array_map(fn ($slug, $name) => $name . ' (--from=' . $slug . ')', array_keys($choices), $choices);
+            WP_CLI::line('More than one source is here: ' . implode(', ', $named) . '.');
+        }
 
         $token = (string) WP_CLI\Utils\get_flag_value($assoc_args, 'token', (string) getenv($this->import->key() === 'calendly' ? 'CALENDLY_API_TOKEN' : 'CIRCLE_API_TOKEN'));
         $map = [];

@@ -38,6 +38,18 @@ class SupportImport extends NativeImport
         return defined('FLUENT_SUPPORT_VERSION') && class_exists('\FluentSupport\App\Services\Tickets\Importer\MigratorService') ? (string) FLUENT_SUPPORT_VERSION : '';
     }
 
+    public function source_choices(): array
+    {
+        $choices = [];
+        foreach (self::SOURCES as $slug => [$name, $constant]) {
+            if (defined($constant)) {
+                $choices[$slug] = $name;
+            }
+        }
+
+        return $choices;
+    }
+
     protected function sources(): array
     {
         $stats = [];

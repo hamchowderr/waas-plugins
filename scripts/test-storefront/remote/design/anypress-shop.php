@@ -2,7 +2,7 @@
 /**
  * Plugin Name: AnyPress shop
  * Description: The shop's block styles (sketch panels, tick lists, size table) and two small shortcodes for the plan pages (the size switcher and the way back to the plans), and the AnyPress logo and support address in AnyPress Host's emails. Installed by the shop's `design` step.
- * Version: 1.1.0
+ * Version: 1.4.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -105,7 +105,7 @@ add_shortcode(
 		if ( empty( $found['sizes'] ) ) {
 			return '';
 		}
-		$html = '<nav class="anypress-sizes" aria-label="' . esc_attr__( 'Sizes', 'anypress-shop' ) . '"><span class="anypress-sizes__label">' . esc_html__( 'Size', 'anypress-shop' ) . '</span><ul>';
+		$html = '<nav class="anypress-sizes" aria-label="' . esc_attr__( 'Sizes', 'anypress-shop' ) . '"><div class="anypress-sizes__label">' . esc_html__( 'Size', 'anypress-shop' ) . '</div><ul>';
 		foreach ( $found['sizes'] as $size ) {
 			$html .= '<li><a href="' . esc_url( $size['url'] ) . '"' . ( $size['current'] ? ' aria-current="page"' : '' ) . '><strong>' . esc_html( $size['label'] ) . '</strong><span>' . esc_html( $size['note'] ) . '</span></a></li>';
 		}
@@ -138,8 +138,9 @@ add_shortcode(
 	'anypress_promises',
 	static function () {
 		$plan  = ! empty( anypress_shop_sibling_sizes()['sizes'] );
+		$brand = (array) get_option( 'anypress_shop_brand', array() );
 		$items = $plan
-			? array( __( 'Pay yearly and get two months free', 'anypress-shop' ), __( '30-day money-back guarantee', 'anypress-shop' ), __( 'Cancel any time from your account', 'anypress-shop' ), __( 'A free anypress.site address, or your own domain', 'anypress-shop' ), __( 'Secure card checkout', 'anypress-shop' ) )
+			? ( $brand['promises'] ?? array( __( 'Pay yearly and get two months free', 'anypress-shop' ), __( '30-day money-back guarantee', 'anypress-shop' ), __( 'Cancel any time from your account', 'anypress-shop' ), __( 'A free anypress.site address, or your own domain', 'anypress-shop' ), __( 'Secure card checkout', 'anypress-shop' ) ) )
 			: array( __( 'A one-time payment, not a subscription', 'anypress-shop' ), __( 'Added to your website right after you pay', 'anypress-shop' ), __( 'Pack emails never expire', 'anypress-shop' ), __( 'Secure card checkout', 'anypress-shop' ) );
 		$lis   = '';
 		foreach ( $items as $item ) {
@@ -180,7 +181,7 @@ function anypress_shop_sign_in() {
 	);
 	return '<div class="anypress-sign-in"><div class="anypress-sign-in__form"><h2>' . esc_html__( 'Sign in', 'anypress-shop' ) . '</h2><p>' . esc_html__( 'Use the email address you bought your plan with.', 'anypress-shop' ) . '</p>' . $form
 		. '<p class="anypress-sign-in__lost"><a href="' . esc_url( wp_lostpassword_url( $account ) ) . '">' . esc_html__( 'Forgot your password? We’ll email you a link.', 'anypress-shop' ) . '</a></p></div>'
-		. '<div class="anypress-sign-in__new"><h3>' . esc_html__( 'New to AnyPress?', 'anypress-shop' ) . '</h3><p>' . esc_html__( 'Your account is made when you buy your first plan. Pick one and you can sign in here a minute later.', 'anypress-shop' ) . '</p>'
+		. '<div class="anypress-sign-in__new"><h3>' . esc_html( ( (array) get_option( 'anypress_shop_brand', array() ) )['signInNew'] ?? __( 'New to AnyPress?', 'anypress-shop' ) ) . '</h3><p>' . esc_html__( 'Your account is made when you buy your first plan. Pick one and you can sign in here a minute later.', 'anypress-shop' ) . '</p>'
 		. '<p><a class="wp-element-button" href="' . esc_url( $plans ? get_permalink( $plans ) : home_url( '/' ) ) . '">' . esc_html__( 'See the plans', 'anypress-shop' ) . '</a></p></div></div>';
 }
 add_filter(
@@ -235,6 +236,42 @@ add_filter(
  * AnyPress Host's website emails: the AnyPress mark next to the name, the AnyPress colour strip, and support@anypress.io in
  * the footer and Reply-To, as in the AnyPress API's account emails.
  */
-add_filter( 'anypress_email_logo_url', static fn () => 'https://anypress.io/logo-512.png' );
-add_filter( 'anypress_email_support_address', static fn () => 'support@anypress.io' );
-add_filter( 'anypress_email_accent', static fn () => 'linear-gradient(90deg,#ffc75a,#ff7a2a,#ee2f5e,#d21fa4)' );
+if ( empty( ( (array) get_option( 'anypress_shop_brand', array() ) )['whiteLabel'] ) ) {
+	add_filter( 'anypress_email_logo_url', static fn () => 'https://anypress.io/logo-512.png' );
+	add_filter( 'anypress_email_support_address', static fn () => 'support@anypress.io' );
+	add_filter( 'anypress_email_accent', static fn () => 'linear-gradient(90deg,#ffc75a,#ff7a2a,#ee2f5e,#d21fa4)' );
+}
+
+/**
+ * AnyPress's own shop keeps one copy of each page: the legal pages live on anypress.io, and help pages that were folded
+ * into another one send people, and search engines, to the section that has them now. Seller storefronts built from
+ * this design keep their own legal pages, so this only runs on shop.anypress.io.
+ */
+add_action(
+	'template_redirect',
+	static function () {
+		if ( 'shop.anypress.io' !== wp_parse_url( home_url(), PHP_URL_HOST ) ) {
+			return;
+		}
+		$moved = array(
+			'terms'                                        => 'https://anypress.io/terms',
+			'privacy'                                      => 'https://anypress.io/privacy',
+			'refund-policy'                                => 'https://anypress.io/refund-policy',
+			'docs/refunds'                                 => 'https://anypress.io/refund-policy',
+			'docs/create-a-site-from-a-form-with-n8n'      => '/docs/use-anypress-in-n8n/#create-a-site-from-a-form',
+			'docs/create-a-site-from-a-payment-with-zapier' => '/docs/use-anypress-in-zapier/#create-a-site-when-a-client-pays',
+			'docs/create-a-site-from-a-crm-step-with-make' => '/docs/use-anypress-in-make/#create-a-site-when-a-deal-is-won',
+		);
+		$path  = trim( (string) wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '', PHP_URL_PATH ), '/' );
+		if ( isset( $moved[ $path ] ) ) {
+			$to = $moved[ $path ];
+			wp_redirect( str_starts_with( $to, '/' ) ? home_url( $to ) : $to, 301, 'AnyPress shop' ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- fixed addresses, anypress.io among them.
+			exit;
+		}
+	},
+	0
+);
+add_filter(
+	'privacy_policy_url',
+	static fn ( $url ) => 'shop.anypress.io' === wp_parse_url( home_url(), PHP_URL_HOST ) ? 'https://anypress.io/privacy' : $url
+);

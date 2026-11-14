@@ -49,6 +49,18 @@ class CourseImport extends NativeImport
         return defined('FLUENT_COMMUNITY_PLUGIN_VERSION') && class_exists('\FluentCommunity\Modules\Course\Model\Course') ? (string) FLUENT_COMMUNITY_PLUGIN_VERSION : '';
     }
 
+    public function source_choices(): array
+    {
+        $choices = [];
+        foreach ($this->readers as $slug => $reader) {
+            if ($reader->found()) {
+                $choices[$slug] = $reader->name();
+            }
+        }
+
+        return $choices;
+    }
+
     protected function sources(): array
     {
         $out = [];
