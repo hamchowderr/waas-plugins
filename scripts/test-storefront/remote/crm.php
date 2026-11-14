@@ -79,8 +79,10 @@ foreach ($was as $key) {
     $renamed['Email: Nurture ' . $key] = 'Email: Nurture ' . AnyPress_CRM::GROUPS[$key];
 }
 foreach ($renamed as $old => $new) {
-    $funnel = Funnel::where('title', $old)->first();
-    if ($funnel && !Funnel::where('title', $new)->exists()) {
+    // Compared in PHP: MySQL matches titles without regard to case, so "Win-back" would count as "Win-Back".
+    $funnel = Funnel::where('title', $old)->get()->first(fn ($f) => $f->title === $old);
+    $taken = $funnel && Funnel::where('title', $new)->get()->contains(fn ($f) => $f->title === $new && (int) $f->id !== (int) $funnel->id);
+    if ($funnel && !$taken) {
         $funnel->title = $new;
         $funnel->save();
         echo "Automation: $old renamed $new\n";
