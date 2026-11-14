@@ -41,9 +41,9 @@ class GettingStartedChecklist
                 "is_done" => false,
             ],
             "setup_tenant_roles" => [
-                "label" => __('Load your plans', 'anypress-host'),
-                "description" => __('Each plan decides which plugins a website gets. The plans are set up on your template website and loaded from there.', 'anypress-host'),
-                "action_label" => __('Load plans', 'anypress-host'),
+                "label" => __('Load your site types', 'anypress-host'),
+                "description" => __('Site types (Website, Bookings, Online Store, Community and more) decide which plugins a website gets. Each website plan sells one of them. They come from your template website through the AnyPress API.', 'anypress-host'),
+                "action_label" => __('Load site types', 'anypress-host'),
                 "action_url" => \AnyPressHost\Api\RolesController::get_refresh_url(),
                 "is_done" => false,
             ],

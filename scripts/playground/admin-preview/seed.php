@@ -25,7 +25,7 @@ add_action('init', function () {
     update_option('anypress_dns_a_records', ['203.0.113.10']);
     update_option('anypress_dns_cname_target', 'stores.anypress.site');
     update_option(\AnyPressHost\Core\ProvisioningApi::CAN_REACH_API_OPTION_NAME, true);
-    // The AnyPress store template's roles (templates/anypress-store/roles.json), as "Load plans" stores them.
+    // The AnyPress store template's roles (templates/anypress-store/roles.json), as "Load site types" stores them.
     $roles = [];
     foreach (['website' => 'Website', 'bookings' => 'Bookings', 'online-store' => 'Online store', 'community' => 'Community & courses', 'everything' => 'Everything', 'store' => 'Everything (before site types)'] as $slug => $title) {
         $roles[$slug] = (object) ['title' => $title, 'plugins' => []];

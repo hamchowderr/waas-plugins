@@ -207,7 +207,7 @@ class AdminHome
                     echo esc_html($plans_made
                         /* translators: %d: number of plans made */
                         ? sprintf(_n('Made %d website plan. It is on sale on your storefront now; change its price or picture in FluentCart.', 'Made %d website plans. They are on sale on your storefront now; change any price or picture in FluentCart.', $plans_made, 'anypress-host'), $plans_made)
-                        : __('No plans were made. Load your plans first, or check that every plan already has a product.', 'anypress-host'));
+                        : __('No plans were made. Load your site types first, or check that every site type already has a plan.', 'anypress-host'));
                 ?></span></div>
             <?php endif; ?>
 
@@ -372,10 +372,10 @@ class AdminHome
             ];
         }
         $rows[] = [
-            __('Plans', 'anypress-host'),
+            __('Site types', 'anypress-host'),
             $roles
-                /* translators: %d: number of plans */
-                ? sprintf(_n('%d plan loaded', '%d plans loaded', count($roles), 'anypress-host'), count($roles))
+                /* translators: %d: number of site types */
+                ? sprintf(_n('%d site type loaded', '%d site types loaded', count($roles), 'anypress-host'), count($roles))
                 : __('None loaded yet', 'anypress-host'),
             '<a class="ap-btn is-sm" href="' . esc_url(\AnyPressHost\Api\RolesController::get_refresh_url()) . '">' . esc_html__('Reload', 'anypress-host') . '</a>',
         ];

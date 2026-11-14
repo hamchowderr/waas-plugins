@@ -21,6 +21,14 @@ class OldNames
 {
     public const DONE_OPTION = 'anypress_old_names_moved';
 
+    /** What DONE_OPTION holds once every step below has run; '1' meant all but move_named_options(). */
+    public const DONE = '2';
+
+    /** Old options without a waas_ prefix, which move_options() doesn't see: old name => new name. */
+    public const OLD_OPTIONS = [
+        'waas-host-roles-options' => 'anypress-host-roles-options',
+    ];
+
     /** The prefixes the plugin used before 2.11.0, and the ones it uses now. */
     public const OLD = 'waas_';
     public const NEW = 'anypress_';
@@ -35,11 +43,31 @@ class OldNames
 
     public static function maybe_run(): void
     {
-        if (get_option(self::DONE_OPTION) === '1') {
+        $done = get_option(self::DONE_OPTION);
+        if ($done === self::DONE) {
             return;
         }
-        self::run();
-        update_option(self::DONE_OPTION, '1');
+        if ($done !== '1') {
+            self::run();
+        }
+        self::move_named_options();
+        update_option(self::DONE_OPTION, self::DONE);
+    }
+
+    /** Moves OLD_OPTIONS to their new names; a value already saved under the new name wins. */
+    public static function move_named_options(): void
+    {
+        $missing = new \stdClass();
+        foreach (self::OLD_OPTIONS as $old => $new) {
+            $value = get_option($old, $missing);
+            if ($value === $missing) {
+                continue;
+            }
+            if (get_option($new, $missing) === $missing) {
+                add_option($new, $value);
+            }
+            delete_option($old);
+        }
     }
 
     public static function run(): void

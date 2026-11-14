@@ -51,7 +51,7 @@ class RolesController
             $this->update_tenant_roles_list();
         } catch (\Exception $error) {
             // Set a transient notice message
-            set_transient(AdminNotices::REFRESH_ROLES_FAILED_NOTICE, __('Roles could not be loaded. Check that your template version labelled "Production" is running, has AnyPress Client active, and has at least one role.', 'anypress-host'), 5);
+            set_transient(AdminNotices::REFRESH_ROLES_FAILED_NOTICE, __('Site types could not be loaded from the AnyPress API. Try again in a minute; if it keeps failing, check that your production template version has AnyPress Client and its site types.', 'anypress-host'), MINUTE_IN_SECONDS);
         }
 
         wp_safe_redirect(wp_get_referer());
