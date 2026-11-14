@@ -37,6 +37,29 @@ class OldNamesTest extends TestCase
         $this->assertSame('whsec-123', SecretBox::open($new, 'anypress-host-webhook-secret'));
     }
 
+    /** A storefront moved before this release keeps its site types, saved under their old hyphenated name. */
+    public function test_a_storefront_moved_before_gets_its_site_types_back(): void
+    {
+        $roles = (object) ['website' => (object) ['title' => 'Website']];
+        $options = ['anypress_old_names_moved' => '1', 'waas-host-roles-options' => $roles];
+        Functions\when('get_option')->alias(fn ($name, $default = false) => array_key_exists($name, $options) ? $options[$name] : $default);
+        Functions\expect('add_option')->once()->with('anypress-host-roles-options', $roles);
+        Functions\expect('delete_option')->once()->with('waas-host-roles-options');
+        Functions\expect('update_option')->once()->with(OldNames::DONE_OPTION, OldNames::DONE);
+
+        OldNames::maybe_run();
+    }
+
+    public function test_site_types_saved_under_the_new_name_win(): void
+    {
+        $options = ['waas-host-roles-options' => ['old'], 'anypress-host-roles-options' => ['new']];
+        Functions\when('get_option')->alias(fn ($name, $default = false) => array_key_exists($name, $options) ? $options[$name] : $default);
+        Functions\expect('add_option')->never();
+        Functions\expect('delete_option')->once()->with('waas-host-roles-options');
+
+        OldNames::move_named_options();
+    }
+
     public function test_a_damaged_old_secret_comes_back_empty(): void
     {
         $this->assertSame('', OldNames::reseal_value('waasenc:v1:not-base64!', 'private-key'));
