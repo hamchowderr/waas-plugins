@@ -43,6 +43,6 @@
     "skool": "node skool.mjs"
   },
   "dependencies": {
-    "@wp-playground/cli": "3.1.59"
+    "@wp-playground/cli": "3.1.64"
   }
 }
